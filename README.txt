@@ -1,6 +1,6 @@
 ========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.5.0  (2026-08-05)
+  Fix package v1.6.20  (2026-08-06)
   Works with both v2.12 and v2.13 (Win10 Patch) executables
 ========================================================================
 
