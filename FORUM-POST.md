@@ -1,218 +1,118 @@
 # BOB2 2.13 Modern Fix — gets Wings of Victory running properly on Windows 10 and 11
 
-Battle of Britain II is twenty years old and still the best campaign in any Battle of
-Britain sim. Getting it to run on a current machine is the problem, and most of the
-advice about it online is either out of date, contradictory, or right for the wrong
-reason.
-
-This is a free companion app that installs alongside the game, gets it starting and
-staying started, and replaces the options screens that no longer fit on a modern
-monitor. It ships **no game content and no patches** — you supply patch 2.13 and it
-applies it for you. Nothing in the game is replaced: the 2.13 AI, ground objects and
-MultiSkin all stay exactly as the BDG left them.
-
-Windows 11 any version; Windows 10 1809 and later.
+*Draft forum post. Copy the body below.*
 
 ---
 
-## What it is not
+## BOB2 2.13 Modern Fix — a launcher and configuration tool for Wings of Victory
 
-It is **not** the community "BOB2 Windows 10 Patch". That is a separate and older
-project built on the **2.01** executable, which replaces textures, sounds and aircraft
-models, and by its own author's account does not carry patch 2.13's AI improvements,
-ground objects or MultiSkin.
+Battle of Britain II still has the best campaign of any Battle of Britain sim, and it is twenty years old. Getting it running on a modern machine means a crash on the way into a mission, options screens drawn for a 1024-pixel monitor, and a frame rate that collapses for reasons nobody can see.
 
-This is for **2.13**, keeps all of it, and changes no game content at all. It touches
-the executable in two places only — both reversible, both explained below.
+This is a companion app that deals with all of that. It is **not** a new patch and it replaces no game content — it sits alongside patch 2.13 and makes the game work.
+
+**Download:** https://github.com/malawicob/bob2-modern-fix/releases
 
 ---
 
-## What it does
+### What it does
 
-**Gets the game running.** BOB2 predates several things Windows now takes for granted:
+**Gets the game started and keeps it started.**
 
-- Renames the imported `DebugBreak` to `GetVersion`. The game calls `DebugBreak()`
-  somewhere. Windows XP usually shrugged that off; Windows 10/11 treats it as fatal
-  when no debugger is attached. Both names are ten characters, take no arguments and
-  return something the caller ignores, so pointing the import at `GetVersion` makes the
-  call harmless. Nine bytes.
-- Ships a `dinput8.dll` guard as a backstop — a transparent DirectInput proxy with a
-  vectored exception handler that catches the same breakpoint exception, the SxS
-  activation-context errors, and the null dereference behind the "More GFX" tab.
-- Removes the `HIGHDPIAWARE` compatibility shim. This is checked and removed on
-  **every** launch, because the Program Compatibility Assistant keeps a record for
-  `Bob.exe` and silently puts the flag back after a crash or an odd exit — which is why
-  one-off removals appear to "stop working" a few hours later.
-- Sets up **dgVoodoo2**, without which the game does not enter 3D at all. See below.
-- Turns off video playback, which is what the intro crash actually is.
+The startup crash, the DPI shim Windows keeps putting back, and Direct3D. Details on why further down, because the "why" matters more than the list.
 
-**Makes the game usable.** The briefing and options screens were drawn for a
-1024-pixel-wide monitor and are unreadable on anything current. The mod rescales them
-by patching all **154 Win32 dialog templates** held as resources inside `Bob.exe` —
-102%, 110%, 125% or 140%. The patcher is verified neutral: a 1.0× pass reproduces
-`Bob.exe` byte-for-byte, and all 154 templates round-trip exactly. The original is kept
-and restorable in one step.
+**Makes the menus readable.**
 
-**Replaces the options screens.** A configuration window that edits `bdg.txt`,
-`keys.txt`, `settings.cfg` and `Weather.cfg` directly, so it does not depend on the
-game's own UI rendering correctly: ~350 `bdg.txt` assignments, all 236 key bindings
-with search and rebinding, the GFX settings, weather, joystick axes and deadzones.
-Every file is backed up before it is touched and nothing is written until you press
-Save.
+The briefing and options screens were laid out for a 1024-pixel-wide monitor. On a 1440p or 4K display they are unreadable. The mod rescales them to 102%, 110%, 125% or 140%, and it does it by editing the dialog layout inside `Bob.exe` itself — not by DPI scaling, which just makes everything blurry.
 
-**Looks after your joystick.** BOB2 rewrites `SAVEGAME\inputcfg.dat` when it exits, and
-rebuilds the axis records from **factory defaults** whenever the set of DirectInput
-devices changes — a stick unplugged, moved to another USB port, or simply enumerated in
-a different order. Tuned deadzones silently become 7.5% and you find out in the air.
-The launcher keeps a reference copy, compares against it on startup and again
-immediately before Play, and offers to put your settings back.
+**Replaces the options screens.**
 
-There is also a device story worth knowing: axis assignment lives in
-`DeviceDefaults.txt`, keyed by DirectInput GUID, and the shipped copy dates from 2005 —
-a Saitek X36, an X45, a Logitech WingMan and a Thrustmaster Top Gun. Any stick made
-since is unknown to the game, which is the real reason its controls screen is so
-unhelpful. The mod detects what is plugged in and writes the entry. Thrustmaster TARGET
-response curves are included for those who use it.
+A settings window that edits `bdg.txt`, `keys.txt`, `settings.cfg` and `Weather.cfg` directly, so it does not depend on the game's own UI working at all. Graphics, view, weather, realism, key bindings, joystick axes, and every single `bdg.txt` value with the game's own inline comments beside it. Nothing is written until you press Save, and every file is copied to a timestamped backup first.
 
-**Measures instead of guessing.** A frame-rate capture using Intel PresentMon that
-**never requires Alt-Tab** — because BOB2 runs exclusive fullscreen through dgVoodoo2,
-loses its D3D9 device when it loses focus, and does not survive the reset. Any guide
-that tells you to Alt-Tab out to start a capture is wrong. Instead you arm it in the
-launcher and trigger it from the cockpit with `ALT+SHIFT+F11` (Scroll Lock lights while
-it records), or set a countdown and just get airborne. The CSV lands timestamped and
-labelled so runs never overwrite each other.
+**Looks after your joystick.**
 
-**Setup wizard.** Six steps, about three minutes, with the right answer already
-selected at each one — find the game, install the fix, graphics translator, menu size,
-joystick, frame rate. Pressing Next six times produces a good result. No step is a dead
-end and it can be re-run at any time.
+BOB2 rebuilds its axis configuration from factory defaults whenever the set of connected devices changes. Unplug your stick for a day, plug it back in, and your deadzones are silently back to 7.5% — which on a modern Hall-effect stick is a large dead patch right where gunnery happens. The mod keeps a reference copy of your settings and tells you the moment that has happened, with one button to put them back.
+
+There is also a live axis test, per-axis deadzones (rudder wants a different value from pitch and roll if you fly with a twist grip), and Thrustmaster TARGET curves for the T.16000M.
+
+**Measures the frame rate instead of guessing.**
+
+A capture that never requires Alt-Tab — because BOB2 loses its Direct3D device and crashes if you do. You arm it, fly, and press a hotkey in the cockpit. Scroll Lock lights while it records.
+
+**A setup wizard for people who just want to fly.**
+
+Six questions, about three minutes, with the correct answer already selected at every step. Pressing Next six times produces a good result. No step is a dead end, nothing is irreversible, and it can be re-run any time to change an answer.
 
 ---
 
-## Why it works — the two crashes, explained properly
+### What makes it different
 
-### 1. The display-mode crash, and why dgVoodoo2 is mandatory
+**This is not the "BOB2 Windows 10 Patch".**
 
-First, the fact that most of the existing advice gets wrong: **BOB2 2.x is a Direct3D 9
-game.** `Bob.exe` imports `d3d9.dll` and `d3dx9_35.dll` and has *no* DirectDraw or D3D7
-imports at all. The 2005 retail release was D3D7; the 2.x patch series rewrote the
-renderer. So every explanation built on "D3DImm.dll wraps D3D7, that's the fix" is
-describing a code path that is never loaded.
+That is a separate and well-known package, and it is a good piece of work for what it is — but it is built on the **2.01** executable. By its own author's account it does not include patch 2.13's AI improvements, new ground objects or the MultiSkin feature. It also replaces textures, sounds and aircraft models with its own.
 
-Entering 3D on a modern display, the engine's mode selection fails and it requests a
-fullscreen swap chain of **Width=0, Height=0, Format=Unknown** — invalid in Direct3D 9.
-The device is therefore never created, the renderer's device pointer stays NULL, and
-`Renderer::SetGamma` dereferences it:
+This mod is the opposite approach:
 
-```
-EXCEPTION_ACCESS_VIOLATION in Bob.exe at 0023:00528E94
-Read from location 00000000
-```
+| | Windows 10 Patch | This |
+|---|---|---|
+| Built on | 2.01 executable | **2.13 executable** |
+| 2.13 AI, ground objects, MultiSkin | not included | **kept** |
+| Game content | replaces textures, sounds, models | **replaces none** |
+| What it is | a repackaged game | a launcher and configuration tool |
 
-Confirmed from three independent directions: DXVK's own log showing the 0 × 0 request,
-the faulting address above, and the engine's own assert —
-`D3DERR_INVALIDCALL in .\RenderD3D9.cpp at line 1702`.
+If you are happy on 2.01, that package is fine. If you want 2.13 — and 2.13 is the better game — this is for you.
 
-All three wrappers were tested on the same machine:
+**It tells you what it is doing.**
 
-| Wrapper | Result |
-|---|---|
-| **dgVoodoo2** | **The only one that works** |
-| Windows' native Direct3D 9 | CTD — identical crash |
-| DXVK | CTD — identical crash |
+Every screen states what it will change before it changes it. Install and repair shows one row per thing with its real state, and offers a button only where something is actually wrong. If everything passes it says so, plainly.
 
-dgVoodoo2 succeeds because `DefaultEnumeratedResolutions = all` and
-`EnumeratedResolutionBitdepths = all` hand the 2005 engine the legacy display-mode list
-it expects to choose from. It is not a performance tweak and not an optional
-compatibility layer — without it the game does not start.
+**It measures rather than assumes.**
 
-This also puts a long-standing community story to bed. The failure happens **at device
-creation, before flight** — so "the 2.02+ executables crash in flight" was never the
-right description of it.
-
-### 2. The intro video crash
-
-The 30 files in `Avi\` are Indeo Video 5 (`IV50`). Microsoft removed the Indeo codecs
-from Windows on security grounds, so no decoder is present on 10 or 11. DirectShow
-fails while building its filter graph and the game goes to desktop. The failure
-surfaces inside `mpg2splt.ax` as it probes candidate filters, which is why that DLL was
-blamed for years — but the cause is the missing codec, not a bug in the splitter.
-Disabling video in `bdg.txt` means the graph is never built. (Installing LAV or ffdshow
-is a perfectly good alternative if you want the videos back.)
+The frame-rate advice in this mod is not folklore. It comes from CPU sampling of an actual flight, which showed the game is rendering-bound on the CPU rather than simulation-bound, and named the two functions that dominate — one of which is cloud lighting. That is why the wizard offers the specific settings it does.
 
 ---
 
-## Performance — density, not resolution
+### Why it works
 
-BOB2's simulation runs on a Windows multimedia timer independent of the render loop, so
-a higher frame rate does **not** speed the game up. And the engine is heavily CPU-bound:
-on a current machine the CPU takes several times longer per frame than the GPU.
+Worth explaining, because these are the things that catch people out.
 
-Two consequences, both measured rather than assumed:
+**The startup crash.** The game calls `DebugBreak()` somewhere in its startup path. On Windows XP that was usually survivable. On Windows 10 and 11, with no debugger attached, it kills the process. The mod renames the imported `DebugBreak` to `GetVersion` — both are ten characters, both take no arguments, and both return something the caller ignores, so the call becomes harmless. There is also a `dinput8.dll` guard that catches the same exception in a vectored handler, as a backstop.
 
-- **Ground-object density governs your frame rate. Resolution is close to free.** Run
-  the game at your monitor's native resolution and spend the budget on
-  `OBJECT_DENSITY` instead — 4 roughly halves the frame rate against 2.
-- **Pin it to the P-cores.** BOB2's engine is effectively single-threaded, and on Intel
-  hybrid CPUs (12th gen and later) Windows will happily schedule it onto an efficiency
-  core. The launcher's Play button starts it pinned. (Single-core pinning gives a
-  higher average but noticeably more stutter — measured, and not recommended. It is
-  still there for testing.)
+**The menus that keep going small again.** Windows applies a `HIGHDPIAWARE` compatibility shim to `Bob.exe`, which cancels the menu rescale. Removing it once is not enough: the Program Compatibility Assistant silently puts it back. The launcher checks and removes it **every single time you press Play**.
 
-On the development machine — i9-13900HX / RTX 4080 at 2560×1600 — power plan, P-core
-pinning and object density together took it from **28 to 95 FPS median**. Your numbers
-will differ, which is exactly why the frame-rate test is in the package: measure your
-own, don't inherit mine.
+**Direct3D.** BOB2 asks for Direct3D 9 in a way modern drivers do not answer well. dgVoodoo2 translates it to Direct3D 11. This is not optional on most modern cards — without it the game often will not start at all. DXVK is offered for completeness but crashes this game on entering 3D, and the mod says so where you choose.
 
-One trap worth repeating: forcing antialiasing to 2×/4×/8× in `dgVoodoo.conf` can break
-the game's options-screen display. Leave it `appdriven`.
+**The menu rescale.** The game's screens are 154 Windows dialog templates inside `Bob.exe`, laid out in dialog units against an 8pt font. Every coordinate is a fixed-width 16-bit field, which means they can be patched in place. The tool rescales all 1,535 controls and their font sizes together. It was verified by generating a 1.0× patch and confirming the result is byte-for-byte identical to the original `Bob.exe` — if the maths were wrong anywhere, that test would fail.
+
+**Frame rate.** Four settings cost more than everything else in the game put together — ground object density above 2 being the worst. The wizard offers to set them sensibly and tells you exactly what it is changing, with `bdg.txt` backed up first.
 
 ---
 
-## What you need
+### What you need
 
-1. A licensed copy of **Battle of Britain II: Wings of Victory** —
-   <https://a2asimulations.com/store/>
-2. **Patch 2.13**, if you are not already on it —
-   <https://www.a2asimulations.com/bob/downloads/BDG%20v2.13.7z>
+1. **A licensed copy of Battle of Britain II: Wings of Victory** — https://a2asimulations.com/store/
+2. **Patch 2.13**, if you are not already on it — https://www.a2asimulations.com/bob/downloads/BDG%20v2.13.7z
 
-That is the whole prerequisite list. 2.13 replaces the older patch chain; you do not
-need to walk 2.01 → 2.02 → … first. The setup wizard checks both on its first screen
-and tells you which, if any, is missing.
+The mod ships neither. It applies the patch installers you supply, and the wizard checks for both and tells you what is missing.
 
-Intel **PresentMon** is a separate optional download, needed only for the frame-rate
-test.
-
-## Installing
-
-1. Download the ZIP from the Releases page.
-2. Right-click it → Properties → tick **Unblock** if the option is there. Windows marks
-   downloaded files and PowerShell may otherwise refuse to run them.
-3. Extract so the `BOB2-Win11-Fix` folder sits **beside `Bob.exe`** in your Battle of
-   Britain II folder.
-4. Run **`BOB2.bat`** and take the setup wizard.
-
-Everything it changes is backed up first, and every change can be undone from the
-launcher. Even so — take a full copy of the game folder before you start. It is the
-only backup nobody ever regrets.
+**Windows 11**, any version, or **Windows 10** version 1809 and later. The mod checks and refuses to install on anything older, rather than half-working.
 
 ---
 
-## Credits and small print
+### Installing
 
-dgVoodoo2 © Dege (<https://dege.freeweb.hu>), shipped under the redistribution
-permission in its own readme. Icons from Lucide (ISC). Launcher photographs from the
-Imperial War Museums, public domain — IWM HU 54418 (32 Squadron at Hawkinge, 29 July
-1940) and IWM CL186. PresentMon is Intel's and is not redistributed here.
+1. Download the ZIP from the releases page.
+2. Right-click it, Properties, tick **Unblock** if that option is there. Windows marks downloaded files and PowerShell may otherwise refuse to run them.
+3. Extract so the `BOB2-Win11-Fix` folder sits **beside `Bob.exe`**.
+4. Run **`BOB2.bat`**.
 
-Thanks to the BDG for 2.13, without which none of this would be worth doing.
+It offers to walk you through setup on first launch. Everything it changes is backed up first and can be undone from the launcher — but a copy of your game folder before you start is the only backup nobody regrets.
 
-Unofficial community mod. Not affiliated with, endorsed by, sponsored by or connected
-to A2A Simulations, Shockwave Productions, Rowan Software, or any current or former
-rights holder in Battle of Britain II: Wings of Victory. All trademarks and copyrights
-belong to their respective owners. Provided as is, without warranty of any kind.
-Distributed free of charge — never to be sold.
+---
 
-Bug reports, corrections and "that's wrong on my machine" reports all welcome. Several
-things in the technical section above were themselves corrections of earlier confident
-guesses, so I would rather be told.
+### The usual caveats
+
+Unofficial community mod. Not affiliated with, endorsed by or connected to A2A Simulations, Shockwave Productions or Rowan Software. Provided as is, without warranty. Free, and never to be sold.
+
+Source is on GitHub, so you can read exactly what it does to your install before you run it.
+
+Bug reports and suggestions welcome — this has been tested on one machine, and one machine is not a sample.

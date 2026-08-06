@@ -16,7 +16,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Must match BOB2FIX_VERSION in dinput8_guard.c - the crash guard writes its
 # own version into bob2guard.log, so a mismatch means a stale DLL is deployed.
 
-$FixVersion = '1.6.20'
+$FixVersion = '1.6.21'
 $FixVersionDate = "2026-08-06"
 $StampFile = "BOB2-Win11-Fix.version"
 

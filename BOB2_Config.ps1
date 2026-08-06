@@ -94,8 +94,18 @@ if (-not $RenderTo) {
 # Any error that escapes has to be shown in a dialog or it disappears
 # silently - there is no console left to print to.
 trap {
+    # PositionMessage alone reports the OUTERMOST statement, which for
+    # anything raised inside a WPF event handler is always the final
+    # ShowDialog() line - true, and useless. ScriptStackTrace names the
+    # function and line the error actually came from.
+    $msg = $_.Exception.Message
+    $where = ''
+    try { $where = $_.ScriptStackTrace } catch { }
+    if (-not $where) { $where = $_.InvocationInfo.PositionMessage }
+    $full = "$msg`n`n$where"
+    try { Set-Content -Path (Join-Path $script:ScriptDir 'BOB2_Config_error.log') -Value $full -Encoding UTF8 } catch { }
     [void][System.Windows.MessageBox]::Show(
-        ($_.Exception.Message + "`n`n" + $_.InvocationInfo.PositionMessage),
+        $full,
         'Battle of Britain II - Configuration',
         [System.Windows.MessageBoxButton]::OK,
         [System.Windows.MessageBoxImage]::Error)
@@ -3517,7 +3527,7 @@ function Build-JoystickPage {
         $v  = [int][math]::Round($mainS.Slider.Value * 100.0)
         $vy = [int][math]::Round($yawS.Slider.Value * 100.0)
         if (Set-JoyDeadzone $v $vy) {
-            $script:PageCache.Remove('Joystick and axes') | Out-Null
+            Invalidate-Page 'Joystick and axes'
             Select-Nav 'Joystick and axes'
         }
     }.GetNewClosure()
@@ -3537,7 +3547,7 @@ function Build-JoystickPage {
         $b = New-Btn $pr.L 'BtnGhost' $pr.K {
             param($s, $e)
             if (Invoke-JoyTool 'BOB2_Sensitivity.ps1' @($s.Tag)) {
-                $script:PageCache.Remove('Joystick and axes') | Out-Null
+                Invalidate-Page 'Joystick and axes'
                 Select-Nav 'Joystick and axes'
             }
         }
@@ -3551,7 +3561,7 @@ function Build-JoystickPage {
     $b1 = New-Stack -Orientation 'Horizontal'
     [void]$b1.Children.Add((New-Btn 'Set up my stick' 'BtnPrimary' $null {
         if (Invoke-JoyTool 'BOB2_Controls.ps1' @('-Apply')) {
-            $script:PageCache.Remove('Joystick and axes') | Out-Null
+            Invalidate-Page 'Joystick and axes'
             Select-Nav 'Joystick and axes'
         }
     }))
@@ -3652,6 +3662,19 @@ function Build-Page {
         'All settings' { return (Build-AllPage) }
         'About'        { return (Build-AboutPage) }
         default        { return (Build-SettingsPage $Name $script:Pages[$Name]) }
+    }
+}
+
+function Invalidate-Page {
+    # Drop a cached page AND take it out of the visual tree. Removing it from
+    # the cache alone left the old copy parented in PageHost, so every reset
+    # added another dead copy underneath - each with its own controls that
+    # the live joystick poll could still be holding references to.
+    param([string]$Name)
+    if ($script:PageCache.ContainsKey($Name)) {
+        $old = $script:PageCache[$Name]
+        if ($old -and $PageHost) { [void]$PageHost.Children.Remove($old) }
+        [void]$script:PageCache.Remove($Name)
     }
 }
 

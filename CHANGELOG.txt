@@ -15,6 +15,22 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.21  (2026-08-06)
+---------------------
+  - FIXED: applying a joystick preset left an orphaned copy of the page in
+    the window. The handlers dropped the page from the cache but never took
+    it out of the visual tree, so every reset parented another dead copy
+    underneath - each with its own controls that the 20-per-second joystick
+    poll could still be holding. Both now go through Invalidate-Page.
+
+  - CHANGED: errors now report where they actually happened.
+
+    The trap showed $_.InvocationInfo.PositionMessage, which reports the
+    OUTERMOST statement - for anything raised inside a WPF event handler
+    that is always the final ShowDialog() line. True, and useless: every
+    error in the app looked like it came from the same place. It now shows
+    the script stack trace and writes it to BOB2_Config_error.log.
+
 v1.6.20  (2026-08-06)
 ---------------------
   - NEW: Build-Release.ps1 - builds a distributable ZIP.
