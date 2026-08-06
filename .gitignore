@@ -1,0 +1,25 @@
+# Build output
+dist/
+
+# Machine-specific state. These are written by a LIVE INSTALL and must never
+# be committed: they carry one machine's game folder path, its text-size
+# preference, its joystick calibration and its logs.
+BOB2_Config.path
+BOB2_Config.textsize
+BOB2_Profile_last_run.log
+*.log
+
+# Backups taken from a real install
+_ControlsBackup/
+_AxisProfiles/
+_ArtBackup/
+_WizardBackup/
+work/
+
+# Markers written into the game folder at runtime
+*.setup-done
+*.wizard-done
+*.version
+
+# Stale artifact
+BOB2-Win11-Fix.tar.gz

@@ -1,0 +1,166 @@
+//=====================================================================
+//  Battle of Britain II - T.16000M axis curves for Thrustmaster TARGET
+//  Part of BOB2 Windows 10/11 Fix v1.5.0
+//
+//  WHY CURVES HAVE TO LIVE HERE AND NOT IN THE GAME
+//    BOB2 has no joystick response curves at all. Its entire input path
+//    is a deadzone followed by a multiply and an offset - ApplyDeadZone,
+//    then CalibrationScaler and CalibrationConstant. No exponent, no
+//    curve table. So the axis has to be shaped BEFORE the game sees it,
+//    which is exactly what TARGET does: it hides the physical stick and
+//    presents a virtual one that BOB2 reads as perfectly linear.
+//
+//  WHAT THE CURVE IS ACTUALLY FOR
+//    Not "realism" in the sense of matching a Spitfire's control forces -
+//    no curve can do that on a spring-centred desktop stick. It is to
+//    correct a mismatch in TRAVEL. A Spitfire's control column moves
+//    roughly 250 mm fore and aft. A T.16000M moves about 60 mm. You are
+//    flying with a quarter of the physical resolution the real pilot had,
+//    so an identical hand movement commands four times the control
+//    deflection. Softening the centre gives that resolution back where it
+//    matters - small corrections while tracking a target - and keeps full
+//    authority at the stops, which is where you want it for a hard break.
+//
+//  BEFORE YOU START
+//    1. Install TARGET (free from Thrustmaster). The T.16000M is
+//       supported.
+//    2. Run this script from the TARGET Script Editor, or build the same
+//       numbers in the TARGET GUI - the GUI draws the curve live, which
+//       is the quickest way to confirm you have the sign the right way
+//       round (see the warning on Curvature below).
+//    3. IMPORTANT - the virtual stick is a DIFFERENT DEVICE with a
+//       different GUID. After enabling TARGET, re-run
+//         BOB2_Controls.ps1 -Apply
+//       so DeviceDefaults.txt gets an entry for the virtual device.
+//       Without it the game will not know which axis is pitch.
+//    4. Zero the in-game deadzone so it does not stack with this one:
+//         BOB2_Sensitivity.ps1 target
+//       Two deadzones in series is the usual reason a stick feels dead
+//       well past centre.
+//
+//  A WARNING ABOUT THE CURVATURE SIGN
+//    SetSCurve's curvature argument runs -100..100. Which sign softens
+//    the centre and which sharpens it is worth confirming rather than
+//    trusting: load the script, open the axis in the TARGET GUI, and
+//    look at the drawn curve. YOU WANT THE LINE TO SAG BELOW THE
+//    DIAGONAL near centre - output smaller than input for small
+//    deflections. If it bulges above instead, flip the sign of every
+//    curvature value here. It takes ten seconds to check and saves an
+//    evening of wondering why the aeroplane feels twitchier than before.
+//
+//  Axis and device identifiers below follow TARGET's naming. If the
+//  editor flags one, take the correct spelling from TARGET's own device
+//  list rather than guessing - names differ slightly between versions.
+//=====================================================================
+
+include "target.tmh"
+
+//---------------------------------------------------------------------
+//  Pick ONE profile by leaving its define uncommented.
+//
+//    SPITFIRE  Spitfire I/II, Hurricane I
+//    MESSER    Bf109E
+//    HEAVY     Bf110, Ju88, He111, Do17
+//---------------------------------------------------------------------
+define PROFILE_SPITFIRE   1
+//define PROFILE_MESSER   1
+//define PROFILE_HEAVY    1
+
+int main()
+{
+    // Only the T.16000M is used here. Exclude anything else so TARGET
+    // does not build a combined device you did not ask for.
+    if (Init(&EventHandle)) return 1;
+
+    //-----------------------------------------------------------------
+    //  SPITFIRE / HURRICANE
+    //
+    //  The Spitfire's elevator was famously light - pilots converting on
+    //  to it routinely over-controlled in pitch and said so. That is an
+    //  argument for softening pitch MORE than roll, not less: the real
+    //  aircraft's sensitivity plus a short-throw stick compounds into
+    //  something you cannot aim with.
+    //
+    //  Ailerons were the opposite - fabric-covered on early marks and
+    //  heavy above about 300 mph. Roll therefore gets a gentler curve,
+    //  so you can still reach full deflection without running out of
+    //  stick.
+    //
+    //     pitch  -30   soft centre for tracking, full authority at stops
+    //     roll   -20   lighter touch; ailerons stiffen with speed anyway
+    //     yaw    -35   twist grips are imprecise, see below
+    //-----------------------------------------------------------------
+    #ifdef PROFILE_SPITFIRE
+        SetSCurve(&T16000, JOYY,  0, 0, 0, -30, 0);   // pitch
+        SetSCurve(&T16000, JOYX,  0, 0, 0, -20, 0);   // roll
+        SetSCurve(&T16000, JOYRZ, 4, 0, 4, -35, 0);   // rudder, twist grip
+    #endif
+
+    //-----------------------------------------------------------------
+    //  Bf109E
+    //
+    //  The 109's ailerons became very heavy at speed - much worse than
+    //  the Spitfire's - while its elevator stayed comparatively usable.
+    //  So the emphasis reverses: roll gets the softer centre because you
+    //  want fine roll control at low speed and you will be fighting the
+    //  stick at high speed regardless.
+    //
+    //     pitch  -20
+    //     roll   -30
+    //     yaw    -35
+    //-----------------------------------------------------------------
+    #ifdef PROFILE_MESSER
+        SetSCurve(&T16000, JOYY,  0, 0, 0, -20, 0);   // pitch
+        SetSCurve(&T16000, JOYX,  0, 0, 0, -30, 0);   // roll
+        SetSCurve(&T16000, JOYRZ, 4, 0, 4, -35, 0);   // rudder
+    #endif
+
+    //-----------------------------------------------------------------
+    //  Bf110 / bombers
+    //
+    //  Heavy aeroplanes flown on trim rather than on the sight. You are
+    //  making large, slow inputs, not tracking a target, so a soft centre
+    //  buys you nothing and costs authority. Keep it close to linear.
+    //
+    //     pitch  -10
+    //     roll   -10
+    //     yaw    -25
+    //-----------------------------------------------------------------
+    #ifdef PROFILE_HEAVY
+        SetSCurve(&T16000, JOYY,  0, 0, 0, -10, 0);   // pitch
+        SetSCurve(&T16000, JOYX,  0, 0, 0, -10, 0);   // roll
+        SetSCurve(&T16000, JOYRZ, 4, 0, 4, -25, 0);   // rudder
+    #endif
+
+    //-----------------------------------------------------------------
+    //  RUDDER - why the twist grip gets a deadzone when nothing else does
+    //
+    //  Everything above uses zero deadzone, because the T.16000M's Hall
+    //  effect sensors do not wander. The twist axis is the exception,
+    //  and not because of the sensor: it is because your wrist rotates
+    //  slightly whenever you push the stick sideways. Without a small
+    //  deadzone you feed in rudder every time you roll, which shows up
+    //  as an aeroplane that will not fly straight and a gunsight that
+    //  drifts off target. 4% is enough to absorb it.
+    //
+    //  If you own rudder pedals, use them and drop this to 0.
+    //-----------------------------------------------------------------
+
+    //-----------------------------------------------------------------
+    //  THROTTLE - deliberately left LINEAR
+    //
+    //  A throttle is not an aiming device. You want the lever position
+    //  to mean the same thing every time you reach for it, and a curve
+    //  destroys that: half travel should be half throttle. The one thing
+    //  worth having is a small deadband at each end so the stops are
+    //  reliably full closed and full open.
+    //-----------------------------------------------------------------
+    SetJCurve(&T16000, THR, 0, 0);
+
+    return 0;
+}
+
+int EventHandle(int type, alias o, int x)
+{
+    DefaultMapping(&o, x);
+}

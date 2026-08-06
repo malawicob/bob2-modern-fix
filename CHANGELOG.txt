@@ -1,0 +1,1166 @@
+========================================================================
+  BOB2 Windows 10/11 Fix - Changelog
+========================================================================
+
+Version numbers here refer to THIS FIX PACKAGE, not to the game.
+The game reports its own version (2.12 / 2.13) on its main menu.
+
+Where to check which fix version you have:
+  - In the game folder:  BOB2-Win11-Fix.version
+  - In bob2guard.log:    first line, written every time the game runs
+  - In the setup tool:   shown in the menu header and in
+                         "Check Installation Status"
+All three should agree. If bob2guard.log reports an older version than
+the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
+step to update it.
+
+
+v1.6.20  (2026-08-06)
+---------------------
+  - NEW: Build-Release.ps1 - builds a distributable ZIP.
+
+    The working folder is a live install and accumulates the current
+    machine's state. Zipping it up would have handed the next person this
+    machine's game folder path, its text-size preference, its last
+    profiling log and its joystick calibration. The build copies out only
+    what belongs in a release, writes LICENCES.txt naming every third-party
+    component, and takes the version number from BOB2_Launcher.ps1 so a
+    release cannot be mislabelled.
+
+    Verified: 39 files, 2.38 MB, no machine-specific files present.
+
+    DXVK is left out by default. It is 7.5 MB - two thirds of the package -
+    for a wrapper this mod tells users not to use because it crashes the
+    game on entering 3D. -IncludeDxvk puts it back.
+
+  - FIXED: PresentMon was hardcoded to "D:\BOB2 Files\tools\PresentMon.exe"
+    in the launcher and in BOB2_MeasureFPS.bat. That is one machine's tools
+    folder; on anyone else's PC FRAME RATE TEST would fail pointing at a
+    path that does not exist. Both now search sensible locations and, when
+    it is genuinely missing, say where to put it.
+
+v1.6.19  (2026-08-06)
+---------------------
+  - FIXED: Done in Install and repair took you to the wizard when the
+    wizard had opened it. That was the wrong reading of the button: Done
+    means "I have finished here, take me home", and home is the main
+    screen - never one step further into a flow you were leaving.
+
+    It now always returns to the main screen, whichever window opened it,
+    and closes the wizard behind it rather than leaving it open and
+    half-finished. The wizard was only ever a route to this window.
+
+    1.6.18 fixed the wizard being abandoned by returning to it. That solved
+    the symptom by going the wrong way. This closes it instead.
+
+v1.6.18  (2026-08-06)
+---------------------
+  - FIXED: opening Install and repair from step 2 of the wizard, then
+    pressing Done, raised the LAUNCHER and left the wizard sitting open and
+    forgotten behind it - halfway through setup, with no sign it was still
+    there.
+
+    Install and repair now takes a -From argument and returns to whoever
+    opened it: the wizard when the wizard opened it, the launcher
+    otherwise. Verified against the live window titles.
+
+    It also no longer starts the launcher as a fallback when it was opened
+    from the wizard - a wizard that has closed itself is not something to
+    recover from by opening a different window.
+
+v1.6.17  (2026-08-06)
+---------------------
+  - FIXED: Done in Install and repair, and Finish in the wizard, did not
+    take you back to the main screen.
+
+    Both looked for the launcher with
+      Get-Process powershell | where MainWindowTitle -eq 'Battle of Britain II'
+    which never matches. The launcher runs inside powershell.exe with its
+    console hidden, and Windows can report that hidden console as the
+    process's main window - so the WPF window is never seen.
+
+    They now enumerate top-level windows and match on the title, which was
+    verified both ways: with the launcher closed the finder correctly
+    reports nothing and the fallback starts it; with it open the finder
+    locates it.
+
+    They also RAISE it now. The launcher is usually still open behind these
+    windows, so closing without bringing it forward just revealed whatever
+    was underneath - which is what "does not take you back" looked like.
+
+v1.6.16  (2026-08-06)
+---------------------
+  - FIXED: Finish on the wizard's last screen did nothing.
+
+    Show-Step returns the button handlers for the step it draws. If any
+    statement inside a step leaks a value to the pipeline, PowerShell
+    returns an ARRAY rather than the hashtable - and $Handlers.Next then
+    resolves to $null, so the button silently does nothing at all.
+
+    Go() now takes the last hashtable out of whatever came back and ignores
+    anything that leaked, which makes the whole class of bug harmless. If
+    it ever does come back empty it now says so instead of failing
+    silently.
+
+  - CHANGED: Finish hands you back to the main screen, matching Done in
+    Install and repair. If the launcher is already open behind it, it just
+    closes.
+
+v1.6.15  (2026-08-06)
+---------------------
+  - CHANGED: GUIDED SETUP is now SETUP WIZARD.
+
+  - NEW: PLAY is disabled until the wizard has been run once, and says
+    "complete the Setup wizard first". Everything the wizard sets - the
+    graphics translator, the menu size, the frame-rate floor - is what
+    makes the game start and stay started.
+
+    SETUP WIZARD carries a red "!" and its marker pulses slowly until it
+    has been completed. Slow and two-state on purpose: a fast blink in the
+    corner of the eye is an irritation, not a prompt. Both stop the moment
+    the wizard reaches its last screen.
+
+    The gate keys off BOB2-Win11-Fix.wizard-done, written when the wizard
+    finishes. That is deliberately NOT the same marker as
+    BOB2-Win11-Fix.setup-done, which only records that setup was OFFERED -
+    declining it is not the same as having been through it.
+
+  - NEW: Install and repair says so plainly when everything passes - "The
+    game is correctly patched and ready to fly." - instead of leaving you
+    to read eight ticks and infer it.
+
+  - CHANGED: Done now hands you back to the main screen rather than closing
+    onto an empty desktop. If the launcher is already open it just closes.
+
+v1.6.14  (2026-08-06)
+---------------------
+  - FIXED: "Configure buttons and axes" did nothing.
+
+    The page name it passes contains spaces, and it was not quoted. Windows
+    handed the configurator "-Page Joystick and axes", which binds
+    "Joystick" to -Page and then chokes on "and" and "axes" as stray
+    positional arguments - so the window never opened and the button looked
+    dead. Verified by driving the same Start-Process call and confirming
+    the configurator opens on the right page.
+
+  - FIXED: buttons in the joystick and disclaimer dialogs turned Aero blue
+    when focused. Their style set colours but no Template, so WPF used the
+    system one. Both now use the app's own.
+
+  - NEW: when patch 2.13 is missing, the wizard offers a direct download
+    from A2A. The file they serve is named "BDG v2.13.7z", which is exactly
+    what the installer already searches for - saving it into the fix folder
+    is all that is needed. The URL is in README.txt too.
+
+v1.6.13  (2026-08-06)
+---------------------
+  - NEW: the wizard's first screen now says what you need before it starts,
+    and checks whether you have it:
+
+      * A licensed copy of Battle of Britain II. If none is found it offers
+        a link to the A2A Simulations store.
+      * Patch 2.13, only if the game is not already at it. This mod ships
+        no game content and no patches - it applies the installers you
+        supply, found automatically in the fix folder or the game folder.
+        The screen lists exactly which files are missing.
+
+    If the game already reports 2.13, it says so and asks for nothing.
+
+  - FIXED: the single-instance guard added in 1.6.6 also blocked the
+    -RenderTo path, so layout could not be checked while a window was open.
+    A headless render is now exempt.
+
+v1.6.12  (2026-08-06)
+---------------------
+  - FIXED: after Install and repair updated the mod, the launcher went on
+    reporting the old version until you closed and reopened it - which
+    looked exactly like the update having failed when it had in fact
+    worked.
+
+    The version stamp was read once at startup and then reused forever;
+    the two-second refresh never looked at it again. It now re-reads the
+    file whenever its timestamp changes, so the status bar follows an
+    update as it happens. Keyed on LastWriteTime, so a quiet tick costs a
+    stat rather than a file read.
+
+    Same class of bug as the menu-size status fixed yesterday: state read
+    once, cached, and never invalidated.
+
+v1.6.11  (2026-08-06)
+---------------------
+  - CHANGED: the Settings window now opens with a photograph band across
+    the top - full-bleed photograph, dark scrim on the left, condensed caps
+    over it - the same device the launcher uses, so the two windows read as
+    one application rather than a front door and an admin panel.
+
+    IWM CL186: men of an RAF Repair and Salvage Unit working on a damaged
+    Spitfire Mk IX of 403 Squadron RCAF, Normandy, 19 June 1944. Fitting
+    for the screen where you take the thing apart and put it back together.
+
+    The band sits ABOVE the rail and the page, never behind them. No body
+    text is laid over a photograph - that would undo the contrast work.
+
+  - REMOVED: the Spitfire cutaway from the About page.
+
+  - REMOVED: the rail repeated "BATTLE OF BRITAIN II / Configuration"
+    directly under the band that now says the same thing. The roundel
+    stays.
+
+v1.6.10  (2026-08-06)
+---------------------
+  - FIXED: the mouse wheel did nothing anywhere in the Settings window.
+
+    The scroll viewer added around the whole window in 1.6.4 handed each
+    page's own ScrollViewer an INFINITE height. A page that is given
+    infinite space never has anything to scroll - and a ScrollViewer
+    swallows the mouse wheel even when it cannot move, so the event never
+    reached anything that could act on it.
+
+    The outer wrapper is gone. Every page already scrolls through
+    New-Scroll, and the header, rail and status bar are meant to stay put.
+
+  - FIXED: the new About page did not scroll at all - it was the one page
+    built without New-Scroll.
+
+  - KNOWN: at 115% and 130% text size the window cannot always grow enough
+    on a 1707-wide work area, and the rightmost column of a wide table can
+    clip. Use the maximise button in the title bar - at full screen there
+    is room at every size. At 100% nothing clips.
+
+v1.6.9  (2026-08-06)
+--------------------
+  - CHANGED: "Fix 1.5.0 (package is 1.6.8)" told you nothing unless you
+    already knew how this thing is built. There are two versions: the one
+    recorded in the game folder as installed, and the one in the files you
+    are running. It now reads "Mod 1.6.6 installed - 1.6.8 available", and
+    the matching row in Install and repair says "version 1.6.6 is
+    installed. Version 1.6.8 is in this folder, ready to apply - press Fix
+    to update."
+
+  - CHANGED: the Overview subtitle was "What was found, what needs
+    attention, and what this tool will do to your files" - three vague
+    clauses that describe any page ever written. It now says "Settings
+    worth changing before you fly, and the five files this tool writes
+    to", which is what the page actually contains.
+
+v1.6.8  (2026-08-06)
+--------------------
+  - NEW: the mod now checks which Windows it is running on, and says so.
+
+    Install and repair shows it on the first row - "Windows 11 25H2 (build
+    26200.8875) - supported" - and refuses to install anything if it is
+    not. The wizard checks at step 2 and will not install on an unsupported
+    version either.
+
+    Supported: Windows 11, any version. Windows 10 version 1809 (build
+    17763) and later.
+
+    The check uses the BUILD NUMBER, never ProductName. On a Windows 11
+    25H2 machine the registry still reports ProductName = "Windows 10 Home
+    Single Language" - Microsoft never updated that value - so a check
+    written against it would tell every Windows 11 user they were on
+    Windows 10. Build 22000 and above is Windows 11.
+
+  - FIXED: the options cog in Settings did nothing when clicked.
+
+    Two causes, both in the same click. The title bar runs DragMove on
+    mouse-down and captures the mouse before the cog's handler runs; and a
+    Popup with StaysOpen="False" opened on mouse-DOWN is dismissed by the
+    very click that opened it. The cog now opens on mouse-up, and every
+    title-bar button marks its event handled so it never reaches the drag.
+
+v1.6.7  (2026-08-06)
+--------------------
+  - FIXED: every Fix button in Install and repair was broken the same way.
+
+    Nine of the Step-* functions take a -GameFolder parameter. The window
+    called them bare, so the parameter was empty and the first Join-Path
+    inside each one failed with "Cannot bind argument to parameter 'Path'".
+    The step reported an error nobody could act on and changed nothing,
+    which is why pressing Fix looked like it did nothing. The window now
+    passes the game folder to any step that declares it.
+
+  - FIXED: the summary line could contradict the button beside it - "Done"
+    sitting next to "1 still needs attention". It was computed from a
+    captured copy of the checks. It is now derived from the same fresh
+    check the buttons use, so the two cannot disagree.
+
+  - CHANGED: that line no longer says "open Details to see why". It names
+    the row that still needs attention and says what to do about it. The
+    log behind Details is evidence for when something goes wrong, not
+    something a user should be sent to read.
+
+  - CHANGED: the summary is green only when everything really is installed,
+    and amber otherwise. It was green either way.
+
+v1.6.6  (2026-08-06)
+--------------------
+  - FIXED: pressing Fix on "This mod" appeared to do nothing. It ran
+    Step-InstallLauncher, which reinstalls the launcher and never touches
+    the version stamp - so the row it was meant to clear stayed exactly as
+    it was. It now refreshes the crash guard and rewrites the stamp, which
+    is what a stale version actually needs.
+
+  - FIXED: "Could not create the desktop shortcut: Cannot bind argument to
+    parameter 'Path' because it is an empty string." GetFolderPath('Desktop')
+    can return nothing when the Desktop is redirected to OneDrive. It now
+    falls back, and if there is genuinely no desktop it says so instead of
+    reporting an error for a cosmetic shortcut.
+
+  - FIXED: Install and repair flung the Details log open after every action,
+    which split the window into two competing scroll areas. It now reports
+    one line - "1 of 1 applied. Everything is installed." - and leaves
+    Details closed unless you open it.
+
+  - FIXED: the wizard and Install and repair could each be opened several
+    times over, stacking windows. Both now allow one instance and bring the
+    existing window to the front instead.
+
+  - FIXED: text stopped wrapping in the Settings window and ran off the
+    right edge. The scroll viewer added in 1.6.4 allowed horizontal
+    scrolling, which hands children an INFINITE available width and
+    silently disables TextWrapping. Horizontal scrolling is now off; the
+    window is resizable and has a maximise button for the cases that need
+    more room.
+
+  - NEW: an About page in Settings, carrying the 1940 Spitfire cutaway
+    whole, with what this mod is, what it is not, and the credits. The
+    picture belongs here rather than behind the settings text, where it
+    would undo the contrast work.
+
+  - NEW: an options cog in the Settings title bar - text size, the game
+    folder, and what the tool writes to. Visible from every page.
+
+  - NEW: Joystick setup on the launcher can now open the controls page
+    directly, instead of "close this, open Settings, find the joystick
+    page".
+
+v1.6.5  (2026-08-06)
+--------------------
+  - FIXED: in Install and repair, the primary button read "Everything is
+    installed" and, when pressed, opened a dialog saying nothing had
+    happened. That is an interruption pretending to be an action.
+
+    With nothing to fix, the button now reads "Done" and closes the window,
+    because letting you leave is the only useful thing left to do. With
+    something to fix it still reads "Fix 2 things" and fixes them.
+
+  - NEW: the "This mod" row now notices when the installed version stamp is
+    older than the package you are running - which was true on this install
+    and silently showing a tick. It reads "version 1.5.0 is installed, but
+    this package is 1.6.4" and offers a Fix.
+
+    The comparison is safe because BOB2_Setup.ps1 is loaded as a library,
+    so the package version and the installed stamp come from the same place
+    and cannot drift apart in the check itself.
+
+v1.6.4  (2026-08-06)
+--------------------
+  - NEW: a text size control in the Settings window. Three stops - 100%,
+    115%, 130% - and the choice is remembered.
+
+    It lives in the status bar, on every page, NOT on a settings page.
+    Someone who cannot read the app cannot navigate to a page to fix that,
+    so the escape hatch has to be where they already are.
+
+    One thing worth knowing about how it behaves. Scaling up SHRINKS the
+    usable canvas, because the window cannot grow past the screen. On this
+    1707x1019 work area:
+
+        scale 1.00   window 1360x900    canvas 1360x900
+        scale 1.15   window 1564x1019   canvas 1360x886
+        scale 1.30   window 1707x1019   canvas 1313x784
+
+    At 130% the layout has less room than it was designed for, and parts of
+    a page would have been unreachable. The scaled content now sits inside
+    a scroll viewer, so at worst you scroll - nothing is ever cut off. The
+    trade is that at 130% on a display this size the Save button sits below
+    the fold and you scroll to reach it.
+
+  - Settings gained a -RenderTo switch, for checking layout without
+    clicking through. That is what caught the clipping above.
+
+v1.6.3  (2026-08-06)
+--------------------
+  - NEW: icons throughout both windows. Lucide v1.28.0, ISC licence,
+    geometry taken from the official SVG rather than hand-drawn.
+
+    Eight on the launcher, eleven on the settings rail, and one glyph means
+    one thing across both: gauge is frame rate everywhere, joystick is the
+    stick everywhere, wrench is repair everywhere. Deliberately NOT a cog
+    for Settings - a cog says "machinery", which is the register this app
+    is trying to leave.
+
+    Two conversions are not obvious and both were caught by rendering a
+    contact sheet and looking at it, not by assuming:
+      * <circle> and <line> carry no "d" attribute and are rebuilt as arcs
+        and linetos, because WPF path data has no circle primitive.
+      * A leading relative "m" is ABSOLUTE per the SVG spec, but the
+        coordinate pairs after it are RELATIVE linetos. Uppercasing the
+        command turns them absolute and quietly wrecks cloud-sun, compass,
+        gauge, file-cog and clipboard-check.
+    Both are documented in assets/lucide-icons.xaml so they cannot come
+    back.
+
+v1.6.2  (2026-08-06)
+--------------------
+  - NEW: INSTALL AND REPAIR is now a proper window instead of a numbered
+    menu in a black console - and the wizard no longer drops you into one
+    at step 2, which was the worst possible moment for it.
+
+    It shows one row per thing with its real state rather than a menu of
+    verbs, so you read what is wrong before choosing to fix it. A row that
+    is fine offers no button. The console detail still exists, collapsed
+    behind "Details", because it is evidence rather than an interface.
+
+    It does NOT reimplement the installer. BOB2_Setup.ps1 gained an
+    -AsLibrary switch that defines every function and runs nothing, and the
+    new window drives the same Step-* code. One implementation, not two.
+
+  - CHANGED: wording, so this cannot be mistaken for the community "BOB2
+    Windows 10 Patch". That is a separate project built on the 2.01
+    executable which, by its author's account, lacks 2.13's AI
+    improvements, ground objects and MultiSkin.
+
+    This is now "BOB2 2.13 Modern Fix" throughout - keyed to 2.13, which is
+    the fact that actually separates the two. The folder, the version stamp
+    and every backup path are deliberately unchanged: renaming those would
+    make existing installs look uninstalled and orphan their backups. The
+    name you read changed; the name on disk did not.
+
+  - FIXED: the wizard reported "version BOB2 Windows 10/11 Fix". It read
+    line 1 of the version file, which is the product NAME - the version is
+    on line 2. Now uses the same parse as the launcher.
+
+v1.6.1  (2026-08-06)
+--------------------
+  - FIXED: guided setup froze on step 1. "Use this folder" drew step 2 but
+    left the buttons wired to step 1, so nothing happened afterwards.
+
+    Show-Step RETURNS the handlers for the step it draws, so every
+    transition has to go through Go(). Nine calls went to Show-Step
+    directly. Go() now sits immediately above the step function with a
+    comment saying why, so the next person does not repeat it.
+
+  - FIXED: every window opened with a Windows title bar carrying the
+    powershell.exe icon, which looked nothing like the rest of the app and
+    announced that you were running a script.
+
+    All eight windows now use WindowStyle="None" with the app's own title
+    bar - name on the left, minimise and close on the right, drag anywhere
+    on the bar. Applies to the settings screen, the wizard, and the frame
+    rate, menu size, graphics, joystick, disclaimer and photograph dialogs.
+
+  - NEW: the wizard now runs automatically the first time the launcher is
+    opened on an install that has not been set up. The marker sits beside
+    the game rather than in the fix folder, so reinstalling the fix does not
+    make an existing install look new again. Declining is remembered - being
+    asked once is help, being asked every time is nagging.
+
+v1.6.0  (2026-08-06)
+--------------------
+  - NEW: GUIDED SETUP - a six-step wizard for people setting this up for
+    the first time.
+
+    Find the game, install the fix, choose a graphics translator, set the
+    in-game menu size, check the joystick, and apply a sensible frame-rate
+    starting point. Every step already has the right answer selected, so
+    pressing Next six times produces a good result - it is a review, not an
+    interrogation. No step is a dead end, nothing is irreversible, and it
+    can be re-run at any time to change an answer.
+
+    Detection in the wizard is read-only. Everything that WRITES is handed
+    to the script that already owns that job - BOB2_MenuScale.ps1,
+    BOB2_SetWrapper.bat, BOB2_Setup.bat - so there is one implementation of
+    each change rather than two that drift apart.
+
+  - FIXED: a PowerShell console window appeared behind the Settings screen.
+
+    Same cause as the launcher: SETTINGS started powershell.exe directly,
+    which always creates a console, and Windows Terminal ignores
+    -WindowStyle Hidden. Now started through BOB2_Config.vbs, with the
+    configurator hiding its own console as a fallback.
+
+  - FIXED: text in the Settings screen was hard to read, and measurement
+    found three separate WCAG AA failures rather than one:
+
+      Dim  #697280   3.52:1 -> Tertiary #949DAC  5.70:1
+      Danger #C9564A 4.00:1 -> #E2685A           4.72:1
+      "WINGS OF VICTORY" at 13px  3.45:1 -> 19px Bold, passes as large text
+      Photo credit #6B6660 3.57:1 -> #8E8880     5.78:1
+
+    There was also a quieter one: a single colour was used both for
+    decorative hairlines and for the borders of text boxes and dropdowns.
+    WCAG requires 3:1 on the boundary of anything you can operate, and that
+    colour was 1.27:1. Split into Rule (dividers) and Edge (controls).
+
+    Type is up about 15% throughout with a hard 12px floor, was 10.5. The
+    settings window now renders with TextFormattingMode="Ideal" - "Display"
+    was right at 10.5px and wrong at the new sizes.
+
+  - NEW: icons throughout, from Lucide (ISC licence). Geometry converted
+    from the official SVG rather than hand-drawn. See
+    assets/lucide-icons.xaml for the two conversions that are not obvious.
+
+  - CHANGED: plain-English labels. MEASURE FRAME RATE -> FRAME RATE TEST,
+    GRAPHICS WRAPPER -> GRAPHICS TRANSLATOR, MENU SIZE -> IN-GAME MENU SIZE,
+    JOYSTICK AXES -> JOYSTICK SETUP, SETUP AND REPAIR -> INSTALL AND REPAIR.
+    Subtitles now name the job rather than the mechanism: "launch pinned to
+    the P-cores" became "start the game with the performance fixes applied".
+
+  - NEW: disclaimer. A line in the launcher footer, a full statement behind
+    it, and the same text in README.txt: unofficial community mod, not
+    affiliated with or endorsed by A2A Simulations, use at your own risk.
+
+  - Design direction for all of the above is in DESIGN.md.
+
+v1.5.0  (2026-08-05)
+--------------------
+  - NEW: the launcher now notices when BOB2 resets your joystick axis
+    settings, instead of letting you find out in the air.
+
+    BOB2 rewrites SAVEGAME\inputcfg.dat when it exits, and rebuilds the
+    axis records from FACTORY DEFAULTS whenever the DirectInput device set
+    changes - a stick unplugged, moved to another USB port, or enumerated
+    in a different order. Tuned deadzones silently become 750 (7.5%).
+    That is how the rudder-jerking fix was lost after a day with the stick
+    unplugged.
+
+    The launcher keeps a reference copy at _AxisProfiles\_reference.dat and
+    compares against it. Only joystick axis records are compared - keyboard
+    and mouse entries change for reasons that are none of our business.
+
+      - On startup, and again immediately before Play, it offers to put
+        your settings back. Both, because the reset happens when the GAME
+        exits, so a launcher left open across a session would otherwise be
+        showing stale state.
+      - The Settings line turns amber and says so while they are wrong.
+      - The old file is kept as _AxisProfiles\before_restore_<stamp>.dat.
+      - Restoring is refused while the game is running, since it would
+        rewrite the file on exit and discard the change anyway.
+
+    If no reference exists yet it offers to save the current settings as
+    one, and says plainly not to accept if the controls already feel wrong
+    - saving a reset config would make the reset look correct forever.
+
+    There is now a JOYSTICK AXES item on the launcher for this, rather
+    than the drift warning borrowing the Settings line. It shows the
+    current and reference deadzones side by side and offers:
+
+      Save current as reference   after you deliberately retune, so the
+                                  launcher stops reporting your own change
+                                  as drift. Confirmed before it writes,
+                                  because this is the one action that can
+                                  quietly enshrine a reset config.
+      Restore reference           enabled only when they actually differ.
+
+    Disabled while the game is running, like everything else that writes
+    config the game would overwrite on exit.
+
+  - FIXED: a black "powershell.exe" console sat behind the launcher for
+    the whole session.
+
+    BOB2.bat already passed -WindowStyle Hidden, but that is ignored when
+    Windows Terminal is the default terminal application - which it is by
+    default on Windows 11. WT hosts the console in its own window and
+    never applies the requested show state.
+
+    BOB2.bat now starts the launcher through BOB2_Launcher.vbs. wscript
+    is a GUI process with no console of its own and creates PowerShell
+    hidden from the outset, so nothing is drawn at all. The launcher also
+    hides its own console window at startup as a fallback, which covers
+    running the .ps1 directly.
+
+  - FIXED: a UAC prompt before every single launch.
+
+    This was never the launcher asking for rights. Bob.exe carried the
+    RUNASADMIN compatibility shim, and BOB2_Launch.bat then elevated
+    itself "for CPU pinning" - also not the real reason, since
+    "start /affinity" can pin a process you create without any privileges.
+    The elevation existed only because an elevated child does not inherit
+    the affinity mask from a non-elevated parent, so the whole chain had
+    to be elevated for pinning to stick.
+
+    The shim is not needed: the game folder grants Authenticated Users
+    Modify, so BOB2 writes its saves, bdg.txt and logs perfectly well as a
+    normal user. RUNASADMIN is a leftover from installs under Program
+    Files. Removed it, dropped the self-elevation from both launch
+    scripts, and the launcher now elevates ONLY if it finds the shim still
+    present - so putting it back by hand still works.
+
+    To restore the old behaviour, add RUNASADMIN back to
+    HKCU\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\
+    Layers for Bob.exe, or tick "Run this program as an administrator" on
+    the exe's Compatibility tab.
+
+  - FIXED: the launcher reported "currently not rescaled" even when the
+    menu rescale had applied perfectly.
+
+    It identified the build by hashing the whole Bob.exe and comparing
+    against the output checksum recorded in the patch file. That stopped
+    working the moment the Windows 10 import fix below was folded into
+    BOB2_MenuScale.ps1, because the import edit is applied AFTER the
+    rescale - so the finished executable could never match the recorded
+    hash again, whatever scale was chosen.
+
+    The rescale itself was always fine, and BOB2_MenuScale.ps1 was always
+    correct: it verifies its checksum BEFORE the import fix. Only the
+    launcher's status line was wrong.
+
+    It now asks the file directly - a patch counts as applied when its
+    edited 16-bit values are present at their offsets. That stays true no
+    matter what else changes elsewhere in the executable, so this class of
+    bug cannot come back.
+
+  - INCORPORATED: the community Windows 10 patch turns out to be a nine
+    byte change, and a neat one. It renames the imported KERNEL32 function
+    DebugBreak to GetVersion.
+
+    The game calls DebugBreak() somewhere. That raises EXCEPTION_BREAKPOINT,
+    which Windows XP usually survived and which Windows 10/11 treats as
+    fatal when no debugger is attached. Both names are ten characters, take
+    no arguments, and return something the caller ignores, so pointing the
+    import at GetVersion makes the call harmless.
+
+    This is the same crash the dinput8.dll guard has been catching in a
+    vectored handler. The import rename is better: it stops the exception
+    being raised at all rather than recovering after the fact. The guard
+    stays as a backstop and still handles the SxS case.
+
+    BOB2_MenuScale.ps1 now applies it on every write, so it survives a
+    change of menu scale. Verified: Bob.exe no longer imports DebugBreak
+    and has two GetVersion entries; Bob.exe.unscaled is untouched.
+
+    Worth noting the copy of the patched executable in the game folder,
+    "Bob.exe.win10patch", is byte-identical to stock 2.13 - it is a backup
+    that never had the patch in it. The real one was Bob.exe.patched213.
+
+  - FIXED: the HIGHDPIAWARE flag comes BACK, and a one-off removal was
+    never going to hold. Windows' Program Compatibility Assistant keeps a
+    record for Bob.exe and re-applies shims when it believes it has seen a
+    problem, so the flag returns after a crash or an unusual exit - and
+    with it the menus go small again and the rescale appears to stop
+    working. Confirmed: the flag was removed, and was back a few hours
+    later with a PCA entry for Bob.exe present.
+
+    The launcher now strips it on startup AND again immediately before
+    launching the game, and says so when it had to. Since the launcher
+    runs before every start anyway, that is the natural place for it.
+    Verified by putting the flag back by hand and watching the launcher
+    remove it.
+
+  - NEW: TARGET\BOB2_T16000M.tmc - joystick response curves for
+    Thrustmaster TARGET, since the game itself has none.
+
+    The curve is not there to reproduce a Spitfire's control forces; no
+    curve can do that on a spring-centred desktop stick. It corrects a
+    TRAVEL mismatch. A Spitfire's control column moves roughly 250 mm
+    fore and aft; a T.16000M moves about 60 mm. The same hand movement
+    therefore commands about four times the control deflection, which is
+    why tracking a target feels twitchy. Softening the centre returns
+    that resolution where it matters and keeps full authority at the
+    stops.
+
+    Three profiles, shaped by what the real aeroplanes actually flew like:
+      Spitfire/Hurricane  pitch -30, roll -20. The Spitfire's elevator
+        was famously light and pilots over-controlled in pitch, so pitch
+        is softened MORE than roll; the fabric ailerons were heavy above
+        about 300 mph, so roll is left livelier.
+      Bf109E              pitch -20, roll -30. The emphasis reverses: the
+        109's ailerons went very heavy at speed while its elevator stayed
+        usable.
+      Bf110 / bombers     pitch -10, roll -10. Flown on trim rather than
+        on the sight, so a soft centre buys nothing and costs authority.
+
+    Rudder carries a 4% deadzone while nothing else does - not for sensor
+    drift, which Hall-effect sticks do not have, but because your wrist
+    twists slightly whenever you push the stick sideways. Without it you
+    feed in rudder every time you roll. Throttle is deliberately left
+    linear: half travel should mean half throttle every time.
+
+    The script flags one thing to verify rather than trust - which sign
+    of SetSCurve's curvature softens the centre. Load it, look at the
+    curve TARGET draws, and confirm the line sags BELOW the diagonal near
+    centre; flip the signs if it bulges above.
+
+  - Two consequences of running TARGET, both easy to miss:
+      * It presents a VIRTUAL device with a different GUID, so the game
+        no longer recognises the stick. Re-run BOB2_Controls.ps1 -Apply
+        afterwards to give the virtual device a DeviceDefaults.txt entry.
+      * Its deadzone stacks with the game's. BOB2_Sensitivity.ps1 gained
+        a 'target' preset that sets the in-game deadzone to zero, so the
+        external tool owns it outright.
+
+  - NEW: BOB2_Controls.ps1 - detects what is actually plugged in and sets
+    it up. Axis assignment lives in DeviceDefaults.txt, a plain-text file
+    keyed by DirectInput device GUID, and the shipped copy dates from
+    2005: a Saitek X36, a Saitek X45, a Logitech WingMan and a
+    Thrustmaster Top Gun. Any stick made since is unknown to the game,
+    which is why its controls screen is so unhelpful.
+
+    The tool reads real axis and button counts from winmm, the product
+    name from the driver's registry entry, and derives the DirectInput
+    GUID from VID/PID - the GUID is simply PID then VID with a fixed tail
+    whose bytes spell "PIDVID", which is how the shipped Saitek entries
+    are formed. Dry run by default; -Apply writes, backing both files up
+    to _ControlsBackup\<timestamp>\ first.
+
+    It adapts to what is present: a twist-grip stick flown alone keeps
+    throttle on its slider, but plug a separate throttle in and re-run
+    and throttle moves to the real lever with rudder on the rocker.
+
+    The button preset gives each action EXACTLY ONE device code. The
+    stock file binds each action across four notional sticks
+    (260/300/340/380); leaving that in place means plugging a throttle in
+    later silently makes ITS button 5 do whatever the stick's button 5
+    does. Verified afterwards: keys.txt still round-trips byte-identical,
+    236 of 236 actions rebuild exactly, and no joystick button maps to
+    more than one action.
+
+  - NEW: BOB2_Sensitivity.ps1, and with it the first decode of
+    SAVEGAME\inputcfg.dat - 18 records of 278 bytes, one per in-game
+    axis in AU_ order:
+        +8  int32 device kind  2 joystick, 1 mouse, 0 none
+        +12 int32 DEADZONE     0..10000 DirectInput units
+        +16 int32 SATURATION   0..10000
+        +20 int32 DirectInput axis index, -1 unassigned
+        +24 byte  INVERT
+        +25 char[] physical axis name
+    Confirmed by the four joystick records lining up exactly with pitch,
+    roll, yaw and throttle, and by the throttle record already carrying
+    the invert flag a slider needs.
+
+    Writes are surgical: applying a preset changed exactly 4 regions of
+    2 bytes each, all at offset +12 of a joystick record, file length
+    unchanged. Presets and named profiles (save / load / list) live in
+    _AxisProfiles\.
+
+  - FINDING: BOB2 HAS NO JOYSTICK RESPONSE CURVES. The entire input path
+    is ApplyDeadZone followed by CalibrationScaler and
+    CalibrationConstant - a multiply and an offset. No exponent, no curve
+    table, no shaping of any kind on a joystick axis. setMouseSensitivity
+    exists but is mouse only.
+
+    The Curve class in CURVES.CPP is easy to mistake for it and is not:
+    it sits under Release\model\ and serves Engine::SetCurves and
+    ModelGenerator::ParseCurves - aerodynamic and engine data.
+
+    So deadzone is the only meaningful in-game lever, and the shipped
+    7.5% is a 2005 default sized for potentiometer sticks that wandered.
+    A Hall-effect stick does not need it. Real curves have to be applied
+    before the game sees the axis - Thrustmaster TARGET or Joystick
+    Gremlin with vJoy - both of which present a virtual stick the game
+    then reads as linear.
+
+  - IMPORTANT, and the cause of "the menu rescale does nothing": the
+    HIGHDPIAWARE compatibility shim. It tells Windows the program manages
+    DPI itself and must not be scaled. BOB2 is from 2005 and does no such
+    thing, so with that flag set its menus are drawn at true pixel size.
+    On a 2560-wide display at 150% scaling that is about a third smaller
+    than intended - and it exactly cancels the menu rescale. The dialogs
+    really are larger; Windows has simply stopped magnifying them.
+
+    It is easy to acquire by accident, since Properties > Compatibility >
+    "Change high DPI settings" > "Override high DPI scaling behaviour"
+    sets precisely this flag. The Win11 tweaks step has never added it,
+    but it now actively REMOVES it and says so, rather than leaving a
+    stray flag to defeat the rescale silently.
+
+    This is also why a rescaled prototype looked right while the same
+    bytes installed as Bob.exe did not: the prototype had no compat
+    entry, so Windows scaled it 1.5x on top of the 1.40x rescale. Same
+    executable content, different environment. Comparing checksums could
+    never have found it.
+
+  - Menu scale is now a proper setting rather than a one-off patch.
+    BOB2_MenuScale.bat offers four sizes and defaults to the largest:
+
+        1.02x  font 8pt   needs 1171 px across   1280 wide or less
+        1.10x  font 9pt   needs 1264 px across   1366 and up
+        1.25x  font 10pt  needs 1437 px across   1600 and up
+        1.40x  font 11pt  needs 1608 px across   1920 and up  [default]
+
+    plus "Original size" to undo. Reachable from the launcher's new
+    MENU SIZE button, which reports which one is currently installed.
+
+    Shipped as verifiable patch files, not as four copies of Bob.exe:
+    that would have been 18 MB of duplicated game code that goes stale
+    the moment the game is re-patched. Each scale is a list of 16-bit
+    edits - about 6,200 of them - and every edit carries the value it
+    EXPECTS to find. One mismatch aborts before anything is written, so
+    a patch cannot be applied to the wrong build or twice over itself.
+    The result is checked against a recorded md5 before it reaches disk.
+    Patches always apply to the pristine Bob.exe.unscaled, so scales
+    never compound. 180 KB for all four.
+
+    All five paths verified byte-exact:
+      102 -> b69f367e   110 -> affa028f   125 -> 340306d6
+      140 -> 9ab5d72e   original -> 877cd76d
+
+  - FIXED: the "currently installed" scale detection read bytes 24..39
+    of the patch header, which straddles the source md5 and the result
+    md5 and so matched nothing. It reported "not recognised" for every
+    scale. Correct offset is 32..47.
+
+  - Configurator: a "Back to launcher" button in the bottom bar. It
+    warns if there are unsaved changes, and will not stack a second
+    launcher window if one is already open.
+
+  - The in-game frame-rate display is SHIFT+F. It was already bound as
+    DISPLAY_FPS in keys.txt and simply undocumented. It is not a
+    replacement for the PresentMon capture, which gives averages and 1%%
+    lows you can compare between settings, but it is there for a glance.
+
+v1.4.0  (2026-08-04)
+--------------------
+  - NEW: the in-game menus are rescaled. They are drawn from 154 Win32
+    dialog templates held as resources inside Bob.exe, and every
+    coordinate in them - plus the font point size - is a fixed-width
+    16-bit field. So the rescale is an IN-PLACE patch: nothing resized,
+    no section rebuilt, no address moved, and the patched Bob.exe is
+    exactly the same length as the original.
+
+    Applied at 1.40x with the dialog font raised from 8pt to 11pt.
+    The largest page goes from 1149 px to 1608 px; the ceiling on this
+    display is about 1.49x, past which pages start clipping again.
+
+      Bob.exe            rescaled     md5 9ab5d72e...
+      Bob.exe.unscaled   the original md5 877cd76d...
+
+    BOB2_MenuScale_Restore.bat puts the original back. Re-applying BDG
+    v2.13, or any patch that replaces Bob.exe, wipes the rescale.
+
+    How this was established, since two earlier conclusions were wrong:
+      * The UI is MFC child dialogs, not engine-drawn: 154 templates,
+        1535 controls, 135 of them WS_CHILD pages in a host window.
+      * Only 87 of those 1535 controls are standard Win32. The rest are
+        eleven Rowan ActiveX controls in Release\vc6\*.ocx, referenced
+        by CLSID - which is also why the "More GFX" tab crashes, since
+        RCombo.ocx is one of them.
+      * Those OCXs import BitBlt but never StretchBlt, and pick their
+        art and font by NUMBER (PictureFileNum, NormalFileNum, FontNum).
+        That predicted the artwork would not scale with the frames.
+        THE PREDICTION WAS WRONG - rescaled menus render correctly.
+      * A first prototype came up blank and was reported here as proof
+        that rescaling could not work. That was also wrong: the blank
+        screen was a modal "File 'models\weapons.txt' is missing!"
+        dialog, caused by the test script passing "start /D" instead of
+        changing directory. The game had failed while loading data and
+        never reached a menu.
+
+    The patcher is verified neutral: a 1.0x pass reproduces Bob.exe
+    byte-for-byte, and all 154 templates round-trip exactly through the
+    parser before any change is made.
+
+    Tools kept at mod92/tools/dlgparse.py and uiscale.py. uiscale.py
+    patches from Bob.exe.unscaled when it exists, so a new factor never
+    compounds on top of an old one.
+
+  - NEW: BOB2_UITest.bat - menu-rescale test harness. Double-click and
+    pick a factor; it builds nothing itself, it just launches a
+    prototype copy. Kept for trying other factors later.
+
+  - FIXED: BOB2_Launch.bat, BOB2_Launch_1core.bat and
+    BOB2_SetWrapper.bat all resolved the game folder as "%~dp0..",
+    which is wrong whenever they are run from a copy of the source tree
+    rather than from inside the game folder - and CMD cannot use a UNC
+    path such as \\wsl.localhost\... as a working directory at all, so
+    it silently falls back to the Windows directory before the script
+    even starts. All three now search for Bob.exe instead of assuming.
+
+  - FIXED, and this was a real design error: measuring the frame rate no
+    longer requires Alt-Tab. It never should have.
+
+    Every previous version of BOB2_MeasureFPS.bat told you to start the
+    game, get airborne, Alt-Tab out to launch the capture, then Alt-Tab
+    back. That is impossible here. In exclusive fullscreen through
+    dgVoodoo2 the game loses its Direct3D device when it loses focus and
+    does not survive the reset - it crashes to desktop. The measuring
+    tool required exactly the thing that kills the game.
+
+    The capture is now ARMED from the launcher and TRIGGERED FROM INSIDE
+    THE COCKPIT, two ways:
+      * Hotkey - press ALT+SHIFT+F11 while flying to record 60 seconds.
+        Scroll Lock lights up while recording and goes out when done, so
+        there is confirmation without looking away from the game.
+        Windows delivers a registered hotkey before the application sees
+        it, which is why it works through exclusive fullscreen.
+      * Automatic - a countdown (120s default), then a 60s capture with
+        no keypress at all.
+
+    The hotkey combination is not arbitrary. Windows CONSUMES a
+    registered hotkey rather than passing it on, so a badly chosen one
+    silently steals a game function. In this install F11 is IMPACTTOG,
+    SHIFT+F11 is FOV_LARGE and CTRL+F11 is WINAMP_STOP; ALT+SHIFT+F11 is
+    unbound, which is why it was picked.
+
+    "Measure Frame Rate" in the launcher is consequently now enabled at
+    all times. It used to be enabled only while the game was running -
+    which meant reaching it required Alt-Tabbing out of the game, the
+    very thing that crashes it.
+
+  - Configurator: joystick and POV assignments can now be changed, not just
+    preserved. The code format in keys.txt was decoded from the shipped
+    keys.txt and default.txt, which agree exactly:
+
+        buttons   260 + 40*device + button     (device 0-3)
+        POV hats  580 +  8*hat    + direction  (hat 0-7, 0=up, clockwise)
+
+    Evidence for the 40-per-device stride: SHOOT is 260 300 340 380 and
+    ROTRESET2 is 261 301 341 381 - the same physical button on four
+    sticks. Evidence for the POV block: the eight ROT* actions each carry
+    eight codes spaced 8 apart, together filling 580..643 with no gaps.
+    Verified by decoding the live file - SHOOT reads back as "Joy 1
+    Button 1 / Joy 2 Button 1 / ..." and ROTUPLEFT as "Hat 1 Up-Left"
+    through "Hat 8 Up-Left".
+
+    Bindings now read "Joy 1  Button 8" instead of "device 267". The
+    capture overlay polls the sticks through winmm joyGetPosEx, so a
+    button or hat press assigns just like a key press. Only a fresh
+    press counts - the state when the overlay opens is the baseline, so
+    a held button cannot assign itself.
+
+    Consequences that had to be fixed with it:
+      * Search now covers the decoded label AND the raw number, so
+        "joy 1", "hat", "button 8" and "267" all find the row. It used
+        to search only the action name, which made a stick binding
+        unfindable by what it says on screen.
+      * The Assigned / Unassigned filters count device bindings. They
+        looked at the keyboard half only, so a stick-only action was
+        listed as unassigned.
+      * A changed device code now marks the action as changed and is
+        re-baselined after saving.
+
+    256-259 and 420-579 are used by no shipped binding and are NOT
+    decoded - most likely axes. Anything unrecognised is shown as its
+    raw number and written back untouched. winmm exposes only one hat
+    per device, so capture produces hat 1; hats 2-8 are displayed and
+    preserved correctly but cannot be captured.
+
+  - Configurator: saving returns you to the Overview page, which is
+    where the health checks and the file list live and so reflects what
+    just happened. On a FAILED save it stays put, so the page holding
+    the unsaved change is still in front of you. Navigation now goes
+    through the nav rail rather than around it, so the highlight can no
+    longer disagree with the page on screen.
+
+  - REBUILT: the configurator (BOB2_Config.bat). The previous one was a
+    flat WinForms tab strip with a list of raw key names. This is a
+    ten-page WPF application with a left nav rail, an Overview that
+    leads with "close the game before saving", and a key-bindings page
+    with 17 categories, live search across action name / plain-English
+    label / assigned key, filters for unassigned and conflicting
+    bindings, and click-a-binding rebinding with a capture overlay that
+    names whoever already owns the chord.
+
+    Building it corrected several things this package had wrong:
+      * bdg.txt holds 350 assignments, not 318. The old figure came from
+        a key pattern that excluded '[' and ']' and so silently skipped
+        the 32-entry BOB_DITHER_LOOK_UP array.
+      * keys.txt holds 236 actions, not 170 - and 46 of them are unbound
+        on a stock install, which a parser expecting "ACTION code" drops
+        entirely.
+      * 20 lines carry several codes, and codes >= 256 are joystick or
+        POV rather than keyboard. Rebinding preserves device codes
+        verbatim and keeps extra chords.
+      * default.txt is a 269-action superset of keys.txt, not a parallel
+        file, so "reset to default" must handle actions absent from
+        keys.txt.
+
+    Verified independently against the real install before shipping:
+    read-then-write reproduces bdg.txt, keys.txt and Weather.cfg
+    byte-for-byte identically (21179 / 4363 / 53 bytes), all 350 bdg
+    assignments and all 236 key actions rebuild to exactly the line they
+    were parsed from, and the tool opens with zero pending changes and
+    Save disabled. Lines are rebuilt by concatenating captured groups
+    rather than by regex substitution, so a '$' or '\' in a value cannot
+    corrupt the line. Nothing is written until Save; every file that is
+    about to change is copied to _ConfigBackups\<timestamp>\ first.
+
+    It also found a conflict shipped in the file itself: End is bound to
+    both EXITKEY and LOOKS.
+
+  - NEW: BOB2.bat - a launcher window, and from now on the only file you
+    need to run. Play, Settings, Measure Frame Rate, Graphics Wrapper and
+    Setup are all reachable from it, and Full Install puts a "Battle of
+    Britain II" shortcut on the desktop pointing at it.
+
+    This is not decoration. The package had grown to five loose .bat files
+    whose correct running order was never stated anywhere, and one of
+    those orderings silently destroys work: Bob.exe REWRITES bdg.txt and
+    settings.cfg when it exits, so anything the configurator changes while
+    the game is running is discarded on quit. bdg.txt even documents a
+    case of this against itself -
+
+        ENABLE_AUTO_TEXTURE_RES=ON  # Change to 'OFF' will affect one
+                                    # session only, IOW BoB will write
+                                    # 'ON' back over it.
+
+    The launcher fixes that structurally rather than by documenting it.
+    It polls for Bob.exe every two seconds and greys out whatever is
+    unsafe at that moment:
+      * game running     -> Settings, Play, Wrapper and Setup disabled
+      * game not running -> Measure Frame Rate disabled, because a
+                            PresentMon capture taken at a menu measures
+                            nothing (the menu barely renders)
+    Each disabled button says why, so it reads as an explanation rather
+    than as something being broken.
+
+    It also surfaces state that previously required reading files by
+    hand: game version, installed fix version (flagged amber when it is
+    older than the package), and which d3d9.dll is actually in place,
+    with its version, in red if it is not dgVoodoo2.
+
+    The Graphics Wrapper button opens a chooser rather than a console
+    window, and explains the trade-off - native D3D9 has lower CPU
+    overhead, which matters on a CPU-bound engine, but crashes on
+    entering 3D on most modern systems.
+
+    Not self-elevating. The window needs no privileges; it elevates only
+    the actions that genuinely do (Play, for CPU pinning; Measure FPS, to
+    trace an elevated process; Setup, to write into the install folder).
+
+  - The background photograph is IWM HU 54418: pilots of 'B' Flight,
+    No. 32 Squadron RAF on the grass at Hawkinge in front of Hurricane
+    Mk I P3522 'GZ-V', 29 July 1940. From left: P/O R F Smythe,
+    P/O K R Gillman, P/O J E Proctor, F/Lt P M Brothers, P/O D H Grice,
+    P/O P M Gardner, P/O A F Eckford. All seven survived the war except
+    Keith Gillman, posted missing on 25 August 1940, aged 19.
+    Ministry of Information Second World War Press Agency Print
+    Collection, Imperial War Museums. Public domain - a UK Government
+    work published before 1 June 1957, so Crown copyright has expired.
+    Full credit and links are in the launcher under "about this
+    photograph".
+      https://commons.wikimedia.org/wiki/File:The_Battle_of_Britain_HU54418.jpg
+      https://www.iwm.org.uk/collections/item/object/205059622
+
+  - The crash guard is rebuilt only to carry the new version string; its
+    behaviour is unchanged from v1.2.1.
+
+v1.3.0  (2026-08-04)
+--------------------
+  - NEW: BOB2_Config.bat - a configurator that replaces the game's options
+    screens. Those screens render at a fixed ~1024px width and clip their
+    right edge on modern displays; changing Windows DPI (100/125/150%) and
+    dgVoodoo2 render resolution (1280x800 / 1600x1000 / native) made no
+    difference, because the limit is in the engine's layout code, not in
+    any setting.
+
+    Rather than patch the executable, this edits bdg.txt directly:
+      * Four tabs of curated settings with plain-English explanations of
+        what each one costs - density, terrain textures, video skipping,
+        field of view, and so on.
+      * An "All settings" tab covering all 318 keys, searchable by name or
+        description, using the game's own inline comments (139 of the 318
+        document themselves).
+      * Only the value on a line is ever rewritten - spacing, comments,
+        ordering, Windows-1252 encoding and CRLF line endings are all
+        preserved. A timestamped backup is written before every save.
+
+    It also sidesteps the "More GFX" screen entirely, which crashes via a
+    null dereference in RCombo.ocx. Every setting behind it is reachable
+    from the All settings tab.
+
+v1.2.1  (2026-08-04)
+--------------------
+  - IMPORTANT: the crash guard no longer tries to "repair" access
+    violations inside RCombo.ocx (the control behind the "More GFX"
+    options tab). It logs them and lets the game's own exception handler
+    deal with it.
+
+    Why: earlier builds set EAX=0 and advanced EIP by 2 to step over what
+    was believed to be a single null-pointer dereference. A real crash
+    showed that does not work - the log recorded a fault at offset 0x2944,
+    the skip, then an immediate second fault at 0x2946, because the next
+    instruction uses the same bad pointer. Execution then continued into
+    code that could not cope and jumped to address 0x00000003. The
+    "repair" turned a contained fault into corrupted control flow.
+
+    You cannot fix a null-pointer dereference by stepping over one
+    instruction when the surrounding code assumes the pointer is valid.
+
+    Breakpoint and SxS handling are unchanged - those ARE safe to skip.
+
+v1.2.0  (2026-08-03)
+--------------------
+  - FIXED: the bundled dgVoodoo.conf shipped VRAM = 4096. Era-appropriate
+    D3D titles can fail to start with implausibly high emulated video
+    memory, and it matched neither the known-good config nor dgVoodoo2's
+    own default. Now 256. (Found by running Full Install against a
+    throwaway copy of a game folder.)
+  - FIXED: a PowerShell array-flattening bug made the Win11 tweaks step
+    print "[OK] O already enabled" instead of the setting name. A
+    single-element array of arrays is flattened, so indexing returned
+    single characters.
+  - Full Install now applies BDG v2.13 ONLY. BDG's own release notes say
+    v2.13 brings any previous version up to date and includes MultiSkin,
+    so the old 2.12 -> MultiSkin -> 2.13 chain required about 500 MB of
+    extra downloads and achieved nothing. Those steps are still available
+    under "Individual Steps". Quick Start now lists two downloads
+    instead of four.
+  - Full Install warns before patching that campaigns from earlier
+    versions will not load in 2.13 and that SAVEGAME must be cleared
+    except DIR.DIR / inputcfg.dat / settings.cfg, and that Windows text
+    scaling should be 100%. Both are in BDG's notes and easy to miss.
+  - README rewritten where it was wrong: the video crash is a missing
+    Indeo 5 codec (not an mpg2splt.ax null-pointer bug), and there is now
+    a proper explanation of why dgVoodoo2 is REQUIRED rather than
+    optional - the game asks for an invalid 0x0 fullscreen buffer, which
+    native D3D9 and DXVK both reject, crashing the game.
+  - README documents the DirectX 9.0c requirement (d3dx9_35.dll) and the
+    four helper scripts, which previously shipped undocumented.
+  - Status report no longer says "dgVoodoo2 DLLs 4/4". Only D3D9.dll is
+    load-bearing; it now reports that file and its version, and treats a
+    missing D3D9.dll as an error rather than a partial install.
+  - FIXED: the tool shipped OBJECT_DENSITY=4 and PARTICLE_DENSITY=4 while
+    reporting "Applied performance settings". Those are the MAXIMUM-COST
+    quality values and the single biggest frame-rate cost in this engine.
+    BOB2 is CPU-bound - measured on a 13900HX / RTX 4080 the CPU spends
+    about 3x longer per frame than the GPU - and ground-object count is the
+    dominant CPU load. Defaults are now density 2 with the scenery
+    generators off. Measured effect of that change plus correct CPU
+    pinning: median frame rate 28 -> 76 FPS.
+  - "Win11 tweaks" no longer forces ENABLE_AUTO_GEN=ON and
+    ADD_SHEEP_COWS_AND_HAYSTACKS=ON. Those are scenery generators, not
+    compatibility fixes, and bundling them into that step silently cost
+    frame rate. They are now controlled only by the Settings Tweaker.
+  - Presets rebalanced and now honest about cost:
+      Performance = density 1, no generated scenery, 1024 terrain textures
+      Balanced    = density 2, no generated scenery  (recommended)
+      Quality     = density 4, generated scenery on, with an explicit
+                    warning that it roughly halves frame rate
+  - bdg.txt edits are now anchored to line starts, so a key that merely
+    CONTAINS another key's name is no longer corrupted, and settings that
+    are missing from the file get appended instead of silently skipped.
+
+v1.1.0  (2026-08-03)
+--------------------
+  - Added version numbering across the package: the setup tool shows it
+    in the menu header, the crash guard writes it into bob2guard.log,
+    and installs are stamped with BOB2-Win11-Fix.version in the game
+    folder. "Check Installation Status" now reports the installed fix
+    version and warns when the deployed dinput8.dll differs from the
+    package copy.
+  - Settings Tweaker no longer writes to the wrong config section.
+    dgVoodoo.conf reuses key names across sections (Resolution and
+    Antialiasing exist in both [Glide] and [DirectX]), so changing a
+    DirectX setting also overwrote the Glide one; the "Filtering" key
+    additionally matched "TMUFiltering". Edits are now scoped to the
+    correct section.
+  - Fixed a crash in the v2.13 step: if the patch was supplied as a .7z
+    and 7za.exe was not on PATH, the script aborted with a PowerShell
+    error instead of showing the "download 7-Zip Extra" message.
+  - README corrected: it described a five-option menu and pointed at
+    option 3 for Uninstall, which is actually Individual Steps.
+    Uninstall is option 5.
+
+v1.0.0  (2026-03-14)
+--------------------
+  - First packaged release: BOB2_Setup.ps1 covering the full patch chain
+    (2.06 -> 2.12 -> MultiSkin -> 2.13), dgVoodoo2 install, crash guard,
+    Win11 tweaks, settings tweaker, and uninstall.
+  - dinput8.dll crash guard: Vectored Exception Handler skipping
+    EXCEPTION_BREAKPOINT, plus SxS activation-context errors and the
+    RCombo.ocx null dereference behind the "More GFX" options tab.
+  - Root cause fix: SKIP_VIDEOS / INTRO_VIDEO disabled in bdg.txt to
+    avoid the null-pointer bug in Windows' mpg2splt.ax DirectShow filter.
