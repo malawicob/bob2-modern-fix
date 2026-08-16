@@ -15,6 +15,41 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.22  (2026-08-11)
+---------------------
+  All three from the first outside tester - a Windows 11 user new to the
+  sim, which is exactly the case the wizard is written for.
+
+  - FIXED: the desktop shortcut was indistinguishable from the game's own.
+    It was named "Battle of Britain II" and borrowed Bob.exe's icon, so it
+    sat next to the shortcut the game installer creates looking identical.
+    The tester reported that clicking it "loads the sim directly - the
+    launcher does not appear": he was clicking the game's one, with no way
+    to tell them apart. Consequence was bigger than a cosmetic slip, since
+    every fix the launcher applies on the way to PLAY - the HIGHDPIAWARE
+    removal in particular - was silently skipped, which in turn explains
+    his unreadable in-game menus.
+
+    Now "Battle of Britain II - Modern Fix" with its own RAF roundel icon
+    (assets\BOB2ModernFix.ico). Setup removes the old ambiguous shortcut,
+    but only after confirming it points at our own BOB2.bat - a shortcut
+    aimed at the game is never touched.
+
+  - DOCUMENTED: why the in-game videos do not play. They are Indeo Video 5
+    (IV50). Microsoft removed the Indeo codecs from Windows over a remote
+    code execution vulnerability and they cannot be legitimately restored,
+    so the videos cannot play on Windows 10 or 11 at all. Setup disables
+    them (SKIP_VIDEOS, SKIP_QUICKVIDEOS, INTRO_VIDEO) so the game does not
+    hang trying to decode them. That was happening silently and read as a
+    fault. Behaviour unchanged - it is now explained in README.txt.
+
+  - DOCUMENTED: antivirus quarantining unsigned PowerShell, and the
+    Mark-of-the-Web "Unblock" step. Both produce the identical symptom -
+    a console window flashes and no launcher appears - and between them
+    they are the likeliest reason a first run fails on someone else's
+    machine.
+
+
 v1.6.21  (2026-08-06)
 ---------------------
   - FIXED: applying a joystick preset left an orphaned copy of the page in
