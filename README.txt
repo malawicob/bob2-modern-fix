@@ -28,9 +28,40 @@ QUICK START
   That's it. The setup tool handles the rest: patching, dgVoodoo2,
   the crash fix, configuration, and a desktop shortcut.
 
-  3. From then on, start the game from the "Battle of Britain II"
-     shortcut on your desktop (or BOB2.bat in this folder). That is the
-     launcher, and it is the only file you need to run - see below.
+  3. From then on, start the game from the "Battle of Britain II -
+     Modern Fix" shortcut on your desktop - the one with the RAF roundel
+     icon (or BOB2.bat in this folder). That is the launcher, and it is
+     the only file you need to run - see below.
+
+     Note the roundel. Your original "Battle of Britain II" shortcut is
+     still there and still starts the game DIRECTLY, skipping the
+     launcher and every fix it applies on the way. If the game opens
+     without the launcher appearing first, you clicked the wrong one.
+
+
+TWO THINGS THAT LOOK LIKE FAULTS BUT ARE NOT
+--------------------------------------------
+  YOUR ANTIVIRUS MAY QUARANTINE THE LAUNCHER
+  Some antivirus products treat any unsigned PowerShell script as
+  suspicious and will isolate BOB2_Launcher.ps1 (and sometimes BOB2.bat)
+  on first run. Nothing here is malicious - the entire source is public
+  at github.com/malawicob/bob2-modern-fix, so you can read every line
+  before you run it. If it happens, restore the files and add this
+  folder as an exclusion. Symptom: a console window flashes up and
+  closes, and no launcher appears.
+
+  Also: if you downloaded the ZIP, right-click it, Properties, and tick
+  "Unblock" BEFORE extracting. Windows marks downloaded files and
+  PowerShell will refuse to run them otherwise - same symptom.
+
+  THE IN-GAME VIDEOS DO NOT PLAY
+  Deliberate, and not something that can be fixed. BOB2's videos are
+  encoded with Indeo Video 5 (IV50). Microsoft removed the Indeo codecs
+  from Windows over a remote-code-execution vulnerability, and they
+  cannot be legitimately restored on Windows 10 or 11. Left enabled the
+  game hangs or crashes trying to decode them, so setup turns them off:
+  SKIP_VIDEOS=ON, SKIP_QUICKVIDEOS=ON, INTRO_VIDEO=OFF in bdg.txt. You
+  can turn them back on in Settings, but they still will not play.
 
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS

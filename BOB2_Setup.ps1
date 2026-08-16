@@ -1180,15 +1180,41 @@ function Step-InstallLauncher {
             Write-Info "  No desktop folder found - skipping the shortcut. Run BOB2.bat from $ScriptDir instead."
             return $true
         }
-        $lnk = Join-Path $desktop 'Battle of Britain II.lnk'
+        # The shortcut MUST NOT look like the game's own.
+        #
+        # It used to be called "Battle of Britain II" and borrowed Bob.exe's
+        # icon, which made it pixel-identical to the shortcut the game
+        # installer puts on the desktop. A tester reported "the sim loads up
+        # directly, the launcher does not appear" - he was clicking the
+        # game's shortcut and had no way to tell the two apart. Distinct
+        # name, distinct icon (an RAF roundel we ship ourselves).
+        $lnk = Join-Path $desktop 'Battle of Britain II - Modern Fix.lnk'
+
+        # Remove the old ambiguous shortcut, but ONLY if it is ours - never
+        # touch one that points at the game itself.
+        $oldLnk = Join-Path $desktop 'Battle of Britain II.lnk'
+        if (Test-Path $oldLnk) {
+            try {
+                $probe = (New-Object -ComObject WScript.Shell).CreateShortcut($oldLnk)
+                if ($probe.TargetPath -eq $target) {
+                    Remove-Item $oldLnk -Force
+                    Write-Info "  Removed the old shortcut that looked like the game's own."
+                }
+            } catch { }
+        }
+
         $shell = New-Object -ComObject WScript.Shell
         $sc = $shell.CreateShortcut($lnk)
         $sc.TargetPath = $target
         $sc.WorkingDirectory = $ScriptDir
-        $sc.Description = 'Battle of Britain II - launcher (play, settings, FPS, wrapper, setup)'
-        # Borrow the game's own icon so the shortcut is recognisable.
-        $bobExe = Join-Path $GameFolder 'Bob.exe'
-        if (Test-Path $bobExe) { $sc.IconLocation = "$bobExe,0" }
+        $sc.Description = 'Battle of Britain II - Modern Fix launcher (play, settings, FPS, wrapper, setup)'
+        $ico = Join-Path $ScriptDir 'assets\BOB2ModernFix.ico'
+        if (Test-Path $ico) {
+            $sc.IconLocation = "$ico,0"
+        } else {
+            $bobExe = Join-Path $GameFolder 'Bob.exe'
+            if (Test-Path $bobExe) { $sc.IconLocation = "$bobExe,0" }
+        }
         $sc.Save()
         Write-OK "Desktop shortcut created: $lnk"
     }
