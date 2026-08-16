@@ -54,14 +54,25 @@ TWO THINGS THAT LOOK LIKE FAULTS BUT ARE NOT
   "Unblock" BEFORE extracting. Windows marks downloaded files and
   PowerShell will refuse to run them otherwise - same symptom.
 
-  THE IN-GAME VIDEOS DO NOT PLAY
-  Deliberate, and not something that can be fixed. BOB2's videos are
-  encoded with Indeo Video 5 (IV50). Microsoft removed the Indeo codecs
-  from Windows over a remote-code-execution vulnerability, and they
-  cannot be legitimately restored on Windows 10 or 11. Left enabled the
-  game hangs or crashes trying to decode them, so setup turns them off:
-  SKIP_VIDEOS=ON, SKIP_QUICKVIDEOS=ON, INTRO_VIDEO=OFF in bdg.txt. You
-  can turn them back on in Settings, but they still will not play.
+  THE IN-GAME VIDEOS DO NOT PLAY - BUT THEY CAN BE MADE TO
+  Off by default, deliberately. BOB2's videos are encoded with Indeo
+  Video 5 (IV50). Microsoft withdrew the Indeo codecs from Windows over
+  a remote-code-execution vulnerability, so on a stock Windows 10 or 11
+  there is nothing to decode them with and the game can hang trying.
+  Setup therefore sets SKIP_VIDEOS=ON, SKIP_QUICKVIDEOS=ON and
+  INTRO_VIDEO=OFF in bdg.txt.
+
+  Microsoft's codec is gone for good, but it is not the only Indeo
+  decoder. FFmpeg has its own, written independently, and codec packs
+  such as K-Lite install it. Bob.exe imports ole32 and neither avifil32
+  nor msvfw32, which points at DirectShow rather than the older Video
+  for Windows route - and DirectShow is exactly what those packs hook
+  into. So if you want the videos, installing K-Lite and turning the
+  three settings back on in Settings has a good chance of working.
+
+  Credit for this goes to a forum reader who remembered K-Lite solving
+  it. This readme previously claimed the videos could not be restored
+  at all, which was wrong.
 
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS

@@ -36,12 +36,21 @@ v1.6.22  (2026-08-11)
     aimed at the game is never touched.
 
   - DOCUMENTED: why the in-game videos do not play. They are Indeo Video 5
-    (IV50). Microsoft removed the Indeo codecs from Windows over a remote
-    code execution vulnerability and they cannot be legitimately restored,
-    so the videos cannot play on Windows 10 or 11 at all. Setup disables
-    them (SKIP_VIDEOS, SKIP_QUICKVIDEOS, INTRO_VIDEO) so the game does not
-    hang trying to decode them. That was happening silently and read as a
-    fault. Behaviour unchanged - it is now explained in README.txt.
+    (IV50). Microsoft withdrew the Indeo codecs from Windows over a remote
+    code execution vulnerability, so a stock Windows 10 or 11 has nothing
+    to decode them with and the game can hang trying. Setup disables them
+    (SKIP_VIDEOS, SKIP_QUICKVIDEOS, INTRO_VIDEO). That was happening
+    silently and read as a fault. Behaviour unchanged - it is now
+    explained in README.txt.
+
+    CORRECTED same day: the first version of that note claimed the videos
+    could not be restored at all. Wrong. Microsoft's codec is gone, but
+    FFmpeg has an independently written Indeo decoder and codec packs such
+    as K-Lite install it. Bob.exe imports ole32 and neither avifil32 nor
+    msvfw32, indicating DirectShow rather than Video for Windows - which
+    is what those packs hook into. Installing K-Lite and re-enabling the
+    three settings has a good chance of working. Caught by a forum reader
+    who remembered doing exactly that.
 
   - DOCUMENTED: antivirus quarantining unsigned PowerShell, and the
     Mark-of-the-Web "Unblock" step. Both produce the identical symptom -
