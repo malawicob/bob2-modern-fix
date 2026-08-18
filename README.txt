@@ -1,78 +1,61 @@
 ========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.6.20  (2026-08-06)
-  Works with both v2.12 and v2.13 (Win10 Patch) executables
+  Fix package v1.6.23  (2026-08-11)
+  For the v2.13 executable
 ========================================================================
 
   This version number refers to THIS FIX, not the game. The game shows
   its own version (e.g. v2.13) on the main menu. To see which fix
   version is installed in your game folder, open the file
-  BOB2-Win11-Fix.version there, or run the setup tool and choose
-  "Check Installation Status".
+  BOB2-Win11-Fix.version there, or open the launcher and read the
+  strapline under the title.
 
 
 QUICK START
 -----------
-  You only need TWO downloads. The v2.13 patch replaces the whole
-  older patch chain - see "Why only one patch?" below.
+  1. Extract the zip you downloaded. It contains ONE folder, called
+     BOB2-Win11-Fix.
 
-  1. Download these and place them in THIS folder (BOB2-Win11-Fix):
-       - BDG v2.13.exe    (or BDG v2.13.7z - the community patch)
-       - dgVoodoo2 zip    (from http://dege.freeweb.hu/dgVoodoo2/dgVoodoo2/)
+  2. Move that whole BOB2-Win11-Fix folder into your Battle of Britain
+     II folder, so that it sits NEXT TO Bob.exe. It should look like
+     this:
 
-     DO NOT unzip or run them manually. The setup tool runs everything
-     in the correct order and points the installer at your game folder.
+         D:\Battle of Britain II\
+             Bob.exe
+             bdg.txt
+             BOB2-Win11-Fix\      <-- the folder from the zip
+                 BOB2.bat
+                 ...
 
-  2. >>> Double-click BOB2_Setup.bat and select "Full Install" <<<
+     If you put it anywhere else the launcher cannot find your game and
+     will say so. It looks in its own folder and in the folder above it,
+     and nowhere else.
 
-  That's it. The setup tool handles the rest: patching, dgVoodoo2,
-  the crash fix, configuration, and a desktop shortcut.
+  3. Double-click BOB2.bat inside that folder.
 
-  3. From then on, start the game from the "Battle of Britain II -
-     Modern Fix" shortcut on your desktop - the one with the RAF roundel
-     icon (or BOB2.bat in this folder). That is the launcher, and it is
-     the only file you need to run - see below.
+     Windows may have flagged the download. If a console window flashes
+     up and nothing else happens, see "TWO THINGS THAT LOOK LIKE FAULTS"
+     below - you probably need to Unblock the zip and extract it again.
 
-     Note the roundel. Your original "Battle of Britain II" shortcut is
-     still there and still starts the game DIRECTLY, skipping the
-     launcher and every fix it applies on the way. If the game opens
-     without the launcher appearing first, you clicked the wrong one.
+  4. The launcher opens. Run the SETUP WIZARD - it walks you through the
+     rest and tells you what it is changing at every step.
 
 
-TWO THINGS THAT LOOK LIKE FAULTS BUT ARE NOT
---------------------------------------------
-  YOUR ANTIVIRUS MAY QUARANTINE THE LAUNCHER
-  Some antivirus products treat any unsigned PowerShell script as
-  suspicious and will isolate BOB2_Launcher.ps1 (and sometimes BOB2.bat)
-  on first run. Nothing here is malicious - the entire source is public
-  at github.com/malawicob/bob2-modern-fix, so you can read every line
-  before you run it. If it happens, restore the files and add this
-  folder as an exclusion. Symptom: a console window flashes up and
-  closes, and no launcher appears.
+WHAT YOU NEED TO SUPPLY
+-----------------------
+  Just the game and its patch:
 
-  Also: if you downloaded the ZIP, right-click it, Properties, and tick
-  "Unblock" BEFORE extracting. Windows marks downloaded files and
-  PowerShell will refuse to run them otherwise - same symptom.
+    - A licensed copy of Battle of Britain II
+    - Patch 2.13, if your game is not already at 2.13:
+      https://www.a2asimulations.com/bob/downloads/BDG%20v2.13.7z
 
-  THE IN-GAME VIDEOS DO NOT PLAY - BUT THEY CAN BE MADE TO
-  Off by default, deliberately. BOB2's videos are encoded with Indeo
-  Video 5 (IV50). Microsoft withdrew the Indeo codecs from Windows over
-  a remote-code-execution vulnerability, so on a stock Windows 10 or 11
-  there is nothing to decode them with and the game can hang trying.
-  Setup therefore sets SKIP_VIDEOS=ON, SKIP_QUICKVIDEOS=ON and
-  INTRO_VIDEO=OFF in bdg.txt.
+  If you need to apply 2.13, put the downloaded patch file in the
+  BOB2-Win11-Fix folder BEFORE running the wizard, and do not unzip or
+  run it yourself - the wizard runs it in the right order and points it
+  at the correct game folder.
 
-  Microsoft's codec is gone for good, but it is not the only Indeo
-  decoder. FFmpeg has its own, written independently, and codec packs
-  such as K-Lite install it. Bob.exe imports ole32 and neither avifil32
-  nor msvfw32, which points at DirectShow rather than the older Video
-  for Windows route - and DirectShow is exactly what those packs hook
-  into. So if you want the videos, installing K-Lite and turning the
-  three settings back on in Settings has a good chance of working.
-
-  Credit for this goes to a forum reader who remembered K-Lite solving
-  it. This readme previously claimed the videos could not be restored
-  at all, which was wrong.
+  You do NOT need to download dgVoodoo2. It is included in this package
+  (the dgv2873 folder) and the wizard installs it for you.
 
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS

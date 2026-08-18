@@ -15,6 +15,35 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.23  (2026-08-11)
+---------------------
+  Two packaging faults, both reported by the same tester, both of which
+  made a first install impossible to complete. Neither was ever visible
+  to me because I have always run this from a working folder rather than
+  from the zip I ship.
+
+  - FIXED: the release zip had no BOB2-Win11-Fix folder in it.
+    CreateFromDirectory archives the CONTENTS of the directory it is
+    given, not the directory itself, so every release since v1.6.x
+    unpacked as 42 loose files. Extracting produced a folder named after
+    the zip - "BOB2-2.13-Modern-Fix-v1.6.22" - and the readme's
+    instruction to "put the BOB2-Win11-Fix folder next to Bob.exe" could
+    not be followed, because no such folder existed. The tester ended up
+    creating one by hand, guessing at what belonged in it, and still got
+    "Bob.exe was not found". The zip now contains exactly one folder.
+
+  - FIXED: the QUICK START section described a workflow this package no
+    longer uses. It told users to download dgVoodoo2 themselves, when it
+    has shipped inside the package for several versions, and to run
+    BOB2_Setup.bat, which the launcher and Setup Wizard replaced. The
+    tester followed it correctly and was led into the wrong shape of
+    install. Rewritten around the actual flow: extract, move one folder
+    next to Bob.exe, run BOB2.bat, use the Setup Wizard. It now also
+    shows the expected folder layout, since that was the thing in doubt.
+
+  - Version header in README.txt was still reading v1.6.20.
+
+
 v1.6.22  (2026-08-11)
 ---------------------
   All three from the first outside tester - a Windows 11 user new to the

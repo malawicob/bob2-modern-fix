@@ -56,8 +56,19 @@ $excludeDirs = @(
 )
 if (-not $IncludeDxvk) { $excludeDirs += 'dxvk' }
 
-$stage = Join-Path $OutDir "BOB2-Win11-Fix"
-if (Test-Path $stage) { Remove-Item $stage -Recurse -Force }
+# Stage INSIDE a wrapper dir, so the zip contains a BOB2-Win11-Fix folder
+# rather than 42 loose files.
+#
+# CreateFromDirectory archives the CONTENTS of the directory it is given,
+# not the directory itself. Pointing it at the staging folder therefore
+# produced a zip whose root was BOB2.bat, BOB2_Launcher.ps1, ... - so
+# extracting it created a folder named after the ZIP and the readme's
+# "put the BOB2-Win11-Fix folder beside Bob.exe" was impossible to follow,
+# because no such folder existed. A tester hit exactly that and could not
+# get past "Bob.exe was not found". Zip the PARENT instead.
+$stageRoot = Join-Path $OutDir '_stage'
+if (Test-Path $stageRoot) { Remove-Item $stageRoot -Recurse -Force }
+$stage = Join-Path $stageRoot 'BOB2-Win11-Fix'
 New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
 Write-Host "Building $version" -ForegroundColor Cyan
@@ -139,7 +150,26 @@ Simulations, Shockwave Productions or Rowan Software.
 $zip = Join-Path $OutDir "BOB2-2.13-Modern-Fix-v$version.zip"
 if (Test-Path $zip) { Remove-Item $zip -Force }
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory($stage, $zip)
+# Write entries by hand rather than CreateFromDirectory.
+#
+# On .NET Framework that helper writes entry names with BACKSLASHES, which
+# the zip spec forbids (APPNOTE 4.4.17.1 requires '/'). Windows Explorer
+# tolerates it; unzip on Linux and macOS does not, and produces a single
+# flat file literally named "BOB2-Win11-Fix\BOB2.bat". Normalising the
+# separator ourselves is the whole fix.
+Add-Type -AssemblyName System.IO.Compression | Out-Null
+$fsZip = [System.IO.File]::Open($zip, [System.IO.FileMode]::Create)
+$arch  = New-Object System.IO.Compression.ZipArchive($fsZip, [System.IO.Compression.ZipArchiveMode]::Create)
+try {
+    Get-ChildItem $stageRoot -Recurse -File | ForEach-Object {
+        $rel = $_.FullName.Substring($stageRoot.Length + 1).Replace('\', '/')
+        [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+            $arch, $_.FullName, $rel, [System.IO.Compression.CompressionLevel]::Optimal)
+    }
+} finally {
+    $arch.Dispose(); $fsZip.Dispose()
+}
+Remove-Item $stageRoot -Recurse -Force
 
 $mb = [Math]::Round((Get-Item $zip).Length / 1MB, 2)
 Write-Host ""
