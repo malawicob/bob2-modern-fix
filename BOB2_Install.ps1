@@ -556,7 +556,23 @@ function Invoke-Step {
     $splat = @{}
     if ($fn.Parameters.ContainsKey('GameFolder')) { $splat['GameFolder'] = $GameDir }
     try { Add-Log ((& $Name @splat 6>&1 4>&1 3>&1 2>&1 | Out-String) -split "`r?`n") }
-    catch { Add-Log "  failed: $($_.Exception.Message)" }
+    catch {
+        $msg = $_.Exception.Message
+        Add-Log "  failed: $msg"
+        # A step that needs a file or an answer used to call Read-Host, which
+        # with no console blocks forever on a dead window - the "I click Fix
+        # and nothing happens" a tester hit on a v2.06 install that needed a
+        # patch file he did not have. Those now throw a marked error, and it
+        # has to be SEEN: putting it in the collapsed Details panel is barely
+        # better than the freeze it replaced.
+        if ($msg -match '^NEEDS-(FILE|ANSWER):\s*(.+)$') {
+            [void][System.Windows.MessageBox]::Show(
+                $Matches[2],
+                'Something is needed before this can run',
+                [System.Windows.MessageBoxButton]::OK,
+                [System.Windows.MessageBoxImage]::Information)
+        }
+    }
 }
 
 function New-Row {

@@ -10,6 +10,14 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+
+# When dot-sourced by the GUI there is NO CONSOLE. Any prompt that waits for
+# a keypress or a line of input therefore blocks forever with nothing on
+# screen to explain why, and the window simply freezes - which is exactly
+# what a tester reported when his v2.06 install needed a patch file he did
+# not have. Every interactive helper below checks this and throws a clear,
+# catchable error instead of waiting for input that can never arrive.
+$script:NonInteractive = [bool]$AsLibrary
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Version of THIS fix package (not the game version).
@@ -68,6 +76,17 @@ function Get-MonitorRefreshRate {
 
     Write-Host ""
     Write-Host "  Detected monitor refresh rate: $refreshRate Hz" -ForegroundColor Green
+
+    # Detected value is the answer we would recommend anyway, so with no
+    # console just take it. This pair of prompts was the last thing hanging
+    # the Install and repair window: the DLLs copied, then it stopped dead
+    # here waiting to be asked about the FPS limit.
+    if ($script:NonInteractive) {
+        Write-Host "  FPS limit set to: $refreshRate" -ForegroundColor Green
+        $script:DetectedFPS = $refreshRate
+        return $refreshRate
+    }
+
     Write-Host ""
     Write-Host "  Use $refreshRate as your FPS limit? (Y/n): " -ForegroundColor Yellow -NoNewline
     $confirm = Read-Host
@@ -258,6 +277,8 @@ function Write-Info {
 }
 
 function Pause-Continue {
+    # Nothing to acknowledge when there is no console - just carry on.
+    if ($script:NonInteractive) { return }
     Write-Host ""
     Write-Host "  Press any key to continue..." -ForegroundColor DarkGray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
@@ -265,6 +286,10 @@ function Pause-Continue {
 
 function Pause-WithPrompt {
     param([string]$Text)
+    # This always means "something is missing and I cannot continue without
+    # it". With a console we wait; without one we must say so, or the caller
+    # sits on a dead window.
+    if ($script:NonInteractive) { throw "NEEDS-FILE: $Text" }
     Write-Host ""
     Write-Host "  $Text" -ForegroundColor Yellow
     Write-Host "  Press any key once ready, or Ctrl+C to cancel..." -ForegroundColor DarkGray
@@ -273,6 +298,9 @@ function Pause-WithPrompt {
 
 function Get-YesNo {
     param([string]$Prompt)
+    # Read-Host returns empty immediately with no console, so this loop would
+    # spin forever rather than block. Worse than a freeze - it pegs a core.
+    if ($script:NonInteractive) { throw "NEEDS-ANSWER: $Prompt" }
     do {
         Write-Host ""
         Write-Host "  $Prompt (Y/N): " -ForegroundColor Yellow -NoNewline
@@ -439,6 +467,9 @@ function Step-DetectGame {
     }
 
     Write-Info "Could not auto-detect BOB2 installation."
+    if ($script:NonInteractive) {
+        throw "NEEDS-ANSWER: Could not find your Battle of Britain II folder. Put the BOB2-Win11-Fix folder next to Bob.exe, or set the folder in Settings."
+    }
     Write-Host ""
     Write-Host "  Enter your BOB2 game folder path: " -ForegroundColor Yellow -NoNewline
     $manualPath = Read-Host
@@ -549,7 +580,10 @@ function Step-ApplyMultiSkin {
     $multiSkinFolder = Join-Path $GameFolder "MultiSkin"
     if (Test-Path $multiSkinFolder) {
         Write-OK "MultiSkin folder already exists - may already be installed"
-        if (-not (Get-YesNo "Re-apply MultiSkin patch?")) {
+        # Pressing Fix IS the yes. Re-asking on an invisible console would
+        # abort the very thing the user just clicked.
+        $goAhead = if ($script:NonInteractive) { $true } else { Get-YesNo "Re-apply MultiSkin patch?" }
+        if (-not $goAhead) {
             return $true
         }
     }
@@ -605,7 +639,8 @@ function Step-ApplyV213 {
     }
 
     if (-not $SkipConfirm) {
-        if (-not (Get-YesNo "Apply BDG v2.13 update? (Recommended - fixes widescreen menus)")) {
+        $goAhead = if ($script:NonInteractive) { $true } else { Get-YesNo "Apply BDG v2.13 update? (Recommended - fixes widescreen menus)" }
+        if (-not $goAhead) {
             Write-Info "Skipping v2.13 update"
             return $true
         }
@@ -741,7 +776,10 @@ function Step-InstallDgVoodoo2 {
     }
     if ($existingDLLs -eq $DgVoodooDLLs.Count) {
         Write-OK "dgVoodoo2 DLLs already installed"
-        if (-not (Get-YesNo "Re-install dgVoodoo2 files?")) {
+        # Already present and nobody to ask: leave them alone. This one has a
+        # safe default, so it should not interrupt the GUI with a dialog.
+        $reinstall = if ($script:NonInteractive) { $false } else { Get-YesNo "Re-install dgVoodoo2 files?" }
+        if (-not $reinstall) {
             # Still ensure config exists
             $confPath = Join-Path $GameFolder "dgVoodoo.conf"
             if (-not (Test-Path $confPath)) {
@@ -754,6 +792,11 @@ function Step-InstallDgVoodoo2 {
 
     # Look for dgVoodoo2 folder (already extracted)
     $dgFolderNames = @(
+        # dgv2873 is the copy THIS PACKAGE SHIPS. It was missing from this
+        # list, so the bundled build was never found: the step fell through
+        # to hunting for a zip, found none, and asked the user to supply
+        # dgVoodoo2 - which is already sitting in the folder next to it.
+        "dgv2873",
         "dgVoodoo2_86_5",
         "dgVoodoo2_86",
         "dgVoodoo2",
@@ -841,10 +884,16 @@ function Step-InstallDgVoodoo2 {
     $candidates = @(
         (Join-Path $dgFolder "MS\x86"),
         (Join-Path $dgFolder "MS/x86"),
-        (Join-Path $dgFolder "x86")
+        (Join-Path $dgFolder "x86"),
+        # A dgVoodoo2 zip nests its DLLs under MS\x86, but the copy WE SHIP
+        # (dgv2873) keeps them at the top level. Without this the step found
+        # the bundled folder and then failed on "could not find MS\x86".
+        $dgFolder
     )
+    # Test for an actual DLL rather than just the folder: a stray empty x86
+    # directory would otherwise win and silently install nothing.
     foreach ($c in $candidates) {
-        if (Test-Path $c) { $x86Folder = $c; break }
+        if ((Test-Path $c) -and (Test-Path (Join-Path $c 'D3D9.dll'))) { $x86Folder = $c; break }
     }
 
     if (-not $x86Folder) {
@@ -1243,7 +1292,8 @@ function Step-GPUReminder {
             Write-Info "  2. Click 'Browse' and select Bob.exe"
             Write-Info "  3. Click 'Options' and select 'High performance'"
             Write-Host ""
-            if (Get-YesNo "Open Windows Graphics Settings now?") {
+            # Never pop a Windows settings panel at a GUI user unasked.
+            if ((-not $script:NonInteractive) -and (Get-YesNo "Open Windows Graphics Settings now?")) {
                 try {
                     Start-Process "ms-settings:display-advancedgraphics"
                     Write-OK "Opened Windows Graphics Settings"
@@ -1347,7 +1397,8 @@ function Step-Validate {
     }
 
     Write-Host ""
-    if (Get-YesNo "Launch BOB2 for testing?") {
+    # Launching the game from inside a repair step would be a surprise.
+    if ((-not $script:NonInteractive) -and (Get-YesNo "Launch BOB2 for testing?")) {
         $bobExe = Join-Path $GameFolder "Bob.exe"
         Write-Info "Launching Bob.exe..."
         try {
@@ -1546,6 +1597,9 @@ function Show-Status {
 function Do-Uninstall {
     $gameFolder = Find-GameFolder
     if (-not $gameFolder) {
+        if ($script:NonInteractive) {
+            throw "NEEDS-ANSWER: Could not find your Battle of Britain II folder, so there is nothing to uninstall from."
+        }
         Write-Host ""
         Write-Host "  Enter your BOB2 game folder path: " -ForegroundColor Yellow -NoNewline
         $gameFolder = Read-Host
@@ -1559,7 +1613,11 @@ function Do-Uninstall {
     Write-Header "Uninstall Modifications"
     Write-Info "Game folder: $gameFolder"
 
-    if (-not (Get-YesNo "Remove all modifications? (Backups will be restored if available)")) {
+    # The GUI already showed a Yes/No dialog listing exactly what this puts
+    # back, and the user said yes. Asking again on a console nobody can see
+    # would just abort the uninstall they asked for.
+    $goAhead = if ($script:NonInteractive) { $true } else { Get-YesNo "Remove all modifications? (Backups will be restored if available)" }
+    if (-not $goAhead) {
         Write-Info "Cancelled."
         return
     }
@@ -1622,7 +1680,8 @@ function Do-Uninstall {
     foreach ($b in $backups) {
         $backupPath = Join-Path $gameFolder $b[0]
         if (Test-Path $backupPath) {
-            if (Get-YesNo "Restore Bob.exe from $($b[0]) ($($b[1]))?") {
+            $restore = if ($script:NonInteractive) { $true } else { Get-YesNo "Restore Bob.exe from $($b[0]) ($($b[1]))?" }
+            if ($restore) {
                 Copy-Item $backupPath $bobExe -Force
                 Write-OK "Restored Bob.exe from $($b[0])"
                 $restoredExe = $true

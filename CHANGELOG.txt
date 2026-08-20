@@ -15,6 +15,53 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.24  (2026-08-11)
+---------------------
+  "I click Fix and nothing happens, then it freezes." Reported against
+  1.6.23 by the same tester, whose game is the A2A digital download and
+  therefore starts at v2.06 rather than 2.13.
+
+  - FIXED: every Fix button could hang the Install and repair window.
+
+    The Step-* functions were written for a console tool and still ask
+    questions: Read-Host for an answer, RawUI.ReadKey for a keypress. The
+    GUI dot-sources that same file with -AsLibrary and runs it with NO
+    CONSOLE ATTACHED, so those calls waited forever for input that could
+    never arrive, with nothing on screen to say why. The window simply
+    stopped responding.
+
+    Every prompt reachable from the GUI now checks a $script:NonInteractive
+    flag set by -AsLibrary:
+      - Cosmetic pauses are skipped.
+      - "Do you want to do X?" answers itself yes - pressing Fix WAS the
+        answer, and re-asking invisibly would abort the requested action.
+      - Genuine blockers throw NEEDS-FILE / NEEDS-ANSWER, which the GUI
+        now shows in a dialog instead of burying in the collapsed log.
+      - Steps that would launch the game or open Windows settings are
+        skipped rather than surprising a GUI user.
+
+    So a missing patch now reads "Place BDG v2.13 patch in the
+    BOB2-Win11-Fix folder, then continue" instead of freezing.
+
+  - FIXED: the bundled dgVoodoo2 was never found. The folder we ship is
+    called dgv2873 and that name was missing from the list of folders the
+    installer searches, so it fell through to hunting for a zip, found
+    none, and asked the user to supply dgVoodoo2 - which was already
+    sitting in the folder beside it.
+
+  - FIXED: and once found, it still would not install. The copy step looked
+    only in MS\x86, MS/x86 and x86, the layout of an official dgVoodoo2
+    zip. Our bundled copy keeps the DLLs at the top level, so the step
+    reported "could not find MS\x86". It now also accepts the folder
+    itself, and tests for an actual D3D9.dll rather than just a directory
+    name, so an empty x86 folder cannot win and silently install nothing.
+
+  Verified on a clean folder rather than by reading the code: all three
+  steps complete in under 300ms and deliver the four DLLs, dinput8.dll,
+  dgVoodoo.conf and the version stamp. With the 2.13 patch absent, the
+  step returns its NEEDS-FILE message in 114ms instead of hanging.
+
+
 v1.6.23  (2026-08-11)
 ---------------------
   Two packaging faults, both reported by the same tester, both of which
