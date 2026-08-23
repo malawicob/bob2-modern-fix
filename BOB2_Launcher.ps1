@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.6.29'
+$FixVersion = '1.6.30'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -904,6 +904,28 @@ function Invoke-DriftCheck {
     # when the GAME exits, so a launcher left open across a session would
     # otherwise still be showing the state from before.
     if (-not (Invoke-DriftCheck)) { return }
+    # A leftover Bob.exe from the previous session holds the DirectInput
+    # devices exclusively and keeps the foreground contended: the new
+    # instance flies with no joystick, no mouse-look, and two cursors on
+    # screen. The game is elevated, so a hung copy can also survive a
+    # normal kill. Never start a second instance over a first.
+    $stale = Get-Process -Name 'Bob' -ErrorAction SilentlyContinue
+    if ($stale) {
+        $ans = [System.Windows.MessageBox]::Show($win,
+            "Battle of Britain II is already running (or has not finished closing).`n`nStarting a second copy leaves you with no joystick and two mouse pointers. Close the old one first?",
+            'Game already running', 'YesNo', 'Warning')
+        if ($ans -ne 'Yes') { return }
+        try { $stale | Stop-Process -Force -ErrorAction Stop } catch {
+            # Elevated process, non-elevated launcher: kill via an elevated shell.
+            try {
+                Start-Process powershell -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList '-NoProfile','-Command',"Get-Process Bob -ErrorAction SilentlyContinue | Stop-Process -Force"
+            } catch { Show-Note 'Could not close the running game. Close it yourself, then press Play again.' 'Still running' 'Warning'; return }
+        }
+        Start-Sleep -Milliseconds 1500
+        if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+            Show-Note 'The old game process would not close. Close it yourself, then press Play again.' 'Still running' 'Warning'; return
+        }
+    }
     $bat = Resolve-Helper 'BOB2_Launch.bat'
     if (-not $bat) { Show-Note "BOB2_Launch.bat is missing from the fix folder." 'Not found' 'Warning'; return }
     try {

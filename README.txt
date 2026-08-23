@@ -1,6 +1,6 @@
 ========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.6.29  (2026-08-23)
+  Fix package v1.6.30  (2026-08-23)
   For the v2.13 executable
 ========================================================================
 
@@ -34,7 +34,7 @@ QUICK START
   3. Double-click BOB2.bat inside that folder.
 
      Windows may have flagged the download. If a console window flashes
-     up and nothing else happens, see "TWO THINGS THAT LOOK LIKE FAULTS"
+     up and nothing else happens, see "THINGS THAT LOOK LIKE FAULTS"
      below - you probably need to Unblock the zip and extract it again.
 
   4. The launcher opens. Run the SETUP WIZARD - it walks you through the
@@ -56,6 +56,40 @@ WHAT YOU NEED TO SUPPLY
 
   You do NOT need to download dgVoodoo2. It is included in this package
   (the dgv2865 folder) and the wizard installs it for you.
+
+
+THINGS THAT LOOK LIKE FAULTS BUT ARE NOT
+----------------------------------------
+  YOUR ANTIVIRUS MAY QUARANTINE THE LAUNCHER
+  Some antivirus products treat any unsigned PowerShell script as
+  suspicious and will isolate BOB2_Launcher.ps1 (and sometimes BOB2.bat)
+  on first run. Nothing here is malicious - the entire source is public
+  at github.com/malawicob/bob2-modern-fix. If it happens, restore the
+  files and add this folder as an exclusion. Symptom: a console window
+  flashes up and closes, and no launcher appears. Also: right-click the
+  downloaded zip, Properties, tick "Unblock" BEFORE extracting - same
+  symptom otherwise.
+
+  TWO MOUSE POINTERS, DEAD JOYSTICK, OR "PLEASE DO NOT ALT TAB"
+  The game runs in exclusive fullscreen, and ANY window appearing over
+  it - even for a fraction of a second - makes it lose the display and
+  input devices. The launcher refuses to start a second copy of the
+  game (a leftover instance holds the joystick and is the classic cause
+  of two pointers), and setup silences the Windows crash-report dialog,
+  which otherwise pops up over your NEXT session after any crash.
+
+  If it still happens, look for anything on YOUR machine that opens a
+  window on a timer: schedulers running console scripts every minute,
+  antivirus popups, update reminders. A per-minute monitoring script
+  did exactly this on the developer's own machine - note that
+  "powershell -WindowStyle Hidden" still flashes, because the console
+  exists before it is hidden. Launching through wscript.exe opens no
+  console at all.
+
+  THE IN-GAME VIDEOS DO NOT PLAY
+  Deliberate - see "The videos" further down. They are Indeo Video 5,
+  which stock Windows cannot decode; installing K-Lite and re-enabling
+  three settings can bring them back.
 
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS

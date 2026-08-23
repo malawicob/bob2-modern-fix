@@ -15,6 +15,33 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.30  (2026-08-23)
+---------------------
+  Protections against FOCUS LOSS, the quiet killer of exclusive
+  fullscreen. Any window appearing over the game - even for an instant -
+  drops the display and input devices: "Please do not Alt Tab", two
+  mouse pointers, a dead joystick, and often a crash.
+
+  - NEW: PLAY refuses to start a second copy of the game. A leftover
+    Bob.exe from the previous session holds the DirectInput devices
+    exclusively - the new instance flies with no joystick and two mouse
+    pointers. The game is elevated, so a hung copy can also survive a
+    normal kill; PLAY now detects it, offers to close it (elevating if
+    needed), and only then launches.
+
+  - NEW: the Win11 tweaks step silences the Windows Error Reporting
+    DIALOG (reports are still recorded). After any CTD, WER pops its
+    "check for a solution" window minutes later - in practice straight
+    over the NEXT game session, which then loses the device and often
+    crashes too. One crash was sabotaging every session after it.
+
+  - README: a section on diagnosing focus thieves. Both of tonight's
+    were real: the WER dialog, and a per-minute monitoring script whose
+    "-WindowStyle Hidden" console still flashes (the window exists
+    before it is hidden). Anything scheduled that opens a console will
+    do this to an exclusive-fullscreen game.
+
+
 v1.6.29  (2026-08-23)
 ---------------------
   REVERTS the v1.6.28 menu changes, and documents the real cause of every

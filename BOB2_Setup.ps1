@@ -1146,6 +1146,19 @@ function Step-Win11Tweaks {
                 Write-Info "  small on a high-DPI display and defeats the menu rescale."
             }
             Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DWM8And16BitMitigation WINXPSP3 RUNASADMIN DISABLEDXMAXIMIZEDWINDOWEDMODE"
+            Write-OK "Set Bob.exe compatibility flags"
+
+            # Silence the Windows Error Reporting DIALOG (reports are still
+            # recorded). If the game ever crashes, WER otherwise pops its
+            # "check for a solution" window minutes later - often straight
+            # over the NEXT game session. The game runs exclusive
+            # fullscreen; any window stealing focus makes it drop the
+            # display device, show "Please do not Alt Tab", and frequently
+            # crash again. One CTD was sabotaging every session after it.
+            $werKey = "HKCU:\Software\Microsoft\Windows\Windows Error Reporting"
+            if (-not (Test-Path $werKey)) { New-Item -Path $werKey -Force | Out-Null }
+            Set-ItemProperty -Path $werKey -Name DontShowUI -Value 1 -Type DWord
+            Write-OK "Crash-report dialogs silenced (crashes still logged, no popup over the game)"
             Write-OK "Set Bob.exe: WinXP SP3 + Admin + Disable fullscreen optimizations"
 
             # Also set compatibility on bob2_config.EXE
