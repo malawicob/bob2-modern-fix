@@ -15,6 +15,38 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.26  (2026-08-23)
+---------------------
+  Uninstall was undoing the wrong thing. Found while checking whether a
+  tester should uninstall before updating. He should not have, and now it
+  would not have mattered.
+
+  - FIXED: uninstalling DOWNGRADED THE GAME. It restored Bob.exe.v212 or
+    Bob.exe.v206 - backups of earlier GAME versions, taken before applying
+    a patch - so "remove this mod" quietly meant "put the game back to
+    2.12". That undoes something the user asked for rather than something
+    this mod imposed.
+
+    It now restores Bob.exe.unscaled, the pristine copy taken before the
+    menu rescale and the DebugBreak import fix, which is exactly and only
+    what this mod changed. The version backups are left alone and named in
+    the log, so anyone who genuinely wants an older executable can put one
+    back by hand.
+
+    Since 1.6.24 this was worse than it sounds: the GUI answers prompts
+    automatically, so the downgrade no longer even asked.
+
+  - FIXED: Bob.exe.unscaled could itself be stale. Neither patch step
+    removed it after replacing Bob.exe, so a copy taken at 2.06 survived a
+    2.13 patch and sat there as a downgrade waiting to happen - the menu
+    rescale patches "the pristine original", and uninstall restores it.
+    Step-ApplyV212 and Step-ApplyV213 now clear it, so the next rescale
+    takes a fresh copy from the newly patched executable.
+
+  UPDATING does not require uninstalling, and never did. Replace the
+  BOB2-Win11-Fix folder and run Install and repair.
+
+
 v1.6.25  (2026-08-23)
 ---------------------
   - FIXED: dgVoodooCpl.exe was never shipped, but README.txt refers to it

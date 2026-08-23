@@ -564,6 +564,17 @@ function Step-ApplyV212 {
         return $false
     }
 
+    # Patching replaced Bob.exe, so any Bob.exe.unscaled kept beside it is now
+    # a copy of the PREVIOUS GAME VERSION. Left in place it becomes a downgrade
+    # waiting to happen: the menu rescale patches "the pristine original", and
+    # uninstall restores it. Drop it so the next rescale takes a fresh one from
+    # the newly patched executable.
+    $unscaled = Join-Path $GameFolder "Bob.exe.unscaled"
+    if (Test-Path $unscaled) {
+        Remove-Item $unscaled -Force -ErrorAction SilentlyContinue
+        Write-Info "Removed the old Bob.exe.unscaled - it was from the previous game version."
+    }
+
     # Verify
     $newVersion = Get-BobVersion $GameFolder
     Write-Info "Bob.exe version after patching: $newVersion"
@@ -755,6 +766,17 @@ function Step-ApplyV213 {
             Write-Err "Failed to extract v2.13 patch: $_"
             return $false
         }
+    }
+
+    # Patching replaced Bob.exe, so any Bob.exe.unscaled kept beside it is now
+    # a copy of the PREVIOUS GAME VERSION. Left in place it becomes a downgrade
+    # waiting to happen: the menu rescale patches "the pristine original", and
+    # uninstall restores it. Drop it so the next rescale takes a fresh one from
+    # the newly patched executable.
+    $unscaled = Join-Path $GameFolder "Bob.exe.unscaled"
+    if (Test-Path $unscaled) {
+        Remove-Item $unscaled -Force -ErrorAction SilentlyContinue
+        Write-Info "Removed the old Bob.exe.unscaled - it was from the previous game version."
     }
 
     # Verify
@@ -1669,29 +1691,31 @@ function Do-Uninstall {
         Write-OK "Restored bdg.txt from backup"
     }
 
-    # Restore Bob.exe from backup
+    # Restore Bob.exe.
+    #
+    # ONLY undo what THIS MOD did to it: the menu rescale and the DebugBreak
+    # import fix. Bob.exe.unscaled is the pristine copy taken before either,
+    # so restoring it returns the executable to how we found it.
+    #
+    # It used to restore Bob.exe.v212 or Bob.exe.v206 instead. Those are
+    # backups of EARLIER GAME VERSIONS taken before applying a patch, so
+    # "uninstall the fix" quietly became "downgrade the game to 2.12" -
+    # undoing something the user asked for rather than something we imposed.
+    # They are left alone; anyone who genuinely wants an older executable can
+    # copy one back by hand.
     $bobExe = Join-Path $gameFolder "Bob.exe"
-    $backups = @(
-        @("Bob.exe.v212", "v2.12"),
-        @("Bob.exe.v206", "v2.06")
-    )
-
-    $restoredExe = $false
-    foreach ($b in $backups) {
-        $backupPath = Join-Path $gameFolder $b[0]
-        if (Test-Path $backupPath) {
-            $restore = if ($script:NonInteractive) { $true } else { Get-YesNo "Restore Bob.exe from $($b[0]) ($($b[1]))?" }
-            if ($restore) {
-                Copy-Item $backupPath $bobExe -Force
-                Write-OK "Restored Bob.exe from $($b[0])"
-                $restoredExe = $true
-                break
-            }
-        }
+    $unscaled = Join-Path $gameFolder "Bob.exe.unscaled"
+    if (Test-Path $unscaled) {
+        Copy-Item $unscaled $bobExe -Force
+        Remove-Item $unscaled -Force -ErrorAction SilentlyContinue
+        Write-OK "Restored Bob.exe from Bob.exe.unscaled (menu rescale and crash fix removed)"
+    } else {
+        Write-Info "No Bob.exe.unscaled found - Bob.exe left as-is"
     }
 
-    if (-not $restoredExe) {
-        Write-Info "Bob.exe left as-is"
+    $stale = @("Bob.exe.v212", "Bob.exe.v206") | Where-Object { Test-Path (Join-Path $gameFolder $_) }
+    if ($stale) {
+        Write-Info "Left in place: $($stale -join ', ') - older GAME versions, not part of this fix."
     }
 
     # Remove Bob.exe.local
