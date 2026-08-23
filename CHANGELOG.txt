@@ -15,6 +15,43 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.28  (2026-08-23)
+---------------------
+  THE MENU RESCALE ONLY EVER PATCHED HALF THE MENUS. Found chasing a
+  briefing screen whose text overlapped its tab row at every scale
+  including "original" - which was the tell, since a rescale problem
+  changes with the scale.
+
+  - FIXED: the game's menus live in TWO files, and the rescale only knew
+    one. Bob.exe holds 154 dialog templates; English\TEXT\boblang.dll
+    holds all 154 again PLUS one more, localised - and MFC loads the
+    LANGUAGE DLL's copy first. 60 of the shared dialogs differ between
+    the files, so for those 60 screens (mission briefings among them)
+    rescaling Bob.exe changed nothing the player ever saw.
+
+    MENU SIZE now patches both files together, from four new
+    langscale*.bin patch files built the same verifiable way: every edit
+    carries the value it expects, one mismatch aborts before anything is
+    written, and the result is checked against a recorded md5. A
+    non-English or re-patched boblang.dll is detected and left alone
+    with a warning rather than corrupted.
+
+  - FIXED: "Original size" removed the crash fix. It restored the
+    pristine Bob.exe wholesale, which silently undid the
+    DebugBreak->GetVersion import fix along with the scale - so undoing
+    the menu scale quietly reintroduced the Windows 11 startup crash.
+    It now restores the layout and re-applies the crash fix, and
+    restores boblang.dll too.
+
+  - NEW: Gunsights option in Settings > GFX screen. Two buttons: use the
+    enhanced reticles (thin sharp lines redrawn at 1024x1024, same ring
+    geometry as stock so deflection aiming is unchanged - RAF reflector
+    and Bf109 Revi), or restore stock. The stock textures are backed up
+    on first switch and Restore puts them back byte-for-byte. This is
+    the one place the mod now offers to replace game content - optional,
+    reversible, and never done by the wizard or installer on their own.
+
+
 v1.6.27  (2026-08-23)
 ---------------------
   THE 3D VIEW RENDERING INTO A CORNER OF THE SCREEN. Two causes, both

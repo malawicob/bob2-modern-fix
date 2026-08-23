@@ -2825,6 +2825,75 @@ function Build-GfxPage {
             -Padding ([System.Windows.Thickness]::new(20,14,28,14)) -Margin ([System.Windows.Thickness]::new(0,14,12,0)) -Radius 6))
     }
     [void]$list.Children.Add($res)
+
+    # ------------------------------------------------------------------
+    #  GUNSIGHTS - stock reticles or the enhanced redrawn set.
+    #
+    #  Three DXT5 textures drive the reflector sights: RAFsight.dds in
+    #  COCKMASK and COCKPM16 (Spitfire/Hurricane) and SIGHT2.dds in
+    #  COCKPM16 (the Bf109 Revi). The enhanced set redraws them at
+    #  1024x1024 with thin sharp lines at the stock ring geometry, so
+    #  aiming references do not move. Stock files are backed up as
+    #  .stock-backup on first switch and restored from there.
+    # ------------------------------------------------------------------
+    [void]$list.Children.Add((New-SectionHeader 'Gunsights' (
+        'The reflector-sight reticles. Enhanced replaces the thick glowing stock reticles with thin sharp ' +
+        'ones redrawn at four times the resolution, at the same ring size, so deflection aiming is unchanged. ' +
+        'Switching is safe: the stock textures are backed up first and Restore puts them back exactly.')))
+
+    $sightTargets = @(
+        @{ Src = 'RAFsight.dds'; Dst = 'COCKMASK\RAFsight.dds' },
+        @{ Src = 'RAFsight.dds'; Dst = 'COCKPM16\RAFsight.dds' },
+        @{ Src = 'SIGHT2.dds';   Dst = 'COCKPM16\SIGHT2.dds' }
+    )
+    $sightAssets = Join-Path $script:ScriptDir 'assets\gunsights'
+
+    $curSight = 'unknown'
+    $probe = Join-Path $script:GameFolder 'COCKPM16\SIGHT2.dds'
+    if (Test-Path -LiteralPath $probe) {
+        $len = (Get-Item -LiteralPath $probe).Length
+        if ($len -ge 1000000) { $curSight = 'enhanced' } elseif ($len -eq 262272) { $curSight = 'stock' }
+    }
+    $sightState = New-TB ("Currently installed: " + $curSight) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,14,0,0))
+    [void]$list.Children.Add($sightState)
+
+    $sightRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
+    $btnEnh = New-Btn 'Use enhanced gunsights' 'BtnPrimary' $null {
+        try {
+            if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                [System.Windows.MessageBox]::Show('Close the game first - it has these textures open.','Gunsights') | Out-Null; return
+            }
+            $done = 0
+            foreach ($t in $sightTargets) {
+                $src = Join-Path $sightAssets $t.Src
+                $dst = Join-Path $script:GameFolder $t.Dst
+                if (-not (Test-Path -LiteralPath $src)) { continue }
+                if (-not (Test-Path -LiteralPath $dst)) { continue }
+                if (-not (Test-Path -LiteralPath ($dst + '.stock-backup'))) { Copy-Item -LiteralPath $dst ($dst + '.stock-backup') }
+                Copy-Item -LiteralPath $src $dst -Force
+                $done++
+            }
+            $sightState.Text = 'Currently installed: enhanced  (' + $done + ' textures replaced, stock backed up)'
+        } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Gunsights') | Out-Null }
+    }.GetNewClosure()
+    $btnStock = New-Btn 'Restore stock' 'BtnGhost' $null {
+        try {
+            if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                [System.Windows.MessageBox]::Show('Close the game first - it has these textures open.','Gunsights') | Out-Null; return
+            }
+            $done = 0
+            foreach ($t in $sightTargets) {
+                $dst = Join-Path $script:GameFolder $t.Dst
+                if (Test-Path -LiteralPath ($dst + '.stock-backup')) { Copy-Item -LiteralPath ($dst + '.stock-backup') $dst -Force; $done++ }
+            }
+            $sightState.Text = 'Currently installed: stock  (' + $done + ' textures restored from backup)'
+        } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Gunsights') | Out-Null }
+    }.GetNewClosure()
+    $btnStock.Margin = [System.Windows.Thickness]::new(12,0,0,0)
+    [void]$sightRow.Children.Add($btnEnh)
+    [void]$sightRow.Children.Add($btnStock)
+    [void]$list.Children.Add($sightRow)
+
     New-Scroll $list
 }
 

@@ -42,6 +42,7 @@ $excludeFiles = @(
     'BOB2_Config.path'              # this machine's game folder
     'BOB2_Config.textsize'          # this machine's text size
     'BOB2_Profile_last_run.log'     # this machine's last profiling run
+    'BOB2_Config_error.log'         # this machine's error trap output
     'BOB2-Win11-Fix.tar.gz'         # stale build artifact, 45 bytes, empty
     'Build-Release.ps1'             # this script
     'DESIGN.md'                     # design notes, not user documentation
