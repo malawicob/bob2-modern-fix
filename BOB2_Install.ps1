@@ -273,7 +273,14 @@ function Get-Checks {
         if (Test-Path (Join-Path $GameDir 'dgVoodoo.conf')) {
             $v = ''
             try { $v = (Get-Item $d3d9).VersionInfo.ProductVersion } catch { }
-            $wrap = "dgVoodoo2 $v".Trim(); $wok = $true
+            if ($v -eq '2.8.6.5') {
+                $wrap = "dgVoodoo2 $v"; $wok = $true
+            } else {
+                # 2.8.7.x was shipped up to v1.6.26 and breaks exclusive
+                # fullscreen - the 3D view renders into a corner. Flag it.
+                $wrap = "dgVoodoo2 $v - wrong version, 3D renders in a corner of the screen; 2.8.6.5 needed"
+                $wok = $false
+            }
         } elseif (Test-Path (Join-Path $GameDir 'dxvk.conf')) {
             $wrap = 'DXVK - known to crash this game in 3D'
         } else { $wrap = 'an unrecognised d3d9.dll'; $wok = $true }

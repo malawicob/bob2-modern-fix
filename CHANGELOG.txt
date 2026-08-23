@@ -15,6 +15,23 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.31  (2026-08-23)
+---------------------
+  - FIXED: updating from v1.6.26 or earlier KEPT the broken dgVoodoo.
+    Those packages shipped 2.8.7.3, which cannot take exclusive
+    fullscreen - the 3D view renders into a corner of the screen. The
+    installer saw "dgVoodoo2 DLLs already installed" and left them
+    alone, so updating the mod never replaced them and the corner bug
+    survived every update. Found when a tester updated and reported the
+    identical symptom.
+
+    Both checks are now version-aware: Install and repair flags any
+    version other than 2.8.6.5 with a Fix button and says why, and the
+    install step replaces a wrong version without asking. Verified by
+    simulating the upgrade: a game folder with 2.8.7.3 comes out at
+    2.8.6.5.
+
+
 v1.6.30  (2026-08-23)
 ---------------------
   Protections against FOCUS LOSS, the quiet killer of exclusive

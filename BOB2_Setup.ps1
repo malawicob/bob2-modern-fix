@@ -812,10 +812,21 @@ function Step-InstallDgVoodoo2 {
         if (Test-Path (Join-Path $GameFolder $dll)) { $existingDLLs++ }
     }
     if ($existingDLLs -eq $DgVoodooDLLs.Count) {
-        Write-OK "dgVoodoo2 DLLs already installed"
-        # Already present and nobody to ask: leave them alone. This one has a
-        # safe default, so it should not interrupt the GUI with a dialog.
-        $reinstall = if ($script:NonInteractive) { $false } else { Get-YesNo "Re-install dgVoodoo2 files?" }
+        # Present is not enough - the VERSION matters. 2.8.7.3 (shipped by
+        # this mod up to v1.6.26) will not take exclusive fullscreen: the
+        # 3D view renders into a corner of the screen. A user updating from
+        # an old package still has those DLLs in the game folder, and
+        # "already installed - leave them alone" kept the broken version
+        # forever. Wrong version now reinstalls without asking.
+        $curVer = ''
+        try { $curVer = (Get-Item (Join-Path $GameFolder 'D3D9.dll')).VersionInfo.ProductVersion } catch { }
+        if ($curVer -ne '2.8.6.5') {
+            Write-Warn "dgVoodoo2 $curVer is installed - 2.8.6.5 is required (2.8.7.x breaks fullscreen). Replacing."
+            $reinstall = $true
+        } else {
+            Write-OK "dgVoodoo2 2.8.6.5 already installed"
+            $reinstall = if ($script:NonInteractive) { $false } else { Get-YesNo "Re-install dgVoodoo2 files?" }
+        }
         if (-not $reinstall) {
             # Still ensure config exists
             $confPath = Join-Path $GameFolder "dgVoodoo.conf"
