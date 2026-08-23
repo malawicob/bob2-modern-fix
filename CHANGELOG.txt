@@ -15,6 +15,30 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.25  (2026-08-23)
+---------------------
+  - FIXED: dgVoodooCpl.exe was never shipped, but README.txt refers to it
+    SIX times - including as the answer to "how do I change the
+    resolution". A tester with the 3D view rendering into a corner of his
+    1920x1080 screen went looking for it and reported, correctly, that
+    "this file is NOT in my install anywhere". He was sent after a tool
+    that did not exist, while trying to fix the exact problem it is for.
+
+    It is now in dgv2873 alongside the DLLs, version 2.8.7.3, matching
+    them exactly. Step-InstallDgVoodoo2 already copied it when present, so
+    shipping it is the whole fix. Covered by the same dgVoodoo
+    redistribution terms already quoted in LICENCES.txt.
+
+    Invisible from here because this machine has dgVoodooCpl.exe from a
+    manual dgVoodoo install predating the package.
+
+  NOTE for anyone on 1.6.23 or earlier with the 3D view in a corner:
+  dgVoodoo2 was never installed at all on those versions - the bundled
+  folder was not in the search list, fixed in 1.6.24 - so the game was
+  running on the native Direct3D 9 path with no wrapper. Update first,
+  and check D3D9.dll is present next to Bob.exe.
+
+
 v1.6.24  (2026-08-11)
 ---------------------
   "I click Fix and nothing happens, then it freezes." Reported against
