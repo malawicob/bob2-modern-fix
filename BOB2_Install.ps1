@@ -319,6 +319,18 @@ function Get-Checks {
         }
     }
 
+    # A leftover dgv2873 folder means the user extracted a new package OVER
+    # an old one instead of deleting it first. It shipped the broken
+    # dgVoodoo 2.8.7.3 and its presence has already confused one tester
+    # (who found dgVoodooCpl.exe in it and ran that copy). Clear it out.
+    $old2873 = Join-Path $ScriptDir 'dgv2873'
+    if (Test-Path $old2873) {
+        $out.Add([pscustomobject]@{
+            Name='Old package leftovers'; Ok=$false
+            Detail='a dgv2873 folder from v1.6.26 or earlier is still inside BOB2-Win11-Fix - it carries the broken dgVoodoo 2.8.7.3'
+            Fix='RemoveOld2873' })
+    }
+
     $di = Test-Path (Join-Path $GameDir 'dinput8.dll')
     $out.Add([pscustomobject]@{
         Name='Startup crash fix'; Ok=$di
@@ -571,6 +583,11 @@ function Invoke-Step {
     # fill the whole screen.
     param([string]$Name)
     if ($Name -eq 'DpiShim') { Repair-DpiShim; Add-Log 'Removed the HIGHDPIAWARE compatibility flag.'; return }
+    if ($Name -eq 'RemoveOld2873') {
+        $old = Join-Path $ScriptDir 'dgv2873'
+        if (Test-Path $old) { Remove-Item $old -Recurse -Force; Add-Log 'Removed the obsolete dgv2873 folder (broken dgVoodoo 2.8.7.3).' }
+        return
+    }
     if ($Name -eq 'FixCampaignRes') {
         # Write a mode that holds: the display's native W x H at 60Hz.
         # 60Hz is enumerated at every resolution on every display seen so

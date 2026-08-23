@@ -1,6 +1,6 @@
 ========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.6.31  (2026-08-23)
+  Fix package v1.6.32  (2026-08-23)
   For the v2.13 executable
 ========================================================================
 
@@ -13,6 +13,12 @@
 
 QUICK START
 -----------
+  UPDATING from any earlier version? Same two steps: DELETE your old
+  BOB2-Win11-Fix folder first (it holds nothing of yours - backups and
+  joystick references live outside it), then continue below. Extracting
+  over the top of an old folder leaves stale files behind; deleting it
+  first cannot.
+
   1. Extract the zip you downloaded. It contains ONE folder, called
      BOB2-Win11-Fix.
 

@@ -15,6 +15,25 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.32  (2026-08-23)
+---------------------
+  Updating is now the same two steps every time, whatever version you
+  come from: DELETE the old BOB2-Win11-Fix folder, extract the new one,
+  run Install and repair.
+
+  - README now says delete-then-extract explicitly. "Replace the folder"
+    was ambiguous: extracting over the top of an old folder merges the
+    two and leaves stale files behind - which is how one tester ended up
+    running dgVoodooCpl.exe from a leftover dgv2873 folder.
+
+  - Install and repair flags a leftover dgv2873 folder (it carries the
+    broken dgVoodoo 2.8.7.3) and removes it at a click.
+
+  The folder holds nothing of the user's: backups, the joystick
+  reference and the wizard marker all live outside it, precisely so the
+  folder can always be deleted and replaced whole.
+
+
 v1.6.31  (2026-08-23)
 ---------------------
   - FIXED: updating from v1.6.26 or earlier KEPT the broken dgVoodoo.
