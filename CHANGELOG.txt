@@ -15,6 +15,42 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.27  (2026-08-23)
+---------------------
+  THE 3D VIEW RENDERING INTO A CORNER OF THE SCREEN. Two causes, both
+  ours, both affecting every user on a DPI-scaled display. Found by
+  comparing against a working install on the same machine that predates
+  this package.
+
+  - FIXED: we shipped the wrong dgVoodoo2. 2.8.7.3 will not take exclusive
+    fullscreen for this game: it renders at the game's own resolution into
+    a small window in the top-left corner. 2.8.6.5 does. Established by
+    A/B test with every other variable held constant - swap the DLLs and
+    nothing else, and the fault appears and disappears with the version.
+
+    Now ships dgv2865. Do not "update" this without testing fullscreen on
+    a high-DPI display first.
+
+  - FIXED: the launcher REMOVED HIGHDPIAWARE before every single launch.
+
+    The reasoning was sound about the 2D menus - without the flag Windows
+    magnifies them, with it they draw at true pixel size and look small -
+    and completely missed the 3D view. Without the flag Windows
+    DPI-virtualises the process and dgVoodoo cannot go fullscreen. So the
+    launcher was breaking the 3D view on every launch to enlarge menus,
+    while shipping a menu rescale whose whole purpose is to enlarge menus.
+
+    It now ensures the flag instead, and Step-Win11Tweaks sets it too.
+    The menu rescale keeps the menus readable, which is its job.
+
+  - CHANGED: dropped WINXPSP3 from the compatibility flags. The working
+    reference install has no XP compatibility mode at all.
+
+  Symptom to recognise: 3D view in the top-left corner of the screen at
+  the game's own resolution, desktop visible around it, menus normal. On
+  a 2560x1600 display at 150% that is a 1024x768 image drawn at 1536x1152.
+
+
 v1.6.26  (2026-08-23)
 ---------------------
   Uninstall was undoing the wrong thing. Found while checking whether a

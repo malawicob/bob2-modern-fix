@@ -24,8 +24,23 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 # Must match BOB2FIX_VERSION in dinput8_guard.c - the crash guard writes its
 # own version into bob2guard.log, so a mismatch means a stale DLL is deployed.
 
+# ONE source of truth for the version number.
+#
+# This used to be its own literal, and it drifted: the launcher was bumped
+# to 1.6.26 while this still said 1.6.21, so every install got stamped
+# 1.6.21 and the launcher reported "1.6.21 installed - 1.6.26 available"
+# forever, even immediately after a clean install. Read it from the
+# launcher instead, so the two cannot disagree.
 $FixVersion = '1.6.21'
 $FixVersionDate = "2026-08-06"
+try {
+    $launcherPs1 = Join-Path $PSScriptRoot 'BOB2_Launcher.ps1'
+    if (Test-Path $launcherPs1) {
+        $m = Select-String -Path $launcherPs1 -Pattern "^\`$FixVersion\s*=\s*'([^']+)'" -ErrorAction Stop |
+             Select-Object -First 1
+        if ($m) { $FixVersion = $m.Matches[0].Groups[1].Value }
+    }
+} catch { }
 $StampFile = "BOB2-Win11-Fix.version"
 
 # Ensure console window is wide enough. Skipped as a library: there is no
@@ -814,10 +829,17 @@ function Step-InstallDgVoodoo2 {
 
     # Look for dgVoodoo2 folder (already extracted)
     $dgFolderNames = @(
-        # dgv2873 is the copy THIS PACKAGE SHIPS. It was missing from this
-        # list, so the bundled build was never found: the step fell through
-        # to hunting for a zip, found none, and asked the user to supply
-        # dgVoodoo2 - which is already sitting in the folder next to it.
+        # dgv2865 is the copy THIS PACKAGE SHIPS, and the version MATTERS.
+        #
+        # We shipped 2.8.7.3 for several releases. On a DPI-scaled display it
+        # will not take exclusive fullscreen: the game renders into a small
+        # window in the corner of the screen. 2.8.6.5 does. Verified by A/B
+        # test on one machine with every other variable held constant, and
+        # it matches a working install that predates this package.
+        #
+        # Do not "update" this to a newer dgVoodoo without testing fullscreen
+        # on a high-DPI display first.
+        "dgv2865",
         "dgv2873",
         "dgVoodoo2_86_5",
         "dgVoodoo2_86",
@@ -908,7 +930,7 @@ function Step-InstallDgVoodoo2 {
         (Join-Path $dgFolder "MS/x86"),
         (Join-Path $dgFolder "x86"),
         # A dgVoodoo2 zip nests its DLLs under MS\x86, but the copy WE SHIP
-        # (dgv2873) keeps them at the top level. Without this the step found
+        # (dgv2865) keeps them at the top level. Without this the step found
         # the bundled folder and then failed on "could not find MS\x86".
         $dgFolder
     )
@@ -1103,7 +1125,7 @@ function Step-Win11Tweaks {
             if (-not (Test-Path $regPath)) {
                 New-Item -Path $regPath -Force | Out-Null
             }
-            # Deliberately WITHOUT HIGHDPIAWARE.
+            # Deliberately WITH HIGHDPIAWARE. This used to omit it.
             #
             # That flag tells Windows "this program handles DPI itself, do not
             # scale it". BOB2 is from 2005 and does no such thing, so with the
@@ -1118,12 +1140,12 @@ function Step-Win11Tweaks {
             # sets exactly this. So strip it rather than merely not adding it.
             $existing = $null
             try { $existing = (Get-ItemProperty -Path $regPath -Name $bobExe -ErrorAction SilentlyContinue).$bobExe } catch { }
-            if ($existing -and $existing -match 'HIGHDPIAWARE') {
-                Write-Warn "Bob.exe had HIGHDPIAWARE set - removing it."
+            if ($existing -and $existing -notmatch 'HIGHDPIAWARE') {
+                Write-Warn "Bob.exe was missing HIGHDPIAWARE - adding it."
                 Write-Info "  It stops Windows scaling the game, which makes the menus"
                 Write-Info "  small on a high-DPI display and defeats the menu rescale."
             }
-            Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DWM8And16BitMitigation WINXPSP3 RUNASADMIN DISABLEDXMAXIMIZEDWINDOWEDMODE"
+            Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DWM8And16BitMitigation RUNASADMIN DISABLEDXMAXIMIZEDWINDOWEDMODE HIGHDPIAWARE"
             Write-OK "Set Bob.exe: WinXP SP3 + Admin + Disable fullscreen optimizations"
 
             # Also set compatibility on bob2_config.EXE

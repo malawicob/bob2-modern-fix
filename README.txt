@@ -1,6 +1,6 @@
 ========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.6.26  (2026-08-23)
+  Fix package v1.6.27  (2026-08-23)
   For the v2.13 executable
 ========================================================================
 
@@ -55,7 +55,7 @@ WHAT YOU NEED TO SUPPLY
   at the correct game folder.
 
   You do NOT need to download dgVoodoo2. It is included in this package
-  (the dgv2873 folder) and the wizard installs it for you.
+  (the dgv2865 folder) and the wizard installs it for you.
 
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS
@@ -125,15 +125,20 @@ original is kept beside it as Bob.exe.unscaled.
   >>> IF THE MENUS DO NOT LOOK ANY BIGGER, CHECK THIS FIRST. <<<
 
 A compatibility flag called HIGHDPIAWARE tells Windows the program
-handles DPI itself and must not be scaled. BOB2 is from 2005 and does no
-such thing, so with that flag set its menus are drawn at true pixel size -
-on a 2560-wide display at 150% scaling that is about a third smaller than
-intended, and it cancels this rescale exactly. The dialogs really are
-bigger; Windows has simply stopped magnifying them.
+handles DPI itself and must not be scaled. This mod now SETS that flag,
+and the rescale above is what keeps the menus readable.
 
-It is easy to acquire by accident, because Properties > Compatibility >
-"Change high DPI settings" > "Override high DPI scaling behaviour" sets
-precisely this flag. The Win11 tweaks step removes it.
+Earlier versions removed it, on the reasoning that BOB2 is from 2005 and
+does not really handle DPI, so the flag made the menus draw small. That
+was true of the menus and wrong about everything else: without the flag
+Windows DPI-virtualises the whole process, dgVoodoo can no longer take
+exclusive fullscreen, and the 3D VIEW RENDERS INTO A SMALL WINDOW IN THE
+CORNER OF THE SCREEN. On a 2560x1600 display at 150% that is a 1024x768
+image scaled to 1536x1152 in the top-left, desktop visible around it.
+
+So if your 3D view appears in a corner, check that Bob.exe HAS this flag:
+Properties > Compatibility > "Change high DPI settings" > "Override high
+DPI scaling behaviour". The launcher sets it before every launch.
 
 Re-applying BDG v2.13, or anything else that replaces Bob.exe, wipes the
 rescale. Run MENU SIZE again afterwards.

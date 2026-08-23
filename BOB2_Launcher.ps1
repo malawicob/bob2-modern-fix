@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.6.26'
+$FixVersion = '1.6.27'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -156,18 +156,26 @@ function Sync-FixVersion {
 }
 
 # ---------------------------------------------------------------------
-#  HIGHDPIAWARE keeps coming back.
+#  HIGHDPIAWARE must be PRESENT. This function used to remove it.
 #
-#  It tells Windows the program manages DPI itself and must not be
-#  scaled. BOB2 is from 2005 and does no such thing, so with the flag
-#  set its menus draw at true pixel size - on a high-DPI display that is
-#  far smaller than intended, and it cancels the menu rescale exactly.
+#  The old reasoning: the flag tells Windows the program handles DPI
+#  itself and must not be scaled; BOB2 does no such thing, so with it set
+#  the menus draw at true pixel size and look small. All true - but only
+#  about the 2D menus, and the menu rescale already solves that.
 #
-#  Removing it by hand does not hold. Windows' Program Compatibility
-#  Assistant keeps a record for Bob.exe and re-applies shims when it
-#  thinks it has seen a problem, so the flag returns after a crash or an
-#  odd exit. Since the launcher runs before every game start anyway, it
-#  is the natural place to put this right, every time.
+#  What it missed is the 3D view. Without the flag Windows DPI-virtualises
+#  the process, and dgVoodoo can no longer take exclusive fullscreen: the
+#  game renders at its own resolution into a small window in the corner of
+#  the screen. On a 2560x1600 display at 150% that is a 1024x768 image
+#  scaled to 1536x1152 in the top-left, with the desktop around it.
+#
+#  So the launcher was removing the flag before every single launch and
+#  breaking the 3D view to make the menus bigger - while shipping a menu
+#  rescale whose entire purpose is to make the menus bigger. It now
+#  ensures the flag instead, and the rescale does its job.
+#
+#  Verified on a 2560x1600 / 150% display against a working install that
+#  predates this package and has the flag set.
 # ---------------------------------------------------------------------
 function Repair-DpiShim {
     $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
@@ -177,10 +185,12 @@ function Repair-DpiShim {
         $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
         if (-not $props -or -not ($props.PSObject.Properties.Name -contains $exe)) { return $false }
         $cur = $props.$exe
-        if ($cur -notmatch 'HIGHDPIAWARE') { return $false }
-        $new = (($cur -split '\s+') | Where-Object { $_ -ne 'HIGHDPIAWARE' -and $_ -ne '' }) -join ' '
+        if ($cur -match 'HIGHDPIAWARE') { return $false }   # already correct
+        $parts = @($cur -split '\s+' | Where-Object { $_ -ne '' })
+        if ($parts.Count -eq 0 -or $parts[0] -ne '~') { $parts = @('~') + $parts }
+        $new = (($parts + 'HIGHDPIAWARE') -join ' ')
         Set-ItemProperty $key -Name $exe -Value $new
-        return $true          # we had to fix it
+        return $true          # we had to add it
     }
     catch { return $false }
 }
@@ -889,8 +899,9 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Windows had re-applied the HIGHDPIAWARE compatibility flag to Bob.exe, which " +
-                   "makes the menus draw small and cancels the menu rescale.`n`nRemoved it. Starting the game now.")
+        Show-Note ("Bob.exe was missing the HIGHDPIAWARE compatibility flag. Without it Windows " +
+                   "scales the whole process, and the 3D view renders into a small window in the " +
+                   "corner of the screen instead of filling it.`n`nAdded it. Starting the game now.")
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would
