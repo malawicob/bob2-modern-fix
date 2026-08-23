@@ -15,6 +15,50 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.29  (2026-08-23)
+---------------------
+  REVERTS the v1.6.28 menu changes, and documents the real cause of every
+  menu problem chased that day.
+
+  - The overlapping briefing text, options pages running off the screen,
+    and menu sizes "doing nothing" all had ONE cause, and it was not the
+    dialog templates: the game's CAMPAIGN RESOLUTION was set to a mode
+    the display pipeline would not hold (2560x1600 at 240Hz). The game
+    silently fell back to a 1024x768 menu surface - a quarter of the
+    area the 1.40x rescale is designed for (it needs about 1608px
+    across). On exit the game wrote the failure into settings.cfg as
+    1280x768 at 0Hz. Set to a mode that holds (1920x1080 at 60Hz) the
+    original menu rescale fits exactly as shipped, briefings included.
+
+  - REVERTED: the boblang.dll language-DLL rescale from v1.6.28, and the
+    two "fit-capped" patch generations that followed it. All three were
+    treating symptoms of the fallback surface. The original scale*.bin
+    patches are back, byte-identical to v1.6.20's. If you installed
+    v1.6.28, run MENU SIZE once and pick your size - it restores
+    boblang.dll to stock automatically if a scaled one is found.
+
+  - KEPT from v1.6.28: "Original size" no longer removes the Windows 11
+    crash fix; the Gunsights option in Settings > GFX screen (with a fix
+    for both buttons failing on a null path); and the new CAMPAIGN
+    RESOLUTION dropdown in Settings > GFX screen, which now has a real
+    job - it offers only modes your display reports, which is exactly
+    the failure this whole episode traced back to.
+
+  - NEW: Install and repair now checks the campaign resolution and
+    offers a one-click fix. It flags a refresh above 60Hz (the case that
+    failed) and the degraded 0Hz mode the game writes after a failure,
+    and the Fix writes the display's native size at 60Hz, with
+    settings.cfg backed up first. The Settings dropdown remains for
+    picking any specific mode.
+
+  - The launcher again REMOVES HIGHDPIAWARE before Play (as every
+    version before v1.6.27 did), and Step-Win11Tweaks sets the original
+    compatibility flags. The v1.6.27 flag change was compensating for
+    the same fallback surface and is not needed with a holdable
+    campaign resolution. The v1.6.27 dgVoodoo 2.8.6.5 correction stands
+    - that one was real.
+
+
 v1.6.28  (2026-08-23)
 ---------------------
   THE MENU RESCALE ONLY EVER PATCHED HALF THE MENUS. Found chasing a

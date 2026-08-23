@@ -1140,12 +1140,12 @@ function Step-Win11Tweaks {
             # sets exactly this. So strip it rather than merely not adding it.
             $existing = $null
             try { $existing = (Get-ItemProperty -Path $regPath -Name $bobExe -ErrorAction SilentlyContinue).$bobExe } catch { }
-            if ($existing -and $existing -notmatch 'HIGHDPIAWARE') {
-                Write-Warn "Bob.exe was missing HIGHDPIAWARE - adding it."
+            if ($existing -and $existing -match 'HIGHDPIAWARE') {
+                Write-Warn "Bob.exe had HIGHDPIAWARE set - removing it."
                 Write-Info "  It stops Windows scaling the game, which makes the menus"
                 Write-Info "  small on a high-DPI display and defeats the menu rescale."
             }
-            Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DWM8And16BitMitigation RUNASADMIN DISABLEDXMAXIMIZEDWINDOWEDMODE HIGHDPIAWARE"
+            Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DWM8And16BitMitigation WINXPSP3 RUNASADMIN DISABLEDXMAXIMIZEDWINDOWEDMODE"
             Write-OK "Set Bob.exe: WinXP SP3 + Admin + Disable fullscreen optimizations"
 
             # Also set compatibility on bob2_config.EXE

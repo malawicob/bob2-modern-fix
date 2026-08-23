@@ -2805,9 +2805,9 @@ function Build-GfxPage {
         (New-CfgSwitch $script:CfgOffsets.Mirror 0 $d4) $d4))
 
     [void]$list.Children.Add((New-SectionHeader 'Campaign resolution' (
-        'Four 32-bit integers at a 64-byte stride. Shown for reference only - this tool does not write them, ' +
-        'because a mode the hardware will not accept leaves the game unable to start. Change it from the ' +
-        'game''s own screen, or set USE_DESKTOP_RESOLUTION on the Graphics page.')))
+        'Four 32-bit integers at a 64-byte stride. The dropdown below writes them - it offers only modes ' +
+        'your display actually reports, so an unusable mode cannot be selected. The 3D view is separate: ' +
+        'set USE_DESKTOP_RESOLUTION on the Graphics page for that.')))
 
     $res = New-Stack -Orientation 'Horizontal'
     foreach ($f in @(
@@ -2825,6 +2825,59 @@ function Build-GfxPage {
             -Padding ([System.Windows.Thickness]::new(20,14,28,14)) -Margin ([System.Windows.Thickness]::new(0,14,12,0)) -Radius 6))
     }
     [void]$list.Children.Add($res)
+
+    # ------------------------------------------------------------------
+    #  CAMPAIGN RESOLUTION - now editable, but only to modes the display
+    #  itself enumerates. The old fear here was writing a mode the
+    #  hardware refuses, which leaves the game unable to start; offering
+    #  nothing but enumerated modes removes that failure, so the
+    #  read-only rule can go.
+    # ------------------------------------------------------------------
+    $dR = New-CfgDot
+    $cbRes = New-Object System.Windows.Controls.ComboBox
+    $cbRes.Style = Res 'Combo'
+    $cbRes.MinWidth = 260
+    $modes = @{}
+    try {
+        Get-CimInstance CIM_VideoControllerResolution -ErrorAction Stop |
+            Where-Object { $_.NumberOfColors -ge 4294967296 -or $_.BitsPerPixel -ge 32 -or $true } |
+            ForEach-Object {
+                if ($_.HorizontalResolution -ge 800 -and $_.RefreshRate -ge 50) {
+                    $k = '{0} x {1} @ {2} Hz' -f $_.HorizontalResolution, $_.VerticalResolution, $_.RefreshRate
+                    $modes[$k] = @([int]$_.HorizontalResolution, [int]$_.VerticalResolution, [int]$_.RefreshRate)
+                }
+            }
+    } catch { }
+    $ordered = $modes.Keys | Sort-Object { $m = $modes[$_]; $m[0]*100000 + $m[1]*10 + $m[2]/1000 }
+    foreach ($k in $ordered) { [void]$cbRes.Items.Add($k) }
+    $curW  = [BitConverter]::ToInt32($script:CfgBytes, $script:CfgOffsets.ResW)
+    $curH  = [BitConverter]::ToInt32($script:CfgBytes, $script:CfgOffsets.ResH)
+    $curHz = [BitConverter]::ToInt32($script:CfgBytes, $script:CfgOffsets.ResHz)
+    $curKey = '{0} x {1} @ {2} Hz' -f $curW, $curH, $curHz
+    if (-not $modes.ContainsKey($curKey)) {
+        $modes[$curKey] = @($curW, $curH, $curHz)
+        [void]$cbRes.Items.Insert(0, $curKey)
+    }
+    $cbRes.SelectedItem = $curKey
+    $cbRes.Tag = @{ Modes = $modes; Dot = $dR }
+    $cbRes.Add_SelectionChanged({
+        param($sndr, $e)
+        if ($sndr.SelectedItem -eq $null) { return }
+        $m = $sndr.Tag.Modes[[string]$sndr.SelectedItem]
+        if (-not $m) { return }
+        [Array]::Copy([BitConverter]::GetBytes([int]$m[0]), 0, $script:CfgBytes, $script:CfgOffsets.ResW,  4)
+        [Array]::Copy([BitConverter]::GetBytes([int]$m[1]), 0, $script:CfgBytes, $script:CfgOffsets.ResH,  4)
+        [Array]::Copy([BitConverter]::GetBytes([int]$m[2]), 0, $script:CfgBytes, $script:CfgOffsets.ResHz, 4)
+        $changed = $false
+        foreach ($o in @($script:CfgOffsets.ResW, $script:CfgOffsets.ResH, $script:CfgOffsets.ResHz)) {
+            for ($i = 0; $i -lt 4; $i++) { if ($script:CfgBytes[$o+$i] -ne $script:CfgOrig[$o+$i]) { $changed = $true } }
+        }
+        $sndr.Tag.Dot.Visibility = $(if ($changed) { 'Visible' } else { 'Hidden' })
+        if ($script:OnChange) { & $script:OnChange }
+    })
+    [void]$list.Children.Add((New-CfgRow 'Set campaign resolution' 'settings.cfg offsets 1416 / 1480 / 1544' `
+        'Writes width, height and refresh together. Colour depth is left as it is. Remember to press Save to disk.' `
+        $cbRes $dR))
 
     # ------------------------------------------------------------------
     #  GUNSIGHTS - stock reticles or the enhanced redrawn set.
@@ -2847,6 +2900,11 @@ function Build-GfxPage {
         @{ Src = 'SIGHT2.dds';   Dst = 'COCKPM16\SIGHT2.dds' }
     )
     $sightAssets = Join-Path $script:ScriptDir 'assets\gunsights'
+    # GetNewClosure() binds LOCAL variables only - $script: scoped ones
+    # resolve against the closure's own module and come back null, which
+    # made both buttons fail with "Cannot bind argument to parameter
+    # 'Path'". Capture the folder into a local first.
+    $sightGameDir = $script:GameFolder
 
     $curSight = 'unknown'
     $probe = Join-Path $script:GameFolder 'COCKPM16\SIGHT2.dds'
@@ -2866,7 +2924,7 @@ function Build-GfxPage {
             $done = 0
             foreach ($t in $sightTargets) {
                 $src = Join-Path $sightAssets $t.Src
-                $dst = Join-Path $script:GameFolder $t.Dst
+                $dst = Join-Path $sightGameDir $t.Dst
                 if (-not (Test-Path -LiteralPath $src)) { continue }
                 if (-not (Test-Path -LiteralPath $dst)) { continue }
                 if (-not (Test-Path -LiteralPath ($dst + '.stock-backup'))) { Copy-Item -LiteralPath $dst ($dst + '.stock-backup') }
@@ -2883,7 +2941,7 @@ function Build-GfxPage {
             }
             $done = 0
             foreach ($t in $sightTargets) {
-                $dst = Join-Path $script:GameFolder $t.Dst
+                $dst = Join-Path $sightGameDir $t.Dst
                 if (Test-Path -LiteralPath ($dst + '.stock-backup')) { Copy-Item -LiteralPath ($dst + '.stock-backup') $dst -Force; $done++ }
             }
             $sightState.Text = 'Currently installed: stock  (' + $done + ' textures restored from backup)'

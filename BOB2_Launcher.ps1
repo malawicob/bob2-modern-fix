@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.6.28'
+$FixVersion = '1.6.29'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -185,12 +185,10 @@ function Repair-DpiShim {
         $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
         if (-not $props -or -not ($props.PSObject.Properties.Name -contains $exe)) { return $false }
         $cur = $props.$exe
-        if ($cur -match 'HIGHDPIAWARE') { return $false }   # already correct
-        $parts = @($cur -split '\s+' | Where-Object { $_ -ne '' })
-        if ($parts.Count -eq 0 -or $parts[0] -ne '~') { $parts = @('~') + $parts }
-        $new = (($parts + 'HIGHDPIAWARE') -join ' ')
+        if ($cur -notmatch 'HIGHDPIAWARE') { return $false }
+        $new = (($cur -split '\s+') | Where-Object { $_ -ne 'HIGHDPIAWARE' -and $_ -ne '' }) -join ' '
         Set-ItemProperty $key -Name $exe -Value $new
-        return $true          # we had to add it
+        return $true          # we had to fix it
     }
     catch { return $false }
 }
@@ -899,9 +897,8 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Bob.exe was missing the HIGHDPIAWARE compatibility flag. Without it Windows " +
-                   "scales the whole process, and the 3D view renders into a small window in the " +
-                   "corner of the screen instead of filling it.`n`nAdded it. Starting the game now.")
+        Show-Note ("Windows had re-applied the HIGHDPIAWARE compatibility flag to Bob.exe, which " +
+                   "makes the menus draw small and cancels the menu rescale.`n`nRemoved it. Starting the game now.")
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would

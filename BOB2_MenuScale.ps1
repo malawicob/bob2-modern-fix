@@ -78,7 +78,6 @@ function Wait-IfInteractive {
 function Write-Err  { param($m) Write-Host "  $m" -ForegroundColor Red }
 function Write-OK   { param($m) Write-Host "  $m" -ForegroundColor Green }
 function Write-Info { param($m) Write-Host "  $m" -ForegroundColor Gray }
-function Write-Warn { param($m) Write-Host "  $m" -ForegroundColor Yellow }
 
 # ---------------------------------------------------------------------
 $GameDir = Find-GameDir
@@ -90,75 +89,26 @@ if (-not $GameDir) {
     exit 1
 }
 
-
-# ---------------------------------------------------------------------
-# The menus live in TWO files, and for years this tool only knew one.
-#
-# Bob.exe holds 154 dialog templates. English\TEXT\boblang.dll holds all
-# 154 again PLUS one more, localised - and MFC loads the LANGUAGE DLL's
-# copy first. 60 of the shared dialogs differ between the files, so for
-# those 60 screens (the mission briefings among them) rescaling Bob.exe
-# alone changed nothing the player ever saw. Both files must carry the
-# same scale.
-#
-# Only English\TEXT is patched: the langscale*.bin patches are built
-# against the English 2.13 boblang.dll. Other language folders are left
-# alone and will show stock-sized menus.
-# ---------------------------------------------------------------------
-function Set-LangScale {
-    param([string]$Scale)   # '102'..'140' or 'original'
-    $langPath = Join-Path $GameDir 'English\TEXT\boblang.dll'
-    $langOrig = "$langPath.unscaled"
-    if (-not (Test-Path $langPath)) {
-        Write-Warn 'English\TEXT\boblang.dll not found - language menus left as they are.'
-        return
-    }
-    if (-not (Test-Path $langOrig)) { Copy-Item $langPath $langOrig }
-    $lorig = [System.IO.File]::ReadAllBytes($langOrig)
-
-    if ($Scale -eq 'original') {
-        [System.IO.File]::WriteAllBytes($langPath, $lorig)
-        Write-OK 'boblang.dll restored to stock size as well.'
-        return
-    }
-
-    $lp = Join-Path $ScriptDir "menuscale\langscale$Scale.bin"
-    if (-not (Test-Path $lp)) {
-        Write-Warn "langscale$Scale.bin missing - boblang.dll left as it is."
-        return
-    }
-    $b = [System.IO.File]::ReadAllBytes($lp)
-    if ([System.Text.Encoding]::ASCII.GetString($b[0..7]) -ne 'BOB2MSL1') {
-        Write-Warn 'langscale patch has the wrong header - boblang.dll left as it is.'
-        return
-    }
-    $n       = [BitConverter]::ToUInt32($b, 12)
-    $wantSrc = ($b[16..31] | ForEach-Object { $_.ToString('x2') }) -join ''
-    $wantOut = ($b[32..47] | ForEach-Object { $_.ToString('x2') }) -join ''
-    if ((Get-Md5 $lorig) -ne $wantSrc) {
-        Write-Warn 'boblang.dll.unscaled is not the English 2.13 build this patch was made'
-        Write-Warn 'for - boblang.dll left as it is. (Non-English install, or re-patched.)'
-        return
-    }
-    $lbuf = [byte[]]::new($lorig.Length)
-    [Array]::Copy($lorig, $lbuf, $lorig.Length)
-    $o = 48; $bad = 0
-    for ($i = 0; $i -lt $n; $i++) {
-        $ofs = [BitConverter]::ToUInt32($b, $o)
-        $exp = [BitConverter]::ToUInt16($b, $o + 4)
-        $new = [BitConverter]::ToUInt16($b, $o + 6)
-        $o += 8
-        if ([BitConverter]::ToUInt16($lbuf, $ofs) -ne $exp) { $bad++; continue }
-        [Array]::Copy([BitConverter]::GetBytes([uint16]$new), 0, $lbuf, $ofs, 2)
-    }
-    if ($bad -gt 0) { Write-Warn "$bad langscale edits mismatched - boblang.dll left as it is."; return }
-    if ((Get-Md5 $lbuf) -ne $wantOut) { Write-Warn 'langscale result checksum mismatch - boblang.dll left as it is.'; return }
-    [System.IO.File]::WriteAllBytes($langPath, $lbuf)
-    Write-OK "boblang.dll rescaled too ($n edits verified) - briefings and localised pages included."
-}
-
 $BobPath  = Join-Path $GameDir 'Bob.exe'
 $OrigPath = Join-Path $GameDir 'Bob.exe.unscaled'
+
+# ---------------------------------------------------------------------
+# v1.6.28 briefly rescaled English\TEXT\boblang.dll as well. That was
+# reverted - the menu problems it chased were caused by the campaign
+# resolution falling back to 1024x768, not by the language DLL. If a
+# scaled boblang.dll is still in place from that version, put the stock
+# one back so this tool's Bob.exe scale is the only thing in play.
+# ---------------------------------------------------------------------
+$langPath = Join-Path $GameDir 'English\TEXT\boblang.dll'
+$langOrig = "$langPath.unscaled"
+if ((Test-Path $langOrig) -and (Test-Path $langPath)) {
+    $a = [System.IO.File]::ReadAllBytes($langPath)
+    $b = [System.IO.File]::ReadAllBytes($langOrig)
+    if ((Get-Md5 $a) -ne (Get-Md5 $b)) {
+        [System.IO.File]::WriteAllBytes($langPath, $b)
+        Write-OK 'Restored stock boblang.dll (a v1.6.28 rescaled copy was found).'
+    }
+}
 
 if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
     Write-Err 'The game is running. Close it first - Bob.exe cannot be replaced while in use.'
@@ -238,9 +188,8 @@ if (-not $Scale) {
 
 # ---------------------------------------------------------------------
 if ($Scale -eq 'original') {
-    # Undo the RESCALE, not the crash protection. This used to write the
-    # pristine bytes back wholesale, which silently removed the
-    # DebugBreak->GetVersion import fix along with the scale - so picking
+    # Undo the RESCALE, not the crash protection. Writing the pristine bytes
+    # back wholesale also removed the DebugBreak->GetVersion import fix, so
     # "Original size" quietly reintroduced the Windows 11 startup crash.
     $rbuf = [byte[]]::new($orig.Length)
     [Array]::Copy($orig, $rbuf, $orig.Length)
@@ -253,11 +202,9 @@ if ($Scale -eq 'original') {
         if ($m) { [Array]::Copy($gv0, 0, $rbuf, $i, $gv0.Length); break }
     }
     [System.IO.File]::WriteAllBytes($BobPath, $rbuf)
-    Set-LangScale 'original'
     Write-Host ''
-    Write-OK 'Menus restored to stock size in Bob.exe and boblang.dll.'
-    Write-OK 'The Windows 10/11 crash fix was kept.'
-    Write-Info 'The .unscaled backups stay in place so a scale can be reapplied.'
+    Write-OK 'Restored the original menu size. The Windows 10/11 crash fix was kept.'
+    Write-Info 'Bob.exe.unscaled has been left in place so a scale can be reapplied.'
     Write-Host ''
     Wait-IfInteractive
     exit 0
@@ -358,7 +305,6 @@ for ($i = 0; $i -lt ($buf.Length - $dbg.Length); $i++) {
 }
 
 [System.IO.File]::WriteAllBytes($BobPath, $buf)
-Set-LangScale $Scale
 
 $s = $SCALES[$Scale]
 Write-Host ''

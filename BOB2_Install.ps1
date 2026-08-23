@@ -282,6 +282,36 @@ function Get-Checks {
         Name='Graphics translator'; Ok=$wok; Detail=$wrap
         Fix=$(if ($wok) { $null } else { 'Step-InstallDgVoodoo2' }) })
 
+    # ------------------------------------------------------------------
+    # CAMPAIGN RESOLUTION. If settings.cfg asks for a display mode the
+    # pipeline will not hold, the game silently falls back to a 1024x768
+    # menu surface: the rescaled menus overflow, briefing text overlaps
+    # its own tab row, and every MENU SIZE option "does nothing". The
+    # game then records the failure as a degraded mode (refresh 0).
+    # Cost a full day to trace; checking four ints prevents it.
+    # ------------------------------------------------------------------
+    $cfgP = Join-Path $GameDir 'SAVEGAME\settings.cfg'
+    if (Test-Path $cfgP) {
+        $cb = [System.IO.File]::ReadAllBytes($cfgP)
+        if ($cb.Length -ge 1612) {
+            $rw  = [BitConverter]::ToInt32($cb, 1416)
+            $rh  = [BitConverter]::ToInt32($cb, 1480)
+            $rhz = [BitConverter]::ToInt32($cb, 1544)
+            $resOk = $true; $why = "$rw x $rh @ $rhz Hz"
+            if ($rhz -le 0 -or $rw -lt 800 -or $rh -lt 600) {
+                $resOk = $false; $why = "$rw x $rh @ $rhz Hz - a degraded fallback the game wrote after a failed mode switch"
+            } elseif ($rhz -gt 60) {
+                # High-refresh modes are what failed to hold in practice
+                # (2560x1600@240 -> 1024x768 fallback). 60Hz exists at
+                # every resolution this game can use.
+                $resOk = $false; $why = "$rw x $rh @ $rhz Hz - high refresh rates can fail to hold and drop the menus to 1024x768"
+            }
+            $out.Add([pscustomobject]@{
+                Name='Campaign resolution'; Ok=$resOk; Detail=$why
+                Fix=$(if ($resOk) { $null } else { 'FixCampaignRes' }) })
+        }
+    }
+
     $di = Test-Path (Join-Path $GameDir 'dinput8.dll')
     $out.Add([pscustomobject]@{
         Name='Startup crash fix'; Ok=$di
@@ -534,6 +564,26 @@ function Invoke-Step {
     # fill the whole screen.
     param([string]$Name)
     if ($Name -eq 'DpiShim') { Repair-DpiShim; Add-Log 'Removed the HIGHDPIAWARE compatibility flag.'; return }
+    if ($Name -eq 'FixCampaignRes') {
+        # Write a mode that holds: the display's native W x H at 60Hz.
+        # 60Hz is enumerated at every resolution on every display seen so
+        # far; native size keeps the menus as large as the panel allows.
+        $cfgP = Join-Path $GameDir 'SAVEGAME\settings.cfg'
+        if (-not (Test-Path $cfgP)) { Add-Log 'settings.cfg not found.'; return }
+        $w = 1920; $h = 1080
+        try {
+            $vc = Get-CimInstance Win32_VideoController | Select-Object -First 1
+            if ($vc.CurrentHorizontalResolution -ge 800) { $w = [int]$vc.CurrentHorizontalResolution; $h = [int]$vc.CurrentVerticalResolution }
+        } catch { }
+        $cb = [System.IO.File]::ReadAllBytes($cfgP)
+        Copy-Item $cfgP "$cfgP.before-resfix" -Force
+        [Array]::Copy([BitConverter]::GetBytes([int]$w),  0, $cb, 1416, 4)
+        [Array]::Copy([BitConverter]::GetBytes([int]$h),  0, $cb, 1480, 4)
+        [Array]::Copy([BitConverter]::GetBytes([int]60),  0, $cb, 1544, 4)
+        [System.IO.File]::WriteAllBytes($cfgP, $cb)
+        Add-Log "Campaign resolution set to $w x $h @ 60 Hz (settings.cfg backed up as .before-resfix)."
+        return
+    }
     if ($Name -eq 'StampVersion') {
         # A stale stamp almost always means a stale dinput8.dll too - the
         # stamp records that file's MD5 - so refresh the guard first, then
