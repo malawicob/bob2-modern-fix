@@ -304,6 +304,24 @@ function Get-Checks {
             $rw  = [BitConverter]::ToInt32($cb, 1416)
             $rh  = [BitConverter]::ToInt32($cb, 1480)
             $rhz = [BitConverter]::ToInt32($cb, 1544)
+            # PLAUSIBILITY GATE. These offsets were established by
+            # differential analysis of ONE machine's settings.cfg. A tester
+            # promptly produced a file where the same offset reads
+            # 67,110,784 "pixels" wide - a different layout, not a
+            # resolution. If any value is structurally implausible we show
+            # that the layout is unrecognised and OFFER NO FIX, because
+            # writing into a file we cannot read would corrupt it.
+            $plausible = ($rw -ge 320 -and $rw -le 7680 -and
+                          $rh -ge 200 -and $rh -le 4320 -and
+                          $rhz -ge 0  -and $rhz -le 500)
+            if (-not $plausible) {
+                $out.Add([pscustomobject]@{
+                    Name='Campaign resolution'; Ok=$true
+                    Detail="settings.cfg layout not recognised on this install - values left strictly alone (raw: $rw x $rh @ $rhz)"
+                    Fix=$null })
+                $cb = $null
+            }
+            if ($cb) {
             $resOk = $true; $why = "$rw x $rh @ $rhz Hz"
             if ($rhz -le 0 -or $rw -lt 800 -or $rh -lt 600) {
                 $resOk = $false; $why = "$rw x $rh @ $rhz Hz - a degraded fallback the game wrote after a failed mode switch"
@@ -316,6 +334,7 @@ function Get-Checks {
             $out.Add([pscustomobject]@{
                 Name='Campaign resolution'; Ok=$resOk; Detail=$why
                 Fix=$(if ($resOk) { $null } else { 'FixCampaignRes' }) })
+            }
         }
     }
 
@@ -600,6 +619,12 @@ function Invoke-Step {
             if ($vc.CurrentHorizontalResolution -ge 800) { $w = [int]$vc.CurrentHorizontalResolution; $h = [int]$vc.CurrentVerticalResolution }
         } catch { }
         $cb = [System.IO.File]::ReadAllBytes($cfgP)
+        # Defence in depth: never write into a layout we cannot read.
+        $ow = [BitConverter]::ToInt32($cb, 1416); $oh = [BitConverter]::ToInt32($cb, 1480)
+        if ($ow -lt 320 -or $ow -gt 7680 -or $oh -lt 200 -or $oh -gt 4320) {
+            Add-Log 'settings.cfg layout not recognised - refusing to write the resolution.'
+            return
+        }
         Copy-Item $cfgP "$cfgP.before-resfix" -Force
         [Array]::Copy([BitConverter]::GetBytes([int]$w),  0, $cb, 1416, 4)
         [Array]::Copy([BitConverter]::GetBytes([int]$h),  0, $cb, 1480, 4)

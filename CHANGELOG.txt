@@ -15,6 +15,21 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.33  (2026-08-24)
+---------------------
+  - FIXED: the Campaign resolution check trusted settings.cfg offsets
+    that were established by differential analysis of ONE machine. The
+    first outside tester promptly produced a file where the same offset
+    reads "67,110,784 pixels wide" - a different layout, not a
+    resolution. The row displayed that nonsense as healthy, and the Fix
+    button would have written into a file we cannot read.
+
+    Both are now plausibility-gated: implausible values show as "layout
+    not recognised on this install - values left strictly alone", no Fix
+    is offered, and the Fix handler independently refuses to write into
+    an unrecognised layout even if invoked.
+
+
 v1.6.32  (2026-08-23)
 ---------------------
   Updating is now the same two steps every time, whatever version you
