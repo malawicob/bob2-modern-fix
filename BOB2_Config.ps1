@@ -2970,6 +2970,114 @@ function Build-GfxPage {
     [void]$sightRow.Children.Add($btnStock)
     [void]$list.Children.Add($sightRow)
 
+    # ------------------------------------------------------------------
+    #  RESHADE - optional visual enhancement layer. Ships as dxgi.dll
+    #  hooking dgVoodoo2's D3D11 output; entirely additive, off by
+    #  default. Disable keeps every file (dxgi.dll renamed .disabled) so
+    #  user preset tweaks survive; the preset buttons rewrite only the
+    #  PresetPath line of the game-root ReShade.ini.
+    # ------------------------------------------------------------------
+    [void]$list.Children.Add((New-SectionHeader 'ReShade visual enhancement' (
+        'An optional post-processing layer over the graphics translator: sharpening, anti-aliasing and ' +
+        'colour grading via five presets, from Subtle to Cinematic. Off by default. In the game, DEL opens ' +
+        'the ReShade overlay, PgUp and PgDn switch presets and PrtScn saves a screenshot.')))
+
+    $rsGameDir = $script:GameFolder
+    $rsSetup = Join-Path $script:ScriptDir 'BOB2_Setup.ps1'
+    $rsDllSize = 4136216
+
+    $rsDescribe = {
+        param($folder)
+        $dll = Join-Path $folder 'dxgi.dll'
+        $off = Join-Path $folder 'dxgi.dll.disabled'
+        $ini = Join-Path $folder 'ReShade.ini'
+        $hasDll = (Test-Path -LiteralPath $dll) -and ((Get-Item -LiteralPath $dll).Length -eq 4136216)
+        $hasOff = Test-Path -LiteralPath $off
+        if ($hasDll -and (Test-Path -LiteralPath $ini)) {
+            $p = 'unknown'
+            $m = Select-String -LiteralPath $ini -Pattern '^PresetPath=.*BOB2-(\w+)\.ini' | Select-Object -First 1
+            if ($m) { $p = $m.Matches[0].Groups[1].Value }
+            return "Currently: ON, preset $p"
+        }
+        if ($hasOff) { return 'Currently: OFF (installed, disabled)' }
+        if ($hasDll) { return 'Currently: incomplete - use Enable to repair' }
+        return 'Currently: not installed'
+    }
+    $rsState = New-TB (& $rsDescribe $rsGameDir) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,14,0,0))
+    [void]$list.Children.Add($rsState)
+
+    $rsRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
+    $btnRsOn = New-Btn 'Enable ReShade' 'BtnPrimary' $null {
+        try {
+            if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                [System.Windows.MessageBox]::Show('Close the game first.','ReShade') | Out-Null; return
+            }
+            . $rsSetup -AsLibrary
+            $null = Step-InstallReShade -GameFolder $rsGameDir *>&1
+            $rsState.Text = (& $rsDescribe $rsGameDir)
+        } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
+    }.GetNewClosure()
+    $btnRsOff = New-Btn 'Disable' 'BtnGhost' $null {
+        try {
+            if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                [System.Windows.MessageBox]::Show('Close the game first.','ReShade') | Out-Null; return
+            }
+            $dll = Join-Path $rsGameDir 'dxgi.dll'
+            if ((Test-Path -LiteralPath $dll) -and ((Get-Item -LiteralPath $dll).Length -eq $rsDllSize)) {
+                Rename-Item -LiteralPath $dll ($dll + '.disabled')
+            }
+            $rsState.Text = (& $rsDescribe $rsGameDir)
+        } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
+    }.GetNewClosure()
+    $btnRsOff.Margin = [System.Windows.Thickness]::new(12,0,0,0)
+    [void]$rsRow.Children.Add($btnRsOn)
+    [void]$rsRow.Children.Add($btnRsOff)
+    [void]$list.Children.Add($rsRow)
+
+    # The active preset's button is highlighted (primary style). Styles and
+    # the button table are captured as locals so the closures can reach them.
+    $rsStylePrimary = Res 'BtnPrimary'
+    $rsStyleGhost = Res 'BtnGhost'
+    $rsPresetBtns = @{}
+    $rsMarkActive = {
+        param($name)
+        foreach ($k in $rsPresetBtns.Keys) {
+            $rsPresetBtns[$k].Style = $(if ($k -eq $name) { $rsStylePrimary } else { $rsStyleGhost })
+        }
+    }.GetNewClosure()
+    $rsCurPreset = $null
+    $rsIniProbe = Join-Path $rsGameDir 'ReShade.ini'
+    if (Test-Path -LiteralPath $rsIniProbe) {
+        $m = Select-String -LiteralPath $rsIniProbe -Pattern '^PresetPath=.*BOB2-(\w+)\.ini' | Select-Object -First 1
+        if ($m) { $rsCurPreset = $m.Matches[0].Groups[1].Value }
+    }
+
+    $rsPresetRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
+    foreach ($rsPresetName in @('Subtle','Balanced','Enhanced','Cinematic','Showcase')) {
+        $rsThis = $rsPresetName
+        $b = New-Btn $rsThis $(if ($rsThis -eq $rsCurPreset) { 'BtnPrimary' } else { 'BtnGhost' }) $null {
+            try {
+                $ini = Join-Path $rsGameDir 'ReShade.ini'
+                $preset = Join-Path $rsGameDir ('reshade-presets\BOB2-' + $rsThis + '.ini')
+                if (-not (Test-Path -LiteralPath $ini)) {
+                    [System.Windows.MessageBox]::Show('ReShade is not installed yet - press Enable ReShade first.','ReShade') | Out-Null; return
+                }
+                if (-not (Test-Path -LiteralPath $preset)) {
+                    [System.Windows.MessageBox]::Show('Preset file missing: ' + $preset,'ReShade') | Out-Null; return
+                }
+                $txt = Get-Content -LiteralPath $ini -Raw
+                $txt = [regex]::Replace($txt, '(?m)^PresetPath=.*$', ('PresetPath=.\reshade-presets\BOB2-' + $rsThis + '.ini'))
+                Set-Content -LiteralPath $ini -Value $txt -Encoding ASCII -NoNewline
+                $rsState.Text = (& $rsDescribe $rsGameDir)
+                & $rsMarkActive $rsThis
+            } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
+        }.GetNewClosure()
+        if ($rsPresetRow.Children.Count -gt 0) { $b.Margin = [System.Windows.Thickness]::new(12,0,0,0) }
+        $rsPresetBtns[$rsThis] = $b
+        [void]$rsPresetRow.Children.Add($b)
+    }
+    [void]$list.Children.Add($rsPresetRow)
+
     New-Scroll $list
 }
 

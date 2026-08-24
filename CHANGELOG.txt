@@ -15,6 +15,21 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.0  (2026-08-24)
+  NEW: optional ReShade 6.8.0 visual enhancement, off by default.
+  Enable it from Settings (GFX screen page). Five presets: Subtle,
+  Balanced (default), Enhanced, Cinematic, Showcase. DEL opens the
+  in-game overlay, PgUp/PgDn switch presets, PrtScn takes screenshots.
+  Ships with the start-up splash banner suppressed, so nothing appears
+  over the menus. Works only with the dgVoodoo2 wrapper (the default).
+  The Install and repair screen gains an informational ReShade row; it
+  never installs ReShade on its own, and "Fix all" will only repair a
+  broken existing install. Uninstall now removes ReShade too, but only
+  the exact build this fix shipped.
+  The qUINT shader library is not bundled (its licence does not permit
+  redistribution); LICENCES.txt explains how to add it manually.
+  Fixed a stale dgVoodoo2 version number in LICENCES.txt.
+
 v1.6.34  (2026-08-24)
 ---------------------
   - FIXED: Settings > GFX screen trusted the same settings.cfg offsets

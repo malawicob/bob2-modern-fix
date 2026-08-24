@@ -1,6 +1,6 @@
 ========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.6.34  (2026-08-24)
+  Fix package v1.7.0  (2026-08-24)
   For the v2.13 executable
 ========================================================================
 
@@ -96,6 +96,28 @@ THINGS THAT LOOK LIKE FAULTS BUT ARE NOT
   Deliberate - see "The videos" further down. They are Indeo Video 5,
   which stock Windows cannot decode; installing K-Lite and re-enabling
   three settings can bring them back.
+
+
+RESHADE VISUAL ENHANCEMENT (OPTIONAL, OFF BY DEFAULT)
+------------------------------------------------------
+The package includes ReShade 6.8.0, a post-processing layer that adds
+sharpening, anti-aliasing and colour grading on top of the graphics
+wrapper. It is NOT installed unless you turn it on: open Settings, go
+to the GFX screen page and press "Enable ReShade". Five presets are
+included, from Subtle (a light sharpen) to Cinematic (a period-film
+look with grain and vignette); the default is Balanced. Pick presets
+with the buttons in Settings, or with PgUp/PgDn in the game. DEL opens
+the ReShade overlay in game and PrtScn saves a screenshot to the
+reshade-screenshots folder.
+
+Notes: it only works with the dgVoodoo2 graphics wrapper (the default);
+switching the wrapper to native Direct3D 9 silently disables it.
+"Disable" in Settings keeps your files and preset tweaks; uninstalling
+the fix removes ReShade completely. The bundled shader set does not
+include the qUINT library (MXAO, qUINT bloom) because its licence does
+not allow us to redistribute it; the presets work without it, and
+LICENCES.txt explains how to add it yourself if you want those two
+effects.
 
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS

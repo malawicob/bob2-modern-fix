@@ -99,7 +99,7 @@ This package contains no Battle of Britain II game content. It patches a
 copy of the game that you already own, and it ships no patches - it applies
 the ones you supply.
 
-  dgVoodoo2 2.8.7.3         Dege - https://dege.freeweb.hu
+  dgVoodoo2 2.8.6.5         Dege - https://dege.freeweb.hu
                             Copyright (C) 2013-2026 Dege.
                             Direct3D wrapper, redistributed unmodified.
 
@@ -133,6 +133,27 @@ the ones you supply.
                             Normandy, 19 June 1944.
 
   dinput8.dll               Built for this mod from dinput8_guard.c.
+
+  ReShade 6.8.0             BSD 3-Clause licence - https://reshade.me
+                            Copyright 2014 Patrick Mours.
+                            Shipped as dxgi.dll (optional, off by default).
+                            Modified from the official build: two conditional
+                            jumps NOP-ed to suppress the start-up splash
+                            banner, a modification the BSD licence permits.
+                            The unmodified original is available from
+                            https://reshade.me.
+
+  ReShade base shaders      BSD 3-Clause / CC0, crosire and contributors.
+                            https://github.com/crosire/reshade-shaders
+
+  SweetFX shaders           MIT licence, CeeJayDK and contributors.
+                            https://github.com/CeeJayDK/SweetFX
+
+  NOTE: the qUINT shader library (MXAO, qUINT bloom) is NOT included
+  because its licence does not grant redistribution. The presets work
+  without it. To add it yourself, get it from its author at
+  https://github.com/martymcmodding/qUINT and copy the Shaders folder
+  into reshade-shaders.
 
 $(if ($IncludeDxvk) { "  DXVK                      zlib/libpng licence - https://github.com/doitsujin/dxvk`n" } else { "" })
 NOT INCLUDED, and needed separately:

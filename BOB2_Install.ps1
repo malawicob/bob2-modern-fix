@@ -383,6 +383,23 @@ function Get-Checks {
                  else { "version $fv - up to date" })
         Fix=$(if ($fv -and -not $stale) { $null } else { 'StampVersion' }) })
 
+    # ReShade is OPTIONAL and off by default: this row never counts as a
+    # problem when absent (so "Fix N things" cannot auto-install it) and
+    # only offers a Fix when an existing install is broken. Enable/disable
+    # and preset choice live in Settings, GFX screen page.
+    $rsState = Get-ReShadeState $GameDir
+    $rsPreset = if ($rsState -eq 'on') { Get-ReShadePreset $GameDir } else { $null }
+    $out.Add([pscustomobject]@{
+        Name='ReShade (optional)'
+        Ok=($rsState -ne 'partial')
+        Detail=$(switch ($rsState) {
+            'on'      { "installed$(if ($rsPreset) { ', preset: ' + $rsPreset }) - visual enhancement over the graphics translator" }
+            'off'     { 'installed but switched off - enable it in Settings if wanted' }
+            'partial' { 'incomplete install - press Fix to repair it' }
+            default   { 'not installed. Optional visual enhancement - enable it in Settings if wanted' }
+        })
+        Fix=$(if ($rsState -eq 'partial') { 'Step-InstallReShade' } else { $null }) })
+
     return $out
 }
 

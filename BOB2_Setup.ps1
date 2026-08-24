@@ -74,6 +74,12 @@ $BobExeMD5_212 = "006280352cf8370a09812f02afe45d47"
 # dgVoodoo2 DLLs to install
 $DgVoodooDLLs = @("DDraw.dll", "D3DImm.dll", "D3D8.dll", "D3D9.dll")
 
+# ReShade (optional visual enhancement). dxgi.dll hooks dgVoodoo2 D3D11 output.
+# Size identifies OUR shipped build; never delete a dxgi.dll of a different size.
+$ReShadeDllSize = 4136216
+$ReShadeItems = @("dxgi.dll", "ReShade.ini", "reshade-shaders", "reshade-presets", "reshade-screenshots")
+
+
 # Detected refresh rate (set during install)
 $script:DetectedFPS = 60
 
@@ -1575,6 +1581,14 @@ function Show-Status {
         Write-Host "D3D9.dll present$dgVer" -ForegroundColor Green
         Write-Host "                       " -NoNewline
         Write-Host "(the only wrapper DLL this game loads)" -ForegroundColor DarkGray
+        $rsState = Get-ReShadeState $gameFolder
+        Write-Host "  ReShade (optional):  " -NoNewline
+        switch ($rsState) {
+            "on"      { $p = Get-ReShadePreset $gameFolder; $lbl = "installed"; if ($p) { $lbl += " (preset: $p)" }; Write-Host $lbl -ForegroundColor Green }
+            "off"     { Write-Host "installed but disabled" -ForegroundColor Yellow }
+            "partial" { Write-Host "incomplete - run Install ReShade to repair" -ForegroundColor Yellow }
+            default   { Write-Host "not installed (optional)" -ForegroundColor DarkGray }
+        }
     } else {
         Write-Host "D3D9.dll MISSING - game will not start" -ForegroundColor Red
         Write-Info "  BOB2 is a Direct3D 9 game. Without dgVoodoo2's D3D9.dll it fails"
@@ -1662,6 +1676,123 @@ function Show-Status {
 # Uninstall
 # ============================================================
 
+function Get-ReShadeState {
+    param([string]$GameFolder)
+    # Returns: 'on', 'off' (disabled, files kept), 'partial', or 'none'
+    $dll = Join-Path $GameFolder "dxgi.dll"
+    $off = Join-Path $GameFolder "dxgi.dll.disabled"
+    $ini = Join-Path $GameFolder "ReShade.ini"
+    $sh  = Join-Path $GameFolder "reshade-shaders"
+    $hasDll = (Test-Path $dll) -and ((Get-Item $dll).Length -eq $ReShadeDllSize)
+    $hasOff = (Test-Path $off) -and ((Get-Item $off).Length -eq $ReShadeDllSize)
+    $hasRest = (Test-Path $ini) -and (Test-Path $sh)
+    if ($hasDll -and $hasRest) { return 'on' }
+    if ($hasOff -and $hasRest) { return 'off' }
+    if ($hasDll -or $hasOff -or (Test-Path $ini)) { return 'partial' }
+    return 'none'
+}
+
+function Get-ReShadePreset {
+    param([string]$GameFolder)
+    $ini = Join-Path $GameFolder "ReShade.ini"
+    if (-not (Test-Path $ini)) { return $null }
+    $m = Select-String -Path $ini -Pattern '^PresetPath=.*BOB2-(\w+)\.ini' | Select-Object -First 1
+    if ($m) { return $m.Matches[0].Groups[1].Value }
+    return $null
+}
+
+function Step-InstallReShade {
+    param([string]$GameFolder)
+    Write-Step "Install ReShade (optional visual enhancement)"
+
+    # ReShade hooks dgVoodoo2's D3D11 output; without dgVoodoo there is nothing to hook.
+    $d3d9 = Join-Path $GameFolder "d3d9.dll"
+    if (-not (Test-Path $d3d9)) {
+        Write-Warn "dgVoodoo2 (d3d9.dll) is not installed. Install the graphics translator first."
+        return $false
+    }
+
+    # A disabled install just needs re-enabling.
+    $off = Join-Path $GameFolder "dxgi.dll.disabled"
+    $dll = Join-Path $GameFolder "dxgi.dll"
+    if ((Test-Path $off) -and -not (Test-Path $dll)) {
+        Rename-Item $off "dxgi.dll"
+        Write-OK "Re-enabled ReShade (dxgi.dll restored)"
+    }
+
+    # Locate the payload folder
+    $payload = $null
+    foreach ($base in @($ScriptDir, $GameFolder, (Join-Path $GameFolder "BOB2-Win11-Fix"))) {
+        $cand = Join-Path $base "reshade"
+        if (Test-Path (Join-Path $cand "dxgi.dll")) { $payload = $cand; break }
+    }
+    if (-not $payload) {
+        Write-Warn "ReShade payload folder not found (looked for reshade\dxgi.dll beside the fix)."
+        return $false
+    }
+
+    $ok = $true
+    if (-not (Test-Path $dll)) {
+        Copy-Item (Join-Path $payload "dxgi.dll") $dll
+        Write-OK "Installed dxgi.dll (ReShade 6.8.0)"
+    } elseif ((Get-Item $dll).Length -ne $ReShadeDllSize) {
+        Write-Warn "A different dxgi.dll is already present. Leaving it strictly alone."
+        return $false
+    } else {
+        Write-OK "dxgi.dll already present"
+    }
+
+    # Config and presets are user-tunable: never overwrite, only supply missing files.
+    $ini = Join-Path $GameFolder "ReShade.ini"
+    if (-not (Test-Path $ini)) {
+        Copy-Item (Join-Path $payload "ReShade.ini") $ini
+        Write-OK "Installed ReShade.ini (default preset: Balanced)"
+    } else {
+        Write-OK "ReShade.ini already present, keeping it"
+    }
+    foreach ($d in @("reshade-shaders", "reshade-presets", "reshade-screenshots")) {
+        $dst = Join-Path $GameFolder $d
+        if (-not (Test-Path $dst)) {
+            Copy-Item (Join-Path $payload $d) $dst -Recurse
+            Write-OK "Installed $d"
+        } else {
+            # supply any missing preset files without touching existing ones
+            if ($d -eq "reshade-presets") {
+                Get-ChildItem (Join-Path $payload $d) -Filter "BOB2-*.ini" | ForEach-Object {
+                    $t = Join-Path $dst $_.Name
+                    if (-not (Test-Path $t)) { Copy-Item $_.FullName $t; Write-OK "Added preset $($_.Name)" }
+                }
+            }
+            Write-OK "$d already present"
+        }
+    }
+    Write-Info "ReShade is active on the next launch. DEL opens the overlay, PgUp/PgDn switch presets."
+    return $ok
+}
+
+function Step-RemoveReShade {
+    param([string]$GameFolder)
+    Write-Step "Remove ReShade"
+    $bob = Get-Process -Name "Bob" -ErrorAction SilentlyContinue
+    if ($bob) {
+        Write-Warn "The game is running. Close it first."
+        return $false
+    }
+    $dll = Join-Path $GameFolder "dxgi.dll"
+    if ((Test-Path $dll) -and ((Get-Item $dll).Length -ne $ReShadeDllSize)) {
+        Write-Warn "dxgi.dll is not the one this fix installed. Leaving all ReShade files alone."
+        return $false
+    }
+    foreach ($item in ($ReShadeItems + @("dxgi.dll.disabled", "ReShade.log"))) {
+        $p = Join-Path $GameFolder $item
+        if (Test-Path $p) {
+            Remove-Item $p -Recurse -Force
+            Write-OK "Removed $item"
+        }
+    }
+    return $true
+}
+
 function Do-Uninstall {
     $gameFolder = Find-GameFolder
     if (-not $gameFolder) {
@@ -1720,6 +1851,11 @@ function Do-Uninstall {
             Remove-Item $fPath -Force
             Write-OK "Removed $f"
         }
+    }
+
+    # Remove ReShade if this fix's build is present (size-checked inside)
+    if ((Test-Path (Join-Path $gameFolder "dxgi.dll")) -or (Test-Path (Join-Path $gameFolder "dxgi.dll.disabled"))) {
+        Step-RemoveReShade $gameFolder | Out-Null
     }
 
     # Restore dgVoodoo.conf backup
@@ -2243,10 +2379,11 @@ function Do-IndividualSteps {
         Write-Host "  7. Check version" -ForegroundColor White
         Write-Host "  8. Validate installation" -ForegroundColor White
         Write-Host "  9. Launcher desktop shortcut" -ForegroundColor White
-        Write-Host " 10. Back to main menu" -ForegroundColor White
+        Write-Host " 10. Install ReShade (optional)" -ForegroundColor White
+        Write-Host " 11. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-10): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-11): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -2259,8 +2396,9 @@ function Do-IndividualSteps {
             "7" { Step-CheckVersion $gameFolder; Pause-Continue }
             "8" { Step-Validate $gameFolder; Pause-Continue }
             "9" { Step-InstallLauncher $gameFolder; Pause-Continue }
-            "10" { return }
-            default { Write-Warn "Invalid option. Please enter 1-10." }
+            "10" { Step-InstallReShade $gameFolder; Pause-Continue }
+            "11" { return }
+            default { Write-Warn "Invalid option. Please enter 1-11." }
         }
     }
 }
