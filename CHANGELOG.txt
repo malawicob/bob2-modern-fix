@@ -15,6 +15,17 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.6.34  (2026-08-24)
+---------------------
+  - FIXED: Settings > GFX screen trusted the same settings.cfg offsets
+    that v1.6.33 gated in Install and repair. On an install with a
+    different file layout the four read-only boxes displayed garbage
+    ("67,110,784" wide) and the campaign-resolution dropdown would have
+    written into a file it cannot read. Both now sit behind the same
+    plausibility gate: an unrecognised layout gets a plain statement
+    that the values are left strictly alone, and no editor.
+
+
 v1.6.33  (2026-08-24)
 ---------------------
   - FIXED: the Campaign resolution check trusted settings.cfg offsets

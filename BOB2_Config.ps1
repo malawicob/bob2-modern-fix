@@ -2809,6 +2809,22 @@ function Build-GfxPage {
         'your display actually reports, so an unusable mode cannot be selected. The 3D view is separate: ' +
         'set USE_DESKTOP_RESOLUTION on the Graphics page for that.')))
 
+    # PLAUSIBILITY GATE. These offsets were mapped by differential
+    # analysis of ONE machine's settings.cfg. A tester's file reads
+    # "67,110,784 pixels wide" at the same offset - a different layout,
+    # not a resolution. If the values are structurally implausible we
+    # say so and offer NO editor, because writing into a file we cannot
+    # read would corrupt it. Same gate as Install and repair.
+    $gW  = [BitConverter]::ToInt32($script:CfgBytes, $script:CfgOffsets.ResW)
+    $gH  = [BitConverter]::ToInt32($script:CfgBytes, $script:CfgOffsets.ResH)
+    $gHz = [BitConverter]::ToInt32($script:CfgBytes, $script:CfgOffsets.ResHz)
+    $resPlausible = ($gW -ge 320 -and $gW -le 7680 -and $gH -ge 200 -and $gH -le 4320 -and $gHz -ge 0 -and $gHz -le 500)
+    if (-not $resPlausible) {
+        [void]$list.Children.Add((New-Note ("This settings.cfg does not match the layout these offsets were mapped on " +
+            "(raw read: $gW x $gH @ $gHz). The values are left strictly alone and no editor is offered - " +
+            "change the campaign resolution from the game's own GFX screen instead.") 'critical'))
+    } else {
+
     $res = New-Stack -Orientation 'Horizontal'
     foreach ($f in @(
         @('Width',   $script:CfgOffsets.ResW),
@@ -2878,6 +2894,8 @@ function Build-GfxPage {
     [void]$list.Children.Add((New-CfgRow 'Set campaign resolution' 'settings.cfg offsets 1416 / 1480 / 1544' `
         'Writes width, height and refresh together. Colour depth is left as it is. Remember to press Save to disk.' `
         $cbRes $dR))
+
+    }
 
     # ------------------------------------------------------------------
     #  GUNSIGHTS - stock reticles or the enhanced redrawn set.
