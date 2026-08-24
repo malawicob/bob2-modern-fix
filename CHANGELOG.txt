@@ -15,6 +15,24 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.1  (2026-08-24)
+--------------------
+  - FIXED: the Graphics translator check verified the dgVoodoo DLL
+    version but never the CONTENT of dgVoodoo.conf. The dgVoodoo
+    control panel rewrites that file with plain defaults if it is ever
+    pointed at the game folder and Apply is pressed, which silently
+    removes the scaling mode and forced rendering resolution the fix
+    relies on. The result is the game's real low-resolution output
+    sitting unscaled inside a black border, while the repair screen
+    shows all green. Found with a tester whose borders survived every
+    other fix.
+
+    Install and repair now checks the conf for the two load-bearing
+    settings and offers a one-click restore (the old file is kept as
+    .bad-backup), and the setup step repairs the conf on the same
+    condition. Deleting dgVoodoo.conf and running Install and repair
+    also rebuilds it correctly on older versions.
+
 v1.7.0  (2026-08-24)
   NEW: optional ReShade 6.8.0 visual enhancement, off by default.
   Enable it from Settings (GFX screen page). Five presets: Subtle,

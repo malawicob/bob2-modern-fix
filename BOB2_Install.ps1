@@ -285,6 +285,22 @@ function Get-Checks {
             $wrap = 'DXVK - known to crash this game in 3D'
         } else { $wrap = 'an unrecognised d3d9.dll'; $wok = $true }
     }
+    # The DLL version alone is not enough: dgVoodooCpl rewrites the game
+    # folder dgVoodoo.conf with plain defaults if pointed there (scaling
+    # and forced resolution lost -> low-res 3D in a black border), and
+    # the board stayed green. Check the conf content too.
+    if ($wok) {
+        $dgConfP = Join-Path $GameDir 'dgVoodoo.conf'
+        $dgConfOk = $false
+        if (Test-Path $dgConfP) {
+            $dgConfTxt = Get-Content $dgConfP -Raw
+            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match 'Resolution\s*=\s*max')
+        }
+        if (-not $dgConfOk) {
+            $wok = $false
+            $wrap = $(if (Test-Path $dgConfP) { 'dgVoodoo.conf is missing the recommended scaling and resolution settings (a control-panel Apply can overwrite them) - press Fix to restore it' } else { 'dgVoodoo.conf is missing - press Fix to create it' })
+        }
+    }
     $out.Add([pscustomobject]@{
         Name='Graphics translator'; Ok=$wok; Detail=$wrap
         Fix=$(if ($wok) { $null } else { 'Step-InstallDgVoodoo2' }) })

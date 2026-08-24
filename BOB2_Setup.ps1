@@ -834,9 +834,23 @@ function Step-InstallDgVoodoo2 {
             $reinstall = if ($script:NonInteractive) { $false } else { Get-YesNo "Re-install dgVoodoo2 files?" }
         }
         if (-not $reinstall) {
-            # Still ensure config exists
+            # Ensure config exists AND carries the two load-bearing lines.
+            # dgVoodooCpl rewrites this file with plain defaults if a user
+            # ever points it at the game folder and presses Apply - the DLLs
+            # then look fine while scaling and forced resolution are gone
+            # (low-res 3D in a black border). Content is checked, not just
+            # presence.
             $confPath = Join-Path $GameFolder "dgVoodoo.conf"
-            if (-not (Test-Path $confPath)) {
+            $confOk = $false
+            if (Test-Path $confPath) {
+                $confTxt = Get-Content $confPath -Raw
+                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match 'Resolution\s*=\s*max')
+            }
+            if (-not $confOk) {
+                if (Test-Path $confPath) {
+                    Copy-Item $confPath ($confPath + '.bad-backup') -Force
+                    Write-Warn "dgVoodoo.conf was missing the recommended scaling/resolution settings - rewriting (old file kept as .bad-backup)"
+                }
                 Set-Content -Path $confPath -Value $DgVoodooConf -Encoding ASCII
                 Write-OK "Created dgVoodoo.conf with recommended settings"
             }

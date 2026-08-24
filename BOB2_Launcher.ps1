@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.0'
+$FixVersion = '1.7.1'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
