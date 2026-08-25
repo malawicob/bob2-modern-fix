@@ -294,7 +294,7 @@ function Get-Checks {
         $dgConfOk = $false
         if (Test-Path $dgConfP) {
             $dgConfTxt = Get-Content $dgConfP -Raw
-            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match 'Resolution\s*=\s*max')
+            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match 'Resolution\s*=\s*max') -and ($dgConfTxt -match 'VRAM\s*=\s*4096')
         }
         if (-not $dgConfOk) {
             $wok = $false
@@ -398,6 +398,16 @@ function Get-Checks {
                  elseif ($stale) { "version $fv is installed. Version $pkg is in this folder, ready to apply - press Fix to update." }
                  else { "version $fv - up to date" })
         Fix=$(if ($fv -and -not $stale) { $null } else { 'StampVersion' }) })
+
+    # Flight Training Module safety net: if the Tiger Moth swap was left
+    # active (crash, launcher killed), offer the one-click restore here.
+    $tmk = Join-Path $GameDir 'BOB2-Win11-Fix.training'
+    if (Test-Path $tmk) {
+        $out.Add([pscustomobject]@{
+            Name='Flight training'; Ok=$false
+            Detail='the Tiger Moth training swap is still active - press Fix to restore the Hurricane Ib and the normal mission list'
+            Fix='Disable-TrainingModule' })
+    }
 
     # ReShade is OPTIONAL and off by default: this row never counts as a
     # problem when absent (so "Fix N things" cannot auto-install it) and

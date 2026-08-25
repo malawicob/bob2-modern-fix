@@ -1,0 +1,132 @@
+# model file for Spitfire1B
+plane
+WeightEmpty 246300
+MaxIntFuel 27800
+FuelTankCap { 15700 12100 0 0 }
+FuelTankXPos { 0 0 0 0 }
+FuelTankType { 0 0 0 0 }
+FuelConsumption 0.65
+Statbin 0
+blrpt_UnfriendlyBuddy "Spitfire1B"
+blrpt_ManualSimpleACM "Spitfire1B"
+blrpt_TwoEngines "Spitfire1B"
+blrpt_FighterWithBomb "Spitfire1B"
+blrpt_SkinDamagePlaneType "Spitfire1B"
+blrpt_109GunviewJu87Floorview "Spitfire1B"
+blrpt_FighterOrRearGunnerOrBomber "Spitfire1B"
+blrpt_RearGunner "Spitfire1B"
+blrpt_TurningPerformanceFighter "Spitfire1B"
+blrpt_NonRetractableGear "Spitfire1B"
+blrpt_DiveClimbFighters "Spitfire1B"
+blrpt_MidLevelBomber "Spitfire1B"
+blrpt_RAFRearGunner "Spitfire1B"
+blrpt_2EngineFighter "Spitfire1B"
+blrpt_HasCANNON "Spitfire1B"
+blrpt_OneEngineSimpleACM "Spitfire1B"
+blrpt_PrintPlaneType "Spitfire1B"
+blrpt_EngineCutsOutUnderNegativeG "Spitfire1B"
+blrpt_TurningOrDiveClimbFighters "Spitfire1B"
+blrpt_MaxPitchRate "Spitfire1B"
+blrpt_Spins "Spitfire1B"
+blrpt_ForceDamageTail "Spitfire1B"
+blrpt_DesiredCustomHeadPosOffs "Spitfire1B"
+blrpt_AlwaysGunSight "Spitfire1B"
+blrpt_HeavyBombers "Spitfire1B"
+blrpt_AutoDiveBomb "Spitfire1B"
+blrpt_GermanPrimeEscort "Spitfire1B"
+blrpt_FlyableSimpleACM "Spitfire1B"
+blrpt_PlaneRelativeStrength "Spitfire1B"
+blrpt_FlyableAirCraft "Spitfire1B"
+ShadowShpNo 354
+Visible 25
+SAGsubshape 368
+CommsVisible 25
+FuelAboff 88
+Maxvel 1495000
+Minvel 500000
+Cruisevel 1420000
+BestClimbVel 900000
+BestClimbPitch 1657
+MaxDiveVel 2011600
+MaxAccel 5400
+TurnPercs 0
+RadiusTurn 0
+Cockpit1 65
+GunnerPit1 {65 0 0 }
+GunnerPit2 {65 0 0 }
+GunnerPit3 {65 0 0 }
+GunnerPit4 {65 0 0 }
+CockpitScale 0.196967
+HdgArc 8192
+PitchMax 8192
+PitchMin 8192
+FinPitch 0
+FinlhdgMin 0
+FinlhdgMax 0
+FinrhdgMin 0
+FinrhdgMax 0
+PhraseName 9986
+AerobaticFactor 2
+DeckAngle 2002
+DeckShunt 128
+MaxRollRate 11833
+MaxPitchRate 6372
+LandingSpeed 337000
+MaxDiveRPM 3900
+FreeRPM 500
+MaxRPM 3000
+MinRPM 500
+MovableFirezoneType -1
+Damage 8738
+FightCeiling 914400
+AbsCeiling 1050000
+MaxTurnRateAoaSL 0.3054
+MuzzleVelocity 8110000
+GunSnd { 29459 65535 65535 65535 29529 }
+EngineSnd 29447
+EngineSubSnd 29445
+EngineStartSnd 29455
+NoGuns 13
+GunIdx1 0
+GunIdx2 1
+GunDelay 24
+GunFrequency 144
+NumACinFlight 3
+MaxFlights 4
+NumEngines 1
+NumPilots 1
+RoleType 0
+IsLarge 0
+EngineCutout 1
+RetractableGear 1
+Playable 1
+Nationality 1
+Cockpit 1
+AIType 1
+MaxHeadLeftRightOpen 35000
+MaxHeadLeftRightClosed 12600
+MaxHeadUp 10000
+MaxHeadDown -5000
+MaxHeadForward 25000
+MaxHeadBackward -15000
+MaxViewHeading 24576
+MaxViewPitchUp 16384
+MaxViewPitchDown 50972
+PanCutOffFactor 0.25
+EyePosXOffset 900
+EyePosYOffset 2200
+EyePosZOffset -6000
+NearClipCockpit 8
+GunSightXPos 0
+GunSightYPos 0
+GunSightSize 1
+InstType 0
+ACFlags 4
+BestClimbAng { 1789 1809 1827 1845 1614 1383 1151 920 687 456 225 0 0 0 0 0 0 0 0 0 0 }
+BestClimbSpeed { 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 }
+MaxVelsl { 1318200 1371739 1442110 1475978 1489971 1495650 1487233 1473139 1450628 1363221 1222478 974859 974859 974859 974859 974859 974859 974859 974859 974859 974859 }
+MaxvelDive_0km 2011600
+MaxvelDive_11km 2011600
+MaxvelDive_20km 2011600
+Version 1
+AcmName "Spitfire1B"

@@ -187,11 +187,11 @@ DitherOrderedMatrixSizeScale = 0
 [DirectX]
 DisableAndPassThru = false
 VideoCard = internal3D
-; VRAM: keep at 256. Era-appropriate D3D titles can fail to start if the
-; emulated video memory is set implausibly high - this template previously
-; shipped 4096, which does not match the known-good config or dgVoodoo2's
-; own default. Raising it buys nothing: BOB2 is CPU-bound.
-VRAM = 256
+; VRAM: 4096, matched to the PROVEN working install (audited 2026-08-24).
+; An earlier release lowered this to 256 on a theory; the one machine with
+; verified full-resolution 3D runs 4096, and a tester on 256 had the game
+; fall back to a low-resolution mode. Ship what demonstrably works.
+VRAM = 4096
 Filtering = appdriven
 Mipmapping = appdriven
 KeepFilterIfPointSampled = false
@@ -844,7 +844,7 @@ function Step-InstallDgVoodoo2 {
             $confOk = $false
             if (Test-Path $confPath) {
                 $confTxt = Get-Content $confPath -Raw
-                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match 'Resolution\s*=\s*max')
+                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match 'Resolution\s*=\s*max') -and ($confTxt -match 'VRAM\s*=\s*4096')
             }
             if (-not $confOk) {
                 if (Test-Path $confPath) {
@@ -1190,7 +1190,7 @@ function Step-Win11Tweaks {
             if (-not (Test-Path $werKey)) { New-Item -Path $werKey -Force | Out-Null }
             Set-ItemProperty -Path $werKey -Name DontShowUI -Value 1 -Type DWord
             Write-OK "Crash-report dialogs silenced (crashes still logged, no popup over the game)"
-            Write-OK "Set Bob.exe: WinXP SP3 + Admin + Disable fullscreen optimizations"
+
 
             # Also set compatibility on bob2_config.EXE
             $configExe = Join-Path $GameFolder "bob2_config.EXE"
@@ -1689,6 +1689,252 @@ function Show-Status {
 # ============================================================
 # Uninstall
 # ============================================================
+
+# ============================================================
+# Flight Training Module (W2). The Tiger Moth is complete on disk but was
+# never registered; the 13 aircraft slots are hardcoded, so for a TRAINING
+# SESSION the Hurricane1B line in models/model.idx is swapped for TigerMoth.acd
+# (it must be a FLYABLE slot: the He 59 slot is compiled non-flyable and the
+# game seats the player as a gunner regardless of the flight file)
+# and a training quick.dat (stock missions + six EFTS exercises) goes in.
+# The launcher restores both automatically when the game exits, on its next
+# start if a swap went stale, and Install and repair is the third net.
+# ============================================================
+$TrainingMarkerName = 'BOB2-Win11-Fix.training'
+
+function Test-TrainingActive {
+    param([string]$GameFolder)
+    Test-Path (Join-Path $GameFolder $TrainingMarkerName)
+}
+
+function Find-TrainingPayload {
+    param([string]$GameFolder)
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path $base 'training'
+        if (Test-Path (Join-Path $cand 'quick.training.dat')) { return $cand }
+    }
+    return $null
+}
+
+function Enable-TrainingModule {
+    param([string]$GameFolder)
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    if (Test-TrainingActive $GameFolder) { Write-OK 'Training module already active'; return $true }
+    $payload = Find-TrainingPayload $GameFolder
+    if (-not $payload) { Write-Warn 'Training payload not found (training\quick.training.dat).'; return $false }
+    $idx = Join-Path $GameFolder 'models\model.idx'
+    $qd  = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    $tm  = Join-Path $GameFolder 'models\TigerMoth.acd'
+    foreach ($p in @($idx, $qd, $tm)) {
+        if (-not (Test-Path $p)) { Write-Warn "Missing $p"; return $false }
+    }
+    # the gauge panel file is a hardcoded path the engine wants for a
+    # flyable slot; write it once and leave it (harmless when not training)
+    $gauges = Join-Path $GameFolder '2dGauges\TigerMoth_2dGauges.ini'
+    if (-not (Test-Path $gauges)) {
+        Copy-Item (Join-Path $payload 'TigerMoth_2dGauges.ini') $gauges
+        Write-OK 'Installed TigerMoth_2dGauges.ini'
+    }
+    if (-not (Test-Path ($idx + '.stock-backup'))) { Copy-Item $idx ($idx + '.stock-backup') }
+    # The hand-authored TigerMoth.acd points its 30 blrpt_* behaviour keys
+    # at donor aircraft (fixed gear etc.). The engine destroys those donor
+    # names when it rewrites the file after a session, so keep the pristine
+    # copy and re-apply it at EVERY enable.
+    if (-not (Test-Path ($tm + '.pristine'))) { Copy-Item $tm ($tm + '.pristine') }
+    Copy-Item ($tm + '.pristine') $tm -Force
+    Copy-Item $qd ($qd + '.training-backup') -Force   # current missions, restored on exit
+    $txt = Get-Content $idx -Raw
+    if ($txt -notmatch 'TigerMoth\.acd') {
+        $txt = $txt -replace 'Hurricane1B\.acd', 'TigerMoth.acd'
+        Set-Content -Path $idx -Value $txt -Encoding ASCII -NoNewline
+        Write-OK 'model.idx: Hurricane Ib slot now flies the Tiger Moth'
+    }
+    Copy-Item (Join-Path $payload 'quick.training.dat') $qd -Force
+    Write-OK 'Training missions installed (six EFTS exercises)'
+    Set-Content -Path (Join-Path $GameFolder $TrainingMarkerName) -Value (Get-Date -Format s) -Encoding ASCII
+    return $true
+}
+
+function Disable-TrainingModule {
+    param([string]$GameFolder)
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $idx = Join-Path $GameFolder 'models\model.idx'
+    $qd  = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (Test-Path ($idx + '.stock-backup')) {
+        Copy-Item ($idx + '.stock-backup') $idx -Force
+        Write-OK 'model.idx restored (Hurricane Ib back in its slot)'
+    }
+    if (Test-Path ($qd + '.training-backup')) {
+        Copy-Item ($qd + '.training-backup') $qd -Force
+        Write-OK 'Mission list restored'
+    }
+    $m = Join-Path $GameFolder $TrainingMarkerName
+    if (Test-Path $m) { Remove-Item $m -Force }
+    return $true
+}
+
+# ============================================================
+# 1940 aircraft variants (W3). Value edits to .acd persist across the
+# engine's per-run rewrite; blrpt_* donor edits (Jabo) do NOT and are
+# re-applied before every launch via Sync-ActiveVariants, driven by the
+# state file. State detection probes signature VALUES (the engine
+# rewrites the files every run, so hashes are useless).
+# ============================================================
+$VariantStateFileName = 'BOB2-Win11-Fix.variants'
+$VariantDefs = @(
+    @{ Id='mk2';  Name='Spitfire Mk II';          Files=@('Spitfire1B.acd','Spitfire1B.acm'); Sig=@{File='Spitfire1B.acd'; On='^WeightEmpty 246300'; Off='^WeightEmpty 243800'} }
+    @{ Id='e7';   Name='Bf 109E-7 extra fuel';    Files=@('Bf109E4.acd');  Sig=@{File='Bf109E4.acd';  On='^MaxIntFuel 50400';  Off='^MaxIntFuel 28800'} }
+    @{ Id='d1';   Name='Bf 110D-1 extra fuel';    Files=@('Bf110C4.acd');  Sig=@{File='Bf110C4.acd';  On='^MaxIntFuel 166000'; Off='^MaxIntFuel 91400'} }
+    @{ Id='jabo'; Name='Bf 109E-4/B Jabo (experimental)'; Files=@(); Sig=$null }
+)
+
+function Get-VariantStateFile { param([string]$GameFolder) Join-Path $GameFolder $VariantStateFileName }
+
+function Get-ActiveVariantIds {
+    param([string]$GameFolder)
+    $sf = Get-VariantStateFile $GameFolder
+    if (Test-Path $sf) { @(Get-Content $sf | Where-Object { $_ -match '\S' }) } else { @() }
+}
+
+function Set-VariantActive {
+    param([string]$GameFolder, [string]$Id, [bool]$Active)
+    $ids = @(Get-ActiveVariantIds $GameFolder | Where-Object { $_ -ne $Id })
+    if ($Active) { $ids += $Id }
+    $sf = Get-VariantStateFile $GameFolder
+    if ($ids.Count) { Set-Content -Path $sf -Value ($ids -join "`r`n") -Encoding ASCII }
+    elseif (Test-Path $sf) { Remove-Item $sf -Force }
+}
+
+function Get-VariantState {
+    # 'on', 'off', or 'unknown' (file readable but neither signature matches)
+    param([string]$GameFolder, [string]$Id)
+    $def = $VariantDefs | Where-Object { $_.Id -eq $Id }
+    if (-not $def) { return 'unknown' }
+    if ($Id -eq 'jabo') {
+        if (@(Get-ActiveVariantIds $GameFolder) -contains 'jabo') { return 'on' } else { return 'off' }
+    }
+    $p = Join-Path $GameFolder ('models\' + $def.Sig.File)
+    if (-not (Test-Path $p)) { return 'unknown' }
+    if (Select-String -LiteralPath $p -Pattern $def.Sig.On  -Quiet) { return 'on' }
+    if (Select-String -LiteralPath $p -Pattern $def.Sig.Off -Quiet) { return 'off' }
+    return 'unknown'
+}
+
+function Find-VariantPayload {
+    param([string]$GameFolder, [string]$Id)
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path (Join-Path $base 'variants') $Id
+        if (Test-Path $cand) { return $cand }
+    }
+    return $null
+}
+
+function Set-JaboEdit {
+    param([string]$GameFolder, [bool]$Enable)
+    $p = Join-Path $GameFolder 'models\Bf109E4.acd'
+    if (-not (Test-Path $p)) { return $false }
+    $txt = Get-Content -LiteralPath $p -Raw
+    $want = if ($Enable) { 'blrpt_FighterWithBomb "Ju87B2"' } else { 'blrpt_FighterWithBomb "Bf109E4"' }
+    $new = $txt -replace 'blrpt_FighterWithBomb\s+"[^"]+"', $want
+    if ($new -ne $txt) { Set-Content -LiteralPath $p -Value $new -Encoding ASCII -NoNewline }
+    return $true
+}
+
+function Install-Variant {
+    param([string]$GameFolder, [string]$Id)
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $def = $VariantDefs | Where-Object { $_.Id -eq $Id }
+    if (-not $def) { return $false }
+    if ($Id -eq 'jabo') {
+        if (-not (Set-JaboEdit $GameFolder $true)) { return $false }
+        Set-VariantActive $GameFolder 'jabo' $true
+        Write-OK 'Jabo behaviour class applied (re-applied automatically before every launch while on)'
+        return $true
+    }
+    $payload = Find-VariantPayload $GameFolder $Id
+    if (-not $payload) { Write-Warn "Variant payload '$Id' not found."; return $false }
+    foreach ($f in $def.Files) {
+        $dst = Join-Path $GameFolder ('models\' + $f)
+        if ((Test-Path $dst) -and -not (Test-Path ($dst + '.stock-backup'))) { Copy-Item $dst ($dst + '.stock-backup') }
+        Copy-Item (Join-Path $payload $f) $dst -Force
+        Write-OK "Installed $f"
+    }
+    if ($Id -eq 'mk2') {
+        $curves = Join-Path $GameFolder 'models\curves.dat'
+        if (-not (Test-Path ($curves + '.stock-backup'))) { Copy-Item $curves ($curves + '.stock-backup') }
+        if (-not (Select-String -LiteralPath $curves -Pattern 'SPITFIRE2 PowerAlt' -Quiet)) {
+            Add-Content -Path $curves -Value (Get-Content (Join-Path $payload 'curves-SPITFIRE2-append.txt') -Raw) -NoNewline
+            Write-OK 'Added SPITFIRE2 PowerAlt curve'
+        }
+        # Coffman-starter cowling blister: a repainted main skin plus a DATED
+        # MultiSkin rule, so in the campaign the blister appears from the
+        # Mk II's historical introduction (12 August 1940). First match wins
+        # in .ms files, so the rule goes at the very top.
+        $skinSrc = Join-Path $payload 'Spit_MkII.dds'
+        $texDir = Join-Path $GameFolder 'MultiSkin\MultiSkinTextures'
+        $msFile = Join-Path $GameFolder 'MultiSkin\SpitMainSkin.ms'
+        if ((Test-Path $skinSrc) -and (Test-Path $msFile)) {
+            Copy-Item $skinSrc (Join-Path $texDir 'Spit_MkII.dds') -Force
+            if (-not (Test-Path ($msFile + '.stock-backup'))) { Copy-Item $msFile ($msFile + '.stock-backup') }
+            $ms = Get-Content $msFile -Raw
+            if ($ms -notmatch 'Spit_MkII') {
+                $rule = 'use MultiSkin\MultiSkinTextures\Spit_MkII.DDS if date >= Aug12th1940 	# Mk II Coffman blister - BOB2 Modern Fix variant'
+                Set-Content -Path $msFile -Value ($rule + "`r`n" + $ms) -Encoding ASCII -NoNewline
+                Write-OK 'Added dated Mk II skin rule (blister from 12 August 1940)'
+            }
+        }
+    }
+    Set-VariantActive $GameFolder $Id $true
+    return $true
+}
+
+function Restore-Variant {
+    param([string]$GameFolder, [string]$Id)
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $def = $VariantDefs | Where-Object { $_.Id -eq $Id }
+    if (-not $def) { return $false }
+    if ($Id -eq 'jabo') {
+        Set-JaboEdit $GameFolder $false | Out-Null
+        Set-VariantActive $GameFolder 'jabo' $false
+        Write-OK 'Jabo behaviour class removed'
+        return $true
+    }
+    foreach ($f in $def.Files) {
+        $dst = Join-Path $GameFolder ('models\' + $f)
+        if (Test-Path ($dst + '.stock-backup')) { Copy-Item ($dst + '.stock-backup') $dst -Force; Write-OK "Restored $f" }
+    }
+    if ($Id -eq 'mk2') {
+        $msFile = Join-Path $GameFolder 'MultiSkin\SpitMainSkin.ms'
+        if (Test-Path ($msFile + '.stock-backup')) {
+            Copy-Item ($msFile + '.stock-backup') $msFile -Force
+            Write-OK 'Restored stock Spitfire skin rules'
+        }
+        # the Spit_MkII.dds texture file is left in place: unreferenced once
+        # the rule is gone, and deleting shared-folder files is riskier.
+    }
+    # the appended SPITFIRE2 curve block is left in curves.dat when Mk II is
+    # restored: nothing references it once the .acm is stock, and removing
+    # lines from a shared file is riskier than leaving an orphan curve.
+    Set-VariantActive $GameFolder $Id $false
+    return $true
+}
+
+function Sync-ActiveVariants {
+    # Called by the launcher before every game start. Value variants
+    # self-heal if a signature went missing; the Jabo blrpt edit MUST be
+    # re-applied every time (the engine renames it back on every exit).
+    param([string]$GameFolder)
+    foreach ($id in (Get-ActiveVariantIds $GameFolder)) {
+        if ($id -eq 'jabo') { Set-JaboEdit $GameFolder $true | Out-Null; continue }
+        if ((Get-VariantState $GameFolder $id) -ne 'on') {
+            $def = $VariantDefs | Where-Object { $_.Id -eq $id }
+            $payload = Find-VariantPayload $GameFolder $id
+            if ($def -and $payload) {
+                foreach ($f in $def.Files) { Copy-Item (Join-Path $payload $f) (Join-Path $GameFolder ('models\' + $f)) -Force }
+            }
+        }
+    }
+}
 
 function Get-ReShadeState {
     param([string]$GameFolder)

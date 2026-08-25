@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.1'
+$FixVersion = '1.7.2'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -416,7 +416,7 @@ $xaml = @'
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Battle of Britain II"
-        Width="1060" Height="800"
+        Width="1060" Height="890"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None" ResizeMode="NoResize"
         Background="#FF050608"
@@ -612,6 +612,24 @@ $xaml = @'
                 <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="PLAY" Style="{StaticResource NavTitle}" FontSize="21"/>
                 <TextBlock x:Name="SubPlay" Text="start the game with the performance fixes applied" Style="{StaticResource NavSub}"/>
+                </StackPanel>
+              </StackPanel>
+              </StackPanel>
+            </Button>
+
+            <Button x:Name="BtnTraining" Style="{StaticResource Nav}">
+              <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path x:Name="IcoTrainingPath" Data="{StaticResource IcoCompass}" Fill="{x:Null}" Stroke="#FF8E8880"
+                          StrokeThickness="1.6" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="TitleTraining" Text="FLIGHT TRAINING" Style="{StaticResource NavTitle}"/>
+                <TextBlock x:Name="SubTraining" Text="fly the Tiger Moth: six 1940 training exercises" Style="{StaticResource NavSub}"/>
                 </StackPanel>
               </StackPanel>
               </StackPanel>
@@ -904,6 +922,17 @@ function Invoke-DriftCheck {
     # when the GAME exits, so a launcher left open across a session would
     # otherwise still be showing the state from before.
     if (-not (Invoke-DriftCheck)) { return }
+    # Aircraft variants: re-apply active ones before every start. Value
+    # variants self-heal; the Jabo behaviour edit is wiped by the engine on
+    # every exit and MUST be rewritten each launch. Costs nothing when the
+    # state file is absent.
+    try {
+        $vsf = Join-Path $GameDir 'BOB2-Win11-Fix.variants'
+        if (Test-Path $vsf) {
+            . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+            Sync-ActiveVariants -GameFolder $GameDir
+        }
+    } catch { }
     # A leftover Bob.exe from the previous session holds the DirectInput
     # devices exclusively and keeps the foreground contended: the new
     # instance flies with no joystick, no mouse-look, and two cursors on
@@ -944,6 +973,15 @@ function Invoke-DriftCheck {
     }
 })
 
+# A training swap left over from a crash or a closed launcher: put the
+# stock files back before anything else happens this session.
+try {
+    if ((Test-Path (Join-Path $GameDir 'BOB2-Win11-Fix.training')) -and -not (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue)) {
+        . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+        $null = Disable-TrainingModule -GameFolder $GameDir *>&1
+    }
+} catch { }
+
 function Test-WizardDone {
     # Written by the wizard when it reaches its last screen. Distinct from
     # BOB2-Win11-Fix.setup-done, which only records that we OFFERED setup -
@@ -965,6 +1003,53 @@ function Start-Wizard {
 }
 
 (C 'BtnWizard').Add_Click({ Start-Wizard })
+
+# The FLIGHT TRAINING icon glows amber while the Tiger Moth swap is armed,
+# so an active session state is visible at a glance.
+function Set-TrainingVisual {
+    param([bool]$Active)
+    $p = C 'IcoTrainingPath'
+    if (-not $p) { return }
+    if ($Active) {
+        $p.Stroke = Brush '#FFFFC846'
+        $fx = New-Object System.Windows.Media.Effects.DropShadowEffect
+        $fx.Color = [System.Windows.Media.Color]::FromRgb(0xFF, 0xC8, 0x46)
+        $fx.BlurRadius = 14; $fx.ShadowDepth = 0; $fx.Opacity = 0.9
+        $p.Effect = $fx
+        (C 'TitleTraining').Foreground = Brush '#FFFFC846'
+    } else {
+        $p.Stroke = Brush '#FF8E8880'
+        $p.Effect = $null
+        (C 'TitleTraining').Foreground = Brush '#FFE4DFD4'
+    }
+}
+
+# Flight Training Module: toggles the Tiger Moth session. Enabling swaps
+# the He 59 slot and the mission list; PLAY then launches as normal, and
+# the watchdog restores everything when the game exits.
+(C 'BtnTraining').Add_Click({
+    try {
+        if (Test-GameRunning) { Show-Note 'Close the game first.' 'Flight training'; return }
+        . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+        if (Test-TrainingActive $GameDir) {
+            $null = Disable-TrainingModule -GameFolder $GameDir *>&1
+            (C 'SubTraining').Text = 'fly the Tiger Moth: six 1940 training exercises'
+            Set-TrainingVisual $false
+            Show-Note 'Training module switched off. The Hurricane Ib and the normal mission list are back.' 'Flight training'
+        } else {
+            $null = Enable-TrainingModule -GameFolder $GameDir *>&1
+            if (Test-TrainingActive $GameDir) {
+                (C 'SubTraining').Text = 'TRAINING ACTIVE - press PLAY to fly. Restores itself when the game exits.'
+                Set-TrainingVisual $true
+                Show-Note ('Tiger Moth training is ready. Press PLAY, and in the game open Quick Missions: the ' +
+                           'Flight Training heading holds the six exercises.' + [Environment]::NewLine + [Environment]::NewLine +
+                           'Everything restores automatically when the game exits.') 'Flight training'
+            } else {
+                Show-Note 'Training could not be enabled - see the setup tool for details.' 'Flight training' 'Warning'
+            }
+        }
+    } catch { Show-Note $_.Exception.Message 'Flight training' 'Warning' }
+})
 
 (C 'BtnSettings').Add_Click({
     $ps1 = Resolve-Helper 'BOB2_Config.ps1'
@@ -1777,10 +1862,28 @@ $creditXaml = @'
 $script:GameVer = Get-GameVersion
 $script:FixVer  = Get-InstalledFixVersion
 # Strip it once at startup too, so the status bar tells the truth.
+Set-TrainingVisual (Test-Path (Join-Path $GameDir 'BOB2-Win11-Fix.training'))
 $script:DpiFixed = Repair-DpiShim
 
 function Update-State {
     $running = Test-GameRunning
+
+    # Flight Training Module watchdog: while the marker exists and the game
+    # runs, remember the session; the first tick after it exits restores
+    # the He 59 slot and the mission list automatically.
+    try {
+        $tmk = Join-Path $GameDir 'BOB2-Win11-Fix.training'
+        if (Test-Path $tmk) {
+            if ($running) { $script:TrainingSessionRan = $true }
+            elseif ($script:TrainingSessionRan) {
+                . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+                $null = Disable-TrainingModule -GameFolder $GameDir *>&1
+                $script:TrainingSessionRan = $false
+                if (C 'SubTraining') { (C 'SubTraining').Text = 'fly the Tiger Moth: six 1940 training exercises' }
+                Set-TrainingVisual $false
+            }
+        }
+    } catch { }
     $w = Get-WrapperState
 
     $wizDone = Test-WizardDone
@@ -1794,6 +1897,7 @@ function Update-State {
     (C 'BtnScale').IsEnabled    = -not $running
     (C 'BtnAxes').IsEnabled     = -not $running
     (C 'BtnWizard').IsEnabled   = -not $running
+    (C 'BtnTraining').IsEnabled = -not $running
 
     # Always available. It used to be enabled only while the game was
     # running, which was wrong: the capture is ARMED from here and then

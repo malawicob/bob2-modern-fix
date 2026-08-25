@@ -1,0 +1,116 @@
+#Spitfire1B_MkII variant (Merlin XII) - BOB2 Modern Fix W3
+#Aircraft setup file {
+Model { 2152 180 -245 8000 } # pitch alt CoG zPos
+Thrustpoint { prop 0 0	-40 0 0 } # x y z pitch yaw
+ENGINE { piston 1350 2600 450 30000000 # horsepower maxrpm minrpm inertia
+ Curves { COMM Power0 COMM Power1 SPITFIRE2 PowerAlt }
+ PropInertia { 15000000 15000000 30000000 } # ixx iyy izz
+ PropType { constspeed 30 65 } # minpitch maxpitch
+ Propeller { 165 13613 0.477 1 } # radius area ratio dir
+ Starter 1
+ MagType 1
+}
+MainPlane { 67400 242 280 45000 183 280 # area0 chord0 span0 area1 chord1 span1
+ Position { 128 -65 -235 368 -43 -235 } # x0 y0 z0 x1 y1 z1
+ Orientation { 2.1 0 6.0 2.1 0 6.0 } # x0 y0 z0 x1 y1 z1
+ DragPolar { 0.024607 0.07098 } # cdo l
+ Curves { SPITFIRE Cl Cd MCd0 MK Cm } 
+ buffetAoa0 15.5
+ buffetAoa1 17.0
+ buffetM0 1
+ buffetM1 1
+ ACMmaxaoa 17.5
+ Control { aileron 20 0.165 0.225 2 } # Chord scalepos scaleneg runtime
+ Slipstream { 1 1 30 } # Thrust1 Thrust2 Percentage 
+}
+Surface { 1 8 15495 145 # type description area span
+ Position { 59 30 -794 } # x y z
+ Orientation { 1.39 0 0 } # x y z
+ Curves { COMM1.0_3927 TailCl COMM TailCd }
+ Control { elevator 40 0.135 0.165 1.25 } # Chord scalepos scaleneg runtime
+ Slipstream { 1 100 } # Thrust Percentage
+}
+Surface { 1 8 15495 145 # type description area span
+ Position { -59 30 -794 } # x y z
+ Orientation { 1.39 0 0 } # x y z
+ Curves { COMM1.0_3927 TailCl COMM TailCd }
+ Control { elevator 40 0.135 0.165 1.25 } # Chord scalepos scaleneg runtime
+ Slipstream { 1 100 } # Thrust Percentage
+}
+Surface { 1 9 27756 -256 # type description area span
+ Position { 0 37 -828 } # x y z
+ Orientation { 0 0 -90 } # x y z
+ Curves { COMM FinCl COMM TailCd }
+ Control { rudder 50 0.25 0.25 2.5 } # Chord scalepos scaleneg runtime
+ Slipstream { 1 100 } # Thrust Percentage
+}
+Cylinder { 265 90 115 0 -15 -183 0 0 0 } # length diax diay x y z ox oy oz
+Cylinder { 265 85 140 0 -5 -448 0 0 0 } # length diax diay x y z ox oy oz
+Cylinder { 275 55 93 0 1 -718 0 0 0 } # length diax diay x y z ox oy oz
+Aerodevice { 2 0 4 0.55 0.20 -0.27 0.1 2 55 306 304 63 flaps 16384 -16384 }
+Aerodevice { 1 0 3 0 0.02 -0.01 0.00 2 40 308 308 63 leglowerl 16384 0 }
+Aerodevice { 1 0 3 0 0.02 -0.01 0.00 2 80 1022 1022 63 leglowerr 16384 0 }
+Aerodevice { 6 0 1 0 0.02 0.006 0.00 2 120 310 310 999 canopy }
+#Gear {ident stiffness damping rollres friction brakepower key gear/void min max }
+Gear { port 30333 363330 0.055 0.4 2500 updown gear 0 255 }
+Gear { stbd 30333 363330 0.055 0.4 2500 nullkey gear 0 255 }
+Gear { tail 7000 70000 0.055 0.4 0 nullkey void 0 255 }
+ModelAnim { aileronr }
+ModelAnim { aileronl 32767 -32768 }
+ModelAnim { elevator 32767 -32768 }
+ModelAnim { rudder }
+ModelAnim { rpm 0 425 }
+Trim { 4096 0 4096 } # elevator aileron rudder
+MassInertias { 14701 23596 9943 }
+FuelCockTanks { 0 false false false false }
+FuelCockTanks { 1 true  false false false }
+FuelCockTanks { 2 false true  false false }
+FuelCockTanks { 3 true  true  false false }
+Data {
+ FuelCockType 1 
+ SlipstreamRudder 250
+ ControlForce 100
+ BuffetForce 100
+ PowerBoost 1.5
+ ContrailDuration 1.0
+}
+
+ACM {
+ pitchmodifier 1e5
+ turnmodifier 1e5
+ aoamodifier 1e6
+ MaxElevatorForTightTurn 20000
+ rollmodifier 5e4
+ MaxAileron 32767
+ yawmodifier 1e9
+ maxdeltaforclosework 0.1
+ lastdeltapitch 0
+ deltapitchsum 0
+ deltarollsum 0
+ deltayawsum 0
+}
+
+GaugeSetup { 2 31 400 1.65 } # Indicated Air Speed
+Calibration { 2 0 0 }
+GaugeSetup { 7 -10 100000 1 } # Altitude
+Calibration { 7 5 0 }
+GaugeSetup { 9 -17 17 -1 } # Turn
+Calibration { 9 0 0 } 
+GaugeSetup { 10 -65 65 0 } # Slip
+Calibration { 10 0 0 }  
+GaugeSetup { 11 -900 195 -1 } # Fuel Contents. Lean to gauge.
+Calibration { 11 0 1 }
+GaugeSetup { 16 -30 150 0 } # Oil Temperature. 20 degrees cold start, 84 degrees normal running, 102 degrees maximum. No lean to gauge.
+Calibration { 17 0 .4 }  
+GaugeSetup { 17 0 88 0 } # Coolant Temperature. 40 degrees cold start, 115 degrees normal running, 124 degrees maximum. No lean to Gauge.
+Calibration { 17 0 .4 } 
+GaugeSetup { 21 1550 4100 0 } # Engine RPM
+Calibration { 21 100 0 }
+GaugeSetup { 23 2 21.8 0 } # Volt Meter
+Calibration { 23 0 0 }
+GaugeSetup { 29 0 360 -1 } # Magnetic Compass
+MaxDelta { 6554 }
+
+
+}
+

@@ -2933,8 +2933,20 @@ function Build-GfxPage {
     $sightState = New-TB ("Currently installed: " + $curSight) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,14,0,0))
     [void]$list.Children.Add($sightState)
 
+    # The button matching the installed state carries the highlight, and the
+    # click handlers swap it (same pattern as the ReShade presets). Styles
+    # and the button table are locals so GetNewClosure() can reach them.
+    $sightStylePrimary = Res 'BtnPrimary'
+    $sightStyleGhost = Res 'BtnGhost'
+    $sightBtns = @{}
+    $sightMark = {
+        param($which)
+        if ($sightBtns['enh'])   { $sightBtns['enh'].Style   = $(if ($which -eq 'enhanced') { $sightStylePrimary } else { $sightStyleGhost }) }
+        if ($sightBtns['stock']) { $sightBtns['stock'].Style = $(if ($which -eq 'stock')    { $sightStylePrimary } else { $sightStyleGhost }) }
+    }.GetNewClosure()
+
     $sightRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
-    $btnEnh = New-Btn 'Use enhanced gunsights' 'BtnPrimary' $null {
+    $btnEnh = New-Btn 'Use enhanced gunsights' $(if ($curSight -eq 'enhanced') { 'BtnPrimary' } else { 'BtnGhost' }) $null {
         try {
             if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
                 [System.Windows.MessageBox]::Show('Close the game first - it has these textures open.','Gunsights') | Out-Null; return
@@ -2950,9 +2962,10 @@ function Build-GfxPage {
                 $done++
             }
             $sightState.Text = 'Currently installed: enhanced  (' + $done + ' textures replaced, stock backed up)'
+            & $sightMark 'enhanced'
         } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Gunsights') | Out-Null }
     }.GetNewClosure()
-    $btnStock = New-Btn 'Restore stock' 'BtnGhost' $null {
+    $btnStock = New-Btn 'Restore stock' $(if ($curSight -eq 'stock') { 'BtnPrimary' } else { 'BtnGhost' }) $null {
         try {
             if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
                 [System.Windows.MessageBox]::Show('Close the game first - it has these textures open.','Gunsights') | Out-Null; return
@@ -2963,9 +2976,12 @@ function Build-GfxPage {
                 if (Test-Path -LiteralPath ($dst + '.stock-backup')) { Copy-Item -LiteralPath ($dst + '.stock-backup') $dst -Force; $done++ }
             }
             $sightState.Text = 'Currently installed: stock  (' + $done + ' textures restored from backup)'
+            & $sightMark 'stock'
         } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Gunsights') | Out-Null }
     }.GetNewClosure()
     $btnStock.Margin = [System.Windows.Thickness]::new(12,0,0,0)
+    $sightBtns['enh'] = $btnEnh
+    $sightBtns['stock'] = $btnStock
     [void]$sightRow.Children.Add($btnEnh)
     [void]$sightRow.Children.Add($btnStock)
     [void]$list.Children.Add($sightRow)
@@ -3372,6 +3388,7 @@ $script:NavIcons = @{
     'Realism and AI' = 'IcoCrosshair'
     'Interface' = 'IcoLayoutDashboard'
     'GFX screen' = 'IcoFileCog'
+    'Aircraft' = 'IcoCrosshair'
     'Key bindings' = 'IcoKeyboard'
     'Joystick and axes' = 'IcoJoystick'
     'All settings' = 'IcoFileText'
@@ -3387,6 +3404,7 @@ $script:NavDefs = @(
     @{ Caption = $null;        Name = 'Realism and AI';  Sub = $null }
     @{ Caption = $null;        Name = 'Interface';       Sub = $null }
     @{ Caption = $null;        Name = 'GFX screen';      Sub = 'The options behind the game''s own GFX screen, decoded out of a binary save file.' }
+    @{ Caption = 'AIRCRAFT';   Name = 'Aircraft';        Sub = 'The 1940 variants: reversible performance and armament changes, one switch per variant, with the dates they historically arrived.' }
     @{ Caption = 'CONTROLS';   Name = 'Key bindings';    Sub = 'Click any binding to assign a new key. Search matches the action name, the plain-English label, or the key itself.' }
     @{ Caption = $null;        Name = 'Joystick and axes'; Sub = 'What is plugged in, which physical axis drives what, and how much dead travel sits around centre.' }
     @{ Caption = $null;        Name = 'About';           Sub = 'What this is, what it is not, and where the photographs came from.' }
@@ -3905,11 +3923,211 @@ function Build-AboutPage {
     return (New-Scroll $sp)
 }
 
+# =============================================================================
+#  AIRCRAFT - the 1940 variants (W3), presented as photo cards. Each variant
+#  swaps an aircraft slot's flight files for a tuned set and back via the
+#  helpers in BOB2_Setup.ps1. State is detected from signature VALUES in the
+#  .acd (the engine rewrites those files every run, so hashes never match).
+#  The Jabo behaviour edit is re-applied by the launcher before every start.
+#  Card photos live in assets\aircraft\<id>.jpg - drop-in replaceable.
+# =============================================================================
+function Build-AircraftPage {
+    $list = New-Stack
+
+    [void]$list.Children.Add((New-TB ('A variant applies to every squadron flying that aircraft slot, immediately: the campaign engine has no ' +
+        'equipment timeline of its own. The date on each card is when the type historically reached the squadrons, so in a campaign you can ' +
+        'introduce it by hand at the right moment. Every switch keeps a stock backup and restores exactly.') -Style 'Sub' -Wrap -Margin ([System.Windows.Thickness]::new(0,4,0,6))))
+
+    $acGameDir = $script:GameFolder
+    $acSetup = Join-Path $script:ScriptDir 'BOB2_Setup.ps1'
+    $acAssets = Join-Path $script:ScriptDir 'assets\aircraft'
+    $acStylePrimary = Res 'BtnPrimary'
+    $acStyleGhost = Res 'BtnGhost'
+
+    $acDefs = @(
+        @{ Id='mk2'; Title='Supermarine Spitfire Mk II'; Date='IN SERVICE FROM AUGUST 1940'
+           Caption='Supermarine Spitfire (IWM CH 1451)'
+           History=('The first Spitfire built in quantity at the giant Castle Bromwich shadow factory, after a production saga that nearly ' +
+                    'defeated the Nuffield Organisation. Its Merlin XII ran on 100 octane fuel and was lit by a Coffman cartridge starter, ' +
+                    'the source of the small blister on the Mk II''s cowling. No. 611 Squadron took the first ones at Digby in August 1940, ' +
+                    'with 74 and 266 Squadron close behind; pilots got a better climb and more height, exactly where the Battle was fought.')
+           Effect='Merlin XII power and altitude curve, better climb, higher ceiling, slightly heavier. Occupies the Spitfire Ib slot.' }
+        @{ Id='e7'; Title='Messerschmitt Bf 109E-7'; Date='IN SERVICE FROM AUGUST 1940'
+           Caption='A Bf 109E in flight, 1940'
+           History=('The 109''s chronic weakness over England was fuel: escorting to London left perhaps ten minutes of fighting before the ' +
+                    'red light came on, and many pilots ditched in the Channel on the way home. The E-7 answered with a 300 litre drop tank ' +
+                    'under the belly. Early tanks were distrusted, rumour said they leaked and burned, but the range they bought changed ' +
+                    'what an escort could do.')
+           Effect='Represents the drop tank as 75 percent more fuel aboard. No visible tank is possible in this engine.' }
+        @{ Id='d1'; Title='Messerschmitt Bf 110D-1'; Date='IN SERVICE FROM JULY 1940'
+           Caption='A Bf 110D carrying the Dackelbauch ventral tank, 1940'
+           History=('The long range Zerstoerer. The D-1''s huge ventral tank was nicknamed the Dackelbauch, the dachshund belly, and its ' +
+                    'crews loathed it: fumes collected in the emptied tank and squadron legend said it could explode. On 15 August 1940 ' +
+                    'Dackelbauch 110s escorted the raids flown all the way from Norway against the North East, the day the Luftwaffe ' +
+                    'learned that no part of England was out of Fighter Command''s reach.')
+           Effect='Represents the ventral tank as greatly increased fuel. No visible tank is possible in this engine.' }
+        @{ Id='jabo'; Title='Bf 109E-4/B Jabo'; Date='EXPERIMENTAL - TRIALLED FROM JULY 1940'
+           Caption='A Messerschmitt Bf 110 (Bundesarchiv)'
+           History=('Erprobungsgruppe 210 proved in July 1940 that fighters could bomb with precision, and by October, when the level ' +
+                    'bombers had been driven to the night, high flying Jabo 109s carrying a single 250 kg bomb were the Luftwaffe''s ' +
+                    'daylight weapon over London, nuisance raiders that were extremely hard to intercept.')
+           Effect='Points the 109 at the dive bomber behaviour class. Unproven: one test flight decides whether the AI actually changes. Re-applied automatically before every launch while on.' }
+    )
+
+    $acProbe = {
+        param($id)
+        $sig = @{ mk2 = @('Spitfire1B.acd','WeightEmpty 246300','WeightEmpty 243800')
+                  e7  = @('Bf109E4.acd','MaxIntFuel 50400','MaxIntFuel 28800')
+                  d1  = @('Bf110C4.acd','MaxIntFuel 166000','MaxIntFuel 91400') }[$id]
+        if (-not $sig) {
+            $sf = Join-Path $acGameDir 'BOB2-Win11-Fix.variants'
+            if ((Test-Path $sf) -and ((Get-Content $sf) -contains $id)) { return 'on' } else { return 'off' }
+        }
+        $p = Join-Path $acGameDir ('models\' + $sig[0])
+        if (-not (Test-Path -LiteralPath $p)) { return 'unknown' }
+        if (Select-String -LiteralPath $p -Pattern ('^' + [regex]::Escape($sig[1])) -Quiet) { return 'on' }
+        if (Select-String -LiteralPath $p -Pattern ('^' + [regex]::Escape($sig[2])) -Quiet) { return 'off' }
+        return 'unknown'
+    }.GetNewClosure()
+
+    foreach ($acDef in $acDefs) {
+        $acId = $acDef.Id
+        $acCur = & $acProbe $acId
+
+        $card = New-Object System.Windows.Controls.Border
+        $card.Background = Res 'Card'
+        $card.CornerRadius = [System.Windows.CornerRadius]::new(10)
+        $card.BorderBrush = Res 'LineSoft'
+        $card.BorderThickness = [System.Windows.Thickness]::new(1)
+        $card.Padding = [System.Windows.Thickness]::new(0)
+        $card.Margin = [System.Windows.Thickness]::new(0,16,0,0)
+        $card.ClipToBounds = $true
+
+        $g = New-Grid -Cols @('236','*')
+
+        # --- photo column ---
+        $photoStack = New-Stack
+        $imgPath = Join-Path $acAssets ($acId + '.jpg')
+        if (Test-Path -LiteralPath $imgPath) {
+            $bmp = New-Object System.Windows.Media.Imaging.BitmapImage
+            $bmp.BeginInit()
+            $bmp.UriSource = New-Object System.Uri($imgPath)
+            $bmp.DecodePixelWidth = 640
+            $bmp.CacheOption = 'OnLoad'
+            $bmp.EndInit()
+            $img = New-Object System.Windows.Controls.Image
+            $img.Source = $bmp
+            $img.Stretch = 'UniformToFill'
+            $img.Height = 158
+            $img.Width = 236
+            $imgClip = New-Object System.Windows.Controls.Border
+            $imgClip.Height = 158; $imgClip.Width = 236
+            $imgClip.ClipToBounds = $true
+            $imgClip.Child = $img
+            [void]$photoStack.Children.Add($imgClip)
+            $cap = New-TB $acDef.Caption -Size 10.5 -Brush 'Muted' -Wrap -Margin ([System.Windows.Thickness]::new(12,7,12,10))
+            [void]$photoStack.Children.Add($cap)
+        }
+        [System.Windows.Controls.Grid]::SetColumn($photoStack, 0)
+        [void]$g.Children.Add($photoStack)
+
+        # --- content column ---
+        $body = New-Stack -Margin ([System.Windows.Thickness]::new(20,14,20,16))
+        [void]$body.Children.Add((New-TB $acDef.Date -Style 'Eyebrow'))
+        [void]$body.Children.Add((New-TB $acDef.Title -Style 'SectionTitle' -Margin ([System.Windows.Thickness]::new(0,2,0,0))))
+        [void]$body.Children.Add((New-TB $acDef.History -Style 'Sub' -Wrap -Margin ([System.Windows.Thickness]::new(0,7,0,0))))
+        [void]$body.Children.Add((New-TB ('In the simulation: ' + $acDef.Effect) -Size 11.5 -Brush 'Muted' -Wrap -Margin ([System.Windows.Thickness]::new(0,7,0,0))))
+
+        $acState = New-TB ('Currently: ' + $(switch ($acCur) { 'on' {'variant active'} 'off' {'stock aircraft'} default {'unrecognised values - switches disabled'} })) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,12,0,0))
+        [void]$body.Children.Add($acState)
+
+        $acRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,8,0,0))
+        $acBtns = @{}
+        $acMark = {
+            param($which)
+            if ($acBtns['on'])  { $acBtns['on'].Style  = $(if ($which -eq 'on')  { $acStylePrimary } else { $acStyleGhost }) }
+            if ($acBtns['off']) { $acBtns['off'].Style = $(if ($which -eq 'off') { $acStylePrimary } else { $acStyleGhost }) }
+        }.GetNewClosure()
+        $bOn = New-Btn 'Enable' $(if ($acCur -eq 'on') { 'BtnPrimary' } else { 'BtnGhost' }) $null {
+            try {
+                if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                    [System.Windows.MessageBox]::Show('Close the game first.','Aircraft') | Out-Null; return
+                }
+                . $acSetup -AsLibrary
+                $null = Install-Variant -GameFolder $acGameDir -Id $acId *>&1
+                $acState.Text = 'Currently: variant active'
+                & $acMark 'on'
+            } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Aircraft') | Out-Null }
+        }.GetNewClosure()
+        $bOff = New-Btn 'Restore stock' $(if ($acCur -eq 'off') { 'BtnPrimary' } else { 'BtnGhost' }) $null {
+            try {
+                if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                    [System.Windows.MessageBox]::Show('Close the game first.','Aircraft') | Out-Null; return
+                }
+                . $acSetup -AsLibrary
+                $null = Restore-Variant -GameFolder $acGameDir -Id $acId *>&1
+                $acState.Text = 'Currently: stock aircraft'
+                & $acMark 'off'
+            } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Aircraft') | Out-Null }
+        }.GetNewClosure()
+        $bOff.Margin = [System.Windows.Thickness]::new(12,0,0,0)
+        if ($acCur -eq 'unknown') { $bOn.IsEnabled = $false; $bOff.IsEnabled = $false }
+        $acBtns['on'] = $bOn; $acBtns['off'] = $bOff
+        [void]$acRow.Children.Add($bOn)
+        [void]$acRow.Children.Add($bOff)
+        [void]$body.Children.Add($acRow)
+
+        [System.Windows.Controls.Grid]::SetColumn($body, 1)
+        [void]$g.Children.Add($body)
+        $card.Child = $g
+        [void]$list.Children.Add($card)
+    }
+
+    # --- the parked cannon variant, as an honest research card ---
+    $rcard = New-Object System.Windows.Controls.Border
+    $rcard.Background = Res 'Card'
+    $rcard.CornerRadius = [System.Windows.CornerRadius]::new(10)
+    $rcard.BorderBrush = Res 'LineSoft'
+    $rcard.BorderThickness = [System.Windows.Thickness]::new(1)
+    $rcard.Margin = [System.Windows.Thickness]::new(0,16,0,0)
+    $rcard.ClipToBounds = $true
+    $rg = New-Grid -Cols @('236','*')
+    $rphoto = New-Stack
+    $rimgPath = Join-Path $acAssets 'cannon.jpg'
+    if (Test-Path -LiteralPath $rimgPath) {
+        $rbmp = New-Object System.Windows.Media.Imaging.BitmapImage
+        $rbmp.BeginInit(); $rbmp.UriSource = New-Object System.Uri($rimgPath); $rbmp.DecodePixelWidth = 640; $rbmp.CacheOption = 'OnLoad'; $rbmp.EndInit()
+        $rimg = New-Object System.Windows.Controls.Image
+        $rimg.Source = $rbmp; $rimg.Stretch = 'UniformToFill'; $rimg.Height = 158; $rimg.Width = 236
+        $rclip = New-Object System.Windows.Controls.Border
+        $rclip.Height = 158; $rclip.Width = 236; $rclip.ClipToBounds = $true; $rclip.Child = $rimg
+        [void]$rphoto.Children.Add($rclip)
+        [void]$rphoto.Children.Add((New-TB 'A Spitfire of No. 602 Squadron, 1940' -Size 10.5 -Brush 'Muted' -Wrap -Margin ([System.Windows.Thickness]::new(12,7,12,10))))
+    }
+    [System.Windows.Controls.Grid]::SetColumn($rphoto, 0)
+    [void]$rg.Children.Add($rphoto)
+    $rbody = New-Stack -Margin ([System.Windows.Thickness]::new(20,14,20,16))
+    [void]$rbody.Children.Add((New-TB 'IN RESEARCH' -Style 'Eyebrow'))
+    [void]$rbody.Children.Add((New-TB 'Supermarine Spitfire Mk Ib cannon' -Style 'SectionTitle' -Margin ([System.Windows.Thickness]::new(0,2,0,0))))
+    [void]$rbody.Children.Add((New-TB ('No. 19 Squadron took the first cannon Spitfires to Duxford in June 1940 and nearly mutinied over them: the ' +
+        'drum fed Hispanos jammed constantly when the wing mounting canted them on their sides, and in August the squadron begged for its ' +
+        'Browning aircraft back. The idea was right, the mounting was not, and by late 1940 the cannon Spitfire returned to stay.') -Style 'Sub' -Wrap -Margin ([System.Windows.Thickness]::new(0,7,0,0))))
+    [void]$rbody.Children.Add((New-TB ('In the simulation: needs a change to a weapon table compiled into the game itself, not just the flight files. ' +
+        'Parked until that patch is built, using the same checksummed technique as the menu rescale.') -Size 11.5 -Brush 'Muted' -Wrap -Margin ([System.Windows.Thickness]::new(0,7,0,0))))
+    [System.Windows.Controls.Grid]::SetColumn($rbody, 1)
+    [void]$rg.Children.Add($rbody)
+    $rcard.Child = $rg
+    [void]$list.Children.Add($rcard)
+
+    New-Scroll $list
+}
+
 function Build-Page {
     param([string]$Name)
     switch ($Name) {
         'Overview'     { return (Build-OverviewPage) }
         'GFX screen'   { return (Build-GfxPage) }
+        'Aircraft'     { return (Build-AircraftPage) }
         'Key bindings' { return (Build-KeysPage) }
         'Joystick and axes' { return (Build-JoystickPage) }
         'All settings' { return (Build-AllPage) }
@@ -4374,4 +4592,7 @@ if ($RenderTo) {
     if ($RenderScale -ne 1.0) { Set-UiScale -Scale $RenderScale }
 }
 
+# Open maximised (user preference) - but never for the offscreen
+# screenshot renders, which size themselves.
+if (-not $RenderTo) { $Win.WindowState = 'Maximized' }
 [void]$Win.ShowDialog()

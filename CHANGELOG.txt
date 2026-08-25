@@ -15,6 +15,24 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.2  (2026-08-24)
+--------------------
+  - FIXED: the dgVoodoo.conf template shipped VRAM = 256, but a full audit
+    of the one install with verified full-resolution 3D found it running
+    VRAM = 4096. The 256 value was introduced earlier on a theory ("era
+    titles can fail with implausibly high video memory") that the working
+    machine disproves, and a tester on 256 still had the game fall back
+    to a low-resolution mode inside a black border. The template now
+    ships the proven 4096, and both the repair screen and the setup step
+    treat a conf without it as wrong and rewrite it (old file kept as
+    .bad-backup).
+
+    The audit also cleared two red herrings: wrapper DLL file dates
+    differing between the fix subfolder and the game folder are normal
+    (copying preserves dates; contents verified identical by checksum),
+    and the compatibility flags on the working install match what the
+    fix sets, so those are not the culprit.
+
 v1.7.1  (2026-08-24)
 --------------------
   - FIXED: the Graphics translator check verified the dgVoodoo DLL

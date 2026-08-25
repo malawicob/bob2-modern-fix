@@ -1,0 +1,132 @@
+# model file for Bf109E4
+plane
+WeightEmpty 233500
+MaxIntFuel 50400
+FuelTankCap { 28800 21600 0 0 }
+FuelTankXPos { 0 0 0 0 }
+FuelTankType { 0 0 0 0 }
+FuelConsumption 1
+Statbin 0
+blrpt_UnfriendlyBuddy "Bf109E4"
+blrpt_ManualSimpleACM "Bf109E4"
+blrpt_TwoEngines "Bf109E4"
+blrpt_FighterWithBomb "Bf109E4"
+blrpt_SkinDamagePlaneType "Bf109E4"
+blrpt_109GunviewJu87Floorview "Bf109E4"
+blrpt_FighterOrRearGunnerOrBomber "Bf109E4"
+blrpt_RearGunner "Bf109E4"
+blrpt_TurningPerformanceFighter "Bf109E4"
+blrpt_NonRetractableGear "Bf109E4"
+blrpt_DiveClimbFighters "Bf109E4"
+blrpt_MidLevelBomber "Bf109E4"
+blrpt_RAFRearGunner "Bf109E4"
+blrpt_2EngineFighter "Bf109E4"
+blrpt_HasCANNON "Bf109E4"
+blrpt_OneEngineSimpleACM "Bf109E4"
+blrpt_PrintPlaneType "Bf109E4"
+blrpt_EngineCutsOutUnderNegativeG "Bf109E4"
+blrpt_TurningOrDiveClimbFighters "Bf109E4"
+blrpt_MaxPitchRate "Bf109E4"
+blrpt_Spins "Bf109E4"
+blrpt_ForceDamageTail "Bf109E4"
+blrpt_DesiredCustomHeadPosOffs "Bf109E4"
+blrpt_AlwaysGunSight "Bf109E4"
+blrpt_HeavyBombers "Bf109E4"
+blrpt_AutoDiveBomb "Bf109E4"
+blrpt_GermanPrimeEscort "Bf109E4"
+blrpt_FlyableSimpleACM "Bf109E4"
+blrpt_PlaneRelativeStrength "Bf109E4"
+blrpt_FlyableAirCraft "Bf109E4"
+ShadowShpNo 362
+Visible 23
+SAGsubshape 376
+CommsVisible 23
+FuelAboff 73
+Maxvel 1488900
+Minvel 500000
+Cruisevel 1450000
+BestClimbVel 900000
+BestClimbPitch 1912
+MaxDiveVel 2000000
+MaxAccel 4400
+TurnPercs 0
+RadiusTurn 0
+Cockpit1 98
+GunnerPit1 {98 0 0 }
+GunnerPit2 {98 0 0 }
+GunnerPit3 {98 0 0 }
+GunnerPit4 {98 0 0 }
+CockpitScale 0.25
+HdgArc 8192
+PitchMax 8192
+PitchMin 8192
+FinPitch 0
+FinlhdgMin 0
+FinlhdgMax 0
+FinrhdgMin 0
+FinrhdgMax 0
+PhraseName 9989
+AerobaticFactor 2
+DeckAngle 2549
+DeckShunt 105
+MaxRollRate 13107
+MaxPitchRate 5461
+LandingSpeed 357000
+MaxDiveRPM 3600
+FreeRPM 400
+MaxRPM 2400
+MinRPM 400
+MovableFirezoneType -1
+Damage 8738
+FightCeiling 1066800
+AbsCeiling 1100000
+MaxTurnRateAoaSL 0.2618
+MuzzleVelocity 5490000
+GunSnd { 29460 29461 65535 29580 29530 }
+EngineSnd 29443
+EngineSubSnd 29441
+EngineStartSnd 29458
+NoGuns 3
+GunIdx1 2
+GunIdx2 255
+GunDelay 24
+GunFrequency 120
+NumACinFlight 4
+MaxFlights 3
+NumEngines 1
+NumPilots 1
+RoleType 0
+IsLarge 0
+EngineCutout 0
+RetractableGear 1
+Playable 1
+Nationality 2
+Cockpit 3
+AIType 3
+MaxHeadLeftRightOpen 32000
+MaxHeadLeftRightClosed 13500
+MaxHeadUp 3600
+MaxHeadDown -10000
+MaxHeadForward 20000
+MaxHeadBackward -25000
+MaxViewHeading 24576
+MaxViewPitchUp 16384
+MaxViewPitchDown 50972
+PanCutOffFactor 0.25
+EyePosXOffset 0
+EyePosYOffset -1800
+EyePosZOffset -12000
+NearClipCockpit 8
+GunSightXPos 0
+GunSightYPos 0
+GunSightSize 1
+InstType 0
+ACFlags 4
+BestClimbAng { 1912 1738 1565 1391 1217 1043 869 695 522 348 174 0 0 0 0 0 0 0 0 0 0 }
+BestClimbSpeed { 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 900000 }
+MaxVelsl { 1250000 1305600 1352800 1416700 1458300 1488900 1466700 1441700 1427800 1416700 1388900 1157400 1157400 1157400 1157400 1157400 1157400 1157400 1157400 1157400 1157400 }
+MaxvelDive_0km 2000000
+MaxvelDive_11km 2000000
+MaxvelDive_20km 2000000
+Version 1
+AcmName "Bf109E4"
