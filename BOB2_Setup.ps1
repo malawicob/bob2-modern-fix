@@ -844,7 +844,7 @@ function Step-InstallDgVoodoo2 {
             $confOk = $false
             if (Test-Path $confPath) {
                 $confTxt = Get-Content $confPath -Raw
-                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match 'Resolution\s*=\s*max') -and ($confTxt -match 'VRAM\s*=\s*4096')
+                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match 'Resolution\s*=\s*max') -and ($confTxt -match 'VRAM\s*=\s*4096') -and ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')
             }
             if (-not $confOk) {
                 if (Test-Path $confPath) {

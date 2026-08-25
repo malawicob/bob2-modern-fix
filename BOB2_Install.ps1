@@ -294,7 +294,7 @@ function Get-Checks {
         $dgConfOk = $false
         if (Test-Path $dgConfP) {
             $dgConfTxt = Get-Content $dgConfP -Raw
-            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match 'Resolution\s*=\s*max') -and ($dgConfTxt -match 'VRAM\s*=\s*4096')
+            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match 'Resolution\s*=\s*max') -and ($dgConfTxt -match 'VRAM\s*=\s*4096') -and ($dgConfTxt -match 'OutputAPI\s*=\s*d3d11') -and ($dgConfTxt -match 'EnumerateRefreshRates\s*=\s*true')
         }
         if (-not $dgConfOk) {
             $wok = $false
