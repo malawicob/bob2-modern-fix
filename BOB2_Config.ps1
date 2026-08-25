@@ -4119,6 +4119,50 @@ function Build-AircraftPage {
     $rcard.Child = $rg
     [void]$list.Children.Add($rcard)
 
+    # --- automatic historical introduction (campaign-date driven) ---
+    [void]$list.Children.Add((New-SectionHeader 'Automatic historical introduction' (
+        'Reads the date from your most recent campaign save (the game stores it as seconds since 1901) and applies ' +
+        'the variants on their historical schedule every time you press PLAY: the Bf 110D from July, the Spitfire Mk II ' +
+        'from 12 August, the Bf 109E-7 from 15 August. Before each date the stock aircraft flies; from it, the variant. ' +
+        'Manual switches above still work when this is off. The experimental Jabo is never applied automatically.')))
+    $autoMarker = Join-Path $acGameDir 'BOB2-Win11-Fix.variants-auto'
+    $autoOn = Test-Path -LiteralPath $autoMarker
+    $autoDateNote = ''
+    try {
+        . $acSetup -AsLibrary
+        $cd = Get-CampaignDate $acGameDir
+        if ($cd) { $autoDateNote = 'Your campaign is at ' + $cd.ToString('d MMMM yyyy') + '.' }
+        else { $autoDateNote = 'No campaign save found yet - it engages once one exists.' }
+    } catch { }
+    $autoState = New-TB ($(if ($autoOn) { 'Currently: ON. ' } else { 'Currently: off. ' }) + $autoDateNote) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
+    [void]$list.Children.Add($autoState)
+    $autoRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,8,0,0))
+    $autoBtns = @{}
+    $autoMark = {
+        param($on)
+        if ($autoBtns['on'])  { $autoBtns['on'].Style  = $(if ($on) { $acStylePrimary } else { $acStyleGhost }) }
+        if ($autoBtns['off']) { $autoBtns['off'].Style = $(if ($on) { $acStyleGhost } else { $acStylePrimary }) }
+    }.GetNewClosure()
+    $bAutoOn = New-Btn 'Enable' $(if ($autoOn) { 'BtnPrimary' } else { 'BtnGhost' }) $null {
+        try {
+            Set-Content -LiteralPath $autoMarker -Value (Get-Date -Format s) -Encoding ASCII
+            $autoState.Text = 'Currently: ON. Applied at every PLAY.'
+            & $autoMark $true
+        } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Aircraft') | Out-Null }
+    }.GetNewClosure()
+    $bAutoOff = New-Btn 'Disable' $(if ($autoOn) { 'BtnGhost' } else { 'BtnPrimary' }) $null {
+        try {
+            if (Test-Path -LiteralPath $autoMarker) { Remove-Item -LiteralPath $autoMarker -Force }
+            $autoState.Text = 'Currently: off. Manual switches above are in charge.'
+            & $autoMark $false
+        } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Aircraft') | Out-Null }
+    }.GetNewClosure()
+    $bAutoOff.Margin = [System.Windows.Thickness]::new(12,0,0,0)
+    $autoBtns['on'] = $bAutoOn; $autoBtns['off'] = $bAutoOff
+    [void]$autoRow.Children.Add($bAutoOn)
+    [void]$autoRow.Children.Add($bAutoOff)
+    [void]$list.Children.Add($autoRow)
+
     New-Scroll $list
 }
 

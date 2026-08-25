@@ -928,7 +928,8 @@ function Invoke-DriftCheck {
     # state file is absent.
     try {
         $vsf = Join-Path $GameDir 'BOB2-Win11-Fix.variants'
-        if (Test-Path $vsf) {
+        $vam = Join-Path $GameDir 'BOB2-Win11-Fix.variants-auto'
+        if ((Test-Path $vsf) -or (Test-Path $vam)) {
             . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
             Sync-ActiveVariants -GameFolder $GameDir
         }

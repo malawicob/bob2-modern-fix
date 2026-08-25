@@ -1954,6 +1954,35 @@ $VariantDefs = @(
     @{ Id='jabo'; Name='Bf 109E-4/B Jabo (experimental)'; Files=@(); Sig=$null }
 )
 
+# Campaign date (decoded 2026-08-25): .BSR saves store dates as u32
+# SECONDS SINCE 1901-01-01. Offsets 49/53/57 = campaign start (10 Jul
+# 1940), offset 61 = the CURRENT campaign date. Values are always whole
+# days (divisible by 86400); Bob.exe carries the same constants
+# (1247184000 = 10 Jul 1940 appears 7 times).
+$VariantAutoMarkerName = 'BOB2-Win11-Fix.variants-auto'
+$VariantIntroDates = @{ mk2 = [datetime]'1940-08-12'; e7 = [datetime]'1940-08-15'; d1 = [datetime]'1940-07-01' }
+
+function Get-CampaignDate {
+    param([string]$GameFolder)
+    # Date of the most recent campaign save, or $null when there is none
+    # or the format is not the known one.
+    $dir = Join-Path $GameFolder 'SAVEGAME'
+    if (-not (Test-Path $dir)) { return $null }
+    $sav = Get-ChildItem $dir -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $sav) { return $null }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        if ($b.Length -lt 70) { return $null }
+        $hdr = [System.Text.Encoding]::ASCII.GetString($b, 1, 20)
+        if ($hdr -notmatch '^Rowan Savegame: V 0') { return $null }
+        $secs = [BitConverter]::ToUInt32($b, 61)
+        if ($secs % 86400 -ne 0) { return $null }
+        $date = ([datetime]'1901-01-01').AddSeconds($secs)
+        if ($date.Year -lt 1939 -or $date.Year -gt 1941) { return $null }
+        return $date
+    } catch { return $null }
+}
+
 function Get-VariantStateFile { param([string]$GameFolder) Join-Path $GameFolder $VariantStateFileName }
 
 function Get-ActiveVariantIds {
@@ -2089,7 +2118,21 @@ function Sync-ActiveVariants {
     # Called by the launcher before every game start. Value variants
     # self-heal if a signature went missing; the Jabo blrpt edit MUST be
     # re-applied every time (the engine renames it back on every exit).
+    # With the auto marker present, the three value variants follow the
+    # campaign date: each is installed from its historical introduction
+    # date and restored to stock before it.
     param([string]$GameFolder)
+    if (Test-Path (Join-Path $GameFolder $VariantAutoMarkerName)) {
+        $cdate = Get-CampaignDate $GameFolder
+        if ($cdate) {
+            foreach ($id in @('mk2','e7','d1')) {
+                $due = ($cdate -ge $VariantIntroDates[$id])
+                $st = Get-VariantState $GameFolder $id
+                if ($due -and $st -eq 'off') { Install-Variant $GameFolder $id | Out-Null }
+                elseif ((-not $due) -and $st -eq 'on') { Restore-Variant $GameFolder $id | Out-Null }
+            }
+        }
+    }
     foreach ($id in (Get-ActiveVariantIds $GameFolder)) {
         if ($id -eq 'jabo') { Set-JaboEdit $GameFolder $true | Out-Null; continue }
         if ((Get-VariantState $GameFolder $id) -ne 'on') {
