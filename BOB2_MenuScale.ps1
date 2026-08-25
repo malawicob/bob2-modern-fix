@@ -107,6 +107,14 @@ if ((Test-Path $langOrig) -and (Test-Path $langPath)) {
     if ((Get-Md5 $a) -ne (Get-Md5 $b)) {
         [System.IO.File]::WriteAllBytes($langPath, $b)
         Write-OK 'Restored stock boblang.dll (a v1.6.28 rescaled copy was found).'
+        # The Dunkirk pack adds the "Dunkerque" name to this DLL; a stock
+        # restore strips it, so put it back when the pack is installed.
+        try {
+            . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+            if ((Get-DunkirkPackState $GameDir) -ne 'none' -and -not (Test-DunkerqueName $GameDir)) {
+                if (Add-DunkerqueName $GameDir) { Write-OK 'Re-added the Dunkerque name after the restore.' }
+            }
+        } catch { }
     }
 }
 

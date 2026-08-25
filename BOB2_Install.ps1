@@ -409,6 +409,21 @@ function Get-Checks {
             Fix='Disable-TrainingModule' })
     }
 
+    # Dunkirk mission pack: optional content, never auto-installed. The row
+    # only offers Fix when a partial install needs repairing.
+    $dkState = 'partial'
+    try { $dkState = Get-DunkirkPackState $GameDir } catch { }
+    $out.Add([pscustomobject]@{
+        Name='Dunkirk missions (optional)'
+        Ok=($dkState -ne 'partial')
+        Detail=$(switch ($dkState) {
+            'installed' { 'installed - four Battle of France missions, the Tiger Moth school shares their menu' }
+            'none'      { 'not installed. Optional mission pack - install it from the setup tool if wanted' }
+            'foreign'   { 'quick.dat carries a different mission set (another mod?) - left strictly alone' }
+            default     { 'incomplete install - press Fix to repair it' }
+        })
+        Fix=$(if ($dkState -eq 'partial') { 'Step-InstallDunkirkPack' } else { $null }) })
+
     # ReShade is OPTIONAL and off by default: this row never counts as a
     # problem when absent (so "Fix N things" cannot auto-install it) and
     # only offers a Fix when an existing install is broken. Enable/disable

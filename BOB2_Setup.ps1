@@ -1691,6 +1691,172 @@ function Show-Status {
 # ============================================================
 
 # ============================================================
+# Dunkirk mission pack (mod92 W1-W5c). Four "Battle of France - Dunkirk"
+# quick missions plus a NEW NAMED PLACE, Dunkerque: a world item appended
+# to the compiled BFIELDS\mainwld.BF (uid 13570) and its name added to
+# English\TEXT\boblang.dll as string resource 17666 (name id = uid+4096,
+# language MUST be UK English 0x0809 - 0x0409 is silently ignored).
+# Every edit is md5-gated against known states and fully restorable.
+# ============================================================
+$DunkirkStockQuickMD5 = 'b924c58ec5d4bfccc644d5de803a0da0'
+$DunkirkPackQuickMD5  = '95bbd4d414ed710a09c2e0ccc0695e72'
+$DunkirkStockWorldMD5 = '499670a702dd72d55816fe9ac14e3a2c'
+$DunkirkWorldRecordHex = '1950041e50011f50022a0825869602' + '2c08a247cd01' + '2e0800300000' + '3f0802350000' + '310801020000'
+$DunkirkWorldGroupOff = 0x29cb    # '15 50 9a' in the stock file
+$DunkirkWorldInsertOff = 0x4132   # end of static group 2 in the stock file
+
+function Get-FileMD5 { param([string]$Path)
+    ([System.BitConverter]::ToString([System.Security.Cryptography.MD5]::Create().ComputeHash([System.IO.File]::ReadAllBytes($Path))) -replace '-','').ToLower()
+}
+
+function Test-DunkerqueName { param([string]$GameFolder)
+    $lang = Join-Path $GameFolder 'English\TEXT\boblang.dll'
+    if (-not (Test-Path $lang)) { return $false }
+    $b = [System.IO.File]::ReadAllBytes($lang)
+    $needle = [System.Text.Encoding]::Unicode.GetBytes('Dunkerque')
+    for ($i = 0; $i -le $b.Length - $needle.Length; $i++) {
+        $hit = $true
+        for ($j = 0; $j -lt $needle.Length; $j++) { if ($b[$i+$j] -ne $needle[$j]) { $hit = $false; break } }
+        if ($hit) { return $true }
+    }
+    return $false
+}
+
+function Add-DunkerqueName { param([string]$GameFolder)
+    # Adds boblang string 17666 = "Dunkerque" (RT_STRING block 1105, entry 2,
+    # language 0x0809). Idempotent via Test-DunkerqueName at the call sites.
+    if (-not ('Win32.DkRes' -as [type])) {
+        Add-Type -Namespace Win32 -Name DkRes -MemberDefinition @'
+[DllImport("kernel32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
+public static extern IntPtr BeginUpdateResourceW(string pFileName, bool bDeleteExistingResources);
+[DllImport("kernel32.dll", SetLastError=true)]
+public static extern bool UpdateResource(IntPtr hUpdate, IntPtr lpType, IntPtr lpName, ushort wLanguage, byte[] lpData, uint cbData);
+[DllImport("kernel32.dll", SetLastError=true)]
+public static extern bool EndUpdateResourceW(IntPtr hUpdate, bool fDiscard);
+'@
+    }
+    $lang = Join-Path $GameFolder 'English\TEXT\boblang.dll'
+    if (-not (Test-Path ($lang + '.stock-backup'))) { Copy-Item $lang ($lang + '.stock-backup') }
+    $ms = New-Object System.IO.MemoryStream
+    $bw = New-Object System.IO.BinaryWriter($ms)
+    for ($i = 0; $i -lt 16; $i++) {
+        if ($i -eq 2) {
+            $s = 'Dunkerque'
+            $bw.Write([uint16]$s.Length)
+            foreach ($ch in $s.ToCharArray()) { $bw.Write([uint16][int]$ch) }
+        } else { $bw.Write([uint16]0) }
+    }
+    $data = $ms.ToArray()
+    $h = [Win32.DkRes]::BeginUpdateResourceW($lang, $false)
+    if ($h -eq [IntPtr]::Zero) { return $false }
+    $ok = [Win32.DkRes]::UpdateResource($h, [IntPtr]6, [IntPtr]1105, 0x0809, $data, $data.Length)
+    $done = [Win32.DkRes]::EndUpdateResourceW($h, $false)
+    return ($ok -and $done)
+}
+
+function Get-DunkirkPackState { param([string]$GameFolder)
+    # 'installed' | 'none' | 'partial' | 'foreign' (unrecognised quick.dat)
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    $w = Join-Path $GameFolder 'BFIELDS\mainwld.BF'
+    if (-not ((Test-Path $q) -and (Test-Path $w))) { return 'partial' }
+    $qm = Get-FileMD5 $q
+    $wb = [System.IO.File]::ReadAllBytes($w)
+    $uid = @(0x3f, 0x08, 0x02, 0x35, 0x00, 0x00)
+    $hasUid = $false
+    for ($i = 0; $i -le $wb.Length - 6; $i++) {
+        if ($wb[$i] -eq 0x3f -and $wb[$i+1] -eq 0x08 -and $wb[$i+2] -eq 0x02 -and $wb[$i+3] -eq 0x35 -and $wb[$i+4] -eq 0 -and $wb[$i+5] -eq 0) { $hasUid = $true; break }
+    }
+    $hasName = Test-DunkerqueName $GameFolder
+    $qPack = ($qm -eq $DunkirkPackQuickMD5)
+    $qStock = ($qm -eq $DunkirkStockQuickMD5)
+    if ($qPack -and $hasUid -and $hasName) { return 'installed' }
+    if ($qStock -and -not $hasUid -and -not $hasName) { return 'none' }
+    if (-not ($qPack -or $qStock)) { return 'foreign' }
+    return 'partial'
+}
+
+function Step-InstallDunkirkPack { param([string]$GameFolder)
+    Write-Step 'Install the Dunkirk mission pack'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $payload = $null
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path $base 'dunkirk'
+        if (Test-Path (Join-Path $cand 'quick.dunkirk.dat')) { $payload = $cand; break }
+    }
+    if (-not $payload) { Write-Warn 'Dunkirk payload folder not found.'; return $false }
+
+    # 1. missions
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    $qm = Get-FileMD5 $q
+    if ($qm -eq $DunkirkPackQuickMD5) { Write-OK 'Missions already installed' }
+    elseif ($qm -eq $DunkirkStockQuickMD5) {
+        if (-not (Test-Path ($q + '.stock-backup'))) { Copy-Item $q ($q + '.stock-backup') }
+        Copy-Item (Join-Path $payload 'quick.dunkirk.dat') $q -Force
+        Write-OK 'Installed the four Dunkirk missions (stock 34 kept intact inside)'
+    } else {
+        Write-Warn 'quick.dat is neither stock nor this pack (another mission mod?) - leaving it strictly alone.'
+        return $false
+    }
+
+    # 2. the Dunkerque world item
+    $w = Join-Path $GameFolder 'BFIELDS\mainwld.BF'
+    $wb = [System.IO.File]::ReadAllBytes($w)
+    $hasUid = $false
+    for ($i = 0; $i -le $wb.Length - 6; $i++) {
+        if ($wb[$i] -eq 0x3f -and $wb[$i+1] -eq 0x08 -and $wb[$i+2] -eq 0x02 -and $wb[$i+3] -eq 0x35 -and $wb[$i+4] -eq 0 -and $wb[$i+5] -eq 0) { $hasUid = $true; break }
+    }
+    if ($hasUid) { Write-OK 'Dunkerque world item already present' }
+    elseif ((Get-FileMD5 $w) -eq $DunkirkStockWorldMD5) {
+        if (-not (Test-Path ($w + '.stock-backup'))) { Copy-Item $w ($w + '.stock-backup') }
+        if (-not ($wb[$DunkirkWorldGroupOff] -eq 0x15 -and $wb[$DunkirkWorldGroupOff+1] -eq 0x50 -and $wb[$DunkirkWorldGroupOff+2] -eq 0x9a)) {
+            Write-Warn 'World file structure not as expected - not touching it.'; return $false
+        }
+        $rec = for ($i = 0; $i -lt $DunkirkWorldRecordHex.Length; $i += 2) { [byte][Convert]::ToInt32($DunkirkWorldRecordHex.Substring($i,2), 16) }
+        $out = New-Object byte[] ($wb.Length + 39)
+        [Array]::Copy($wb, 0, $out, 0, $DunkirkWorldInsertOff)
+        [Array]::Copy([byte[]]$rec, 0, $out, $DunkirkWorldInsertOff, 39)
+        [Array]::Copy($wb, $DunkirkWorldInsertOff, $out, $DunkirkWorldInsertOff + 39, $wb.Length - $DunkirkWorldInsertOff)
+        $out[$DunkirkWorldGroupOff + 2] = 0x9b
+        [System.IO.File]::WriteAllBytes($w, $out)
+        Write-OK 'Added Dunkerque to the world map (2.38E 51.03N)'
+    } else {
+        Write-Warn 'mainwld.BF is not the known stock file - leaving it strictly alone.'
+        return $false
+    }
+
+    # 3. the name
+    if (Test-DunkerqueName $GameFolder) { Write-OK 'Dunkerque name already present' }
+    elseif (Add-DunkerqueName $GameFolder) { Write-OK 'Added the Dunkerque name to the language file' }
+    else { Write-Warn 'Could not add the name - the place will show as a blank entry.' }
+
+    # 4. scenery and flotilla (only over blank placeholders)
+    foreach ($f in @('BoF Dunkirk.txt', 'BoF Ships.txt')) {
+        $dst = Join-Path $GameFolder ('ObjectAdds\' + $f)
+        if ((Test-Path $dst) -and ((Get-Item $dst).Length -lt 200)) {
+            Copy-Item $dst ($dst + '.blank-backup') -Force
+            Copy-Item (Join-Path $payload $f) $dst -Force
+            Write-OK "Installed $f"
+        }
+    }
+    return $true
+}
+
+function Step-RemoveDunkirkPack { param([string]$GameFolder)
+    Write-Step 'Remove the Dunkirk mission pack'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    foreach ($pair in @(
+        @('BFIELDS\quick.dat', '.stock-backup'),
+        @('BFIELDS\mainwld.BF', '.stock-backup'),
+        @('English\TEXT\boblang.dll', '.stock-backup'),
+        @('ObjectAdds\BoF Dunkirk.txt', '.blank-backup'),
+        @('ObjectAdds\BoF Ships.txt', '.blank-backup'))) {
+        $p = Join-Path $GameFolder $pair[0]
+        if (Test-Path ($p + $pair[1])) { Copy-Item ($p + $pair[1]) $p -Force; Write-OK ('Restored ' + $pair[0]) }
+    }
+    return $true
+}
+
+# ============================================================
 # Flight Training Module (W2). The Tiger Moth is complete on disk but was
 # never registered; the 13 aircraft slots are hardcoded, so for a TRAINING
 # SESSION the Hurricane1B line in models/model.idx is swapped for TigerMoth.acd
@@ -2640,10 +2806,11 @@ function Do-IndividualSteps {
         Write-Host "  8. Validate installation" -ForegroundColor White
         Write-Host "  9. Launcher desktop shortcut" -ForegroundColor White
         Write-Host " 10. Install ReShade (optional)" -ForegroundColor White
-        Write-Host " 11. Back to main menu" -ForegroundColor White
+        Write-Host " 11. Install the Dunkirk mission pack (optional)" -ForegroundColor White
+        Write-Host " 12. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-11): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-12): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -2657,8 +2824,9 @@ function Do-IndividualSteps {
             "8" { Step-Validate $gameFolder; Pause-Continue }
             "9" { Step-InstallLauncher $gameFolder; Pause-Continue }
             "10" { Step-InstallReShade $gameFolder; Pause-Continue }
-            "11" { return }
-            default { Write-Warn "Invalid option. Please enter 1-11." }
+            "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
+            "12" { return }
+            default { Write-Warn "Invalid option. Please enter 1-12." }
         }
     }
 }

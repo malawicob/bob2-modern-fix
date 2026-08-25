@@ -1,0 +1,4 @@
+stock_quick=b924c58ec5d4bfccc644d5de803a0da0
+pack_quick=95bbd4d414ed710a09c2e0ccc0695e72
+stock_mainwld=499670a702dd72d55816fe9ac14e3a2c
+patched_mainwld=bcb24e5310e15b79a6216741eaa4c981
