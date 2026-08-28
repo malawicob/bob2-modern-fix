@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.2'
+$FixVersion = '1.7.3'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -385,9 +385,27 @@ function Get-WrapperState {
     }
     $ver = ''
     try { $ver = $d3d9.VersionInfo.ProductVersion } catch { }
-    if (Test-Path (Join-Path $GameDir 'dgVoodoo.conf')) {
-        $d = if ($ver) { "version $ver" } else { 'version unknown' }
-        return [pscustomobject]@{ Name = 'dgVoodoo2'; Detail = $d; Ok = $true }
+    $confPath = Join-Path $GameDir 'dgVoodoo.conf'
+    if (Test-Path $confPath) {
+        # Presence is not enough. dgVoodooCpl rewrites this file with plain
+        # defaults the moment anyone points it at the game folder and presses
+        # Apply, which leaves the DLLs looking fine while forced resolution and
+        # the 4096 VRAM are gone: low-resolution 3D in a black border, and the
+        # watermark comes back. Check the load-bearing lines, matching the
+        # predicate in Step-InstallDgVoodoo2 (the source of truth), so a
+        # reset config lights up "Install and repair" instead of reading green.
+        $confTxt = ''
+        try { $confTxt = Get-Content $confPath -Raw } catch { }
+        $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and `
+                  ($confTxt -match 'Resolution\s*=\s*max') -and `
+                  ($confTxt -match 'VRAM\s*=\s*4096') -and `
+                  ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and `
+                  ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')
+        if ($confOk) {
+            $d = if ($ver) { "version $ver" } else { 'version unknown' }
+            return [pscustomobject]@{ Name = 'dgVoodoo2'; Detail = $d; Ok = $true }
+        }
+        return [pscustomobject]@{ Name = 'dgVoodoo2'; Detail = 'config reset to defaults, run Install and repair'; Ok = $false }
     }
     if (Test-Path (Join-Path $GameDir 'dxvk.conf')) {
         return [pscustomobject]@{ Name = 'DXVK'; Detail = 'known to crash this game'; Ok = $false }

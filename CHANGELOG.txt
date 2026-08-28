@@ -1,4 +1,4 @@
-========================================================================
+﻿========================================================================
   BOB2 Windows 10/11 Fix - Changelog
 ========================================================================
 
@@ -14,6 +14,22 @@ All three should agree. If bob2guard.log reports an older version than
 the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
+
+v1.7.3  (2026-08-28)
+--------------------
+  - FIXED: the launcher's own Wrapper status row read green whenever
+    dgVoodoo.conf merely existed, without checking its contents. v1.7.1
+    taught the Install and repair screen and the setup step to validate
+    the conf, but the main launcher window was missed and still passed a
+    reset conf as fine. So a tester whose dgVoodoo control panel had
+    rewritten the conf with plain defaults (which strips the forced
+    resolution and the 4096 VRAM, giving low-resolution 3D in a black
+    border with the watermark back on) saw a green Wrapper row and no
+    prompt to repair. The launcher now checks the same load-bearing
+    lines the installer does (ScalingMode, Resolution, VRAM, OutputAPI,
+    EnumerateRefreshRates); a reset conf turns the Wrapper row red with
+    "config reset to defaults, run Install and repair", so hitting Play
+    without repairing no longer hides the problem.
 
 v1.7.2  (2026-08-24)
 --------------------
