@@ -1,6 +1,6 @@
 ﻿========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.7.6  (2026-08-29)
+  Fix package v1.7.7  (2026-08-29)
   For the v2.13 executable
 ========================================================================
 
@@ -37,7 +37,8 @@ QUICK START
      will say so. It looks in its own folder and in the folder above it,
      and nowhere else.
 
-  3. Double-click BOB2.bat inside that folder.
+  3. Double-click "_CLICK HERE TO START.bat", the first file in
+     the folder. (BOB2.bat does the same thing.)
 
      Windows may have flagged the download. If a console window flashes
      up and nothing else happens, see "THINGS THAT LOOK LIKE FAULTS"

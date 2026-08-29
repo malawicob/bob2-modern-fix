@@ -15,6 +15,16 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.7  (2026-08-29)
+--------------------
+  - NEW: "_CLICK HERE TO START.bat". The fix folder holds thirty-odd
+    files, eleven of them .bat, and BOB2.bat sits alphabetically in the
+    middle of them; a user can easily click the wrong one. The new file
+    sorts to the very top of the folder in Windows Explorer, its name
+    says exactly what to do, and it does exactly what BOB2.bat does
+    (opens the launcher; press PLAY there). Nothing moved, so every
+    documented path still works and BOB2.bat still behaves as before.
+
 v1.7.6  (2026-08-29)
 --------------------
   - The Play-time black-border repair now runs ITSELF. v1.7.5 asked a
