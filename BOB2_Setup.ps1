@@ -1699,6 +1699,10 @@ function Show-Status {
 # Every edit is md5-gated against known states and fully restorable.
 # ============================================================
 $DunkirkStockQuickMD5 = 'b924c58ec5d4bfccc644d5de803a0da0'
+# Living dispersal: airfields dressed by the pack (payload dispersal\AF_<f>.dispersal.txt,
+# appended to the stock ObjectAdds file behind a marker line, backup .before-dispersal)
+$DispersalFields = @('Croydon','Biggin_Hill','Debden','Kenley','Hornchurch')
+$DispersalMarker = '# Living dispersal'
 $DunkirkPackQuickMD5  = '4658c45e4f1d1f29244b3f624255a75e'
 $DunkirkStockWorldMD5 = '499670a702dd72d55816fe9ac14e3a2c'
 $DunkirkWorldRecordHex = '1950041e50011f50022a0825869602' + '2c08a247cd01' + '2e0800300000' + '3f0802350000' + '310801020000'
@@ -1838,6 +1842,27 @@ function Step-InstallDunkirkPack { param([string]$GameFolder)
             Write-OK "Installed $f"
         }
     }
+
+    # 5. living dispersal: static crew, vehicles and props at the fighter
+    # fields the missions use. APPEND-only behind a marker line, so any
+    # stock variant of the airfield file is safe; original kept as
+    # .before-dispersal. Fields with the marker already present are left
+    # alone (re-running never doubles the scenery).
+    $dispDir = Join-Path (Split-Path $payload -Parent) 'dispersal'
+    if (Test-Path $dispDir) {
+        foreach ($f in $DispersalFields) {
+            $blk = Join-Path $dispDir ("AF_" + $f + ".dispersal.txt")
+            $dst = Join-Path $GameFolder ("ObjectAdds\AF_" + $f + ".txt")
+            if (-not (Test-Path $blk)) { continue }
+            if (-not (Test-Path $dst)) { Write-Warn "AF_$f.txt not found - skipping its dispersal"; continue }
+            $cur = Get-Content $dst -Raw
+            if ($cur -match [regex]::Escape($DispersalMarker)) { Write-OK "Dispersal already present at $f"; continue }
+            if (-not (Test-Path ($dst + '.before-dispersal'))) { Copy-Item $dst ($dst + '.before-dispersal') }
+            $blkTxt = Get-Content $blk -Raw
+            Set-Content -Path $dst -Value ($cur.TrimEnd() + "`r`n" + $blkTxt) -NoNewline -Encoding ASCII
+            Write-OK "Dressed $f with the living dispersal"
+        }
+    }
     return $true
 }
 
@@ -1852,6 +1877,21 @@ function Step-RemoveDunkirkPack { param([string]$GameFolder)
         @('ObjectAdds\BoF Ships.txt', '.blank-backup'))) {
         $p = Join-Path $GameFolder $pair[0]
         if (Test-Path ($p + $pair[1])) { Copy-Item ($p + $pair[1]) $p -Force; Write-OK ('Restored ' + $pair[0]) }
+    }
+    # living dispersal: restore the backup where one exists, otherwise cut
+    # the appended block off at its marker line (it is always at the end)
+    foreach ($f in $DispersalFields) {
+        $p = Join-Path $GameFolder ("ObjectAdds\AF_" + $f + ".txt")
+        if (Test-Path ($p + '.before-dispersal')) {
+            Copy-Item ($p + '.before-dispersal') $p -Force; Write-OK ("Restored AF_" + $f + ".txt")
+        } elseif (Test-Path $p) {
+            $cur = Get-Content $p -Raw
+            $ix = $cur.IndexOf($DispersalMarker)
+            if ($ix -gt 0) {
+                Set-Content -Path $p -Value ($cur.Substring(0, $ix).TrimEnd() + "`r`n") -NoNewline -Encoding ASCII
+                Write-OK ("Stripped the dispersal block from AF_" + $f + ".txt")
+            }
+        }
     }
     return $true
 }
@@ -2923,7 +2963,7 @@ function Do-IndividualSteps {
         Write-Host "  8. Validate installation" -ForegroundColor White
         Write-Host "  9. Launcher desktop shortcut" -ForegroundColor White
         Write-Host " 10. Install ReShade (optional)" -ForegroundColor White
-        Write-Host " 11. Install the Dunkirk mission pack (optional)" -ForegroundColor White
+        Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
