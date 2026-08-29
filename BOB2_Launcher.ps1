@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.5'
+$FixVersion = '1.7.6'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -987,14 +987,16 @@ function Invoke-DriftCheck {
             . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
             $chk = Test-SettingsCfgHealthy $GameDir
             if (-not $chk.Healthy) {
+                # Repair automatically, no question asked: a file that fails
+                # this check is by definition unusable (the game would apply
+                # its garbage as a display mode), and the old file is always
+                # backed up first. The note afterwards says what happened.
                 $script:CfgRepairOffered = $true
-                $ans = [System.Windows.MessageBox]::Show($win,
-                    "The game's graphics settings file is damaged ($($chk.Reason)). This is the proven cause of the low-resolution picture inside a black border.`n`nFix it now? Your old file is kept as settings.cfg.before-knowngood.",
-                    'Graphics settings damaged', 'YesNo', 'Warning')
-                if ($ans -eq 'Yes') {
-                    $r = Repair-KnownGoodSettings -GameFolder $GameDir
-                    if ($r.Ok) { Show-Note $r.Message 'Repaired' 'Information' }
-                    else { Show-Note $r.Message 'Not repaired' 'Warning' }
+                $r = Repair-KnownGoodSettings -GameFolder $GameDir
+                if ($r.Ok) {
+                    Show-Note ("The game's graphics settings file was damaged ($($chk.Reason)), which causes the low-resolution picture inside a black border. It has been repaired automatically.`n`n" + $r.Message) 'Graphics settings repaired' 'Information'
+                } else {
+                    Show-Note ("The game's graphics settings file is damaged ($($chk.Reason)) but could not be repaired: $($r.Message)") 'Graphics settings damaged' 'Warning'
                 }
             }
         } catch { }

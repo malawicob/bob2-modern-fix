@@ -15,6 +15,16 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.6  (2026-08-29)
+--------------------
+  - The Play-time black-border repair now runs ITSELF. v1.7.5 asked a
+    yes/no question first; there is nothing to decide, because a
+    settings.cfg that fails the plausibility check is by definition
+    unusable (the game applies its garbage as a display mode) and the
+    old file is always backed up as settings.cfg.before-knowngood. The
+    launcher now repairs automatically and shows one note saying what
+    it did. If the repair itself cannot run, the note says why.
+
 v1.7.5  (2026-08-29)
 --------------------
   - The v1.7.4 black-border repair made foolproof. Nobody should have to
