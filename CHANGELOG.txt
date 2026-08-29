@@ -15,6 +15,22 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.5  (2026-08-29)
+--------------------
+  - The v1.7.4 black-border repair made foolproof. Nobody should have to
+    find option 14 in a console menu:
+    * The LAUNCHER now checks settings.cfg at Play. If the stored display
+      mode is implausible (the proven cause of the border), it offers the
+      one-click repair right there. Declining never blocks the launch and
+      it asks at most once per session.
+    * The repair now reads the real display mode from the video controller
+      instead of Windows Forms, whose bounds are DPI-scaled (1920x1080 at
+      125 percent scaling reads 1536x864, and writing that would have
+      recreated the exact invalid-mode bug being repaired).
+    * The repair creates SAVEGAME if it is missing and reports every
+      failure as a message instead of stopping.
+    * Option 14 in the Settings Tweaker now uses the same hardened code.
+
 v1.7.4  (2026-08-29)
 --------------------
   - NEW: Settings Tweaker option 14, "Reset graphics settings to the

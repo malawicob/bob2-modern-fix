@@ -1788,6 +1788,75 @@ $VariantDefs = @(
     @{ Id='jabo'; Name='Bf 109E-4/B Jabo (experimental)'; Files=@(); Sig=$null }
 )
 
+# --- known-good settings.cfg repair (shared: option 14 + launcher Play guard) ---
+function Get-CurrentDisplayModeSafe {
+    # The ACTUAL current display mode. Windows Forms bounds are DPI-scaled
+    # (1920x1080 at 125% reads 1536x864; writing that would recreate the
+    # exact invalid-mode bug this repairs), so ask the video controller.
+    $w = 0; $h = 0; $hz = 60
+    try {
+        $vc = Get-CimInstance Win32_VideoController -ErrorAction Stop |
+              Where-Object { $_.CurrentHorizontalResolution -ge 800 } | Select-Object -First 1
+        if ($vc) {
+            $w = [int]$vc.CurrentHorizontalResolution
+            $h = [int]$vc.CurrentVerticalResolution
+            if ($vc.CurrentRefreshRate -ge 23) { $hz = [int]$vc.CurrentRefreshRate }
+        }
+    } catch { }
+    if ($w -lt 800 -or $h -lt 600) {
+        try {
+            Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+            $scr = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $w = [int]$scr.Width; $h = [int]$scr.Height
+        } catch { }
+    }
+    if ($w -ge 800 -and $w -le 7680 -and $h -ge 600 -and $h -le 4320) {
+        return @{ W = $w; H = $h; Hz = $hz }
+    }
+    $null
+}
+function Test-SettingsCfgHealthy {
+    param([string]$GameFolder)
+    # Healthy = the layout ChangeMode reads (int32 at offsets 1416/1480)
+    # holds a plausible display mode. A missing file is left alone (the
+    # game writes one); only an EXISTING implausible file is flagged.
+    $p = Join-Path $GameFolder 'SAVEGAME\settings.cfg'
+    if (-not (Test-Path $p)) { return @{ Exists = $false; Healthy = $true; Reason = 'no file' } }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($p)
+        if ($b.Length -ne 1786) { return @{ Exists = $true; Healthy = $false; Reason = "unexpected size $($b.Length) bytes" } }
+        $w = [BitConverter]::ToInt32($b, 1416); $h = [BitConverter]::ToInt32($b, 1480)
+        if ($w -lt 800 -or $w -gt 7680 -or $h -lt 600 -or $h -gt 4320) {
+            return @{ Exists = $true; Healthy = $false; Reason = "stored mode reads ${w}x${h}" }
+        }
+        return @{ Exists = $true; Healthy = $true; Reason = "${w}x${h}" }
+    } catch { return @{ Exists = $true; Healthy = $true; Reason = 'unreadable, left alone' } }
+}
+function Repair-KnownGoodSettings {
+    param([string]$GameFolder)
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+        return @{ Ok = $false; Message = 'Close the game first. It rewrites settings.cfg on exit.' }
+    }
+    $kg = Join-Path $PSScriptRoot 'knowngood\settings.cfg'
+    if (-not (Test-Path $kg)) { return @{ Ok = $false; Message = 'knowngood\settings.cfg is missing from the fix folder.' } }
+    $bytes = [System.IO.File]::ReadAllBytes($kg)
+    if ($bytes.Length -ne 1786) { return @{ Ok = $false; Message = "known-good file is $($bytes.Length) bytes, expected 1786. Not applying." } }
+    $mode = Get-CurrentDisplayModeSafe
+    $note = 'kept the known-good 1920x1080 @ 60'
+    if ($mode) {
+        [BitConverter]::GetBytes([int]$mode.W).CopyTo($bytes, 1416)
+        [BitConverter]::GetBytes([int]$mode.H).CopyTo($bytes, 1480)
+        [BitConverter]::GetBytes([int]$mode.Hz).CopyTo($bytes, 1544)
+        $note = "resolution set to your display: $($mode.W)x$($mode.H) @ $($mode.Hz)"
+    }
+    $dir = Join-Path $GameFolder 'SAVEGAME'
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $dst = Join-Path $dir 'settings.cfg'
+    if (Test-Path $dst) { Copy-Item $dst "$dst.before-knowngood" -Force }
+    [System.IO.File]::WriteAllBytes($dst, $bytes)
+    return @{ Ok = $true; Message = "Known-good settings.cfg installed, $note. The old file is kept as settings.cfg.before-knowngood." }
+}
+
 function Get-VariantStateFile { param([string]$GameFolder) Join-Path $GameFolder $VariantStateFileName }
 
 function Get-ActiveVariantIds {
@@ -2464,51 +2533,8 @@ function Do-Settings {
                 }
             }
             "14" {
-                # Replace SAVEGAME\settings.cfg with the file captured from the
-                # proven working install (2026-08-29 audit), with the four
-                # campaign-resolution ints (offsets 1416/1480/1544/1608) patched
-                # to THIS machine's desktop mode. This is the cure when a
-                # settings.cfg is damaged or laid out differently (one tester's
-                # read 67,110,784 at the width offset), which leaves the game
-                # rendering a small mode inside a black border while every
-                # wrapper-side setting is correct. ChangeMode @ 0x5a082d applies
-                # these bytes with no validation, so garbage here IS the border.
-                if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
-                    Write-Warn "Close the game first - it rewrites settings.cfg on exit."
-                } else {
-                    $kg = Join-Path $PSScriptRoot 'knowngood\settings.cfg'
-                    $dst = Join-Path $gameFolder 'SAVEGAME\settings.cfg'
-                    if (-not (Test-Path $kg)) {
-                        Write-Err "knowngood\settings.cfg is missing from the fix folder."
-                    } else {
-                        $bytes = [System.IO.File]::ReadAllBytes($kg)
-                        if ($bytes.Length -ne 1786) {
-                            Write-Err "known-good file is $($bytes.Length) bytes, expected 1786 - not applying."
-                        } else {
-                            $w = 0; $h = 0; $hz = 60
-                            try {
-                                Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
-                                $scr = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-                                $w = [int]$scr.Width; $h = [int]$scr.Height
-                            } catch { }
-                            if ($w -ge 800 -and $h -ge 600) {
-                                [BitConverter]::GetBytes([int]$w).CopyTo($bytes, 1416)
-                                [BitConverter]::GetBytes([int]$h).CopyTo($bytes, 1480)
-                                [BitConverter]::GetBytes([int]$hz).CopyTo($bytes, 1544)
-                                Write-Info "Campaign resolution patched to your desktop: ${w}x${h} @ ${hz}"
-                            } else {
-                                Write-Info "Could not read the desktop mode - keeping the file's 1920x1080 @ 60."
-                            }
-                            if (Test-Path $dst) {
-                                Copy-Item $dst "$dst.before-knowngood" -Force
-                                Write-OK "Backed up settings.cfg as settings.cfg.before-knowngood"
-                            }
-                            [System.IO.File]::WriteAllBytes($dst, $bytes)
-                            Write-OK "Known-good settings.cfg installed (from the audited working install)."
-                            Write-Info "Start the game and fly. To undo: restore settings.cfg.before-knowngood."
-                        }
-                    }
-                }
+                $r = Repair-KnownGoodSettings -GameFolder $gameFolder
+                if ($r.Ok) { Write-OK $r.Message } else { Write-Warn $r.Message }
             }
             "P" {
                 Write-Step "Applying Performance Preset"

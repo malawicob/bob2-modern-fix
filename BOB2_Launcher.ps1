@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.4'
+$FixVersion = '1.7.5'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -975,6 +975,30 @@ function Invoke-DriftCheck {
     }
     $bat = Resolve-Helper 'BOB2_Launch.bat'
     if (-not $bat) { Show-Note "BOB2_Launch.bat is missing from the fix folder." 'Not found' 'Warning'; return }
+
+    # Foolproof black-border guard. settings.cfg holding an implausible
+    # display mode is the PROVEN cause of low-resolution 3D inside a black
+    # border (ChangeMode applies the stored bytes with no validation), so
+    # check it right here at Play and offer the one-click repair. Fully
+    # guarded: a failure in the check can never stop the game launching,
+    # and declining only asks again next launcher session.
+    if (-not $script:CfgRepairOffered) {
+        try {
+            . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+            $chk = Test-SettingsCfgHealthy $GameDir
+            if (-not $chk.Healthy) {
+                $script:CfgRepairOffered = $true
+                $ans = [System.Windows.MessageBox]::Show($win,
+                    "The game's graphics settings file is damaged ($($chk.Reason)). This is the proven cause of the low-resolution picture inside a black border.`n`nFix it now? Your old file is kept as settings.cfg.before-knowngood.",
+                    'Graphics settings damaged', 'YesNo', 'Warning')
+                if ($ans -eq 'Yes') {
+                    $r = Repair-KnownGoodSettings -GameFolder $GameDir
+                    if ($r.Ok) { Show-Note $r.Message 'Repaired' 'Information' }
+                    else { Show-Note $r.Message 'Not repaired' 'Warning' }
+                }
+            }
+        } catch { }
+    }
     try {
         # Only elevate if Bob.exe still carries RUNASADMIN. When it does, we
         # must elevate HERE rather than let the .bat re-spawn itself, because
