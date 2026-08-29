@@ -1897,6 +1897,57 @@ function Step-RemoveDunkirkPack { param([string]$GameFolder)
 }
 
 # ============================================================
+# Enhanced sea (optional). Replaces Weather\Water.fx with the tuned
+# shader (larger swells, sun glint, sparse white specks on both the
+# detailed and the distant filler water) and sets the deep-navy channel
+# colours in bdg.txt. The shader is compiled fresh by the game at every
+# launch (WeatherClass::InitWater), so install/remove is just files.
+# ============================================================
+function Step-InstallSeaState { param([string]$GameFolder)
+    Write-Step 'Install the enhanced sea'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $payload = $null
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path $base 'seastate\Water.fx'
+        if (Test-Path $cand) { $payload = $cand; break }
+    }
+    if (-not $payload) { Write-Warn 'seastate\Water.fx payload not found.'; return $false }
+    $fx = Join-Path $GameFolder 'Weather\Water.fx'
+    if (-not (Test-Path $fx)) { Write-Warn 'Weather\Water.fx not found in the game folder.'; return $false }
+    if ((Get-FileMD5 $fx) -eq (Get-FileMD5 $payload)) { Write-OK 'Enhanced sea already installed' }
+    else {
+        if (-not (Test-Path ($fx + '.before-seastate'))) { Copy-Item $fx ($fx + '.before-seastate') }
+        Copy-Item $payload $fx -Force
+        Write-OK 'Installed the enhanced Water.fx (swells, glint, white specks)'
+    }
+    $bdg = Join-Path $GameFolder 'bdg.txt'
+    if (Test-Path $bdg) {
+        $t = Get-Content $bdg -Raw
+        foreach ($kv in @(@('WATER_COLOUR_DARK','14 30 54'), @('WATER_COLOUR_LIGHT','48 74 112'))) {
+            if ($t -match ('(?m)^\s*' + $kv[0] + '\s*=')) {
+                $t = $t -replace ('(?m)^(\s*' + $kv[0] + '\s*=\s*)[^\r\n]*'), ('${1}' + $kv[1])
+            } else {
+                $t = $t.TrimEnd() + "`r`n" + $kv[0] + ' = ' + $kv[1] + "`r`n"
+            }
+        }
+        Set-Content -Path $bdg -Value $t -NoNewline -Encoding ASCII
+        Write-OK 'Set the deep-navy water colours in bdg.txt'
+    }
+    return $true
+}
+function Step-RemoveSeaState { param([string]$GameFolder)
+    Write-Step 'Remove the enhanced sea'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $fx = Join-Path $GameFolder 'Weather\Water.fx'
+    if (Test-Path ($fx + '.before-seastate')) {
+        Copy-Item ($fx + '.before-seastate') $fx -Force
+        Write-OK 'Restored the previous Water.fx'
+    } else { Write-Warn 'No .before-seastate backup found - Water.fx left as it is.' }
+    Write-Info 'The water colours in bdg.txt are left as set; the game GFX screen can change them.'
+    return $true
+}
+
+# ============================================================
 # Flight Training Module (W2). The Tiger Moth is complete on disk but was
 # never registered; the 13 aircraft slots are hardcoded, so for a TRAINING
 # SESSION the Hurricane1B line in models/model.idx is swapped for TigerMoth.acd
@@ -2964,10 +3015,11 @@ function Do-IndividualSteps {
         Write-Host "  9. Launcher desktop shortcut" -ForegroundColor White
         Write-Host " 10. Install ReShade (optional)" -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
-        Write-Host " 12. Back to main menu" -ForegroundColor White
+        Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
+        Write-Host " 13. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-12): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-13): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -2982,8 +3034,9 @@ function Do-IndividualSteps {
             "9" { Step-InstallLauncher $gameFolder; Pause-Continue }
             "10" { Step-InstallReShade $gameFolder; Pause-Continue }
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
-            "12" { return }
-            default { Write-Warn "Invalid option. Please enter 1-12." }
+            "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
+            "13" { return }
+            default { Write-Warn "Invalid option. Please enter 1-13." }
         }
     }
 }
