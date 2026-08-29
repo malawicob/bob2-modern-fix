@@ -1699,7 +1699,7 @@ function Show-Status {
 # Every edit is md5-gated against known states and fully restorable.
 # ============================================================
 $DunkirkStockQuickMD5 = 'b924c58ec5d4bfccc644d5de803a0da0'
-$DunkirkPackQuickMD5  = '95bbd4d414ed710a09c2e0ccc0695e72'
+$DunkirkPackQuickMD5  = '4658c45e4f1d1f29244b3f624255a75e'
 $DunkirkStockWorldMD5 = '499670a702dd72d55816fe9ac14e3a2c'
 $DunkirkWorldRecordHex = '1950041e50011f50022a0825869602' + '2c08a247cd01' + '2e0800300000' + '3f0802350000' + '310801020000'
 $DunkirkWorldGroupOff = 0x29cb    # '15 50 9a' in the stock file
@@ -1981,6 +1981,75 @@ function Get-CampaignDate {
         if ($date.Year -lt 1939 -or $date.Year -gt 1941) { return $null }
         return $date
     } catch { return $null }
+}
+
+# --- known-good settings.cfg repair (shared: option 14 + launcher Play guard) ---
+function Get-CurrentDisplayModeSafe {
+    # The ACTUAL current display mode. Windows Forms bounds are DPI-scaled
+    # (1920x1080 at 125% reads 1536x864; writing that would recreate the
+    # exact invalid-mode bug this repairs), so ask the video controller.
+    $w = 0; $h = 0; $hz = 60
+    try {
+        $vc = Get-CimInstance Win32_VideoController -ErrorAction Stop |
+              Where-Object { $_.CurrentHorizontalResolution -ge 800 } | Select-Object -First 1
+        if ($vc) {
+            $w = [int]$vc.CurrentHorizontalResolution
+            $h = [int]$vc.CurrentVerticalResolution
+            if ($vc.CurrentRefreshRate -ge 23) { $hz = [int]$vc.CurrentRefreshRate }
+        }
+    } catch { }
+    if ($w -lt 800 -or $h -lt 600) {
+        try {
+            Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+            $scr = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+            $w = [int]$scr.Width; $h = [int]$scr.Height
+        } catch { }
+    }
+    if ($w -ge 800 -and $w -le 7680 -and $h -ge 600 -and $h -le 4320) {
+        return @{ W = $w; H = $h; Hz = $hz }
+    }
+    $null
+}
+function Test-SettingsCfgHealthy {
+    param([string]$GameFolder)
+    # Healthy = the layout ChangeMode reads (int32 at offsets 1416/1480)
+    # holds a plausible display mode. A missing file is left alone (the
+    # game writes one); only an EXISTING implausible file is flagged.
+    $p = Join-Path $GameFolder 'SAVEGAME\settings.cfg'
+    if (-not (Test-Path $p)) { return @{ Exists = $false; Healthy = $true; Reason = 'no file' } }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($p)
+        if ($b.Length -ne 1786) { return @{ Exists = $true; Healthy = $false; Reason = "unexpected size $($b.Length) bytes" } }
+        $w = [BitConverter]::ToInt32($b, 1416); $h = [BitConverter]::ToInt32($b, 1480)
+        if ($w -lt 800 -or $w -gt 7680 -or $h -lt 600 -or $h -gt 4320) {
+            return @{ Exists = $true; Healthy = $false; Reason = "stored mode reads ${w}x${h}" }
+        }
+        return @{ Exists = $true; Healthy = $true; Reason = "${w}x${h}" }
+    } catch { return @{ Exists = $true; Healthy = $true; Reason = 'unreadable, left alone' } }
+}
+function Repair-KnownGoodSettings {
+    param([string]$GameFolder)
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+        return @{ Ok = $false; Message = 'Close the game first. It rewrites settings.cfg on exit.' }
+    }
+    $kg = Join-Path $PSScriptRoot 'knowngood\settings.cfg'
+    if (-not (Test-Path $kg)) { return @{ Ok = $false; Message = 'knowngood\settings.cfg is missing from the fix folder.' } }
+    $bytes = [System.IO.File]::ReadAllBytes($kg)
+    if ($bytes.Length -ne 1786) { return @{ Ok = $false; Message = "known-good file is $($bytes.Length) bytes, expected 1786. Not applying." } }
+    $mode = Get-CurrentDisplayModeSafe
+    $note = 'kept the known-good 1920x1080 @ 60'
+    if ($mode) {
+        [BitConverter]::GetBytes([int]$mode.W).CopyTo($bytes, 1416)
+        [BitConverter]::GetBytes([int]$mode.H).CopyTo($bytes, 1480)
+        [BitConverter]::GetBytes([int]$mode.Hz).CopyTo($bytes, 1544)
+        $note = "resolution set to your display: $($mode.W)x$($mode.H) @ $($mode.Hz)"
+    }
+    $dir = Join-Path $GameFolder 'SAVEGAME'
+    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+    $dst = Join-Path $dir 'settings.cfg'
+    if (Test-Path $dst) { Copy-Item $dst "$dst.before-knowngood" -Force }
+    [System.IO.File]::WriteAllBytes($dst, $bytes)
+    return @{ Ok = $true; Message = "Known-good settings.cfg installed, $note. The old file is kept as settings.cfg.before-knowngood." }
 }
 
 function Get-VariantStateFile { param([string]$GameFolder) Join-Path $GameFolder $VariantStateFileName }
@@ -2554,6 +2623,7 @@ function Do-Settings {
         } else {
             Write-Warn "bdg.txt not found"
         }
+        Write-Host "  14. Reset graphics settings to the known-good file" -ForegroundColor White
 
         Write-Host ""
         Write-Host "  --- Presets ---" -ForegroundColor Cyan
@@ -2563,7 +2633,7 @@ function Do-Settings {
         Write-Host ""
         Write-Host "  0. Back to main menu" -ForegroundColor White
         Write-Host ""
-        Write-Host "  Select setting to change (0-13, P/Q/B): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select setting to change (0-14, P/Q/B): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice.ToUpper()) {
@@ -2670,6 +2740,10 @@ function Do-Settings {
                         Write-Info "Recommended - let dgVoodoo2 handle frame pacing"
                     }
                 }
+            }
+            "14" {
+                $r = Repair-KnownGoodSettings -GameFolder $gameFolder
+                if ($r.Ok) { Write-OK $r.Message } else { Write-Warn $r.Message }
             }
             "P" {
                 Write-Step "Applying Performance Preset"
