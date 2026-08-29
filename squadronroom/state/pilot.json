@@ -1,0 +1,19 @@
+﻿{
+    "pilot":  "Patrick Millin",
+    "rank":  "Sergeant",
+    "codes":  "QJ-P",
+    "status":  "On strength",
+    "serials":  "R6824",
+    "note":  "Posted to No. 92 Squadron.",
+    "historical":  false,
+    "portrait":  "pilot03.jpg",
+    "created":  "2026-08-28",
+    "markings":  {
+                     "serx":  0.7443,
+                     "sqy":  0.3461,
+                     "sery":  0.4487,
+                     "sqx":  0.4194,
+                     "indy":  0.3326,
+                     "indx":  0.6727
+                 }
+}
