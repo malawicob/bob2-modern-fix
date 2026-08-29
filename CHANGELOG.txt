@@ -1,4 +1,4 @@
-========================================================================
+﻿========================================================================
   BOB2 Windows 10/11 Fix - Changelog
 ========================================================================
 
@@ -14,6 +14,82 @@ All three should agree. If bob2guard.log reports an older version than
 the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
+
+v1.7.7  (2026-08-29)
+--------------------
+  - NEW: "_CLICK HERE TO START.bat". The fix folder holds thirty-odd
+    files, eleven of them .bat, and BOB2.bat sits alphabetically in the
+    middle of them; a user can easily click the wrong one. The new file
+    sorts to the very top of the folder in Windows Explorer, its name
+    says exactly what to do, and it does exactly what BOB2.bat does
+    (opens the launcher; press PLAY there). Nothing moved, so every
+    documented path still works and BOB2.bat still behaves as before.
+
+v1.7.6  (2026-08-29)
+--------------------
+  - The Play-time black-border repair now runs ITSELF. v1.7.5 asked a
+    yes/no question first; there is nothing to decide, because a
+    settings.cfg that fails the plausibility check is by definition
+    unusable (the game applies its garbage as a display mode) and the
+    old file is always backed up as settings.cfg.before-knowngood. The
+    launcher now repairs automatically and shows one note saying what
+    it did. If the repair itself cannot run, the note says why.
+
+v1.7.5  (2026-08-29)
+--------------------
+  - The v1.7.4 black-border repair made foolproof. Nobody should have to
+    find option 14 in a console menu:
+    * The LAUNCHER now checks settings.cfg at Play. If the stored display
+      mode is implausible (the proven cause of the border), it offers the
+      one-click repair right there. Declining never blocks the launch and
+      it asks at most once per session.
+    * The repair now reads the real display mode from the video controller
+      instead of Windows Forms, whose bounds are DPI-scaled (1920x1080 at
+      125 percent scaling reads 1536x864, and writing that would have
+      recreated the exact invalid-mode bug being repaired).
+    * The repair creates SAVEGAME if it is missing and reports every
+      failure as a message instead of stopping.
+    * Option 14 in the Settings Tweaker now uses the same hardened code.
+
+v1.7.4  (2026-08-29)
+--------------------
+  - NEW: Settings Tweaker option 14, "Reset graphics settings to the
+    known-good file". A full audit of the one install with verified
+    full-resolution 3D proved the black-border failure end to end: the
+    game sets its display mode in ChangeMode from four values stored in
+    SAVEGAME\settings.cfg (width 1416, height 1480, refresh 1544, depth
+    1608) and applies them with NO validation; a damaged or differently
+    laid out settings.cfg (one tester's reads 67,110,784 at the width
+    offset) makes the mode change fail, and the game then runs its
+    1024x768 default inside the desktop: the black border. Every
+    wrapper-side setting is powerless against it because the damage is
+    upstream of the wrapper.
+
+    The new option installs the settings.cfg captured from the audited
+    working install, with the resolution patched to the machine's own
+    desktop mode, after backing the old file up as
+    settings.cfg.before-knowngood. It refuses to run while the game is
+    open (the game rewrites this file on exit).
+
+    The audit also cleared the launcher batch files (byte-identical to
+    the working install) and re-confirmed the dgVoodoo configuration and
+    DLLs are identical between working and broken machines.
+
+v1.7.3  (2026-08-28)
+--------------------
+  - FIXED: the launcher's own Wrapper status row read green whenever
+    dgVoodoo.conf merely existed, without checking its contents. v1.7.1
+    taught the Install and repair screen and the setup step to validate
+    the conf, but the main launcher window was missed and still passed a
+    reset conf as fine. So a tester whose dgVoodoo control panel had
+    rewritten the conf with plain defaults (which strips the forced
+    resolution and the 4096 VRAM, giving low-resolution 3D in a black
+    border with the watermark back on) saw a green Wrapper row and no
+    prompt to repair. The launcher now checks the same load-bearing
+    lines the installer does (ScalingMode, Resolution, VRAM, OutputAPI,
+    EnumerateRefreshRates); a reset conf turns the Wrapper row red with
+    "config reset to defaults, run Install and repair", so hitting Play
+    without repairing no longer hides the problem.
 
 v1.7.2  (2026-08-24)
 --------------------
@@ -32,12 +108,6 @@ v1.7.2  (2026-08-24)
     (copying preserves dates; contents verified identical by checksum),
     and the compatibility flags on the working install match what the
     fix sets, so those are not the culprit.
-
-  Also aboard, ahead of their formal announcement in the next feature
-  release: the Settings Aircraft page (optional 1940 variant switches,
-  off by default) and the launcher FLIGHT TRAINING button (Tiger Moth
-  training module, entirely opt-in and self-restoring). Both will be
-  documented fully in v1.8.0.
 
 v1.7.1  (2026-08-24)
 --------------------

@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
 REM  BOB2 launcher - pins the game to P-cores
-REM  Part of BOB2 Windows 10/11 Fix v1.5.0
+REM  Part of BOB2 Windows 10/11 Fix
 REM ============================================================
 REM
 REM  Why: BOB2's engine is effectively single-threaded (verified -

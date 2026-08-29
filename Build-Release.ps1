@@ -49,6 +49,7 @@ $excludeFiles = @(
     'BOB2_UITest.bat'               # menu-rescale prototype, developer only
 )
 $excludeDirs = @(
+    '.git'                          # -Force picks it up; 14 MB of history shipped by accident up to v1.7.2
     'dist'
     '_ControlsBackup'               # backups of a real install
     '_AxisProfiles'                 # somebody's joystick calibration

@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.2'
+$FixVersion = '1.7.7'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -385,9 +385,27 @@ function Get-WrapperState {
     }
     $ver = ''
     try { $ver = $d3d9.VersionInfo.ProductVersion } catch { }
-    if (Test-Path (Join-Path $GameDir 'dgVoodoo.conf')) {
-        $d = if ($ver) { "version $ver" } else { 'version unknown' }
-        return [pscustomobject]@{ Name = 'dgVoodoo2'; Detail = $d; Ok = $true }
+    $confPath = Join-Path $GameDir 'dgVoodoo.conf'
+    if (Test-Path $confPath) {
+        # Presence is not enough. dgVoodooCpl rewrites this file with plain
+        # defaults the moment anyone points it at the game folder and presses
+        # Apply, which leaves the DLLs looking fine while forced resolution and
+        # the 4096 VRAM are gone: low-resolution 3D in a black border, and the
+        # watermark comes back. Check the load-bearing lines, matching the
+        # predicate in Step-InstallDgVoodoo2 (the source of truth), so a
+        # reset config lights up "Install and repair" instead of reading green.
+        $confTxt = ''
+        try { $confTxt = Get-Content $confPath -Raw } catch { }
+        $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and `
+                  ($confTxt -match 'Resolution\s*=\s*max') -and `
+                  ($confTxt -match 'VRAM\s*=\s*4096') -and `
+                  ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and `
+                  ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')
+        if ($confOk) {
+            $d = if ($ver) { "version $ver" } else { 'version unknown' }
+            return [pscustomobject]@{ Name = 'dgVoodoo2'; Detail = $d; Ok = $true }
+        }
+        return [pscustomobject]@{ Name = 'dgVoodoo2'; Detail = 'config reset to defaults, run Install and repair'; Ok = $false }
     }
     if (Test-Path (Join-Path $GameDir 'dxvk.conf')) {
         return [pscustomobject]@{ Name = 'DXVK'; Detail = 'known to crash this game'; Ok = $false }
@@ -630,6 +648,24 @@ $xaml = @'
                 <StackPanel VerticalAlignment="Center">
                 <TextBlock x:Name="TitleTraining" Text="FLIGHT TRAINING" Style="{StaticResource NavTitle}"/>
                 <TextBlock x:Name="SubTraining" Text="fly the Tiger Moth: six 1940 training exercises" Style="{StaticResource NavSub}"/>
+                </StackPanel>
+              </StackPanel>
+              </StackPanel>
+            </Button>
+
+            <Button x:Name="BtnSquadron" Style="{StaticResource Nav}">
+              <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Data="{StaticResource IcoCompass}" Fill="{x:Null}" Stroke="#FF8E8880"
+                          StrokeThickness="1.6" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="SQUADRON ROOM" Style="{StaticResource NavTitle}"/>
+                <TextBlock x:Name="SubSquadron" Text="your pilot, the roster and the day's readiness" Style="{StaticResource NavSub}"/>
                 </StackPanel>
               </StackPanel>
               </StackPanel>
@@ -958,6 +994,56 @@ function Invoke-DriftCheck {
     }
     $bat = Resolve-Helper 'BOB2_Launch.bat'
     if (-not $bat) { Show-Note "BOB2_Launch.bat is missing from the fix folder." 'Not found' 'Warning'; return }
+
+    # Foolproof black-border guard. settings.cfg holding an implausible
+    # display mode is the PROVEN cause of low-resolution 3D inside a black
+    # border (ChangeMode applies the stored bytes with no validation), so
+    # check it right here at Play and offer the one-click repair. Fully
+    # guarded: a failure in the check can never stop the game launching,
+    # and declining only asks again next launcher session.
+    if (-not $script:CfgRepairOffered) {
+        try {
+            . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+            $chk = Test-SettingsCfgHealthy $GameDir
+            if (-not $chk.Healthy) {
+                # Repair automatically, no question asked: a file that fails
+                # this check is by definition unusable (the game would apply
+                # its garbage as a display mode), and the old file is always
+                # backed up first. The note afterwards says what happened.
+                $script:CfgRepairOffered = $true
+                $r = Repair-KnownGoodSettings -GameFolder $GameDir
+                if ($r.Ok) {
+                    Show-Note ("The game's graphics settings file was damaged ($($chk.Reason)), which causes the low-resolution picture inside a black border. It has been repaired automatically.`n`n" + $r.Message) 'Graphics settings repaired' 'Information'
+                } else {
+                    Show-Note ("The game's graphics settings file is damaged ($($chk.Reason)) but could not be repaired: $($r.Message)") 'Graphics settings damaged' 'Warning'
+                }
+            }
+        } catch { }
+    }
+
+    # Squadron Room: if a pilot exists, drop a flight marker so this sortie
+    # logs itself. Best-effort and fully guarded - it must never affect Play.
+    try {
+        $srDir = Join-Path $GameDir 'SquadronRoom'
+        if (Test-Path (Join-Path $srDir 'pilot.json')) {
+            $before = ''
+            try {
+                $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($sav) {
+                    $bb = [System.IO.File]::ReadAllBytes($sav.FullName)
+                    if (($bb.Length -ge 70) -and ([System.Text.Encoding]::ASCII.GetString($bb,1,20) -match '^Rowan Savegame: V 0')) {
+                        $secs = [BitConverter]::ToUInt32($bb,61)
+                        if ($secs % 86400 -eq 0) {
+                            $dt = ([datetime]'1901-01-01').AddSeconds($secs)
+                            if ($dt.Year -ge 1939 -and $dt.Year -le 1941) { $before = $dt.ToString('yyyy-MM-dd') }
+                        }
+                    }
+                }
+            } catch { }
+            @{ start = (Get-Date).ToString('s'); dateBefore = $before } | ConvertTo-Json | Set-Content -Path (Join-Path $srDir 'flight.open') -Encoding UTF8
+        }
+    } catch { }
+
     try {
         # Only elevate if Bob.exe still carries RUNASADMIN. When it does, we
         # must elevate HERE rather than let the .bat re-spawn itself, because
@@ -1004,6 +1090,21 @@ function Start-Wizard {
 }
 
 (C 'BtnWizard').Add_Click({ Start-Wizard })
+
+# The Squadron Room: a standalone RAF dispersal view (your pilot, the roster,
+# the day's readiness). Launches the same console-free way as the wizard.
+function Start-SquadronRoom {
+    $vbs = Resolve-Helper 'BOB2_SquadronRoom.vbs'
+    $ps1 = Resolve-Helper 'BOB2_SquadronRoom.ps1'
+    if (-not $ps1) { Show-Note "BOB2_SquadronRoom.ps1 is missing from the fix folder." 'Not found' 'Warning'; return }
+    if ($vbs) {
+        Start-Process -FilePath 'wscript.exe' -ArgumentList '//nologo', "`"$vbs`"" -WorkingDirectory $GameDir
+    } else {
+        Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden `
+            -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$ps1`"" -WorkingDirectory $GameDir
+    }
+}
+(C 'BtnSquadron').Add_Click({ Start-SquadronRoom })
 
 # The FLIGHT TRAINING icon glows amber while the Tiger Moth swap is armed,
 # so an active session state is visible at a glance.

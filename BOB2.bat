@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
 REM  Battle of Britain II - launcher
-REM  Part of BOB2 Windows 10/11 Fix v1.5.0
+REM  Part of BOB2 Windows 10/11 Fix
 REM ============================================================
 REM
 REM  THIS IS THE ONLY FILE YOU NEED TO RUN.
