@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 #  THE SQUADRON ROOM - Phase 1  (No. 92 Squadron RAF)
 #  Fullscreen dispersal: the readiness board, framed photographs on the
 #  wall, and a joining form for a new pilot.
@@ -275,6 +275,25 @@ function Get-Airfield {
     $cur = $moves[0].f
     foreach ($m in $moves) { if ($Date -ge $m.d) { $cur = $m.f } }
     $cur
+}
+# The campaign pilot from the newest save. The .BSR carries the pilot
+# surname at file offset 100 and the aircraft name at 121 (char[21], NUL
+# padded) inside the campaign block - see modernization/BSR_FORMAT.md.
+function Get-CampaignPilot {
+    if (-not $GameDir) { return $null }
+    $dir = Join-Path $GameDir 'SAVEGAME'
+    if (-not (Test-Path $dir)) { return $null }
+    $sav = Get-ChildItem $dir -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $sav) { return $null }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        if ($b.Length -lt 160) { return $null }
+        if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
+        $name  = [System.Text.Encoding]::ASCII.GetString($b, 100, 21).TrimEnd([char]0)
+        $plane = [System.Text.Encoding]::ASCII.GetString($b, 121, 21).TrimEnd([char]0)
+        if ($name -notmatch '^[ -~]{2,20}$') { return $null }
+        return @{ Name = $name; Plane = $plane }
+    } catch { return $null }
 }
 # Pull a date out of a fate string like "KIA 19 Oct 1940" / "24 Sept 1940"
 function Parse-FateDate {
@@ -719,6 +738,15 @@ function Show-Logbook {
     $script:CampaignDate = Get-CampaignDate
     [void]$script:Stage.Children.Add((New-Nav 'logbook'))
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow "PILOT'S LOGBOOK" -Title ("$($Pilot.pilot)")))
+
+    $cp = Get-CampaignPilot
+    if ($cp) {
+        $cpTxt = "Campaign pilot on record: $($cp.Name)"
+        if ($cp.Plane) { $cpTxt += ", flying '$($cp.Plane)'" }
+        $cpl = New-TB -Text $cpTxt -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
+        $cpl.Margin = '0,-12,0,14'
+        [void]$script:Stage.Children.Add($cpl)
+    }
 
     $sessions = Get-Sessions
     $career = Get-Career $Pilot $sessions
