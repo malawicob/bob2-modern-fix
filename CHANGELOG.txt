@@ -15,6 +15,30 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.4  (2026-08-29)
+--------------------
+  - NEW: Settings Tweaker option 14, "Reset graphics settings to the
+    known-good file". A full audit of the one install with verified
+    full-resolution 3D proved the black-border failure end to end: the
+    game sets its display mode in ChangeMode from four values stored in
+    SAVEGAME\settings.cfg (width 1416, height 1480, refresh 1544, depth
+    1608) and applies them with NO validation; a damaged or differently
+    laid out settings.cfg (one tester's reads 67,110,784 at the width
+    offset) makes the mode change fail, and the game then runs its
+    1024x768 default inside the desktop: the black border. Every
+    wrapper-side setting is powerless against it because the damage is
+    upstream of the wrapper.
+
+    The new option installs the settings.cfg captured from the audited
+    working install, with the resolution patched to the machine's own
+    desktop mode, after backing the old file up as
+    settings.cfg.before-knowngood. It refuses to run while the game is
+    open (the game rewrites this file on exit).
+
+    The audit also cleared the launcher batch files (byte-identical to
+    the working install) and re-confirmed the dgVoodoo configuration and
+    DLLs are identical between working and broken machines.
+
 v1.7.3  (2026-08-28)
 --------------------
   - FIXED: the launcher's own Wrapper status row read green whenever

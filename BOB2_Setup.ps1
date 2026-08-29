@@ -2345,6 +2345,7 @@ function Do-Settings {
         } else {
             Write-Warn "bdg.txt not found"
         }
+        Write-Host "  14. Reset graphics settings to the known-good file" -ForegroundColor White
 
         Write-Host ""
         Write-Host "  --- Presets ---" -ForegroundColor Cyan
@@ -2354,7 +2355,7 @@ function Do-Settings {
         Write-Host ""
         Write-Host "  0. Back to main menu" -ForegroundColor White
         Write-Host ""
-        Write-Host "  Select setting to change (0-13, P/Q/B): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select setting to change (0-14, P/Q/B): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice.ToUpper()) {
@@ -2459,6 +2460,53 @@ function Do-Settings {
                     Write-OK "Frame Smoothing set to $val"
                     if ($val -eq "NONE") {
                         Write-Info "Recommended - let dgVoodoo2 handle frame pacing"
+                    }
+                }
+            }
+            "14" {
+                # Replace SAVEGAME\settings.cfg with the file captured from the
+                # proven working install (2026-08-29 audit), with the four
+                # campaign-resolution ints (offsets 1416/1480/1544/1608) patched
+                # to THIS machine's desktop mode. This is the cure when a
+                # settings.cfg is damaged or laid out differently (one tester's
+                # read 67,110,784 at the width offset), which leaves the game
+                # rendering a small mode inside a black border while every
+                # wrapper-side setting is correct. ChangeMode @ 0x5a082d applies
+                # these bytes with no validation, so garbage here IS the border.
+                if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+                    Write-Warn "Close the game first - it rewrites settings.cfg on exit."
+                } else {
+                    $kg = Join-Path $PSScriptRoot 'knowngood\settings.cfg'
+                    $dst = Join-Path $gameFolder 'SAVEGAME\settings.cfg'
+                    if (-not (Test-Path $kg)) {
+                        Write-Err "knowngood\settings.cfg is missing from the fix folder."
+                    } else {
+                        $bytes = [System.IO.File]::ReadAllBytes($kg)
+                        if ($bytes.Length -ne 1786) {
+                            Write-Err "known-good file is $($bytes.Length) bytes, expected 1786 - not applying."
+                        } else {
+                            $w = 0; $h = 0; $hz = 60
+                            try {
+                                Add-Type -AssemblyName System.Windows.Forms -ErrorAction Stop
+                                $scr = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+                                $w = [int]$scr.Width; $h = [int]$scr.Height
+                            } catch { }
+                            if ($w -ge 800 -and $h -ge 600) {
+                                [BitConverter]::GetBytes([int]$w).CopyTo($bytes, 1416)
+                                [BitConverter]::GetBytes([int]$h).CopyTo($bytes, 1480)
+                                [BitConverter]::GetBytes([int]$hz).CopyTo($bytes, 1544)
+                                Write-Info "Campaign resolution patched to your desktop: ${w}x${h} @ ${hz}"
+                            } else {
+                                Write-Info "Could not read the desktop mode - keeping the file's 1920x1080 @ 60."
+                            }
+                            if (Test-Path $dst) {
+                                Copy-Item $dst "$dst.before-knowngood" -Force
+                                Write-OK "Backed up settings.cfg as settings.cfg.before-knowngood"
+                            }
+                            [System.IO.File]::WriteAllBytes($dst, $bytes)
+                            Write-OK "Known-good settings.cfg installed (from the audited working install)."
+                            Write-Info "Start the game and fly. To undo: restore settings.cfg.before-knowngood."
+                        }
                     }
                 }
             }
