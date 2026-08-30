@@ -32,28 +32,28 @@ $FlightOpen   = Join-Path $StateDir 'flight.open'
 
 # --- squadrons a new pilot may join (bases as the campaign opens) -------
 $Squadrons = @(
-    @{ Num=19;  Code='QV'; Type='Spitfire I';  Base='RAF Duxford';       Lon=0.13;  Lat=52.09; Grp=12; Dx=0; Dy=0; Mx=0.565; My=0.075; Px=0 }
-    @{ Num=54;  Code='KL'; Type='Spitfire I';  Base='RAF Rochford';      Lon=0.70;  Lat=51.57; Grp=11; Dx=0; Dy=0; Mx=0.694; My=0.381; Px=0 }
-    @{ Num=64;  Code='SH'; Type='Spitfire I';  Base='RAF Kenley';        Lon=-0.10; Lat=51.30; Grp=11; Dx=0; Dy=0; Mx=0.525; My=0.542; Px=0 }
-    @{ Num=65;  Code='YT'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=-5; Mx=0.599; My=0.396; Px=-11 }
-    @{ Num=74;  Code='ZP'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=5; Mx=0.599; My=0.396; Px=11 }
-    @{ Num=92;  Code='QJ'; Type='Spitfire I';  Base='RAF Pembrey';       Lon=-4.32; Lat=51.71; Grp=10; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=152; Code='SN'; Type='Spitfire I';  Base='RAF Warmwell';      Lon=-2.32; Lat=50.70; Grp=10; Dx=0; Dy=0; Mx=0.134; My=0.737; Px=0 }
-    @{ Num=609; Code='PR'; Type='Spitfire I';  Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=-5; Mx=0.258; My=0.601; Px=11 }
-    @{ Num=610; Code='DW'; Type='Spitfire I';  Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=-5; Mx=0.553; My=0.547; Px=11 }
-    @{ Num=611; Code='FY'; Type='Spitfire I';  Base='RAF Digby';         Lon=-0.43; Lat=53.09; Grp=12; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=1;   Code='JX'; Type='Hurricane I'; Base='RAF Northolt';      Lon=-0.42; Lat=51.55; Grp=11; Dx=0; Dy=0; Mx=0.449; My=0.349; Px=0 }
-    @{ Num=17;  Code='YB'; Type='Hurricane I'; Base='RAF Debden';        Lon=0.26;  Lat=51.99; Grp=11; Dx=0; Dy=0; Mx=0.624; My=0.21; Px=0 }
-    @{ Num=32;  Code='GZ'; Type='Hurricane I'; Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=5; Mx=0.553; My=0.547; Px=-11 }
-    @{ Num=43;  Code='FT'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=-5; Mx=0.426; My=0.742; Px=-11 }
-    @{ Num=56;  Code='US'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=-5; Mx=0.57; My=0.288; Px=-11 }
-    @{ Num=111; Code='JU'; Type='Hurricane I'; Base='RAF Croydon';       Lon=-0.12; Lat=51.36; Grp=11; Dx=0; Dy=0; Mx=0.518; My=0.487; Px=0 }
-    @{ Num=151; Code='DZ'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=5; Mx=0.57; My=0.288; Px=11 }
-    @{ Num=213; Code='AK'; Type='Hurricane I'; Base='RAF Exeter';        Lon=-3.41; Lat=50.73; Grp=10; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=238; Code='VK'; Type='Hurricane I'; Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=5; Mx=0.258; My=0.601; Px=-11 }
-    @{ Num=242; Code='LE'; Type='Hurricane I'; Base='RAF Coltishall';    Lon=1.36;  Lat=52.75; Grp=12; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=501; Code='SD'; Type='Hurricane I'; Base='RAF Gravesend';     Lon=0.37;  Lat=51.43; Grp=11; Dx=0; Dy=0; Mx=0.624; My=0.459; Px=0 }
-    @{ Num=601; Code='UF'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=5; Mx=0.426; My=0.742; Px=11 }
+    @{ Num=19;  Ic='O'; Code='QV'; Type='Spitfire I';  Base='RAF Duxford';       Lon=0.13;  Lat=52.09; Grp=12; Dx=0; Dy=0; Mx=0.565; My=0.075; Px=0 }
+    @{ Num=54;  Ic='C'; Code='KL'; Type='Spitfire I';  Base='RAF Rochford';      Lon=0.70;  Lat=51.57; Grp=11; Dx=0; Dy=0; Mx=0.694; My=0.381; Px=0 }
+    @{ Num=64;  Ic='O'; Code='SH'; Type='Spitfire I';  Base='RAF Kenley';        Lon=-0.10; Lat=51.30; Grp=11; Dx=0; Dy=0; Mx=0.525; My=0.542; Px=0 }
+    @{ Num=65;  Ic='C'; Code='YT'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=-5; Mx=0.599; My=0.396; Px=-11 }
+    @{ Num=74;  Ic='C'; Code='ZP'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=5; Mx=0.599; My=0.396; Px=11 }
+    @{ Num=92;  Ic='C'; Code='QJ'; Type='Spitfire I';  Base='RAF Pembrey';       Lon=-4.32; Lat=51.71; Grp=10; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
+    @{ Num=152; Ic='O'; Code='SN'; Type='Spitfire I';  Base='RAF Warmwell';      Lon=-2.32; Lat=50.70; Grp=10; Dx=0; Dy=0; Mx=0.134; My=0.737; Px=0 }
+    @{ Num=609; Ic='O'; Code='PR'; Type='Spitfire I';  Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=-5; Mx=0.258; My=0.601; Px=11 }
+    @{ Num=610; Ic='C'; Code='DW'; Type='Spitfire I';  Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=-5; Mx=0.553; My=0.547; Px=11 }
+    @{ Num=611; Ic='C'; Code='FY'; Type='Spitfire I';  Base='RAF Digby';         Lon=-0.43; Lat=53.09; Grp=12; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
+    @{ Num=1;   Ic='O'; Code='JX'; Type='Hurricane I'; Base='RAF Northolt';      Lon=-0.42; Lat=51.55; Grp=11; Dx=0; Dy=0; Mx=0.449; My=0.349; Px=0 }
+    @{ Num=17;  Ic='C'; Code='YB'; Type='Hurricane I'; Base='RAF Debden';        Lon=0.26;  Lat=51.99; Grp=11; Dx=0; Dy=0; Mx=0.624; My=0.21; Px=0 }
+    @{ Num=32;  Ic='C'; Code='GZ'; Type='Hurricane I'; Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=5; Mx=0.553; My=0.547; Px=-11 }
+    @{ Num=43;  Ic='O'; Code='FT'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=-5; Mx=0.426; My=0.742; Px=-11 }
+    @{ Num=56;  Ic='C'; Code='US'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=-5; Mx=0.57; My=0.288; Px=-11 }
+    @{ Num=111; Ic='O'; Code='JU'; Type='Hurricane I'; Base='RAF Croydon';       Lon=-0.12; Lat=51.36; Grp=11; Dx=0; Dy=0; Mx=0.518; My=0.487; Px=0 }
+    @{ Num=151; Ic='C'; Code='DZ'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=5; Mx=0.57; My=0.288; Px=11 }
+    @{ Num=213; Ic='O'; Code='AK'; Type='Hurricane I'; Base='RAF Exeter';        Lon=-3.41; Lat=50.73; Grp=10; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
+    @{ Num=238; Ic='O'; Code='VK'; Type='Hurricane I'; Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=5; Mx=0.258; My=0.601; Px=-11 }
+    @{ Num=242; Ic='O'; Code='LE'; Type='Hurricane I'; Base='RAF Coltishall';    Lon=1.36;  Lat=52.75; Grp=12; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
+    @{ Num=501; Ic='C'; Code='SD'; Type='Hurricane I'; Base='RAF Gravesend';     Lon=0.37;  Lat=51.43; Grp=11; Dx=0; Dy=0; Mx=0.624; My=0.459; Px=0 }
+    @{ Num=601; Ic='O'; Code='UF'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=5; Mx=0.426; My=0.742; Px=11 }
 )
 function Get-SquadronDef { param([int]$Num)
     foreach ($q in $Squadrons) { if ($q.Num -eq $Num) { return $q } }
@@ -1144,8 +1144,7 @@ function Show-SquadronSelect {
         param($q2)
         $script:SelSq = $q2
         foreach ($d in $script:SqDots) {
-            $isS = ("$($d.Tag.Type)" -match 'Spitfire')
-            $d.Stroke = if ($isS) { B '#5FD0E8' } else { B '#F5A83C' }
+            $d.Stroke = if ("$($d.Tag.Ic)" -eq 'C') { B '#5FD0E8' } else { B '#F5A83C' }
             $d.StrokeThickness = 2.5; $d.Width = 30; $d.Height = 30
             [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 15); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 15)
         }
@@ -1168,17 +1167,16 @@ function Show-SquadronSelect {
         $cy = [double]$q.My * $H
         $ov = $script:RingPos["$($q.Num)"]
         if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
-        $isSpit = ("$($q.Type)" -match 'Spitfire')
         $ring = New-Object Windows.Shapes.Ellipse
         $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 2.5
-        $ring.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
+        $ring.Stroke = if ("$($q.Ic)" -eq 'C') { B '#5FD0E8' } else { B '#F5A83C' }
         $ring.Fill = B '#01000000'
         $ring.Cursor = 'Hand'
         $qt = @{}; foreach ($k in $q.Keys) { $qt[$k] = $q[$k] }
         $qt.CX = $cx; $qt.CY = $cy
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
         # click selects; a drag repositions the ring and is remembered
-        $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 11.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
+        $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 11.5 -Colour '#D8D2BC' -Bold
         $nl.IsHitTestVisible = $false
         [Windows.Controls.Canvas]::SetLeft($nl, $cx - 10); [Windows.Controls.Canvas]::SetTop($nl, $cy + 17)
         $qt.Label = $nl; $qt.MapW = $W; $qt.MapH = $H
