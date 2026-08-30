@@ -621,12 +621,33 @@ function Finalize-Flight {
     $mins = 0
     if ($start) { $mins = [int][math]::Max(0, ($end - $start).TotalMinutes) }
     $after = Get-CampaignDate
+    # outcome: did the campaign move on while you flew? Compare the save the
+    # launcher snapshotted at Play against the newest one now.
+    $outcome = ''
+    $beforeSnap = Join-Path $StateDir 'before.bsr'
+    try {
+        $newest = $null
+        if ($GameDir) { $newest = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1 }
+        if ($mk.dateBefore) {
+            $dAfter = if ($after) { $after.ToString('yyyy-MM-dd') } else { '' }
+            if ($dAfter -and ($dAfter -gt "$($mk.dateBefore)")) { $outcome = 'Campaign day flown' }
+            elseif ((Test-Path $beforeSnap) -and $newest) {
+                $a = [System.IO.File]::ReadAllBytes($beforeSnap)
+                $b2 = [System.IO.File]::ReadAllBytes($newest.FullName)
+                $same = ($a.Length -eq $b2.Length)
+                if ($same) { for ($i = 0; $i -lt $a.Length; $i += 97) { if ($a[$i] -ne $b2[$i]) { $same = $false; break } } }
+                $outcome = if ($same) { 'No campaign progress' } else { 'Campaign progressed' }
+            }
+        } else { $outcome = 'Practice flight' }
+    } catch { }
+    Remove-Item $beforeSnap -Force -ErrorAction SilentlyContinue
     $sess = [ordered]@{
         end        = $end.ToString('s')
         minutes    = $mins
         dateBefore = "$($mk.dateBefore)"
         dateAfter  = if ($after) { $after.ToString('yyyy-MM-dd') } else { "$($mk.dateBefore)" }
         mode       = if ($mk.dateBefore) { 'campaign' } else { 'instant' }
+        outcome    = $outcome
     }
     Save-Sessions (@(Get-Sessions) + $sess)
     Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue
@@ -707,7 +728,7 @@ function New-LogRow {
     $b.Padding = '18,10,18,10'; $b.BorderThickness = '0,0,0,1'; $b.BorderBrush = Res 'Rule'
     if ($Header) { $b.Background = B '#101B22' } elseif ($Index % 2 -eq 1) { $b.Background = Res 'Panel' } else { $b.Background = Res 'PanelHi' }
     $g = New-Object Windows.Controls.Grid
-    foreach ($w in @('*','170','*')) {
+    foreach ($w in @('*','150','170','190')) {
         $cd = New-Object Windows.Controls.ColumnDefinition
         if ($w -eq '*') { $cd.Width = New-Object Windows.GridLength(1,([Windows.GridUnitType]::Star)) }
         else { $cd.Width = New-Object Windows.GridLength([double]$w) }
@@ -717,6 +738,7 @@ function New-LogRow {
         Add-Cell $g 'FLOWN'        0 $CondFam 12 '#C8973F' -Bold
         Add-Cell $g 'FLIGHT TIME'  1 $CondFam 12 '#C8973F' -Bold
         Add-Cell $g 'CAMPAIGN DAY' 2 $CondFam 12 '#C8973F' -Bold
+        Add-Cell $g 'OUTCOME'      3 $CondFam 12 '#C8973F' -Bold
     } else {
         $flown = "$($S.end)"; try { $flown = ([datetime]$S.end).ToString('ddd d MMM, HH:mm') } catch { }
         Add-Cell $g $flown 0 $CondFam 13.5 '#E9E3D4'
@@ -725,6 +747,10 @@ function New-LogRow {
         Add-Cell $g $ft 1 $CondFam 13.5 '#9FB0B8'
         $day = "$($S.dateAfter)"; if ((-not $day) -or ($S.mode -eq 'instant')) { $day = 'Instant Action' }
         Add-Cell $g $day 2 $CondFam 13.5 '#9FB0B8'
+        $oc = ''
+        if ($S.PSObject.Properties.Name -contains 'outcome') { $oc = "$($S.outcome)" }
+        $occol = if ($oc -eq 'Campaign day flown') { '#8FB56A' } elseif ($oc -eq 'No campaign progress') { '#D9A441' } else { '#9FB0B8' }
+        Add-Cell $g $oc 3 $CondFam 13 $occol
     }
     $b.Child = $g; $b
 }

@@ -1041,6 +1041,12 @@ function Invoke-DriftCheck {
                 }
             } catch { }
             @{ start = (Get-Date).ToString('s'); dateBefore = $before } | ConvertTo-Json | Set-Content -Path (Join-Path $srDir 'flight.open') -Encoding UTF8
+            # snapshot the newest save so the Squadron Room can diff the
+            # outcome of this flight (day advanced, campaign progressed)
+            try {
+                $sav2 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+                if ($sav2) { Copy-Item $sav2.FullName (Join-Path $srDir 'before.bsr') -Force }
+            } catch { }
         }
     } catch { }
 
