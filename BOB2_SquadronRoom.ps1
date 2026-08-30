@@ -549,10 +549,11 @@ function Add-Cell {
     [void]$Grid.Children.Add($t)
 }
 function New-RosterRow {
-    param($P,[switch]$Header,[int]$Index=0)
+    param($P,[switch]$Header,[int]$Index=0,[switch]$IsPlayer)
     $b = New-Object Windows.Controls.Border
     $b.Padding = '18,10,18,10'; $b.BorderThickness = '0,0,0,1'; $b.BorderBrush = Res 'Rule'
     if ($Header) { $b.Background = B '#101B22' }
+    elseif ($IsPlayer) { $b.Background = B '#26313B'; $b.BorderBrush = Res 'BrassDk' }
     elseif ($Index % 2 -eq 1) { $b.Background = Res 'Panel' }
     else { $b.Background = Res 'PanelHi' }
 
@@ -577,9 +578,9 @@ function New-RosterRow {
         [void]$ns.Children.Add($rct)
         [Windows.Controls.Grid]::SetColumn($ns,0); [void]$g.Children.Add($ns)
 
-        $vic = Accrue-Victories $P $script:CampaignDate
+        $vic = if ($IsPlayer) { $(if ([int]$P.victories -gt 0) { "$($P.victories)" } else { '' }) } else { Accrue-Victories $P $script:CampaignDate }
         Add-Cell $g $vic 1 $CondFam 16 '#D9B45A' -Center -Bold
-        $aw = Get-Awards $P $script:CampaignDate
+        $aw = if ($IsPlayer) { "$($P.awards)" } else { Get-Awards $P $script:CampaignDate }
         Add-Cell $g $aw 2 $CondFam 13.5 '#C8973F' -Bold
         $stat = Resolve-Status $P $script:CampaignDate
         Add-Cell $g $stat.Text 3 $CondFam 13.5 $stat.Colour
@@ -669,25 +670,48 @@ function Get-Career {
 }
 # The player's own decoration. Stored award wins; otherwise a DFC once he has
 # five victories (a plausible Battle of Britain threshold). "None yet" before.
-function Get-PlayerAwards {
-    param($Pilot)
-    if (($Pilot.PSObject.Properties.Name -contains 'awards') -and $Pilot.awards) { return "$($Pilot.awards)" }
+# Rank-aware honours ladder, computed from the record. Sergeants earn the
+# DFM, officers the DFC (as the RAF actually did); a second award of the
+# same decoration is a Bar. Mentioned in Despatches for sustained flying.
+function Get-PlayerHonours {
+    param($Pilot, $Career)
     $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
-    if ($v -ge 5) { return 'DFC' }
-    'None yet'
+    $sorties = 0; if ($Career) { $sorties = [int]$Career.sorties }
+    $isNCO = ("$($Career.rank)" -eq 'Sergeant')
+    $cross = if ($isNCO) { 'DFM' } else { 'DFC' }
+    $h = @()
+    if ($sorties -ge 10) { $h += 'MiD' }
+    if ($v -ge 5)  { $h += $cross }
+    if ($v -ge 10) { $h += "Bar to $cross" }
+    if ($v -ge 15) { $h += 'DSO' }
+    if (($Pilot.PSObject.Properties.Name -contains 'awards') -and $Pilot.awards -and ($h -notcontains "$($Pilot.awards)")) { $h = @("$($Pilot.awards)") + $h }
+    ,$h
 }
-# Player-entered victory (auto claims from the game are Tier 4, still ahead).
+# Player-entered victory with the type shot down (auto claims are Tier 4).
 function Add-Claim {
-    param($Pilot)
+    param($Pilot, [string]$Type = '')
     $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
     $claims = @(); if (($Pilot.PSObject.Properties.Name -contains 'claims') -and $Pilot.claims) { $claims = @($Pilot.claims) }
     $cd = Get-CampaignDate; $when = if ($cd) { $cd.ToString('yyyy-MM-dd') } else { (Get-Date).ToString('yyyy-MM-dd') }
+    $entry = if ($Type) { "$when $Type" } else { "$when" }
     $obj = [ordered]@{}
     foreach ($p in $Pilot.PSObject.Properties) { $obj[$p.Name] = $p.Value }
     $obj['victories'] = $v + 1
-    $obj['claims'] = @($claims + $when)
+    $obj['claims'] = @($claims + $entry)
     Save-Pilot $obj
     Show-Logbook -Pilot (Get-Pilot)
+}
+# "2 x Bf 109E, 1 x He 111" from the stored claim strings
+function Get-ClaimSummary {
+    param($Pilot)
+    $claims = @(); if (($Pilot.PSObject.Properties.Name -contains 'claims') -and $Pilot.claims) { $claims = @($Pilot.claims) }
+    $byType = @{}
+    foreach ($c in $claims) {
+        $t = ("$c" -replace '^\d{4}-\d{2}-\d{2}\s*','')
+        if (-not $t) { $t = 'type not recorded' }
+        if ($byType.ContainsKey($t)) { $byType[$t]++ } else { $byType[$t] = 1 }
+    }
+    (@($byType.Keys | Sort-Object | ForEach-Object { "$($byType[$_]) x $_" })) -join ', '
 }
 
 function New-Stat {
@@ -778,17 +802,27 @@ function Show-Logbook {
     [void]$tiles.Children.Add((New-Stat 'SORTIES' "$($career.sorties)"))
     [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
     [void]$tiles.Children.Add((New-Stat 'VICTORIES' "$vics"))
-    [void]$tiles.Children.Add((New-Stat 'AWARDS' (Get-PlayerAwards $Pilot)))
+    $honours = @(Get-PlayerHonours $Pilot $career)
+    $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
+    [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile))
     [void]$tiles.Children.Add((New-Stat 'RANK' "$($career.rank)"))
     [void]$script:Stage.Children.Add($tiles)
 
     $pn = if ($career.next) { "Next promotion to $($career.next) at $($career.nextAt) sorties." } else { 'At the top of the tree.' }
-    $pnt = New-TB -Text $pn -Family 'Segoe UI' -Size 13 -Colour '#6F828C'; $pnt.Margin = '0,2,0,18'
+    if ($honours.Count) { $pn = "Honours: $($honours -join ', ').  $pn" }
+    $cs = Get-ClaimSummary $Pilot
+    if ($cs) { $pn = "Claims: $cs.  $pn" }
+    $pnt = New-TB -Text $pn -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap; $pnt.Margin = '0,2,0,18'; $pnt.MaxWidth = 860; $pnt.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($pnt)
 
     $claimRow = New-Object Windows.Controls.StackPanel; $claimRow.Orientation = 'Horizontal'; $claimRow.Margin = '0,0,0,22'
+    $script:ClaimType = New-Object Windows.Controls.ComboBox
+    $script:ClaimType.MinWidth = 150; $script:ClaimType.Margin = '0,0,12,0'; $script:ClaimType.VerticalAlignment = 'Center'
+    foreach ($t in @('Bf 109E','Bf 110','Do 17','He 111','Ju 87','Ju 88','Other')) { [void]$script:ClaimType.Items.Add($t) }
+    $script:ClaimType.SelectedIndex = 0
+    [void]$claimRow.Children.Add($script:ClaimType)
     $cbtn = New-Object Windows.Controls.Button; $cbtn.Content = 'LOG A CLAIM'; $cbtn.MinWidth = 130
-    $cbtn.Add_Click({ Add-Claim -Pilot (Get-Pilot) })
+    $cbtn.Add_Click({ Add-Claim -Pilot (Get-Pilot) -Type ("$($script:ClaimType.SelectedItem)") })
     [void]$claimRow.Children.Add($cbtn)
     $ct = New-TB -Text 'Record a victory you scored on your last sortie. Automatic claims from the game are still to come.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
     $ct.VerticalAlignment = 'Center'; $ct.Margin = '16,0,0,0'; $ct.MaxWidth = 460
@@ -862,7 +896,21 @@ function Show-Roster {
     $listWrap.BorderBrush = Res 'Rule'; $listWrap.BorderThickness = '1'; $listWrap.CornerRadius = '3'; $listWrap.ClipToBounds = $true
     $ls = New-Object Windows.Controls.StackPanel
     [void]$ls.Children.Add((New-RosterRow -Header))
-    $i = 0
+    # you, first on the board, with your LIVE record
+    $sessions0 = Get-Sessions
+    $career0 = Get-Career $Pilot $sessions0
+    $pv = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $pv = [int]$Pilot.victories }
+    $ph = @(Get-PlayerHonours $Pilot $career0)
+    $me = [pscustomobject]@{
+        pilot = "$($Pilot.pilot)"
+        rank = "$($career0.rank)"
+        codes = "$($Pilot.codes)"
+        status = 'On strength'
+        victories = $pv
+        awards = if ($ph.Count) { $ph[$ph.Count-1] } else { '' }
+    }
+    [void]$ls.Children.Add((New-RosterRow -P $me -Index 0 -IsPlayer))
+    $i = 1
     foreach ($h in (Get-Historical)) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
