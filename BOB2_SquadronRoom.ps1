@@ -1100,8 +1100,11 @@ function Show-SquadronSelect {
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  POSTINGS" }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE PLOTTING TABLE' -Title 'Choose your squadron'))
     $lead = New-TB -Text 'Sector and fighter airfields, South East England, 1940. Click a ringed station to see the squadron, then report to it. The key is printed on the table.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
-    $lead.Margin = '0,-14,0,16'
+    $lead.Margin = '0,-14,0,4'
     [void]$script:Stage.Children.Add($lead)
+    $hint2 = New-TB -Text 'A ring sitting off its station can be dragged onto it; the correction is remembered.' -Family 'Segoe UI' -Size 12 -Colour '#6F828C'
+    $hint2.Margin = '0,0,0,12'
+    [void]$script:Stage.Children.Add($hint2)
 
     $W = 1080.0; $H = [math]::Round($W * 805.0 / 1600.0)
     $mapWrap = New-Object Windows.Controls.Border
@@ -1126,6 +1129,16 @@ function Show-SquadronSelect {
     $btn.Content = 'REPORT TO THIS SQUADRON'; $btn.IsEnabled = $false; $btn.MinWidth = 240
     $script:SqDetail = $detail
     $script:SqButton = $btn
+
+    # hand-corrected ring anchors, remembered across sessions and careers
+    $script:RingPosPath = Join-Path $StateDir 'ringpos.json'
+    $script:RingPos = @{}
+    if (Test-Path $script:RingPosPath) {
+        try {
+            $rp = Get-Content $script:RingPosPath -Raw | ConvertFrom-Json
+            foreach ($pp in $rp.PSObject.Properties) { $script:RingPos[$pp.Name] = $pp.Value }
+        } catch { }
+    }
 
     $script:SelectSq = {
         param($q2)
@@ -1153,6 +1166,8 @@ function Show-SquadronSelect {
         if ([double]$q.Mx -lt 0) { continue }
         $cx = [double]$q.Mx * $W + [double]$q.Px
         $cy = [double]$q.My * $H
+        $ov = $script:RingPos["$($q.Num)"]
+        if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
         $isSpit = ("$($q.Type)" -match 'Spitfire')
         $ring = New-Object Windows.Shapes.Ellipse
         $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 2.5
@@ -1161,14 +1176,52 @@ function Show-SquadronSelect {
         $ring.Cursor = 'Hand'
         $qt = @{}; foreach ($k in $q.Keys) { $qt[$k] = $q[$k] }
         $qt.CX = $cx; $qt.CY = $cy
-        $ring.Tag = $qt
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
-        $ring.Add_MouseLeftButtonUp({ param($sender,$e) & $script:SelectSq $sender.Tag })
-        $script:SqDots += $ring
-        [void]$cv.Children.Add($ring)
+        # click selects; a drag repositions the ring and is remembered
         $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 11.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
         $nl.IsHitTestVisible = $false
-        [Windows.Controls.Canvas]::SetLeft($nl, $cx - 10 + [double]$q.Px * 0.2); [Windows.Controls.Canvas]::SetTop($nl, $cy + 17)
+        [Windows.Controls.Canvas]::SetLeft($nl, $cx - 10); [Windows.Controls.Canvas]::SetTop($nl, $cy + 17)
+        $qt.Label = $nl; $qt.MapW = $W; $qt.MapH = $H
+        $qt.Drag = $false; $qt.Moved = $false; $qt.OX = 0.0; $qt.OY = 0.0
+        $ring.Tag = $qt
+        $ring.Add_MouseLeftButtonDown({
+            param($sender,$e)
+            $t = $sender.Tag
+            $pt = $e.GetPosition($sender.Parent)
+            $t.Drag = $true; $t.Moved = $false
+            $t.OX = $pt.X - $t.CX; $t.OY = $pt.Y - $t.CY
+            [void]$sender.CaptureMouse(); $e.Handled = $true
+        })
+        $ring.Add_MouseMove({
+            param($sender,$e)
+            $t = $sender.Tag
+            if ($t.Drag) {
+                $pt = $e.GetPosition($sender.Parent)
+                $nx = $pt.X - $t.OX; $ny = $pt.Y - $t.OY
+                if ([math]::Abs($nx - $t.CX) -gt 3 -or [math]::Abs($ny - $t.CY) -gt 3) { $t.Moved = $true }
+                if ($t.Moved) {
+                    $t.CX = $nx; $t.CY = $ny
+                    $half = $sender.Width / 2.0
+                    [Windows.Controls.Canvas]::SetLeft($sender, $nx - $half); [Windows.Controls.Canvas]::SetTop($sender, $ny - $half)
+                    [Windows.Controls.Canvas]::SetLeft($t.Label, $nx - 10); [Windows.Controls.Canvas]::SetTop($t.Label, $ny + 17)
+                }
+            }
+        })
+        $ring.Add_MouseLeftButtonUp({
+            param($sender,$e)
+            $t = $sender.Tag
+            if ($t.Drag) {
+                $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
+                if ($t.Moved) {
+                    $script:RingPos["$($t.Num)"] = @{ x = [math]::Round($t.CX / $t.MapW, 4); y = [math]::Round($t.CY / $t.MapH, 4) }
+                    try { $script:RingPos | ConvertTo-Json | Set-Content -Path $script:RingPosPath -Encoding UTF8 } catch { }
+                } else {
+                    & $script:SelectSq $t
+                }
+            }
+        })
+        $script:SqDots += $ring
+        [void]$cv.Children.Add($ring)
         [void]$cv.Children.Add($nl)
     }
 
