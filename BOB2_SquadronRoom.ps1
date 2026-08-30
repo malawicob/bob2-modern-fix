@@ -983,7 +983,7 @@ function Show-Roster {
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
     [void]$d.Children.Add((New-TB -Text ("$($Pilot.pilot)") -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
-    $line = "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)"
+    $line = if (@(Get-Sessions).Count -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
     [void]$d.Children.Add($lt)
     $st = New-TB -Text 'ON STRENGTH' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold; $st.Margin = '0,16,0,0'
@@ -1003,14 +1003,15 @@ function Show-Roster {
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
-        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign and fly the day. When you come back here, your first sortie will be in the logbook, with its outcome, and the board will have moved with the war." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign and fly the day. When you come back here your first sortie will be in the logbook, and your aircraft, with your code letter and serial, will be waiting on the board." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
         $ord.Child = $os2
         [void]$script:Stage.Children.Add($ord)
     }
     $Pilot = Ensure-Serial -Pilot $Pilot
-    $ac = New-Aircraft -Pilot $Pilot
+    $flown = (@(Get-Sessions).Count -gt 0)
+    $ac = if ($flown) { New-Aircraft -Pilot $Pilot } else { $null }
     if ($ac) {
         [void]$script:Stage.Children.Add($ac)
     }
@@ -1058,19 +1059,18 @@ function Show-Roster {
 }
 
 function Update-CreateValid {
-    $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and `
-          ($script:LetBox.Text.Trim().Length -eq 1) -and `
-          ($null -ne $script:SelPortrait)
+    $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
     $script:SubmitBtn.IsEnabled = $ok
 }
 function Invoke-Submit {
-    $isCmdr = ($script:RbCmd -and $script:RbCmd.IsChecked)
-    $rank = if ($isCmdr) { 'Squadron Leader' } elseif ($script:RbPO.IsChecked) { 'Pilot Officer' } else { 'Sergeant' }
+    $isCmdr = $false
+    $rank = 'Sergeant'
+    $letter = ('A','B','D','E','F','G','H','J','K','L','N','P','R','S','T','U','V','W','X','Y','Z' | Get-Random)
     $serial = New-Serial -Type ("$($script:SelSq.Type)")
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
         rank    = $rank
-        codes   = "$($script:SelSq.Code)-$($script:LetBox.Text.Trim().ToUpper())"
+        codes   = "$($script:SelSq.Code)-$letter"
         status  = 'On strength'
         serials = $serial
         note    = "Posted to No. $($script:SelSq.Num) Squadron at $($script:SelSq.Base)."
@@ -1246,7 +1246,7 @@ function Show-Create {
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $($script:SelSq.Num) Squadron" }
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  $($script:SelSq.Type.ToUpper())S AT $($script:SelSq.Base.ToUpper())" }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
-    $lead = New-TB -Text 'Summer 1940. Give your name, take a letter, and pick your photograph from the wall.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
+    $lead = New-TB -Text 'Summer 1940. Give your name and pick your photograph. Your aircraft, code letter and rank are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
     [void]$script:Stage.Children.Add($lead)
 
@@ -1263,38 +1263,6 @@ function Show-Create {
     [void]$nameCol.Children.Add($script:NameBox)
     [void]$row.Children.Add($nameCol)
 
-    $letCol = New-Object Windows.Controls.StackPanel; $letCol.Margin = '0,0,36,0'
-    [void]$letCol.Children.Add((New-TB -Text 'LETTER' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
-    $letWrap = New-Object Windows.Controls.StackPanel; $letWrap.Orientation = 'Horizontal'; $letWrap.Margin = '0,7,0,0'
-    $qj = New-TB -Text "$($script:SelSq.Code)-" -Family 'Georgia, serif' -Size 18 -Colour '#9FB0B8'; $qj.VerticalAlignment = 'Bottom'; $qj.Margin = '0,0,4,6'
-    [void]$letWrap.Children.Add($qj)
-    $script:LetBox = New-Object Windows.Controls.TextBox
-    $script:LetBox.Width = 52; $script:LetBox.MaxLength = 1; $script:LetBox.TextAlignment = 'Center'; $script:LetBox.CharacterCasing = 'Upper'
-    [void]$letWrap.Children.Add($script:LetBox)
-    [void]$letCol.Children.Add($letWrap)
-    [void]$row.Children.Add($letCol)
-
-    $rankCol = New-Object Windows.Controls.StackPanel
-    [void]$rankCol.Children.Add((New-TB -Text 'RANK' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
-    $rankWrap = New-Object Windows.Controls.StackPanel; $rankWrap.Orientation = 'Horizontal'; $rankWrap.Margin = '0,12,0,0'
-    $script:RbSgt = New-Object Windows.Controls.RadioButton
-    $script:RbSgt.Content = 'Sergeant'; $script:RbSgt.IsChecked = $true; $script:RbSgt.Margin = '0,0,20,0'; $script:RbSgt.GroupName = 'rank'
-    $script:RbPO = New-Object Windows.Controls.RadioButton
-    $script:RbPO.Content = 'Pilot Officer'; $script:RbPO.GroupName = 'rank'
-    [void]$rankWrap.Children.Add($script:RbSgt); [void]$rankWrap.Children.Add($script:RbPO)
-    [void]$rankCol.Children.Add($rankWrap)
-    [void]$row.Children.Add($rankCol)
-
-    $modeCol = New-Object Windows.Controls.StackPanel; $modeCol.Margin = '36,0,0,0'
-    [void]$modeCol.Children.Add((New-TB -Text 'CAREER' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
-    $modeWrap = New-Object Windows.Controls.StackPanel; $modeWrap.Orientation = 'Horizontal'; $modeWrap.Margin = '0,12,0,0'
-    $script:RbFly = New-Object Windows.Controls.RadioButton
-    $script:RbFly.Content = 'Squadron pilot'; $script:RbFly.IsChecked = $true; $script:RbFly.Margin = '0,0,20,0'; $script:RbFly.GroupName = 'mode'
-    $script:RbCmd = New-Object Windows.Controls.RadioButton
-    $script:RbCmd.Content = 'Squadron commander'; $script:RbCmd.GroupName = 'mode'
-    [void]$modeWrap.Children.Add($script:RbFly); [void]$modeWrap.Children.Add($script:RbCmd)
-    [void]$modeCol.Children.Add($modeWrap)
-    [void]$row.Children.Add($modeCol)
     [void]$script:Stage.Children.Add($row)
 
     [void]$script:Stage.Children.Add((New-TB -Text 'YOUR PHOTOGRAPH' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
@@ -1327,7 +1295,6 @@ function Show-Create {
     [void]$script:Stage.Children.Add($foot)
 
     $script:NameBox.Add_TextChanged({ Update-CreateValid })
-    $script:LetBox.Add_TextChanged({ Update-CreateValid })
     $script:SubmitBtn.Add_Click({ Invoke-Submit })
 }
 
