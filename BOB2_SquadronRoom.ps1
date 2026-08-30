@@ -454,7 +454,7 @@ function New-Frame {
 # per-type profile art and marking defaults (roundel positions measured)
 function Get-AircraftSpec { param([string]$Type)
     if ($Type -match 'Hurricane') {
-        return @{ Img='hurricane.png'; Ratio=(316.0/1000.0); SqX=0.40; IndX=0.675; SerX=0.775; FuseY=0.565; SerY=0.635; CodeSize=80.0 }
+        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.375; IndX=0.655; SerX=0.765; FuseY=0.575; SerY=0.645; CodeSize=78.0 }
     }
     @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.415; IndX=0.685; SerX=0.775; FuseY=0.51; SerY=0.565; CodeSize=84.0 }
 }
