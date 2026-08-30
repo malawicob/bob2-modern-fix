@@ -635,6 +635,24 @@ $xaml = @'
               </StackPanel>
             </Button>
 
+            <Button x:Name="BtnRepairAlert" Style="{StaticResource Nav}" Visibility="Collapsed">
+              <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Data="{StaticResource IcoWrench}" Fill="{x:Null}" Stroke="#FFE8394F"
+                          StrokeThickness="1.6" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="INSTALL AND REPAIR" Style="{StaticResource NavTitle}" Foreground="#FFE8394F"/>
+                <TextBlock x:Name="SubRepairAlert" Text="attention needed" Style="{StaticResource NavSub}" Foreground="#FFE8394F"/>
+                </StackPanel>
+              </StackPanel>
+              </StackPanel>
+            </Button>
+
             <Button x:Name="BtnTraining" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -671,6 +689,42 @@ $xaml = @'
               </StackPanel>
             </Button>
 
+            <Button x:Name="BtnSettings" Style="{StaticResource Nav}">
+              <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Data="{StaticResource IcoSlidersHorizontal}" Fill="{x:Null}" Stroke="#FF8E8880"
+                          StrokeThickness="1.6" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="SETTINGS" Style="{StaticResource NavTitle}"/>
+                <TextBlock Text="game settings, wizard, joystick, translator, repair and more" Style="{StaticResource NavSub}"/>
+                </StackPanel>
+              </StackPanel>
+              </StackPanel>
+            </Button>
+
+            <StackPanel x:Name="SettingsGroup" Visibility="Collapsed" Margin="26,0,0,0">
+            <Button x:Name="BtnGameSettings" Style="{StaticResource Nav}">
+              <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path Data="{StaticResource IcoSlidersHorizontal}" Fill="{x:Null}" Stroke="#FF8E8880"
+                          StrokeThickness="1.6" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="GAME SETTINGS" Style="{StaticResource NavTitle}"/>
+                <TextBlock x:Name="SubSettings" Text="graphics, view, gameplay and key mapping" Style="{StaticResource NavSub}"/>
+                </StackPanel>
+              </StackPanel>
+              </StackPanel>
+            </Button>
             <Button x:Name="BtnWizard" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -688,25 +742,6 @@ $xaml = @'
               </StackPanel>
               </StackPanel>
             </Button>
-
-            <Button x:Name="BtnSettings" Style="{StaticResource Nav}">
-              <StackPanel>
-              <StackPanel Orientation="Horizontal">
-                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
-                  <Canvas Width="24" Height="24">
-                    <Path Data="{StaticResource IcoSlidersHorizontal}" Fill="{x:Null}" Stroke="#FF8E8880"
-                          StrokeThickness="1.6" StrokeStartLineCap="Round"
-                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                  </Canvas>
-                </Viewbox>
-                <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="SETTINGS" Style="{StaticResource NavTitle}"/>
-                <TextBlock x:Name="SubSettings" Text="graphics, view, gameplay and key mapping" Style="{StaticResource NavSub}"/>
-                </StackPanel>
-              </StackPanel>
-              </StackPanel>
-            </Button>
-
             <Button x:Name="BtnFps" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -724,7 +759,6 @@ $xaml = @'
               </StackPanel>
               </StackPanel>
             </Button>
-
             <Button x:Name="BtnWrapper" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -742,7 +776,6 @@ $xaml = @'
               </StackPanel>
               </StackPanel>
             </Button>
-
             <Button x:Name="BtnScale" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -760,7 +793,6 @@ $xaml = @'
               </StackPanel>
               </StackPanel>
             </Button>
-
             <Button x:Name="BtnAxes" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -778,7 +810,6 @@ $xaml = @'
               </StackPanel>
               </StackPanel>
             </Button>
-
             <Button x:Name="BtnSetup" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -796,6 +827,7 @@ $xaml = @'
               </StackPanel>
               </StackPanel>
             </Button>
+            </StackPanel>
 
           </StackPanel>
         </StackPanel>
@@ -1013,6 +1045,7 @@ function Invoke-DriftCheck {
                 $script:CfgRepairOffered = $true
                 $r = Repair-KnownGoodSettings -GameFolder $GameDir
                 if ($r.Ok) {
+                    $script:CfgHealthyCache = $true
                     Show-Note ("The game's graphics settings file was damaged ($($chk.Reason)), which causes the low-resolution picture inside a black border. It has been repaired automatically.`n`n" + $r.Message) 'Graphics settings repaired' 'Information'
                 } else {
                     Show-Note ("The game's graphics settings file is damaged ($($chk.Reason)) but could not be repaired: $($r.Message)") 'Graphics settings damaged' 'Warning'
@@ -1097,6 +1130,28 @@ function Start-Wizard {
 
 (C 'BtnWizard').Add_Click({ Start-Wizard })
 
+# SETTINGS is now a group: the button expands and collapses the tools that
+# used to crowd the main menu (game settings, wizard, frame rate, translator,
+# menu size, joystick, install and repair).
+(C 'BtnSettings').Add_Click({
+    $g = C 'SettingsGroup'
+    $g.Visibility = if ($g.Visibility -eq 'Visible') { 'Collapsed' } else { 'Visible' }
+})
+# The red alert on the main menu is Install and repair, surfaced only when
+# something is actually wrong. Clicking it forwards to the real handler.
+(C 'BtnRepairAlert').Add_Click({
+    (C 'SettingsGroup').Visibility = 'Visible'
+    $ev = New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+    (C 'BtnSetup').RaiseEvent($ev)
+})
+# One startup health check for the alert (the Play guard re-checks anyway)
+$script:CfgHealthyCache = $true
+try {
+    . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+    $chk0 = Test-SettingsCfgHealthy $GameDir
+    $script:CfgHealthyCache = [bool]$chk0.Healthy
+} catch { }
+
 # The Squadron Room: a standalone RAF dispersal view (your pilot, the roster,
 # the day's readiness). Launches the same console-free way as the wizard.
 function Start-SquadronRoom {
@@ -1159,7 +1214,7 @@ function Set-TrainingVisual {
     } catch { Show-Note $_.Exception.Message 'Flight training' 'Warning' }
 })
 
-(C 'BtnSettings').Add_Click({
+(C 'BtnGameSettings').Add_Click({
     $ps1 = Resolve-Helper 'BOB2_Config.ps1'
     if (-not $ps1) { Show-Note "BOB2_Config.ps1 is missing from the fix folder." 'Not found' 'Warning'; return }
     # Through the .vbs, not powershell.exe directly. Starting PowerShell here
@@ -1999,7 +2054,7 @@ function Update-State {
     # sets - the graphics translator, the menu size, the frame-rate floor -
     # is what makes the game start and stay started.
     (C 'BtnPlay').IsEnabled     = (-not $running) -and $wizDone
-    (C 'BtnSettings').IsEnabled = -not $running
+    (C 'BtnGameSettings').IsEnabled = -not $running
     (C 'BtnSetup').IsEnabled    = -not $running
     (C 'BtnWrapper').IsEnabled  = -not $running
     (C 'BtnScale').IsEnabled    = -not $running
@@ -2063,6 +2118,17 @@ function Update-State {
         }
         (C 'Dot').Fill      = Brush '#FF6B6660'
         (C 'LblState').Text = 'Not running'
+    }
+
+    # surface Install and repair on the main menu ONLY when something needs it
+    $needsRepair = (-not $w.Ok) -or (-not $script:CfgHealthyCache)
+    if ($needsRepair -and -not $running) {
+        (C 'BtnRepairAlert').Visibility = 'Visible'
+        (C 'SubRepairAlert').Text = if (-not $w.Ok) {
+            "attention needed — $($w.Name)$(if ($w.Detail) { ": $($w.Detail)" })"
+        } else { 'attention needed — the graphics settings file looks damaged' }
+    } else {
+        (C 'BtnRepairAlert').Visibility = 'Collapsed'
     }
 
     Sync-FixVersion
