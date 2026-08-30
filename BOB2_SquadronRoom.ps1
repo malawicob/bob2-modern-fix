@@ -30,31 +30,66 @@ $PilotPath    = Join-Path $StateDir 'pilot.json'
 $SessionsPath = Join-Path $StateDir 'sessions.json'
 $FlightOpen   = Join-Path $StateDir 'flight.open'
 
-# --- squadrons a new pilot may join (bases as the campaign opens) -------
-$Squadrons = @(
-    @{ Num=19;  Act='L'; Code='QV'; Type='Spitfire I';  Base='RAF Duxford';       Lon=0.13;  Lat=52.09; Grp=12; Dx=0; Dy=0; Mx=0.565; My=0.075; Px=0 }
-    @{ Num=54;  Act='H'; Code='KL'; Type='Spitfire I';  Base='RAF Rochford';      Lon=0.70;  Lat=51.57; Grp=11; Dx=0; Dy=0; Mx=0.694; My=0.381; Px=0 }
-    @{ Num=64;  Act='H'; Code='SH'; Type='Spitfire I';  Base='RAF Kenley';        Lon=-0.10; Lat=51.30; Grp=11; Dx=0; Dy=0; Mx=0.525; My=0.542; Px=0 }
-    @{ Num=65;  Act='H'; Code='YT'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=-5; Mx=0.599; My=0.396; Px=-11 }
-    @{ Num=74;  Act='H'; Code='ZP'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=5; Mx=0.599; My=0.396; Px=11 }
-    @{ Num=92;  Act='L'; Code='QJ'; Type='Spitfire I';  Base='RAF Pembrey';       Lon=-4.32; Lat=51.71; Grp=10; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=152; Act='M'; Code='SN'; Type='Spitfire I';  Base='RAF Warmwell';      Lon=-2.32; Lat=50.70; Grp=10; Dx=0; Dy=0; Mx=0.134; My=0.737; Px=0 }
-    @{ Num=609; Act='M'; Code='PR'; Type='Spitfire I';  Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=-5; Mx=0.258; My=0.601; Px=11 }
-    @{ Num=610; Act='H'; Code='DW'; Type='Spitfire I';  Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=-5; Mx=0.553; My=0.547; Px=11 }
-    @{ Num=611; Act='L'; Code='FY'; Type='Spitfire I';  Base='RAF Digby';         Lon=-0.43; Lat=53.09; Grp=12; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=1;   Act='M'; Code='JX'; Type='Hurricane I'; Base='RAF Northolt';      Lon=-0.42; Lat=51.55; Grp=11; Dx=0; Dy=0; Mx=0.449; My=0.349; Px=0 }
-    @{ Num=17;  Act='M'; Code='YB'; Type='Hurricane I'; Base='RAF Debden';        Lon=0.26;  Lat=51.99; Grp=11; Dx=0; Dy=0; Mx=0.624; My=0.21; Px=0 }
-    @{ Num=32;  Act='H'; Code='GZ'; Type='Hurricane I'; Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=5; Mx=0.553; My=0.547; Px=-11 }
-    @{ Num=43;  Act='H'; Code='FT'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=-5; Mx=0.426; My=0.742; Px=-11 }
-    @{ Num=56;  Act='M'; Code='US'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=-5; Mx=0.57; My=0.288; Px=-11 }
-    @{ Num=111; Act='H'; Code='JU'; Type='Hurricane I'; Base='RAF Croydon';       Lon=-0.12; Lat=51.36; Grp=11; Dx=0; Dy=0; Mx=0.518; My=0.487; Px=0 }
-    @{ Num=151; Act='M'; Code='DZ'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=5; Mx=0.57; My=0.288; Px=11 }
-    @{ Num=213; Act='M'; Code='AK'; Type='Hurricane I'; Base='RAF Exeter';        Lon=-3.41; Lat=50.73; Grp=10; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=238; Act='M'; Code='VK'; Type='Hurricane I'; Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=5; Mx=0.258; My=0.601; Px=-11 }
-    @{ Num=242; Act='L'; Code='LE'; Type='Hurricane I'; Base='RAF Coltishall';    Lon=1.36;  Lat=52.75; Grp=12; Dx=0; Dy=0; Mx=-1; My=-1; Px=0 }
-    @{ Num=501; Act='H'; Code='SD'; Type='Hurricane I'; Base='RAF Gravesend';     Lon=0.37;  Lat=51.43; Grp=11; Dx=0; Dy=0; Mx=0.624; My=0.459; Px=0 }
-    @{ Num=601; Act='H'; Code='UF'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=5; Mx=0.426; My=0.742; Px=11 }
+# --- squadrons a new pilot may join --------------------------------------
+# Postings are PER CAMPAIGN PERIOD: P1 = the Channel battles (10 Jul),
+# P2 = Eagle Day and the airfields (13 Aug), P3 = London (7 Sep).
+# Each period entry is 'Station,ActionRating' or '-' when the squadron is
+# resting in the north. Station anchors are image fractions on the table.
+$MapStations = @{
+    'RAF Duxford'       = @(0.565, 0.075)
+    'RAF Debden'        = @(0.624, 0.210)
+    'RAF North Weald'   = @(0.570, 0.288)
+    'RAF Rochford'      = @(0.694, 0.381)
+    'RAF Hornchurch'    = @(0.599, 0.396)
+    'RAF Northolt'      = @(0.449, 0.349)
+    'RAF Croydon'       = @(0.518, 0.487)
+    'RAF Kenley'        = @(0.525, 0.542)
+    'RAF Biggin Hill'   = @(0.553, 0.547)
+    'RAF Gravesend'     = @(0.624, 0.459)
+    'RAF Tangmere'      = @(0.426, 0.742)
+    'RAF Middle Wallop' = @(0.258, 0.601)
+    'RAF Warmwell'      = @(0.134, 0.737)
+}
+$Periods = @(
+    @{ Id='P1'; Label='10 JULY - THE CHANNEL';  Desc='convoy battles over the Channel' }
+    @{ Id='P2'; Label='13 AUGUST - EAGLE DAY';  Desc='the assault on the airfields' }
+    @{ Id='P3'; Label='7 SEPTEMBER - LONDON';   Desc='the great daylight raids on London' }
 )
+$Squadrons = @(
+    @{ Num=19;  Code='QV'; Type='Spitfire I';  P1='RAF Duxford,L';       P2='RAF Duxford,M';       P3='RAF Duxford,H' }
+    @{ Num=54;  Code='KL'; Type='Spitfire I';  P1='RAF Rochford,H';      P2='RAF Hornchurch,H';    P3='-' }
+    @{ Num=64;  Code='SH'; Type='Spitfire I';  P1='RAF Kenley,H';        P2='RAF Kenley,H';        P3='-' }
+    @{ Num=65;  Code='YT'; Type='Spitfire I';  P1='RAF Hornchurch,H';    P2='RAF Hornchurch,H';    P3='-' }
+    @{ Num=74;  Code='ZP'; Type='Spitfire I';  P1='RAF Hornchurch,H';    P2='-';                   P3='-' }
+    @{ Num=92;  Code='QJ'; Type='Spitfire I';  P1='RAF Pembrey,L';       P2='RAF Pembrey,L';       P3='RAF Biggin Hill,H' }
+    @{ Num=152; Code='SN'; Type='Spitfire I';  P1='RAF Warmwell,M';      P2='RAF Warmwell,M';      P3='RAF Warmwell,M' }
+    @{ Num=609; Code='PR'; Type='Spitfire I';  P1='RAF Middle Wallop,M'; P2='RAF Middle Wallop,H'; P3='RAF Middle Wallop,H' }
+    @{ Num=610; Code='DW'; Type='Spitfire I';  P1='RAF Biggin Hill,H';   P2='RAF Biggin Hill,H';   P3='-' }
+    @{ Num=611; Code='FY'; Type='Spitfire I';  P1='RAF Digby,L';         P2='RAF Digby,L';         P3='RAF Digby,L' }
+    @{ Num=1;   Code='JX'; Type='Hurricane I'; P1='RAF Northolt,M';      P2='RAF Northolt,H';      P3='-' }
+    @{ Num=17;  Code='YB'; Type='Hurricane I'; P1='RAF Debden,M';        P2='RAF Debden,H';        P3='RAF Debden,M' }
+    @{ Num=32;  Code='GZ'; Type='Hurricane I'; P1='RAF Biggin Hill,H';   P2='RAF Biggin Hill,H';   P3='-' }
+    @{ Num=43;  Code='FT'; Type='Hurricane I'; P1='RAF Tangmere,H';      P2='RAF Tangmere,H';      P3='-' }
+    @{ Num=56;  Code='US'; Type='Hurricane I'; P1='RAF North Weald,M';   P2='RAF North Weald,H';   P3='-' }
+    @{ Num=111; Code='JU'; Type='Hurricane I'; P1='RAF Croydon,H';       P2='RAF Croydon,H';       P3='-' }
+    @{ Num=151; Code='DZ'; Type='Hurricane I'; P1='RAF North Weald,M';   P2='RAF North Weald,H';   P3='-' }
+    @{ Num=213; Code='AK'; Type='Hurricane I'; P1='RAF Exeter,M';        P2='RAF Exeter,M';        P3='RAF Tangmere,H' }
+    @{ Num=238; Code='VK'; Type='Hurricane I'; P1='RAF Middle Wallop,M'; P2='-';                   P3='RAF Middle Wallop,M' }
+    @{ Num=242; Code='LE'; Type='Hurricane I'; P1='RAF Coltishall,L';    P2='RAF Coltishall,L';    P3='RAF Duxford,H' }
+    @{ Num=501; Code='SD'; Type='Hurricane I'; P1='RAF Gravesend,H';     P2='RAF Gravesend,H';     P3='RAF Kenley,H' }
+    @{ Num=601; Code='UF'; Type='Hurricane I'; P1='RAF Tangmere,H';      P2='RAF Tangmere,H';      P3='RAF Exeter,M' }
+)
+# a squadron's posting in a period: @{Base;Act;Mx;My} or $null when resting
+function Get-Posting { param($Q, [string]$Period)
+    $raw = "$($Q[$Period])"
+    if ((-not $raw) -or ($raw -eq '-')) { return $null }
+    $parts = $raw -split ','
+    $base = $parts[0]; $act = if ($parts.Count -gt 1) { $parts[1] } else { 'M' }
+    $st = $MapStations[$base]
+    $mx = -1.0; $my = -1.0
+    if ($st) { $mx = [double]$st[0]; $my = [double]$st[1] }
+    @{ Base = $base; Act = $act; Mx = $mx; My = $my }
+}
 function Get-SquadronDef { param([int]$Num)
     foreach ($q in $Squadrons) { if ($q.Num -eq $Num) { return $q } }
     $null
@@ -560,12 +595,16 @@ function Ensure-Squadron {
     Save-Pilot $obj
     Get-Pilot
 }
+function Get-GroupForBase { param([string]$Base)
+    if ($Base -match 'Pembrey|Exeter|Warmwell|Middle Wallop|Boscombe') { return 10 }
+    if ($Base -match 'Duxford|Digby|Coltishall') { return 12 }
+    11
+}
 function Set-Header {
     param($Pilot)
     $num = 92; $grp = 10
     if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $num = [int]$Pilot.sqn }
-    $def = Get-SquadronDef $num
-    if ($def) { $grp = [int]$def.Grp }
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { $grp = Get-GroupForBase "$($Pilot.base)" }
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $num Squadron" }
     $m = C 'HdrMotto'
     if ($m) {
@@ -1119,6 +1158,7 @@ function Invoke-Submit {
         sqcode  = "$($script:SelSq.Code)"
         actype  = "$($script:SelSq.Type)"
         base    = "$($script:SelSq.Base)"
+        period  = "$($script:SelSq.Period)"
         historical = $false
         portrait = $script:SelPortrait
         created = (Get-Date).ToString('yyyy-MM-dd')
@@ -1134,17 +1174,33 @@ function Map-XY { param([double]$Lon,[double]$Lat,[double]$W,[double]$H)
     ,@((($Lon + 5.6) / 7.7 * $W), ((53.8 - $Lat) / 4.3 * $H))
 }
 function Show-SquadronSelect {
+    if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
     Set-Header $null
     $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Fighter Command' }
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  POSTINGS" }
-    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE PLOTTING TABLE' -Title 'Choose your squadron'))
-    $lead = New-TB -Text 'Sector and fighter airfields, South East England, 1940. Click a ringed station to see the squadron, then report to it. The key is printed on the table.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
-    $lead.Margin = '0,-14,0,4'
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE PLOTTING TABLE' -Title 'Choose your campaign and squadron'))
+
+    # campaign period: squadrons moved as the battle moved, so pick the
+    # period first and the table repopulates with that phase's postings
+    $segRow = New-Object Windows.Controls.StackPanel; $segRow.Orientation = 'Horizontal'; $segRow.Margin = '0,-10,0,10'
+    foreach ($per in $Periods) {
+        $seg = New-Object Windows.Controls.Border
+        $seg.Padding = '14,8'; $seg.Margin = '0,0,10,0'; $seg.CornerRadius = '3'; $seg.Cursor = 'Hand'; $seg.Tag = $per.Id
+        $active = ($per.Id -eq $script:SelPeriod)
+        $seg.Background = if ($active) { B '#213540' } else { B '#101B22' }
+        $seg.BorderThickness = '0,0,0,2'
+        $seg.BorderBrush = if ($active) { Res 'Brass' } else { B '#101B22' }
+        $seg.Child = (New-TB -Text $per.Label -Family $CondFam -Size 12.5 -Colour $(if ($active) { '#E9E3D4' } else { '#6F828C' }) -Bold)
+        $seg.Add_MouseLeftButtonUp({ param($sender,$e) $script:SelPeriod = "$($sender.Tag)"; $script:SelSq = $null; Show-SquadronSelect })
+        [void]$segRow.Children.Add($seg)
+    }
+    [void]$script:Stage.Children.Add($segRow)
+
+    $perDef = $Periods | Where-Object { $_.Id -eq $script:SelPeriod } | Select-Object -First 1
+    $lead = New-TB -Text "The board for $($perDef.Desc). $([char]0x25B2)$([char]0x25B2)$([char]0x25B2) heavy fighting  $([char]0x25B2)$([char]0x25B2) steady  $([char]0x25B2) quiet. Click a ring to see the squadron, then report to it. A ring off its station can be dragged onto it." -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
+    $lead.Margin = '0,0,0,12'
     [void]$script:Stage.Children.Add($lead)
-    $hint2 = New-TB -Text "$([char]0x25B2)$([char]0x25B2)$([char]0x25B2) heavy early fighting   $([char]0x25B2)$([char]0x25B2) steady action   $([char]0x25B2) quieter start.  A ring off its station can be dragged onto it; the correction is remembered." -Family 'Segoe UI' -Size 12 -Colour '#6F828C' 
-    $hint2.Margin = '0,0,0,12'
-    [void]$script:Stage.Children.Add($hint2)
 
     $W = 1080.0; $H = [math]::Round($W * 800.0 / 1600.0)
     $mapWrap = New-Object Windows.Controls.Border
@@ -1161,16 +1217,7 @@ function Show-SquadronSelect {
     [void]$grid.Children.Add($cv)
     $mapWrap.Child = $grid
 
-    $script:SelSq = $null
-    $script:SqDots = @()
-    $script:SqChips = @()
-    $detail = New-TB -Text 'No squadron selected.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
-    $btn = New-Object Windows.Controls.Button
-    $btn.Content = 'REPORT TO THIS SQUADRON'; $btn.IsEnabled = $false; $btn.MinWidth = 240
-    $script:SqDetail = $detail
-    $script:SqButton = $btn
-
-    # hand-corrected ring anchors, remembered across sessions and careers
+    # hand-corrected ring anchors (per station name, so they hold across periods)
     $script:RingPosPath = Join-Path $StateDir 'ringpos.json'
     $script:RingPos = @{}
     if (Test-Path $script:RingPosPath) {
@@ -1179,6 +1226,15 @@ function Show-SquadronSelect {
             foreach ($pp in $rp.PSObject.Properties) { $script:RingPos[$pp.Name] = $pp.Value }
         } catch { }
     }
+
+    $script:SelSq = $null
+    $script:SqDots = @()
+    $script:SqChips = @()
+    $detail = New-TB -Text 'No squadron selected.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
+    $btn = New-Object Windows.Controls.Button
+    $btn.Content = 'REPORT TO THIS SQUADRON'; $btn.IsEnabled = $false; $btn.MinWidth = 240
+    $script:SqDetail = $detail
+    $script:SqButton = $btn
 
     $script:SelectSq = {
         param($q2)
@@ -1195,35 +1251,49 @@ function Show-SquadronSelect {
             }
         }
         foreach ($cp in $script:SqChips) {
-            $cp.BorderBrush = if ($cp.Tag.Num -eq $q2.Num) { B '#FFE28A' } else { Res 'Rule' }
+            $cp.BorderBrush = if ($cp.Tag -and $cp.Tag.Num -eq $q2.Num) { B '#FFE28A' } else { Res 'Rule' }
         }
-        $actTxt = switch ("$($q2.Act)") { 'H' { 'in the thick of the fighting from the start' } 'M' { 'steady action, building as the battle grows' } default { 'a quieter start, the war arrives later' } }
-        $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $($q2.Grp) Group  $([char]0x2022)  $actTxt   (codes $($q2.Code)-)"
+        $actTxt = switch ("$($q2.Act)") { 'H' { 'in the thick of the fighting' } 'M' { 'steady action' } default { 'a quieter station' } }
+        $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $(Get-GroupForBase $q2.Base) Group  $([char]0x2022)  $actTxt   (codes $($q2.Code)-)"
         $script:SqButton.IsEnabled = $true
     }
 
+    # shared-station fan-out: count squadrons per station this period
+    $stationCount = @{}
     foreach ($q in $Squadrons) {
-        if ([double]$q.Mx -lt 0) { continue }
-        $cx = [double]$q.Mx * $W + [double]$q.Px
-        $cy = [double]$q.My * $H
-        $ov = $script:RingPos["$($q.Num)"]
+        $po = Get-Posting $q $script:SelPeriod
+        if ($po -and $po.Mx -ge 0) { $stationCount[$po.Base] = 1 + [int]$stationCount[$po.Base] }
+    }
+    $stationSeen = @{}
+    $farActive = @(); $resting = @()
+    foreach ($q in $Squadrons) {
+        $po = Get-Posting $q $script:SelPeriod
+        if (-not $po) { $resting += $q; continue }
+        $qt = @{ Num=$q.Num; Code=$q.Code; Type=$q.Type; Base=$po.Base; Act=$po.Act; Period=$script:SelPeriod }
+        if ($po.Mx -lt 0) { $farActive += $qt; continue }
+        $split = 0.0
+        if ([int]$stationCount[$po.Base] -gt 1) {
+            $ix = [int]$stationSeen[$po.Base]; $stationSeen[$po.Base] = $ix + 1
+            $split = if ($ix -eq 0) { -11.0 } else { 11.0 }
+        }
+        $cx = $po.Mx * $W + $split
+        $cy = $po.My * $H
+        $ov = $script:RingPos["$($po.Base)|$($q.Num)"]
         if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
+        $isSpit = ("$($q.Type)" -match 'Spitfire')
         $ring = New-Object Windows.Shapes.Ellipse
         $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 2.5
-        $isSpit = ("$($q.Type)" -match 'Spitfire')
         $ring.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
         $ring.Fill = B '#01000000'
         $ring.Cursor = 'Hand'
-        $qt = @{}; foreach ($k in $q.Keys) { $qt[$k] = $q[$k] }
-        $qt.CX = $cx; $qt.CY = $cy
+        $qt.CX = $cx; $qt.CY = $cy; $qt.MapW = $W; $qt.MapH = $H
+        $qt.Drag = $false; $qt.Moved = $false; $qt.OX = 0.0; $qt.OY = 0.0
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
-        # click selects; a drag repositions the ring and is remembered
-        $pips = switch ("$($q.Act)") { 'H' { " $([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { " $([char]0x25B2)$([char]0x25B2)" } default { " $([char]0x25B2)" } }
+        $pips = switch ("$($po.Act)") { 'H' { " $([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { " $([char]0x25B2)$([char]0x25B2)" } default { " $([char]0x25B2)" } }
         $nl = New-TB -Text "$($q.Num)$pips" -Family $CondFam -Size 11.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
         $nl.IsHitTestVisible = $false
         [Windows.Controls.Canvas]::SetLeft($nl, $cx - 10); [Windows.Controls.Canvas]::SetTop($nl, $cy + 17)
-        $qt.Label = $nl; $qt.MapW = $W; $qt.MapH = $H
-        $qt.Drag = $false; $qt.Moved = $false; $qt.OX = 0.0; $qt.OY = 0.0
+        $qt.Label = $nl
         $ring.Tag = $qt
         $ring.Add_MouseLeftButtonDown({
             param($sender,$e)
@@ -1254,7 +1324,7 @@ function Show-SquadronSelect {
             if ($t.Drag) {
                 $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
                 if ($t.Moved) {
-                    $script:RingPos["$($t.Num)"] = @{ x = [math]::Round($t.CX / $t.MapW, 4); y = [math]::Round($t.CY / $t.MapH, 4) }
+                    $script:RingPos["$($t.Base)|$($t.Num)"] = @{ x = [math]::Round($t.CX / $t.MapW, 4); y = [math]::Round($t.CY / $t.MapH, 4) }
                     try { $script:RingPos | ConvertTo-Json | Set-Content -Path $script:RingPosPath -Encoding UTF8 } catch { }
                 } else {
                     & $script:SelectSq $t
@@ -1268,28 +1338,29 @@ function Show-SquadronSelect {
 
     [void]$script:Stage.Children.Add($mapWrap)
 
-    # postings beyond this table's edge
-    $far = @($Squadrons | Where-Object { [double]$_.Mx -lt 0 })
-    if ($far.Count) {
+    if ($farActive.Count) {
         $fl = New-TB -Text 'POSTINGS BEYOND THIS TABLE' -Family $CondFam -Size 11.5 -Colour '#8A9689' -Bold
         $fl.Margin = '2,12,0,6'
         [void]$script:Stage.Children.Add($fl)
         $chips = New-Object Windows.Controls.StackPanel; $chips.Orientation = 'Horizontal'
-        foreach ($q in $far) {
-            $isSpit = ("$($q.Type)" -match 'Spitfire')
+        foreach ($qt in $farActive) {
+            $isSpit = ("$($qt.Type)" -match 'Spitfire')
             $chip = New-Object Windows.Controls.Border
             $chip.Padding = '12,7'; $chip.Margin = '0,0,10,0'; $chip.CornerRadius = '3'; $chip.Cursor = 'Hand'
             $chip.Background = B '#101B22'; $chip.BorderBrush = Res 'Rule'; $chip.BorderThickness = '1.5'
-            $pips2 = switch ("$($q.Act)") { 'H' { " $([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { " $([char]0x25B2)$([char]0x25B2)" } default { " $([char]0x25B2)" } }
-            $ct = New-TB -Text "No. $($q.Num)  $([char]0x2022)  $($q.Base -replace '^RAF ','')$pips2" -Family $CondFam -Size 12 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
-            $chip.Child = $ct
-            $qt = @{}; foreach ($k in $q.Keys) { $qt[$k] = $q[$k] }
+            $pips3 = switch ("$($qt.Act)") { 'H' { " $([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { " $([char]0x25B2)$([char]0x25B2)" } default { " $([char]0x25B2)" } }
+            $chip.Child = (New-TB -Text "No. $($qt.Num)  $([char]0x2022)  $($qt.Base -replace '^RAF ','')$pips3" -Family $CondFam -Size 12 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold)
             $chip.Tag = $qt
             $chip.Add_MouseLeftButtonUp({ param($sender,$e) & $script:SelectSq $sender.Tag })
             $script:SqChips += $chip
             [void]$chips.Children.Add($chip)
         }
         [void]$script:Stage.Children.Add($chips)
+    }
+    if ($resting.Count) {
+        $rl = New-TB -Text ('RESTING IN THE NORTH THIS PERIOD:  ' + (@($resting | ForEach-Object { "No. $($_.Num)" }) -join '   ')) -Family $CondFam -Size 11.5 -Colour '#4E5B63'
+        $rl.Margin = '2,10,0,0'
+        [void]$script:Stage.Children.Add($rl)
     }
 
     $detail.Margin = '2,14,0,14'
@@ -1303,10 +1374,15 @@ function Show-SquadronSelect {
 function Show-Create {
     $script:Stage.Children.Clear()
     $script:SelPortrait = $null; $script:SelBorder = $null
-    if (-not $script:SelSq) { $script:SelSq = Get-SquadronDef 92 }
+    if (-not $script:SelSq) {
+        $q92 = Get-SquadronDef 92
+        $po92 = Get-Posting $q92 'P1'
+        $script:SelSq = @{ Num=92; Code='QJ'; Type='Spitfire I'; Base=$po92.Base; Act=$po92.Act; Period='P1' }
+    }
     Set-Header $null
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $($script:SelSq.Num) Squadron" }
-    $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  $($script:SelSq.Type.ToUpper())S AT $($script:SelSq.Base.ToUpper())" }
+    $perDef2 = $Periods | Where-Object { $_.Id -eq "$($script:SelSq.Period)" } | Select-Object -First 1
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  $($script:SelSq.Type.ToUpper())S AT $($script:SelSq.Base.ToUpper())$(if ($perDef2) { "  $([char]0x2022)  $($perDef2.Label)" })" }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
     $lead = New-TB -Text 'Summer 1940. Give your name and pick your photograph. Your aircraft, code letter and rank are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
