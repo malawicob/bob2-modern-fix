@@ -687,14 +687,25 @@ function New-RosterRow {
 function Test-GameRunning { [bool](Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) }
 
 function Get-Sessions {
+    # Returns only real session objects. Repairs two legacy corruptions:
+    # the ConvertTo-Json value/Count wrapper shape, and empty-array
+    # elements leaked in by an old comma-return (both made the count
+    # read nonzero with no flights, unlocking the aircraft early).
     $out = @()
-    if (Test-Path $SessionsPath) { try { $out = @(Get-Content $SessionsPath -Raw | ConvertFrom-Json) } catch { $out = @() } }
-    ,$out
+    if (Test-Path $SessionsPath) {
+        try {
+            $j = Get-Content $SessionsPath -Raw | ConvertFrom-Json
+            if ($j -and ($j.PSObject.Properties.Name -contains 'value')) { $j = $j.value }
+            $out = @($j) | Where-Object { $_ -and ($_ -isnot [array]) -and ($_.PSObject.Properties.Name -contains 'end') }
+        } catch { $out = @() }
+    }
+    $out
 }
 function Save-Sessions {
     param($S)
     if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
-    ,@($S) | ConvertTo-Json -Depth 6 | Set-Content -Path $SessionsPath -Encoding UTF8
+    $flat = @(@($S) | Where-Object { $_ -and ($_ -isnot [array]) })
+    ConvertTo-Json -InputObject $flat -Depth 6 | Set-Content -Path $SessionsPath -Encoding UTF8
 }
 # When the room opens after a flight, turn the launcher's flight marker into
 # a logged sortie. End time is taken from the newest save (best proxy for
