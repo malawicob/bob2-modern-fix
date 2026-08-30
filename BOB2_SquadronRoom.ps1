@@ -30,6 +30,36 @@ $PilotPath    = Join-Path $StateDir 'pilot.json'
 $SessionsPath = Join-Path $StateDir 'sessions.json'
 $FlightOpen   = Join-Path $StateDir 'flight.open'
 
+# --- squadrons a new pilot may join (bases as the campaign opens) -------
+$Squadrons = @(
+    @{ Num=19;  Code='QV'; Type='Spitfire I';  Base='RAF Duxford';       Lon=0.13;  Lat=52.09; Grp=12; Lx=8;   Ly=-14 }
+    @{ Num=54;  Code='KL'; Type='Spitfire I';  Base='RAF Rochford';      Lon=0.70;  Lat=51.57; Grp=11; Lx=8;   Ly=-4 }
+    @{ Num=64;  Code='SH'; Type='Spitfire I';  Base='RAF Kenley';        Lon=-0.10; Lat=51.30; Grp=11; Lx=-52; Ly=6 }
+    @{ Num=65;  Code='YT'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Lx=8;   Ly=-16 }
+    @{ Num=74;  Code='ZP'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Lx=8;   Ly=2 }
+    @{ Num=92;  Code='QJ'; Type='Spitfire I';  Base='RAF Pembrey';       Lon=-4.32; Lat=51.71; Grp=10; Lx=8;   Ly=-14 }
+    @{ Num=152; Code='SN'; Type='Spitfire I';  Base='RAF Warmwell';      Lon=-2.32; Lat=50.70; Grp=10; Lx=8;   Ly=4 }
+    @{ Num=609; Code='PR'; Type='Spitfire I';  Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Lx=8;   Ly=-16 }
+    @{ Num=610; Code='DW'; Type='Spitfire I';  Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Lx=8;   Ly=2 }
+    @{ Num=611; Code='FY'; Type='Spitfire I';  Base='RAF Digby';         Lon=-0.43; Lat=53.09; Grp=12; Lx=8;   Ly=-14 }
+    @{ Num=1;   Code='JX'; Type='Hurricane I'; Base='RAF Northolt';      Lon=-0.42; Lat=51.55; Grp=11; Lx=-46; Ly=-16 }
+    @{ Num=17;  Code='YB'; Type='Hurricane I'; Base='RAF Debden';        Lon=0.26;  Lat=51.99; Grp=11; Lx=8;   Ly=-4 }
+    @{ Num=32;  Code='GZ'; Type='Hurricane I'; Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Lx=8;   Ly=16 }
+    @{ Num=43;  Code='FT'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Lx=-46; Ly=2 }
+    @{ Num=56;  Code='US'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Lx=-52; Ly=-14 }
+    @{ Num=111; Code='JU'; Type='Hurricane I'; Base='RAF Croydon';       Lon=-0.12; Lat=51.36; Grp=11; Lx=-58; Ly=-16 }
+    @{ Num=151; Code='DZ'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Lx=8;   Ly=-2 }
+    @{ Num=213; Code='AK'; Type='Hurricane I'; Base='RAF Exeter';        Lon=-3.41; Lat=50.73; Grp=10; Lx=8;   Ly=-14 }
+    @{ Num=238; Code='VK'; Type='Hurricane I'; Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Lx=8;   Ly=2 }
+    @{ Num=242; Code='LE'; Type='Hurricane I'; Base='RAF Coltishall';    Lon=1.36;  Lat=52.75; Grp=12; Lx=8;   Ly=-4 }
+    @{ Num=501; Code='SD'; Type='Hurricane I'; Base='RAF Gravesend';     Lon=0.37;  Lat=51.43; Grp=11; Lx=8;   Ly=8 }
+    @{ Num=601; Code='UF'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Lx=-46; Ly=18 }
+)
+function Get-SquadronDef { param([int]$Num)
+    foreach ($q in $Squadrons) { if ($q.Num -eq $Num) { return $q } }
+    $null
+}
+
 # --- data ---------------------------------------------------------------
 function Get-Portraits {
     if (Test-Path $PortIndex) { try { return @(Get-Content $PortIndex -Raw | ConvertFrom-Json) } catch { } }
@@ -138,11 +168,16 @@ $Xaml = @'
         </Grid>
         <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
           <TextBlock Style="{StaticResource Serif}" FontSize="27" FontWeight="Bold"
-                     Foreground="{StaticResource Ink}" Text="No. 92 Squadron"/>
+                     Foreground="{StaticResource Ink}" x:Name="HdrSquadron" Text="No. 92 Squadron"/>
           <TextBlock Style="{StaticResource Cond}" FontSize="13" Foreground="{StaticResource Faint}"
-                     Text="ROYAL AIR FORCE  &#x2022;  AUT PUGNA AUT MORERE" Margin="1,3,0,0"/>
+                     x:Name="HdrMotto" Text="ROYAL AIR FORCE  &#x2022;  AUT PUGNA AUT MORERE" Margin="1,3,0,0"/>
         </StackPanel>
       </StackPanel>
+      <Border x:Name="RoomPlay" Background="#C8973F" CornerRadius="3" Cursor="Hand"
+              HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0" Padding="26,10">
+        <TextBlock Text="PLAY" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
+                   FontWeight="Bold" Foreground="#171203"/>
+      </Border>
       <Border x:Name="ChromeClose" Width="52" Height="52" Background="Transparent"
               HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" Margin="0,0,10,0">
         <TextBlock Text="&#x2715;" Foreground="#9FB0B8" FontSize="17"
@@ -179,6 +214,30 @@ $Win.Dispatcher.add_UnhandledException({
     $e.Handled = $true
 })
 $Win.Add_KeyDown({ param($s,$e) if ($e.Key -eq 'Escape') { $Win.Close() } })
+# PLAY from inside the Room: same flight-marker pipeline as the launcher,
+# so the sortie logs itself; then the game starts via the pinning bat.
+$rp = C 'RoomPlay'
+if ($rp) {
+    $rp.Add_MouseLeftButtonUp({
+        if (-not $GameDir) { [System.Windows.MessageBox]::Show('Run the Squadron Room from the game folder to fly.', 'Squadron Room') | Out-Null; return }
+        if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { [System.Windows.MessageBox]::Show('The game is already running.', 'Squadron Room') | Out-Null; return }
+        try {
+            if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
+            $before = ''
+            $cd0 = Get-CampaignDate
+            if ($cd0) { $before = $cd0.ToString('yyyy-MM-dd') }
+            @{ start = (Get-Date).ToString('s'); dateBefore = $before } | ConvertTo-Json | Set-Content -Path $FlightOpen -Encoding UTF8
+            $sav0 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($sav0) { Copy-Item $sav0.FullName (Join-Path $StateDir 'before.bsr') -Force }
+        } catch { }
+        $bat = Join-Path $ScriptDir 'BOB2_Launch.bat'
+        if (Test-Path $bat) { Start-Process -FilePath $bat -WorkingDirectory $GameDir }
+        else { Start-Process -FilePath (Join-Path $GameDir 'Bob.exe') -WorkingDirectory $GameDir }
+        $Win.WindowState = 'Minimized'
+    })
+    $rp.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') })
+    $rp.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
+}
 $cx = C 'ChromeClose'
 if ($cx) {
     $cx.Add_MouseLeftButtonDown({ param($s,$e) $e.Handled = $true; $Win.Close() })
@@ -392,6 +451,13 @@ function New-Frame {
 }
 
 # --- the player's aircraft: a Spitfire profile with live codes and serial --
+# per-type profile art and marking defaults (roundel positions measured)
+function Get-AircraftSpec { param([string]$Type)
+    if ($Type -match 'Hurricane') {
+        return @{ Img='hurricane.png'; Ratio=(316.0/1000.0); SqX=0.40; IndX=0.675; SerX=0.775; FuseY=0.565; SerY=0.635; CodeSize=80.0 }
+    }
+    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.415; IndX=0.685; SerX=0.775; FuseY=0.51; SerY=0.565; CodeSize=84.0 }
+}
 $AircraftImg  = Join-Path (Join-Path $ModDir 'aircraft') 'spitfire.png'
 $AcW          = 760.0            # on-screen width; height follows the image
 $AcRatio      = 324.0 / 1000.0   # staged spitfire.png aspect
@@ -461,6 +527,12 @@ function Make-Draggable {
     })
 }
 function New-Serial {
+    param([string]$Type = 'Spitfire I')
+    if ($Type -match 'Hurricane') {
+        $pool = @(@{p='P2';lo=550;hi=999}, @{p='P3';lo=30;hi=980}, @{p='V6';lo=530;hi=999}, @{p='V7';lo=200;hi=499})
+        $pick = $pool | Get-Random
+        return ('{0}{1:000}' -f $pick.p, (Get-Random -Minimum $pick.lo -Maximum $pick.hi))
+    }
     $pool = @(@{p='R';lo=6800;hi=6999}, @{p='N';lo=3200;hi=3299}, @{p='X';lo=4200;hi=4399}, @{p='P';lo=9300;hi=9499})
     $pick = $pool | Get-Random
     "$($pick.p)$(Get-Random -Minimum $pick.lo -Maximum $pick.hi)"
@@ -477,8 +549,39 @@ function Ensure-Serial {
     Save-Pilot $obj
     Get-Pilot
 }
+# Older pilots predate squadron choice: they are 92 Squadron men.
+function Ensure-Squadron {
+    param($Pilot)
+    if ($null -eq $Pilot) { return $Pilot }
+    if (($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { return $Pilot }
+    $obj = [ordered]@{}
+    foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+    $obj['sqn'] = 92; $obj['sqcode'] = 'QJ'; $obj['actype'] = 'Spitfire I'; $obj['base'] = 'RAF Biggin Hill'
+    Save-Pilot $obj
+    Get-Pilot
+}
+function Set-Header {
+    param($Pilot)
+    $num = 92; $grp = 10
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $num = [int]$Pilot.sqn }
+    $def = Get-SquadronDef $num
+    if ($def) { $grp = [int]$def.Grp }
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $num Squadron" }
+    $m = C 'HdrMotto'
+    if ($m) {
+        $m.Text = if ($num -eq 92) { "ROYAL AIR FORCE  $([char]0x2022)  AUT PUGNA AUT MORERE" }
+                  else { "ROYAL AIR FORCE  $([char]0x2022)  NO. $grp GROUP, FIGHTER COMMAND" }
+    }
+}
 function New-Aircraft {
     param($Pilot)
+    $ptype = 'Spitfire I'
+    if (($Pilot.PSObject.Properties.Name -contains 'actype') -and $Pilot.actype) { $ptype = "$($Pilot.actype)" }
+    $spec = Get-AircraftSpec $ptype
+    $AircraftImg = Join-Path (Join-Path $ModDir 'aircraft') $spec.Img
+    $AcRatio = [double]$spec.Ratio
+    $SqX = [double]$spec.SqX; $IndX = [double]$spec.IndX; $SerX = [double]$spec.SerX
+    $FuseY = [double]$spec.FuseY; $SerY = [double]$spec.SerY; $CodeSize = [double]$spec.CodeSize
     if (-not (Test-Path $AircraftImg)) { return $null }
     $acH = $AcW * $AcRatio
     $script:AcW = $AcW; $script:AcHpx = $acH
@@ -659,6 +762,9 @@ function Get-Career {
     $sorties = @($Sessions).Count
     $mins = 0; foreach ($s in $Sessions) { $mins += [int]$s.minutes }
     $hours = [math]::Round($mins / 60.0, 1)
+    if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) {
+        return @{ sorties = $sorties; hours = $hours; rank = 'Squadron Leader'; next = $null; nextAt = 0 }
+    }
     $ladder = @('Sergeant','Pilot Officer','Flying Officer','Flight Lieutenant')
     $idx = [array]::IndexOf($ladder, "$($Pilot.rank)"); if ($idx -lt 0) { $idx = 0 }
     $step = 12
@@ -808,7 +914,9 @@ function Show-Logbook {
     [void]$tiles.Children.Add((New-Stat 'RANK' "$($career.rank)"))
     [void]$script:Stage.Children.Add($tiles)
 
-    $pn = if ($career.next) { "Next promotion to $($career.next) at $($career.nextAt) sorties." } else { 'At the top of the tree.' }
+    $isCmdr2 = (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander'))
+    $pn = if ($isCmdr2) { 'You command the squadron. Its fortunes in the air are yours to answer for.' }
+          elseif ($career.next) { "Next promotion to $($career.next) at $($career.nextAt) sorties." } else { 'At the top of the tree.' }
     if ($honours.Count) { $pn = "Honours: $($honours -join ', ').  $pn" }
     $cs = Get-ClaimSummary $Pilot
     if ($cs) { $pn = "Claims: $cs.  $pn" }
@@ -850,10 +958,14 @@ function Show-Roster {
     $script:Stage.Children.Clear()
     $script:CampaignDate = Get-CampaignDate
     [void]$script:Stage.Children.Add((New-Nav 'dispersal'))
-    $eyebrow = if ($script:CampaignDate) {
-        "$((Get-Airfield $script:CampaignDate).ToUpper())  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())"
-    } else { 'THE DISPERSAL' }
-    [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title 'No. 92 Squadron at readiness'))
+    $Pilot = Ensure-Squadron -Pilot $Pilot
+    Set-Header $Pilot
+    $sqnum = 92; if (($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
+    $baseTxt = if ($sqnum -eq 92 -and $script:CampaignDate) { (Get-Airfield $script:CampaignDate).ToUpper() }
+               elseif (($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { "$($Pilot.base)".ToUpper() }
+               else { 'THE DISPERSAL' }
+    $eyebrow = if ($script:CampaignDate) { "$baseTxt  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $baseTxt }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at readiness"))
 
     # the only photograph on the wall is yours
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,32'
@@ -911,9 +1023,38 @@ function Show-Roster {
     }
     [void]$ls.Children.Add((New-RosterRow -P $me -Index 0 -IsPlayer))
     $i = 1
-    foreach ($h in (Get-Historical)) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
+    if ($sqnum -eq 92) {
+        foreach ($h in (Get-Historical)) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
+    }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
+    if ($sqnum -ne 92) {
+        $nr = New-TB -Text 'Squadron roster research for this unit is still to come; your own record is on the board.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
+        $nr.Margin = '2,8,0,0'
+        [void]$script:Stage.Children.Add($nr)
+    }
+
+    # start again with a different squadron; the old career is archived
+    $nc = New-Object Windows.Controls.Border
+    $nc.Margin = '0,26,0,0'; $nc.Padding = '12,8'; $nc.CornerRadius = '3'; $nc.HorizontalAlignment = 'Left'
+    $nc.Background = B '#101B22'; $nc.BorderBrush = Res 'Rule'; $nc.BorderThickness = '1'; $nc.Cursor = 'Hand'
+    $nc.Child = (New-TB -Text 'START A NEW CAREER' -Family $CondFam -Size 12 -Colour '#9FB0B8' -Bold)
+    $nc.Add_MouseLeftButtonUp({
+        $ans = [System.Windows.MessageBox]::Show($Win,
+            "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
+            'New career', 'YesNo', 'Question')
+        if ($ans -eq 'Yes') {
+            try {
+                $arch = Join-Path $StateDir ('archive\' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
+                New-Item -ItemType Directory -Path $arch -Force | Out-Null
+                foreach ($f in @($PilotPath, $SessionsPath)) {
+                    if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
+                }
+            } catch { }
+            Show-SquadronSelect
+        }
+    })
+    [void]$script:Stage.Children.Add($nc)
 }
 
 function Update-CreateValid {
@@ -923,15 +1064,21 @@ function Update-CreateValid {
     $script:SubmitBtn.IsEnabled = $ok
 }
 function Invoke-Submit {
-    $rank = if ($script:RbPO.IsChecked) { 'Pilot Officer' } else { 'Sergeant' }
-    $serial = New-Serial   # period-correct Spitfire I/II serial
+    $isCmdr = ($script:RbCmd -and $script:RbCmd.IsChecked)
+    $rank = if ($isCmdr) { 'Squadron Leader' } elseif ($script:RbPO.IsChecked) { 'Pilot Officer' } else { 'Sergeant' }
+    $serial = New-Serial -Type ("$($script:SelSq.Type)")
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
         rank    = $rank
-        codes   = "QJ-$($script:LetBox.Text.Trim().ToUpper())"
+        codes   = "$($script:SelSq.Code)-$($script:LetBox.Text.Trim().ToUpper())"
         status  = 'On strength'
         serials = $serial
-        note    = 'Posted to No. 92 Squadron.'
+        note    = "Posted to No. $($script:SelSq.Num) Squadron at $($script:SelSq.Base)."
+        cmode   = if ($isCmdr) { 'commander' } else { 'pilot' }
+        sqn     = [int]$script:SelSq.Num
+        sqcode  = "$($script:SelSq.Code)"
+        actype  = "$($script:SelSq.Type)"
+        base    = "$($script:SelSq.Base)"
         historical = $false
         portrait = $script:SelPortrait
         created = (Get-Date).ToString('yyyy-MM-dd')
@@ -940,10 +1087,116 @@ function Invoke-Submit {
     Show-Roster -Pilot (Get-Pilot)
 }
 
+# =====================================================================
+#  Postings: choose your squadron on the plotting map
+# =====================================================================
+function Map-XY { param([double]$Lon,[double]$Lat,[double]$W,[double]$H)
+    ,@((($Lon + 5.6) / 7.7 * $W), ((53.8 - $Lat) / 4.3 * $H))
+}
+function Show-SquadronSelect {
+    $script:Stage.Children.Clear()
+    Set-Header $null
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Fighter Command' }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  POSTINGS" }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE PLOTTING TABLE' -Title 'Choose your squadron'))
+    $lead = New-TB -Text 'The board as the battle opens. Pick a squadron to see its aircraft and station, then report to it.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
+    $lead.Margin = '0,-14,0,16'
+    [void]$script:Stage.Children.Add($lead)
+
+    $W = 900.0; $H = 560.0
+    $mapWrap = New-Object Windows.Controls.Border
+    $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
+    $mapWrap.Background = B '#0E1A21'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
+    $cv = New-Object Windows.Controls.Canvas; $cv.Width = $W; $cv.Height = $H; $cv.ClipToBounds = $true
+    $mapWrap.Child = $cv
+
+    # stylised coastline, enough to read as the map on the ops-room table
+    $coast = @(
+        @(-4.7,53.2),@(-4.1,52.9),@(-4.1,52.55),@(-4.8,52.3),@(-5.3,51.9),@(-4.9,51.62),@(-4.3,51.56),
+        @(-3.9,51.62),@(-3.1,51.5),@(-2.6,51.6),@(-3.0,51.22),@(-3.6,51.22),@(-4.2,51.2),@(-4.6,50.93),
+        @(-5.7,50.05),@(-5.0,49.97),@(-4.2,50.3),@(-3.5,50.38),@(-3.0,50.7),@(-2.4,50.6),@(-1.9,50.6),
+        @(-1.3,50.75),@(-0.9,50.78),@(-0.2,50.76),@(0.3,50.77),@(0.98,50.92),@(1.4,51.1),@(1.45,51.38),
+        @(0.9,51.36),@(0.5,51.48),@(0.7,51.53),@(0.95,51.62),@(1.3,51.95),@(1.63,52.1),@(1.75,52.48),
+        @(1.65,52.75),@(1.3,52.96),@(0.5,52.97),@(0.2,52.82),@(0.05,52.9),@(0.35,53.06),@(0.15,53.4),@(0.0,53.63)
+    )
+    $pl = New-Object Windows.Shapes.Polyline
+    $pl.Stroke = B '#3F5D52'; $pl.StrokeThickness = 2
+    foreach ($pt in $coast) {
+        $xy = Map-XY $pt[0] $pt[1] $W $H
+        $pl.Points.Add((New-Object Windows.Point($xy[0], $xy[1])))
+    }
+    [void]$cv.Children.Add($pl)
+    # the French coast, faint
+    $fr = New-Object Windows.Shapes.Polyline
+    $fr.Stroke = B '#4A3A34'; $fr.StrokeThickness = 1.5
+    foreach ($pt in @(@(1.9,51.05),@(1.6,50.9),@(1.2,50.75),@(0.6,49.85),@(0.2,49.7),@(-0.8,49.6),@(-1.5,49.66),@(-1.9,49.72))) {
+        $xy = Map-XY $pt[0] $pt[1] $W $H
+        $fr.Points.Add((New-Object Windows.Point($xy[0], $xy[1])))
+    }
+    [void]$cv.Children.Add($fr)
+
+    $script:SelSq = $null
+    $script:SqDots = @()
+    $detail = New-TB -Text 'No squadron selected.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
+    $btn = New-Object Windows.Controls.Button
+    $btn.Content = 'REPORT TO THIS SQUADRON'; $btn.IsEnabled = $false; $btn.MinWidth = 240
+
+    foreach ($q in $Squadrons) {
+        $xy = Map-XY ([double]$q.Lon) ([double]$q.Lat) $W $H
+        $isSpit = ("$($q.Type)" -match 'Spitfire')
+        $dot = New-Object Windows.Shapes.Ellipse
+        $dot.Width = 13; $dot.Height = 13; $dot.StrokeThickness = 2
+        $dot.Stroke = B '#0E1A21'
+        $dot.Fill = if ($isSpit) { B '#C8973F' } else { B '#8FB56A' }
+        [Windows.Controls.Canvas]::SetLeft($dot, $xy[0]-6.5); [Windows.Controls.Canvas]::SetTop($dot, $xy[1]-6.5)
+        $dot.Cursor = 'Hand'; $dot.Tag = $q
+        $lbl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 12 -Colour '#C9D4CE' -Bold
+        [Windows.Controls.Canvas]::SetLeft($lbl, $xy[0] + [double]$q.Lx); [Windows.Controls.Canvas]::SetTop($lbl, $xy[1] + [double]$q.Ly)
+        $lbl.Cursor = 'Hand'; $lbl.Tag = $q
+        $sel = {
+            param($sender,$e)
+            $q2 = $sender.Tag
+            $script:SelSq = $q2
+            foreach ($d in $script:SqDots) {
+                $isS = ("$($d.Tag.Type)" -match 'Spitfire')
+                $d.Fill = if ($isS) { B '#C8973F' } else { B '#8FB56A' }
+                $d.Width = 13; $d.Height = 13
+            }
+            foreach ($d in $script:SqDots) {
+                if ($d.Tag.Num -eq $q2.Num) { $d.Fill = B '#E8394F'; $d.Width = 17; $d.Height = 17 }
+            }
+            $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $($q2.Grp) Group   (codes $($q2.Code)-)"
+            $script:SqButton.IsEnabled = $true
+        }
+        $dot.Add_MouseLeftButtonUp($sel)
+        $lbl.Add_MouseLeftButtonUp($sel)
+        $script:SqDots += $dot
+        [void]$cv.Children.Add($dot)
+        [void]$cv.Children.Add($lbl)
+    }
+    $script:SqDetail = $detail
+    $script:SqButton = $btn
+    [void]$script:Stage.Children.Add($mapWrap)
+
+    $legend = New-TB -Text "$([char]0x25CF) Spitfire squadrons (gold)    $([char]0x25CF) Hurricane squadrons (green)" -Family $CondFam -Size 12 -Colour '#6F828C'
+    $legend.Margin = '2,8,0,14'
+    [void]$script:Stage.Children.Add($legend)
+    $detail.Margin = '2,0,0,14'
+    [void]$script:Stage.Children.Add($detail)
+    $btn.Add_Click({ if ($script:SelSq) { Show-Create } })
+    $btnRow = New-Object Windows.Controls.StackPanel; $btnRow.Orientation='Horizontal'
+    [void]$btnRow.Children.Add($btn)
+    [void]$script:Stage.Children.Add($btnRow)
+}
+
 function Show-Create {
     $script:Stage.Children.Clear()
     $script:SelPortrait = $null; $script:SelBorder = $null
-    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title 'A new pilot for No. 92'))
+    if (-not $script:SelSq) { $script:SelSq = Get-SquadronDef 92 }
+    Set-Header $null
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $($script:SelSq.Num) Squadron" }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  $($script:SelSq.Type.ToUpper())S AT $($script:SelSq.Base.ToUpper())" }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
     $lead = New-TB -Text 'Summer 1940. Give your name, take a letter, and pick your photograph from the wall.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
     [void]$script:Stage.Children.Add($lead)
@@ -961,7 +1214,7 @@ function Show-Create {
     $letCol = New-Object Windows.Controls.StackPanel; $letCol.Margin = '0,0,36,0'
     [void]$letCol.Children.Add((New-TB -Text 'LETTER' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
     $letWrap = New-Object Windows.Controls.StackPanel; $letWrap.Orientation = 'Horizontal'; $letWrap.Margin = '0,7,0,0'
-    $qj = New-TB -Text 'QJ-' -Family 'Georgia, serif' -Size 18 -Colour '#9FB0B8'; $qj.VerticalAlignment = 'Bottom'; $qj.Margin = '0,0,4,6'
+    $qj = New-TB -Text "$($script:SelSq.Code)-" -Family 'Georgia, serif' -Size 18 -Colour '#9FB0B8'; $qj.VerticalAlignment = 'Bottom'; $qj.Margin = '0,0,4,6'
     [void]$letWrap.Children.Add($qj)
     $script:LetBox = New-Object Windows.Controls.TextBox
     $script:LetBox.Width = 52; $script:LetBox.MaxLength = 1; $script:LetBox.TextAlignment = 'Center'; $script:LetBox.CharacterCasing = 'Upper'
@@ -979,6 +1232,17 @@ function Show-Create {
     [void]$rankWrap.Children.Add($script:RbSgt); [void]$rankWrap.Children.Add($script:RbPO)
     [void]$rankCol.Children.Add($rankWrap)
     [void]$row.Children.Add($rankCol)
+
+    $modeCol = New-Object Windows.Controls.StackPanel; $modeCol.Margin = '36,0,0,0'
+    [void]$modeCol.Children.Add((New-TB -Text 'CAREER' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $modeWrap = New-Object Windows.Controls.StackPanel; $modeWrap.Orientation = 'Horizontal'; $modeWrap.Margin = '0,12,0,0'
+    $script:RbFly = New-Object Windows.Controls.RadioButton
+    $script:RbFly.Content = 'Squadron pilot'; $script:RbFly.IsChecked = $true; $script:RbFly.Margin = '0,0,20,0'; $script:RbFly.GroupName = 'mode'
+    $script:RbCmd = New-Object Windows.Controls.RadioButton
+    $script:RbCmd.Content = 'Squadron commander'; $script:RbCmd.GroupName = 'mode'
+    [void]$modeWrap.Children.Add($script:RbFly); [void]$modeWrap.Children.Add($script:RbCmd)
+    [void]$modeCol.Children.Add($modeWrap)
+    [void]$row.Children.Add($modeCol)
     [void]$script:Stage.Children.Add($row)
 
     [void]$script:Stage.Children.Add((New-TB -Text 'YOUR PHOTOGRAPH' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
@@ -1018,5 +1282,5 @@ function Show-Create {
 # =====================================================================
 Finalize-Flight
 $existing = Get-Pilot
-if ($existing) { Show-Roster -Pilot $existing } else { Show-Create }
+if ($existing) { Show-Roster -Pilot $existing } else { Show-SquadronSelect }
 [void]$Win.ShowDialog()
