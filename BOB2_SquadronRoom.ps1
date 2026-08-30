@@ -856,6 +856,11 @@ function New-Nav {
                 foreach ($f in @($PilotPath, $SessionsPath)) {
                     if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
                 }
+                # a flight marker or save snapshot from the OLD career must not
+                # become the new pilot's phantom first sortie
+                foreach ($f in @($FlightOpen, (Join-Path $StateDir 'before.bsr'))) {
+                    if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
+                }
             } catch { }
             Show-SquadronSelect
         }
