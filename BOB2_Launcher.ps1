@@ -653,24 +653,6 @@ $xaml = @'
               </StackPanel>
             </Button>
 
-            <Button x:Name="BtnTraining" Style="{StaticResource Nav}">
-              <StackPanel>
-              <StackPanel Orientation="Horizontal">
-                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
-                  <Canvas Width="24" Height="24">
-                    <Path x:Name="IcoTrainingPath" Data="{StaticResource IcoCompass}" Fill="{x:Null}" Stroke="#FF8E8880"
-                          StrokeThickness="1.6" StrokeStartLineCap="Round"
-                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
-                  </Canvas>
-                </Viewbox>
-                <StackPanel VerticalAlignment="Center">
-                <TextBlock x:Name="TitleTraining" Text="FLIGHT TRAINING" Style="{StaticResource NavTitle}"/>
-                <TextBlock x:Name="SubTraining" Text="fly the Tiger Moth: six 1940 training exercises" Style="{StaticResource NavSub}"/>
-                </StackPanel>
-              </StackPanel>
-              </StackPanel>
-            </Button>
-
             <Button x:Name="BtnSquadron" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
@@ -684,6 +666,24 @@ $xaml = @'
                 <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="SQUADRON ROOM" Style="{StaticResource NavTitle}"/>
                 <TextBlock x:Name="SubSquadron" Text="your pilot, the roster and the day's readiness" Style="{StaticResource NavSub}"/>
+                </StackPanel>
+              </StackPanel>
+              </StackPanel>
+            </Button>
+
+            <Button x:Name="BtnTraining" Style="{StaticResource Nav}">
+              <StackPanel>
+              <StackPanel Orientation="Horizontal">
+                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
+                  <Canvas Width="24" Height="24">
+                    <Path x:Name="IcoTrainingPath" Data="{StaticResource IcoCompass}" Fill="{x:Null}" Stroke="#FF8E8880"
+                          StrokeThickness="1.6" StrokeStartLineCap="Round"
+                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                  </Canvas>
+                </Viewbox>
+                <StackPanel VerticalAlignment="Center">
+                <TextBlock x:Name="TitleTraining" Text="FLIGHT TRAINING" Style="{StaticResource NavTitle}"/>
+                <TextBlock x:Name="SubTraining" Text="fly the Tiger Moth: six 1940 training exercises" Style="{StaticResource NavSub}"/>
                 </StackPanel>
               </StackPanel>
               </StackPanel>
