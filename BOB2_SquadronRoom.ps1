@@ -1122,7 +1122,7 @@ function Show-SquadronSelect {
     $hint2.Margin = '0,0,0,12'
     [void]$script:Stage.Children.Add($hint2)
 
-    $W = 1080.0; $H = [math]::Round($W * 805.0 / 1600.0)
+    $W = 1080.0; $H = [math]::Round($W * 800.0 / 1600.0)
     $mapWrap = New-Object Windows.Controls.Border
     $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
     $mapWrap.Background = B '#0B141B'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
@@ -1160,7 +1160,7 @@ function Show-SquadronSelect {
         param($q2)
         $script:SelSq = $q2
         foreach ($d in $script:SqDots) {
-            $d.Stroke = if ("$($d.Tag.Ic)" -eq 'C') { B '#5FD0E8' } else { B '#F5A83C' }
+            $d.Stroke = if ("$($d.Tag.Type)" -match 'Spitfire') { B '#5FD0E8' } else { B '#F5A83C' }
             $d.StrokeThickness = 2.5; $d.Width = 30; $d.Height = 30
             [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 15); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 15)
         }
@@ -1185,14 +1185,15 @@ function Show-SquadronSelect {
         if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
         $ring = New-Object Windows.Shapes.Ellipse
         $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 2.5
-        $ring.Stroke = if ("$($q.Ic)" -eq 'C') { B '#5FD0E8' } else { B '#F5A83C' }
+        $isSpit = ("$($q.Type)" -match 'Spitfire')
+        $ring.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
         $ring.Fill = B '#01000000'
         $ring.Cursor = 'Hand'
         $qt = @{}; foreach ($k in $q.Keys) { $qt[$k] = $q[$k] }
         $qt.CX = $cx; $qt.CY = $cy
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
         # click selects; a drag repositions the ring and is remembered
-        $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 11.5 -Colour '#D8D2BC' -Bold
+        $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 11.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
         $nl.IsHitTestVisible = $false
         [Windows.Controls.Canvas]::SetLeft($nl, $cx - 10); [Windows.Controls.Canvas]::SetTop($nl, $cy + 17)
         $qt.Label = $nl; $qt.MapW = $W; $qt.MapH = $H
