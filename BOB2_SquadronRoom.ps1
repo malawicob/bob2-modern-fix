@@ -1152,6 +1152,36 @@ function Show-SquadronSelect {
     Add-Land $cv $GB '#2F3B31' '#8FA08A' 1.5 $W $H
     Add-Land $cv $WIGHT '#2F3B31' '#8FA08A' 1.2 $W $H
 
+    # Fighter Command group sectors, as the table drew them: 10 Group west,
+    # 11 Group the south-east, 12 Group above. Dashed boundaries, stylised.
+    function Add-Boundary {
+        param($Canvas, $Pts, [double]$W2, [double]$H2)
+        $bl = New-Object Windows.Shapes.Polyline
+        $bl.Stroke = B '#7E8F99'; $bl.StrokeThickness = 1.6
+        $bl.StrokeDashArray = New-Object Windows.Media.DoubleCollection
+        [void]$bl.StrokeDashArray.Add(5); [void]$bl.StrokeDashArray.Add(4)
+        foreach ($pt in $Pts) {
+            $x = ($pt[0] + 5.6) / 7.7 * $W2
+            $y = (53.8 - $pt[1]) / 4.3 * $H2
+            $bl.Points.Add((New-Object Windows.Point($x, $y)))
+        }
+        [void]$Canvas.Children.Add($bl)
+    }
+    # 10/11 boundary: up from the coast between Tangmere and Middle Wallop
+    Add-Boundary $cv @(@(-1.15,50.45),@(-1.12,50.95),@(-1.10,51.45),@(-1.10,52.02)) $W $H
+    # 11/12 boundary: across from that line to the coast north of Debden
+    Add-Boundary $cv @(@(-1.10,52.02),@(-0.20,52.03),@(0.60,52.04),@(1.45,52.05)) $W $H
+    foreach ($g in @(
+        @{ T='NO. 10 GROUP'; Lon=-3.30; Lat=50.35 },
+        @{ T='NO. 11 GROUP'; Lon=0.45;  Lat=50.52 },
+        @{ T='NO. 12 GROUP'; Lon=-1.05; Lat=53.35 })) {
+        $gl = New-TB -Text $g.T -Family $CondFam -Size 13 -Colour '#7E8F99' -Bold
+        $gl.Opacity = 0.85
+        [Windows.Controls.Canvas]::SetLeft($gl, ($g.Lon + 5.6) / 7.7 * $W)
+        [Windows.Controls.Canvas]::SetTop($gl, (53.8 - $g.Lat) / 4.3 * $H)
+        [void]$cv.Children.Add($gl)
+    }
+
     $script:SelSq = $null
     $script:SqDots = @()
     $detail = New-TB -Text 'No squadron selected.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
@@ -1168,7 +1198,8 @@ function Show-SquadronSelect {
         $dot.Fill = if ($isSpit) { B '#6FA8BF' } else { B '#C9A15E' }
         [Windows.Controls.Canvas]::SetLeft($dot, $x0-6); [Windows.Controls.Canvas]::SetTop($dot, $y0-6)
         $dot.Cursor = 'Hand'; $dot.Tag = $q
-        $lbl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 12 -Colour '#D8D2BC' -Bold
+        $lblCol = if ($isSpit) { '#9CC7DB' } else { '#DCBd85' }
+        $lbl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 12 -Colour $lblCol -Bold
         [Windows.Controls.Canvas]::SetLeft($lbl, $x0 + [double]$q.Lx); [Windows.Controls.Canvas]::SetTop($lbl, $y0 + [double]$q.Ly)
         $lbl.Cursor = 'Hand'; $lbl.Tag = $q
         $sel = {
@@ -1196,7 +1227,7 @@ function Show-SquadronSelect {
     $script:SqButton = $btn
     [void]$script:Stage.Children.Add($mapWrap)
 
-    $legend = New-TB -Text "$([char]0x25CF) Spitfire squadrons (blue)    $([char]0x25CF) Hurricane squadrons (tan)" -Family $CondFam -Size 12 -Colour '#8A9689'
+    $legend = New-TB -Text "BLUE squadrons fly the Spitfire I    $([char]0x2022)    TAN squadrons fly the Hurricane I    $([char]0x2022)    dashed lines are the Group boundaries" -Family $CondFam -Size 12 -Colour '#8A9689'
     $legend.Margin = '2,8,0,14'
     [void]$script:Stage.Children.Add($legend)
     $detail.Margin = '2,0,0,14'
