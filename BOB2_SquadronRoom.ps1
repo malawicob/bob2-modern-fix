@@ -984,6 +984,20 @@ function Show-Roster {
     }
     [void]$hero.Children.Add($d)
     [void]$script:Stage.Children.Add($hero)
+
+    # first-timer's orders: until a sortie is in the book, say what comes next
+    if (@(Get-Sessions).Count -eq 0) {
+        $ord = New-Object Windows.Controls.Border
+        $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
+        $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
+        $os2 = New-Object Windows.Controls.StackPanel
+        [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
+        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign and fly the day. When you come back here, your first sortie will be in the logbook, with its outcome, and the board will have moved with the war." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        $ot.Margin = '0,6,0,0'
+        [void]$os2.Children.Add($ot)
+        $ord.Child = $os2
+        [void]$script:Stage.Children.Add($ord)
+    }
     $Pilot = Ensure-Serial -Pilot $Pilot
     $ac = New-Aircraft -Pilot $Pilot
     if ($ac) {
