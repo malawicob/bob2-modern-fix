@@ -454,9 +454,9 @@ function New-Frame {
 # per-type profile art and marking defaults (roundel positions measured)
 function Get-AircraftSpec { param([string]$Type)
     if ($Type -match 'Hurricane') {
-        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.375; IndX=0.655; SerX=0.765; FuseY=0.575; SerY=0.645; CodeSize=78.0 }
+        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.375; IndX=0.655; SerX=0.755; FuseY=0.575; SerY=0.615; CodeSize=78.0; SerSize=46.0 }
     }
-    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.415; IndX=0.685; SerX=0.775; FuseY=0.51; SerY=0.565; CodeSize=84.0 }
+    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.415; IndX=0.685; SerX=0.775; FuseY=0.51; SerY=0.565; CodeSize=84.0; SerSize=32.0 }
 }
 $AircraftImg  = Join-Path (Join-Path $ModDir 'aircraft') 'spitfire.png'
 $AcW          = 760.0            # on-screen width; height follows the image
@@ -582,6 +582,7 @@ function New-Aircraft {
     $AcRatio = [double]$spec.Ratio
     $SqX = [double]$spec.SqX; $IndX = [double]$spec.IndX; $SerX = [double]$spec.SerX
     $FuseY = [double]$spec.FuseY; $SerY = [double]$spec.SerY; $CodeSize = [double]$spec.CodeSize
+    $SerialSize = [double]$spec.SerSize
     if (-not (Test-Path $AircraftImg)) { return $null }
     $acH = $AcW * $AcRatio
     $script:AcW = $AcW; $script:AcHpx = $acH
