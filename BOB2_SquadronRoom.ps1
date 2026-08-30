@@ -32,28 +32,28 @@ $FlightOpen   = Join-Path $StateDir 'flight.open'
 
 # --- squadrons a new pilot may join (bases as the campaign opens) -------
 $Squadrons = @(
-    @{ Num=19;  Code='QV'; Type='Spitfire I';  Base='RAF Duxford';       Lon=0.13;  Lat=52.09; Grp=12; Lx=8;   Ly=-14 }
-    @{ Num=54;  Code='KL'; Type='Spitfire I';  Base='RAF Rochford';      Lon=0.70;  Lat=51.57; Grp=11; Lx=8;   Ly=-4 }
-    @{ Num=64;  Code='SH'; Type='Spitfire I';  Base='RAF Kenley';        Lon=-0.10; Lat=51.30; Grp=11; Lx=-52; Ly=6 }
-    @{ Num=65;  Code='YT'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Lx=8;   Ly=-16 }
-    @{ Num=74;  Code='ZP'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Lx=8;   Ly=2 }
-    @{ Num=92;  Code='QJ'; Type='Spitfire I';  Base='RAF Pembrey';       Lon=-4.32; Lat=51.71; Grp=10; Lx=8;   Ly=-14 }
-    @{ Num=152; Code='SN'; Type='Spitfire I';  Base='RAF Warmwell';      Lon=-2.32; Lat=50.70; Grp=10; Lx=8;   Ly=4 }
-    @{ Num=609; Code='PR'; Type='Spitfire I';  Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Lx=8;   Ly=-16 }
-    @{ Num=610; Code='DW'; Type='Spitfire I';  Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Lx=8;   Ly=2 }
-    @{ Num=611; Code='FY'; Type='Spitfire I';  Base='RAF Digby';         Lon=-0.43; Lat=53.09; Grp=12; Lx=8;   Ly=-14 }
-    @{ Num=1;   Code='JX'; Type='Hurricane I'; Base='RAF Northolt';      Lon=-0.42; Lat=51.55; Grp=11; Lx=-46; Ly=-16 }
-    @{ Num=17;  Code='YB'; Type='Hurricane I'; Base='RAF Debden';        Lon=0.26;  Lat=51.99; Grp=11; Lx=8;   Ly=-4 }
-    @{ Num=32;  Code='GZ'; Type='Hurricane I'; Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Lx=8;   Ly=16 }
-    @{ Num=43;  Code='FT'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Lx=-46; Ly=2 }
-    @{ Num=56;  Code='US'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Lx=-52; Ly=-14 }
-    @{ Num=111; Code='JU'; Type='Hurricane I'; Base='RAF Croydon';       Lon=-0.12; Lat=51.36; Grp=11; Lx=-58; Ly=-16 }
-    @{ Num=151; Code='DZ'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Lx=8;   Ly=-2 }
-    @{ Num=213; Code='AK'; Type='Hurricane I'; Base='RAF Exeter';        Lon=-3.41; Lat=50.73; Grp=10; Lx=8;   Ly=-14 }
-    @{ Num=238; Code='VK'; Type='Hurricane I'; Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Lx=8;   Ly=2 }
-    @{ Num=242; Code='LE'; Type='Hurricane I'; Base='RAF Coltishall';    Lon=1.36;  Lat=52.75; Grp=12; Lx=8;   Ly=-4 }
-    @{ Num=501; Code='SD'; Type='Hurricane I'; Base='RAF Gravesend';     Lon=0.37;  Lat=51.43; Grp=11; Lx=8;   Ly=8 }
-    @{ Num=601; Code='UF'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Lx=-46; Ly=18 }
+    @{ Num=19;  Code='QV'; Type='Spitfire I';  Base='RAF Duxford';       Lon=0.13;  Lat=52.09; Grp=12; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=54;  Code='KL'; Type='Spitfire I';  Base='RAF Rochford';      Lon=0.70;  Lat=51.57; Grp=11; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=64;  Code='SH'; Type='Spitfire I';  Base='RAF Kenley';        Lon=-0.10; Lat=51.30; Grp=11; Dx=0; Dy=0; Lx=-40; Ly=12 }
+    @{ Num=65;  Code='YT'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=-5; Lx=8; Ly=-18 }
+    @{ Num=74;  Code='ZP'; Type='Spitfire I';  Base='RAF Hornchurch';    Lon=0.21;  Lat=51.53; Grp=11; Dx=0; Dy=5; Lx=-16; Ly=12 }
+    @{ Num=92;  Code='QJ'; Type='Spitfire I';  Base='RAF Pembrey';       Lon=-4.32; Lat=51.71; Grp=10; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=152; Code='SN'; Type='Spitfire I';  Base='RAF Warmwell';      Lon=-2.32; Lat=50.70; Grp=10; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=609; Code='PR'; Type='Spitfire I';  Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=-5; Lx=8; Ly=-18 }
+    @{ Num=610; Code='DW'; Type='Spitfire I';  Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=-5; Lx=-38; Ly=-18 }
+    @{ Num=611; Code='FY'; Type='Spitfire I';  Base='RAF Digby';         Lon=-0.43; Lat=53.09; Grp=12; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=1;   Code='JX'; Type='Hurricane I'; Base='RAF Northolt';      Lon=-0.42; Lat=51.55; Grp=11; Dx=0; Dy=0; Lx=-40; Ly=-8 }
+    @{ Num=17;  Code='YB'; Type='Hurricane I'; Base='RAF Debden';        Lon=0.26;  Lat=51.99; Grp=11; Dx=0; Dy=0; Lx=10; Ly=-8 }
+    @{ Num=32;  Code='GZ'; Type='Hurricane I'; Base='RAF Biggin Hill';   Lon=0.03;  Lat=51.33; Grp=11; Dx=0; Dy=5; Lx=-14; Ly=10 }
+    @{ Num=43;  Code='FT'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=-5; Lx=8; Ly=-18 }
+    @{ Num=56;  Code='US'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=-5; Lx=8; Ly=-18 }
+    @{ Num=111; Code='JU'; Type='Hurricane I'; Base='RAF Croydon';       Lon=-0.12; Lat=51.36; Grp=11; Dx=0; Dy=0; Lx=-42; Ly=0 }
+    @{ Num=151; Code='DZ'; Type='Hurricane I'; Base='RAF North Weald';   Lon=0.10;  Lat=51.72; Grp=11; Dx=0; Dy=5; Lx=-38; Ly=4 }
+    @{ Num=213; Code='AK'; Type='Hurricane I'; Base='RAF Exeter';        Lon=-3.41; Lat=50.73; Grp=10; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=238; Code='VK'; Type='Hurricane I'; Base='RAF Middle Wallop'; Lon=-1.57; Lat=51.14; Grp=10; Dx=0; Dy=5; Lx=-38; Ly=8 }
+    @{ Num=242; Code='LE'; Type='Hurricane I'; Base='RAF Coltishall';    Lon=1.36;  Lat=52.75; Grp=12; Dx=0; Dy=0; Lx=8; Ly=-18 }
+    @{ Num=501; Code='SD'; Type='Hurricane I'; Base='RAF Gravesend';     Lon=0.37;  Lat=51.43; Grp=11; Dx=0; Dy=0; Lx=6; Ly=8 }
+    @{ Num=601; Code='UF'; Type='Hurricane I'; Base='RAF Tangmere';      Lon=-0.71; Lat=50.85; Grp=11; Dx=0; Dy=5; Lx=-38; Ly=8 }
 )
 function Get-SquadronDef { param([int]$Num)
     foreach ($q in $Squadrons) { if ($q.Num -eq $Num) { return $q } }
@@ -1106,34 +1106,51 @@ function Show-SquadronSelect {
     $W = 900.0; $H = 560.0
     $mapWrap = New-Object Windows.Controls.Border
     $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
-    $mapWrap.Background = B '#0E1A21'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
+    $mapWrap.Background = B '#1A2930'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
     $cv = New-Object Windows.Controls.Canvas; $cv.Width = $W; $cv.Height = $H; $cv.ClipToBounds = $true
     $mapWrap.Child = $cv
 
-    # stylised coastline, enough to read as the map on the ops-room table
-    $coast = @(
-        @(-4.7,53.2),@(-4.1,52.9),@(-4.1,52.55),@(-4.8,52.3),@(-5.3,51.9),@(-4.9,51.62),@(-4.3,51.56),
-        @(-3.9,51.62),@(-3.1,51.5),@(-2.6,51.6),@(-3.0,51.22),@(-3.6,51.22),@(-4.2,51.2),@(-4.6,50.93),
-        @(-5.7,50.05),@(-5.0,49.97),@(-4.2,50.3),@(-3.5,50.38),@(-3.0,50.7),@(-2.4,50.6),@(-1.9,50.6),
-        @(-1.3,50.75),@(-0.9,50.78),@(-0.2,50.76),@(0.3,50.77),@(0.98,50.92),@(1.4,51.1),@(1.45,51.38),
-        @(0.9,51.36),@(0.5,51.48),@(0.7,51.53),@(0.95,51.62),@(1.3,51.95),@(1.63,52.1),@(1.75,52.48),
-        @(1.65,52.75),@(1.3,52.96),@(0.5,52.97),@(0.2,52.82),@(0.05,52.9),@(0.35,53.06),@(0.15,53.4),@(0.0,53.63)
+    # graticule: one line per degree, under everything
+    for ($lon = -5; $lon -le 2; $lon++) {
+        $x = ($lon + 5.6) / 7.7 * $W
+        $ln = New-Object Windows.Shapes.Line
+        $ln.X1 = $x; $ln.X2 = $x; $ln.Y1 = 0; $ln.Y2 = $H
+        $ln.Stroke = B '#223440'; $ln.StrokeThickness = 1
+        [void]$cv.Children.Add($ln)
+    }
+    for ($lat = 50; $lat -le 53; $lat++) {
+        $y = (53.8 - $lat) / 4.3 * $H
+        $ln = New-Object Windows.Shapes.Line
+        $ln.X1 = 0; $ln.X2 = $W; $ln.Y1 = $y; $ln.Y2 = $y
+        $ln.Stroke = B '#223440'; $ln.StrokeThickness = 1
+        [void]$cv.Children.Add($ln)
+    }
+
+    function Add-Land {
+        param($Canvas, $Pts, [string]$Fill, [string]$Stroke, [double]$Thick, [double]$W2, [double]$H2)
+        $pg = New-Object Windows.Shapes.Polygon
+        $pg.Fill = B $Fill
+        if ($Stroke) { $pg.Stroke = B $Stroke; $pg.StrokeThickness = $Thick; $pg.StrokeLineJoin = 'Round' }
+        foreach ($pt in $Pts) {
+            $x = ($pt[0] + 5.6) / 7.7 * $W2
+            $y = (53.8 - $pt[1]) / 4.3 * $H2
+            $pg.Points.Add((New-Object Windows.Point($x, $y)))
+        }
+        [void]$Canvas.Children.Add($pg)
+    }
+
+    $GB = @(
+@(-5.60,50.07),@(-5.53,50.05),@(-5.43,50.10),@(-5.28,50.06),@(-5.20,49.96),@(-5.09,50.03),@(-5.02,50.14),@(-4.78,50.23),@(-4.64,50.32),@(-4.20,50.33),@(-4.10,50.37),@(-3.79,50.22),@(-3.64,50.22),@(-3.48,50.41),@(-3.56,50.47),@(-3.46,50.56),@(-3.36,50.62),@(-3.17,50.68),@(-2.95,50.72),@(-2.55,50.63),@(-2.46,50.52),@(-2.43,50.61),@(-2.05,50.58),@(-1.93,50.60),@(-1.99,50.69),@(-1.87,50.72),@(-1.53,50.71),@(-1.47,50.79),@(-1.40,50.90),@(-1.30,50.83),@(-1.09,50.79),@(-0.79,50.72),@(-0.55,50.80),@(-0.10,50.81),@(0.10,50.77),@(0.25,50.73),@(0.42,50.83),@(0.57,50.85),@(0.98,50.91),@(1.10,51.02),@(1.19,51.08),@(1.32,51.13),@(1.40,51.22),@(1.45,51.38),@(1.35,51.39),@(1.20,51.38),@(1.02,51.36),@(0.90,51.42),@(0.45,51.45),@(0.36,51.44),@(0.55,51.50),@(0.71,51.53),@(0.92,51.61),@(0.94,51.71),@(0.90,51.78),@(1.15,51.79),@(1.29,51.88),@(1.33,51.96),@(1.44,52.02),@(1.58,52.08),@(1.68,52.33),@(1.76,52.48),@(1.73,52.61),@(1.69,52.72),@(1.53,52.83),@(1.30,52.93),@(1.08,52.96),@(0.85,52.97),@(0.66,52.97),@(0.49,52.95),@(0.44,52.85),@(0.40,52.76),@(0.28,52.78),@(0.16,52.80),@(0.06,52.89),@(0.13,52.99),@(0.33,53.09),@(0.34,53.15),@(0.25,53.32),@(0.14,53.43),@(0.03,53.52),@(-0.05,53.56),@(-0.23,53.65),@(-0.45,53.70),@(-0.30,53.73),@(-0.08,53.66),@(0.11,53.58),@(0.08,53.65),@(0.03,53.72),@(-0.04,53.80),@(-3.05,53.80),@(-2.90,53.71),@(-3.00,53.64),@(-3.08,53.55),@(-3.02,53.45),@(-2.88,53.36),@(-3.10,53.41),@(-3.16,53.29),@(-3.32,53.35),@(-3.60,53.32),@(-3.87,53.34),@(-4.10,53.25),@(-4.30,53.12),@(-4.55,53.00),@(-4.75,52.80),@(-4.40,52.89),@(-4.13,52.92),@(-4.06,52.72),@(-4.04,52.55),@(-4.06,52.41),@(-4.26,52.24),@(-4.51,52.14),@(-4.68,52.07),@(-4.98,52.02),@(-5.31,51.90),@(-5.11,51.76),@(-5.24,51.73),@(-5.19,51.68),@(-4.95,51.71),@(-4.93,51.60),@(-4.70,51.67),@(-4.40,51.74),@(-4.33,51.56),@(-3.98,51.57),@(-3.70,51.47),@(-3.27,51.39),@(-3.13,51.44),@(-2.95,51.53),@(-2.48,51.73),@(-2.60,51.62),@(-2.70,51.50),@(-2.78,51.47),@(-2.99,51.33),@(-3.00,51.23),@(-3.48,51.22),@(-3.79,51.24),@(-4.12,51.21),@(-4.22,51.19),@(-4.23,51.08),@(-4.53,51.02),@(-4.55,50.83),@(-4.72,50.67),@(-4.94,50.55),@(-5.08,50.42),@(-5.22,50.33),@(-5.48,50.21),@(-5.60,50.15),@(-5.60,50.07)
     )
-    $pl = New-Object Windows.Shapes.Polyline
-    $pl.Stroke = B '#3F5D52'; $pl.StrokeThickness = 2
-    foreach ($pt in $coast) {
-        $xy = Map-XY $pt[0] $pt[1] $W $H
-        $pl.Points.Add((New-Object Windows.Point($xy[0], $xy[1])))
-    }
-    [void]$cv.Children.Add($pl)
-    # the French coast, faint
-    $fr = New-Object Windows.Shapes.Polyline
-    $fr.Stroke = B '#4A3A34'; $fr.StrokeThickness = 1.5
-    foreach ($pt in @(@(1.9,51.05),@(1.6,50.9),@(1.2,50.75),@(0.6,49.85),@(0.2,49.7),@(-0.8,49.6),@(-1.5,49.66),@(-1.9,49.72))) {
-        $xy = Map-XY $pt[0] $pt[1] $W $H
-        $fr.Points.Add((New-Object Windows.Point($xy[0], $xy[1])))
-    }
-    [void]$cv.Children.Add($fr)
+    $WIGHT = @(
+@(-1.57,50.66),@(-1.45,50.71),@(-1.30,50.77),@(-1.14,50.74),@(-1.07,50.68),@(-1.19,50.61),@(-1.31,50.58),@(-1.51,50.62),@(-1.57,50.66)
+    )
+    $FRANCE = @(
+@(2.10,51.01),@(1.85,50.97),@(1.71,50.93),@(1.58,50.88),@(1.59,50.80),@(1.60,50.73),@(1.57,50.63),@(1.56,50.53),@(1.55,50.40),@(1.53,50.27),@(1.62,50.19),@(1.51,50.21),@(1.45,50.11),@(1.38,50.06),@(1.20,49.98),@(1.08,49.93),@(0.90,49.90),@(0.71,49.87),@(0.55,49.83),@(0.37,49.77),@(0.19,49.71),@(0.13,49.62),@(0.08,49.55),@(0.06,49.50),@(-1.22,49.50),@(-1.24,49.59),@(-1.26,49.68),@(-1.36,49.71),@(-1.47,49.70),@(-1.62,49.66),@(-1.80,49.69),@(-1.94,49.72),@(-1.92,49.63),@(-1.88,49.56),@(-1.86,49.50),@(2.10,49.50),@(2.10,51.01)
+    )
+    Add-Land $cv $FRANCE '#382E2E' '#5A4A44' 1.2 $W $H
+    Add-Land $cv $GB '#2F3B31' '#8FA08A' 1.5 $W $H
+    Add-Land $cv $WIGHT '#2F3B31' '#8FA08A' 1.2 $W $H
 
     $script:SelSq = $null
     $script:SqDots = @()
@@ -1142,16 +1159,17 @@ function Show-SquadronSelect {
     $btn.Content = 'REPORT TO THIS SQUADRON'; $btn.IsEnabled = $false; $btn.MinWidth = 240
 
     foreach ($q in $Squadrons) {
-        $xy = Map-XY ([double]$q.Lon) ([double]$q.Lat) $W $H
+        $x0 = ([double]$q.Lon + 5.6) / 7.7 * $W + [double]$q.Dx
+        $y0 = (53.8 - [double]$q.Lat) / 4.3 * $H + [double]$q.Dy
         $isSpit = ("$($q.Type)" -match 'Spitfire')
         $dot = New-Object Windows.Shapes.Ellipse
-        $dot.Width = 13; $dot.Height = 13; $dot.StrokeThickness = 2
-        $dot.Stroke = B '#0E1A21'
-        $dot.Fill = if ($isSpit) { B '#C8973F' } else { B '#8FB56A' }
-        [Windows.Controls.Canvas]::SetLeft($dot, $xy[0]-6.5); [Windows.Controls.Canvas]::SetTop($dot, $xy[1]-6.5)
+        $dot.Width = 12; $dot.Height = 12; $dot.StrokeThickness = 2
+        $dot.Stroke = B '#0E1418'
+        $dot.Fill = if ($isSpit) { B '#6FA8BF' } else { B '#C9A15E' }
+        [Windows.Controls.Canvas]::SetLeft($dot, $x0-6); [Windows.Controls.Canvas]::SetTop($dot, $y0-6)
         $dot.Cursor = 'Hand'; $dot.Tag = $q
-        $lbl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 12 -Colour '#C9D4CE' -Bold
-        [Windows.Controls.Canvas]::SetLeft($lbl, $xy[0] + [double]$q.Lx); [Windows.Controls.Canvas]::SetTop($lbl, $xy[1] + [double]$q.Ly)
+        $lbl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 12 -Colour '#D8D2BC' -Bold
+        [Windows.Controls.Canvas]::SetLeft($lbl, $x0 + [double]$q.Lx); [Windows.Controls.Canvas]::SetTop($lbl, $y0 + [double]$q.Ly)
         $lbl.Cursor = 'Hand'; $lbl.Tag = $q
         $sel = {
             param($sender,$e)
@@ -1159,11 +1177,11 @@ function Show-SquadronSelect {
             $script:SelSq = $q2
             foreach ($d in $script:SqDots) {
                 $isS = ("$($d.Tag.Type)" -match 'Spitfire')
-                $d.Fill = if ($isS) { B '#C8973F' } else { B '#8FB56A' }
-                $d.Width = 13; $d.Height = 13
+                $d.Fill = if ($isS) { B '#6FA8BF' } else { B '#C9A15E' }
+                $d.Width = 12; $d.Height = 12
             }
             foreach ($d in $script:SqDots) {
-                if ($d.Tag.Num -eq $q2.Num) { $d.Fill = B '#E8394F'; $d.Width = 17; $d.Height = 17 }
+                if ($d.Tag.Num -eq $q2.Num) { $d.Fill = B '#E3C568'; $d.Width = 16; $d.Height = 16 }
             }
             $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $($q2.Grp) Group   (codes $($q2.Code)-)"
             $script:SqButton.IsEnabled = $true
@@ -1178,7 +1196,7 @@ function Show-SquadronSelect {
     $script:SqButton = $btn
     [void]$script:Stage.Children.Add($mapWrap)
 
-    $legend = New-TB -Text "$([char]0x25CF) Spitfire squadrons (gold)    $([char]0x25CF) Hurricane squadrons (green)" -Family $CondFam -Size 12 -Colour '#6F828C'
+    $legend = New-TB -Text "$([char]0x25CF) Spitfire squadrons (blue)    $([char]0x25CF) Hurricane squadrons (tan)" -Family $CondFam -Size 12 -Colour '#8A9689'
     $legend.Margin = '2,8,0,14'
     [void]$script:Stage.Children.Add($legend)
     $detail.Margin = '2,0,0,14'
