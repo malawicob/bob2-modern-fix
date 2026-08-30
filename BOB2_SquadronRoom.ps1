@@ -454,9 +454,9 @@ function New-Frame {
 # per-type profile art and marking defaults (roundel positions measured)
 function Get-AircraftSpec { param([string]$Type)
     if ($Type -match 'Hurricane') {
-        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.375; IndX=0.655; SerX=0.755; FuseY=0.575; SerY=0.615; CodeSize=78.0; SerSize=46.0 }
+        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.4118; SqY=0.3474; IndX=0.6313; IndY=0.3532; SerX=0.7182; SerTy=0.4750; CodeSize=78.0; SerSize=46.0 }
     }
-    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.415; IndX=0.685; SerX=0.775; FuseY=0.51; SerY=0.565; CodeSize=84.0; SerSize=32.0 }
+    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.4194; SqY=0.3461; IndX=0.6727; IndY=0.3326; SerX=0.7443; SerTy=0.4487; CodeSize=84.0; SerSize=32.0 }
 }
 $AircraftImg  = Join-Path (Join-Path $ModDir 'aircraft') 'spitfire.png'
 $AcW          = 760.0            # on-screen width; height follows the image
@@ -579,12 +579,8 @@ function New-Aircraft {
     if (($Pilot.PSObject.Properties.Name -contains 'actype') -and $Pilot.actype) { $ptype = "$($Pilot.actype)" }
     $spec = Get-AircraftSpec $ptype
     $AircraftImg = Join-Path (Join-Path $ModDir 'aircraft') $spec.Img
-    $AcRatio = [double]$spec.Ratio
-    $SqX = [double]$spec.SqX; $IndX = [double]$spec.IndX; $SerX = [double]$spec.SerX
-    $FuseY = [double]$spec.FuseY; $SerY = [double]$spec.SerY; $CodeSize = [double]$spec.CodeSize
-    $SerialSize = [double]$spec.SerSize
     if (-not (Test-Path $AircraftImg)) { return $null }
-    $acH = $AcW * $AcRatio
+    $acH = $AcW * [double]$spec.Ratio
     $script:AcW = $AcW; $script:AcHpx = $acH
     $wrap = New-Object Windows.Controls.Grid
     $wrap.Width = $AcW; $wrap.Height = $acH; $wrap.HorizontalAlignment = 'Left'; $wrap.Margin = '0,2,0,10'
@@ -595,32 +591,25 @@ function New-Aircraft {
     [void]$wrap.Children.Add($img)
 
     $cv = New-Object Windows.Controls.Canvas; $cv.Width = $AcW; $cv.Height = $acH
-    $script:AcCanvas = $cv
-    $mk = if ($Pilot.PSObject.Properties.Name -contains 'markings') { $Pilot.markings } else { $null }
     $codes = "$($Pilot.codes)"
     $sq = ($codes -replace '-.*','')
     $ind = ''; if ($codes -match '-(.+)$') { $ind = $matches[1] }
-    $defCodeTy = ($FuseY * $acH - 0.52 * $CodeSize) / $acH
-    $defSerTy  = ($SerY  * $acH - 0.52 * $SerialSize) / $acH
 
-    $tSq = New-TB -Text $sq -Family $CodeFont -Size $CodeSize -Colour $CodeColour -Bold
-    [Windows.Controls.Canvas]::SetLeft($tSq, (Mk-Val $mk 'sqx' $SqX) * $AcW)
-    [Windows.Controls.Canvas]::SetTop($tSq,  (Mk-Val $mk 'sqy' $defCodeTy) * $acH)
-    Make-Draggable $tSq 'sqx' 'sqy'
+    $tSq = New-TB -Text $sq -Family $CodeFont -Size ([double]$spec.CodeSize) -Colour $CodeColour -Bold
+    [Windows.Controls.Canvas]::SetLeft($tSq, [double]$spec.SqX * $AcW)
+    [Windows.Controls.Canvas]::SetTop($tSq,  [double]$spec.SqY * $acH)
     [void]$cv.Children.Add($tSq)
 
-    $tInd = New-TB -Text $ind -Family $CodeFont -Size $CodeSize -Colour $CodeColour -Bold
-    [Windows.Controls.Canvas]::SetLeft($tInd, (Mk-Val $mk 'indx' $IndX) * $AcW)
-    [Windows.Controls.Canvas]::SetTop($tInd,  (Mk-Val $mk 'indy' $defCodeTy) * $acH)
-    Make-Draggable $tInd 'indx' 'indy'
+    $tInd = New-TB -Text $ind -Family $CodeFont -Size ([double]$spec.CodeSize) -Colour $CodeColour -Bold
+    [Windows.Controls.Canvas]::SetLeft($tInd, [double]$spec.IndX * $AcW)
+    [Windows.Controls.Canvas]::SetTop($tInd,  [double]$spec.IndY * $acH)
     [void]$cv.Children.Add($tInd)
 
     $ser = "$($Pilot.serials)"
     if ($ser) {
-        $tSer = New-TB -Text $ser -Family $SerialFont -Size $SerialSize -Colour $SerialColour -Bold
-        [Windows.Controls.Canvas]::SetLeft($tSer, (Mk-Val $mk 'serx' $SerX) * $AcW)
-        [Windows.Controls.Canvas]::SetTop($tSer,  (Mk-Val $mk 'sery' $defSerTy) * $acH)
-        Make-Draggable $tSer 'serx' 'sery'
+        $tSer = New-TB -Text $ser -Family $SerialFont -Size ([double]$spec.SerSize) -Colour $SerialColour -Bold
+        [Windows.Controls.Canvas]::SetLeft($tSer, [double]$spec.SerX * $AcW)
+        [Windows.Controls.Canvas]::SetTop($tSer,  [double]$spec.SerTy * $acH)
         [void]$cv.Children.Add($tSer)
     }
     [void]$wrap.Children.Add($cv)
@@ -1024,9 +1013,6 @@ function Show-Roster {
     $ac = New-Aircraft -Pilot $Pilot
     if ($ac) {
         [void]$script:Stage.Children.Add($ac)
-        $hint = New-TB -Text 'Drag the codes or the serial to reposition them. They stay where you drop them.' -Family 'Segoe UI' -Size 12 -Colour '#6F828C'
-        $hint.Margin = '2,0,0,24'
-        [void]$script:Stage.Children.Add($hint)
     }
 
     # the squadron as a records book: names, victories, fate
