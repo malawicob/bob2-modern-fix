@@ -1208,6 +1208,9 @@ function Show-Create {
     [void]$nameCol.Children.Add((New-TB -Text 'NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
     $script:NameBox = New-Object Windows.Controls.TextBox
     $script:NameBox.Width = 320; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 40
+    # one man, one name: if a campaign is under way, offer its pilot's name
+    $cp0 = Get-CampaignPilot
+    if ($cp0 -and $cp0.Name) { $script:NameBox.Text = "$($cp0.Name)" }
     [void]$nameCol.Children.Add($script:NameBox)
     [void]$row.Children.Add($nameCol)
 
