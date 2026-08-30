@@ -851,6 +851,27 @@ function New-Nav {
         })
         [void]$nav.Children.Add($tb)
     }
+    # start again with a different squadron; the old career is archived
+    $nc = New-Object Windows.Controls.Border
+    $nc.Padding = '15,9'; $nc.Margin = '18,0,0,0'; $nc.CornerRadius = '3'; $nc.Cursor = 'Hand'
+    $nc.Background = B '#101B22'; $nc.BorderThickness = '0,0,0,2'; $nc.BorderBrush = B '#101B22'
+    $nc.Child = (New-TB -Text 'START A NEW CAREER' -Family $CondFam -Size 12.5 -Colour '#6F828C' -Bold)
+    $nc.Add_MouseLeftButtonUp({
+        $ans = [System.Windows.MessageBox]::Show($Win,
+            "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
+            'New career', 'YesNo', 'Question')
+        if ($ans -eq 'Yes') {
+            try {
+                $arch = Join-Path $StateDir ('archive\' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
+                New-Item -ItemType Directory -Path $arch -Force | Out-Null
+                foreach ($f in @($PilotPath, $SessionsPath)) {
+                    if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
+                }
+            } catch { }
+            Show-SquadronSelect
+        }
+    })
+    [void]$nav.Children.Add($nc)
     $nav
 }
 function New-LogRow {
@@ -1048,28 +1069,6 @@ function Show-Roster {
         $nr.Margin = '2,8,0,0'
         [void]$script:Stage.Children.Add($nr)
     }
-
-    # start again with a different squadron; the old career is archived
-    $nc = New-Object Windows.Controls.Border
-    $nc.Margin = '0,26,0,0'; $nc.Padding = '12,8'; $nc.CornerRadius = '3'; $nc.HorizontalAlignment = 'Left'
-    $nc.Background = B '#101B22'; $nc.BorderBrush = Res 'Rule'; $nc.BorderThickness = '1'; $nc.Cursor = 'Hand'
-    $nc.Child = (New-TB -Text 'START A NEW CAREER' -Family $CondFam -Size 12 -Colour '#9FB0B8' -Bold)
-    $nc.Add_MouseLeftButtonUp({
-        $ans = [System.Windows.MessageBox]::Show($Win,
-            "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
-            'New career', 'YesNo', 'Question')
-        if ($ans -eq 'Yes') {
-            try {
-                $arch = Join-Path $StateDir ('archive\' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
-                New-Item -ItemType Directory -Path $arch -Force | Out-Null
-                foreach ($f in @($PilotPath, $SessionsPath)) {
-                    if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
-                }
-            } catch { }
-            Show-SquadronSelect
-        }
-    })
-    [void]$script:Stage.Children.Add($nc)
 }
 
 function Update-CreateValid {
