@@ -209,11 +209,16 @@ $Xaml = @'
                      x:Name="HdrMotto" Text="ROYAL AIR FORCE  &#x2022;  AUT PUGNA AUT MORERE" Margin="1,3,0,0"/>
         </StackPanel>
       </StackPanel>
-      <Border x:Name="RoomPlay" Background="#C8973F" CornerRadius="3" Cursor="Hand"
-              HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0" Padding="26,10">
-        <TextBlock Text="PLAY" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
-                   FontWeight="Bold" Foreground="#171203"/>
-      </Border>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0">
+        <Border x:Name="RoomPlay" Background="#C8973F" CornerRadius="3" Cursor="Hand" Padding="26,10">
+          <TextBlock Text="PLAY" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
+                     FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
+        </Border>
+        <Border x:Name="RoomNewCareer" Background="#A6252F" CornerRadius="3" Cursor="Hand" Padding="20,10" Margin="14,0,0,0">
+          <TextBlock Text="START A NEW CAREER" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="15"
+                     FontWeight="Bold" Foreground="#F7ECE6" VerticalAlignment="Center"/>
+        </Border>
+      </StackPanel>
       <Border x:Name="ChromeClose" Width="52" Height="52" Background="Transparent"
               HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" Margin="0,0,10,0">
         <TextBlock Text="&#x2715;" Foreground="#9FB0B8" FontSize="17"
@@ -273,6 +278,12 @@ if ($rp) {
     })
     $rp.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') })
     $rp.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
+}
+$rnc = C 'RoomNewCareer'
+if ($rnc) {
+    $rnc.Add_MouseLeftButtonUp({ Start-NewCareer })
+    $rnc.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C23440') })
+    $rnc.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#A6252F') })
 }
 $cx = C 'ChromeClose'
 if ($cx) {
@@ -972,28 +983,30 @@ function New-Nav {
     $nc.Padding = '15,9'; $nc.Margin = '18,0,0,0'; $nc.CornerRadius = '3'; $nc.Cursor = 'Hand'
     $nc.Background = B '#101B22'; $nc.BorderThickness = '0,0,0,2'; $nc.BorderBrush = B '#101B22'
     $nc.Child = (New-TB -Text 'START A NEW CAREER' -Family $CondFam -Size 12.5 -Colour '#6F828C' -Bold)
-    $nc.Add_MouseLeftButtonUp({
-        $ans = [System.Windows.MessageBox]::Show($Win,
-            "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
-            'New career', 'YesNo', 'Question')
-        if ($ans -eq 'Yes') {
-            try {
-                $arch = Join-Path $StateDir ('archive\' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
-                New-Item -ItemType Directory -Path $arch -Force | Out-Null
-                foreach ($f in @($PilotPath, $SessionsPath)) {
-                    if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
-                }
-                # a flight marker or save snapshot from the OLD career must not
-                # become the new pilot's phantom first sortie
-                foreach ($f in @($FlightOpen, (Join-Path $StateDir 'before.bsr'))) {
-                    if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
-                }
-            } catch { }
-            Show-SquadronSelect
-        }
-    })
+    $nc.Add_MouseLeftButtonUp({ Start-NewCareer })
     [void]$nav.Children.Add($nc)
     $nav
+}
+# Archive the current man and choose a squadron for the next. Shared by
+# the nav tab and the red header button.
+function Start-NewCareer {
+    $ans = [System.Windows.MessageBox]::Show($Win,
+        "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
+        'New career', 'YesNo', 'Question')
+    if ($ans -ne 'Yes') { return }
+    try {
+        $arch = Join-Path $StateDir ('archive\' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
+        New-Item -ItemType Directory -Path $arch -Force | Out-Null
+        foreach ($f in @($PilotPath, $SessionsPath)) {
+            if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
+        }
+        # a flight marker or save snapshot from the OLD career must not
+        # become the new pilot's phantom first sortie
+        foreach ($f in @($FlightOpen, (Join-Path $StateDir 'before.bsr'))) {
+            if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
+        }
+    } catch { }
+    Show-SquadronSelect
 }
 function New-LogRow {
     param($S, [switch]$Header, [int]$Index = 0)
