@@ -1312,13 +1312,8 @@ function Show-Map {
         $ring.Stroke = B '#FFE28A'; $ring.Fill = B '#01000000'
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
         [void]$cv.Children.Add($ring)
-        $bl = New-TB -Text "No. $sqnum SQUADRON  $([char]0x2022)  $($base.ToUpper())" -Family $CondFam -Size 12.5 -Colour '#FFE28A' -Bold
-        $bl.IsHitTestVisible = $false
-        # keep the caption on the table when the station sits near an edge
-        $blx = [math]::Max(6.0, [math]::Min($cx - 70.0, $W - 260.0))
-        $bly = if ($cy + 62.0 -gt $H) { $cy - 58.0 } else { $cy + 38.0 }
-        [Windows.Controls.Canvas]::SetLeft($bl, $blx); [Windows.Controls.Canvas]::SetTop($bl, $bly)
-        [void]$cv.Children.Add($bl)
+        # no caption: the station's name is already printed on the map,
+        # and the rings' open centres leave it readable
     }
     [void]$script:Stage.Children.Add($mapWrap)
 
