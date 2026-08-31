@@ -17,6 +17,7 @@ $ModDir      = Join-Path $ScriptDir 'squadronroom'
 $PortraitDir = Join-Path $ModDir 'portraits'
 $SeedPath    = Join-Path $ModDir 'roster.seed.json'
 $PortIndex   = Join-Path $ModDir 'portraits.json'
+$BadgeDir    = Join-Path $ModDir 'badges'
 
 function Find-GameDir {
     foreach ($d in @($ScriptDir, (Split-Path $ScriptDir -Parent))) {
@@ -314,6 +315,55 @@ function Load-Image {
         $bmp.EndInit(); $bmp.Freeze()
         return $bmp
     } catch { return $null }
+}
+# Insignia chips cut from the 1943 'Rank and Badges' booklet: rank cuffs,
+# the pilot's flying badge, and medal ribbons. Each renders as a small
+# framed print so the period paper ground reads as intentional.
+function New-BadgeImage {
+    param([string]$File, [double]$Height = 40, [string]$Tip)
+    $bmp = Load-Image -Path (Join-Path $BadgeDir $File)
+    if (-not $bmp) { return $null }
+    $img = New-Object Windows.Controls.Image
+    $img.Source = $bmp; $img.Height = $Height; $img.Stretch = 'Uniform'
+    $bd = New-Object Windows.Controls.Border
+    $bd.BorderBrush = Res 'Rule'; $bd.BorderThickness = '1'
+    $bd.SnapsToDevicePixels = $true; $bd.VerticalAlignment = 'Center'
+    if ($Tip) { $bd.ToolTip = $Tip }
+    $bd.Child = $img
+    $bd
+}
+function Get-RankBadgeFile {
+    param([string]$Rank)
+    switch -Regex ($Rank) {
+        '^Sergeant'          { return 'sergeant.png' }
+        '^Pilot Officer'     { return 'pilot-officer.png' }
+        '^Flying Officer'    { return 'flying-officer.png' }
+        '^Flight Lieutenant' { return 'flight-lieutenant.png' }
+        '^Squadron Leader'   { return 'squadron-leader.png' }
+    }
+    return $null
+}
+# One chip per decoration in wearing order; a Bar becomes the rosette
+# variant of the same ribbon, never a second ribbon. MiD has no ribbon of
+# its own in 1940, so it stays a written honour.
+function New-RibbonRow {
+    param($Honours, [double]$Height = 15)
+    $set = @($Honours)
+    $items = @()
+    if ($set -contains 'VC')  { $items += @{ f='ribbon-vc.png';  t='Victoria Cross' } }
+    if ($set -contains 'DSO') { $items += @{ f='ribbon-dso.png'; t='Distinguished Service Order' } }
+    if ($set -contains 'Bar to DFC')     { $items += @{ f='ribbon-dfc-bar.png'; t='Distinguished Flying Cross and Bar' } }
+    elseif ($set -contains 'DFC')        { $items += @{ f='ribbon-dfc.png';     t='Distinguished Flying Cross' } }
+    if ($set -contains 'Bar to DFM')     { $items += @{ f='ribbon-dfm-bar.png'; t='Distinguished Flying Medal and Bar' } }
+    elseif ($set -contains 'DFM')        { $items += @{ f='ribbon-dfm.png';     t='Distinguished Flying Medal' } }
+    if ($items.Count -eq 0) { return $null }
+    $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'
+    foreach ($i in $items) {
+        $chip = New-BadgeImage -File $i.f -Height $Height -Tip $i.t
+        if ($chip) { $chip.Margin = '0,0,6,0'; [void]$row.Children.Add($chip) }
+    }
+    if ($row.Children.Count -eq 0) { return $null }
+    $row
 }
 function New-TB {
     param([string]$Text, [string]$Family = 'Segoe UI', [double]$Size = 15, $Colour, [switch]$Bold, [switch]$Wrap)
@@ -885,12 +935,15 @@ function Get-ClaimSummary {
 }
 
 function New-Stat {
-    param([string]$Label, [string]$Value)
+    param([string]$Label, [string]$Value, $Chip)
     $b = New-Object Windows.Controls.Border
     $b.Background = Res 'Panel'; $b.BorderBrush = Res 'Rule'; $b.BorderThickness = '1'; $b.CornerRadius = '4'
     $b.Padding = '20,14'; $b.Margin = '0,0,16,0'; $b.MinWidth = 148
     $sp = New-Object Windows.Controls.StackPanel
-    [void]$sp.Children.Add((New-TB -Text $Value -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    $vrow = New-Object Windows.Controls.StackPanel; $vrow.Orientation = 'Horizontal'
+    [void]$vrow.Children.Add((New-TB -Text $Value -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    if ($Chip) { $Chip.Margin = '12,0,0,0'; $Chip.VerticalAlignment = 'Center'; [void]$vrow.Children.Add($Chip) }
+    [void]$sp.Children.Add($vrow)
     $l = New-TB -Text $Label -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold; $l.Margin = '0,2,0,0'
     [void]$sp.Children.Add($l)
     $b.Child = $sp; $b
@@ -1000,8 +1053,11 @@ function Show-Logbook {
     [void]$tiles.Children.Add((New-Stat 'VICTORIES' "$vics"))
     $honours = @(Get-PlayerHonours $Pilot $career)
     $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
-    [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile))
-    [void]$tiles.Children.Add((New-Stat 'RANK' "$($career.rank)"))
+    [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile -Chip (New-RibbonRow $honours -Height 13)))
+    [void]$tiles.Children.Add((New-Stat 'RANK' "$($career.rank)" -Chip $(
+        $f = Get-RankBadgeFile "$($career.rank)"
+        if ($f) { New-BadgeImage -File $f -Height 38 -Tip "$($career.rank)" }
+    )))
     [void]$script:Stage.Children.Add($tiles)
 
     $isCmdr2 = (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander'))
@@ -1065,6 +1121,19 @@ function Show-Roster {
     $line = if (@(Get-Sessions).Count -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
     [void]$d.Children.Add($lt)
+    # worn on the tunic: rank cuff and wings, the ribbons beneath them
+    $chipRow = New-Object Windows.Controls.StackPanel; $chipRow.Orientation = 'Horizontal'; $chipRow.Margin = '0,14,0,0'
+    $rbf = Get-RankBadgeFile "$($Pilot.rank)"
+    if ($rbf) {
+        $cuff = New-BadgeImage -File $rbf -Height 52 -Tip "$($Pilot.rank)"
+        if ($cuff) { $cuff.Margin = '0,0,10,0'; [void]$chipRow.Children.Add($cuff) }
+    }
+    $wg = New-BadgeImage -File 'wings.png' -Height 52 -Tip "Qualified pilot's flying badge"
+    if ($wg) { [void]$chipRow.Children.Add($wg) }
+    if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
+    $heroHon = @(Get-PlayerHonours $Pilot (Get-Career $Pilot @(Get-Sessions)))
+    $heroRib = New-RibbonRow $heroHon
+    if ($heroRib) { $heroRib.Margin = '0,10,0,0'; $heroRib.HorizontalAlignment = 'Left'; [void]$d.Children.Add($heroRib) }
     $st = New-TB -Text 'ON STRENGTH' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold; $st.Margin = '0,16,0,0'
     [void]$d.Children.Add($st)
     if ($Pilot.note) {
