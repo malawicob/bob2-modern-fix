@@ -267,8 +267,12 @@ if ($rp) {
             $before = ''
             $cd0 = Get-CampaignDate
             if ($cd0) { $before = $cd0.ToString('yyyy-MM-dd') }
-            @{ start = (Get-Date).ToString('s'); dateBefore = $before } | ConvertTo-Json | Set-Content -Path $FlightOpen -Encoding UTF8
             $sav0 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            # record WHICH save was snapshotted: byte offsets only line up
+            # against the same slot, and "newest" can be a different file
+            # after the flight (Auto Save vs a named save)
+            @{ start = (Get-Date).ToString('s'); dateBefore = $before; savePath = $(if ($sav0) { $sav0.FullName } else { '' }) } |
+                ConvertTo-Json | Set-Content -Path $FlightOpen -Encoding UTF8
             if ($sav0) { Copy-Item $sav0.FullName (Join-Path $StateDir 'before.bsr') -Force }
         } catch { }
         $bat = Join-Path $ScriptDir 'BOB2_Launch.bat'
@@ -845,27 +849,40 @@ function Finalize-Flight {
             }
         } else { $outcome = 'Practice flight' }
     } catch { }
-    # capture the raw save delta for the auto-claims mapping: once the kill
-    # tallies are located, these recorded diffs turn into automatic credits
+    # ---- automatic claims -------------------------------------------
+    # Diff against the SAME save that was snapshotted at Play. When the
+    # counter is already known, credit the kills now; while it is still
+    # being learnt, park the rises for the logbook to ask about.
+    $autoAdded = 0
     try {
-        if ((Test-Path $beforeSnap) -and $newest) {
-            $a2 = [System.IO.File]::ReadAllBytes($beforeSnap)
-            $b3 = [System.IO.File]::ReadAllBytes($newest.FullName)
-            $lim = [math]::Min($a2.Length, $b3.Length)
-            $runs = New-Object System.Collections.ArrayList
-            $i2 = 0
-            while (($i2 -lt $lim) -and ($runs.Count -lt 200)) {
-                if ($a2[$i2] -ne $b3[$i2]) {
-                    $st = $i2
-                    while (($i2 -lt $lim) -and ($a2[$i2] -ne $b3[$i2]) -and (($i2 - $st) -lt 48)) { $i2++ }
-                    [void]$runs.Add(@{ off = $st; old = [BitConverter]::ToString($a2[$st..($i2-1)]); new = [BitConverter]::ToString($b3[$st..($i2-1)]) })
-                } else { $i2++ }
-            }
-            if ($runs.Count) {
-                $dd = Join-Path $StateDir 'diffs'
-                if (-not (Test-Path $dd)) { New-Item -ItemType Directory -Path $dd -Force | Out-Null }
-                ConvertTo-Json -InputObject @($runs) -Depth 4 |
-                    Set-Content -Path (Join-Path $dd ((Get-Date).ToString('yyyyMMdd-HHmmss') + '.json')) -Encoding UTF8
+        $sameSave = $null
+        if ($mk.PSObject.Properties.Name -contains 'savePath' -and $mk.savePath -and (Test-Path "$($mk.savePath)")) { $sameSave = "$($mk.savePath)" }
+        if ((Test-Path $beforeSnap) -and $sameSave) {
+            $rises = Get-SaveRises -BeforePath $beforeSnap -AfterPath $sameSave
+            $ac = Get-AutoClaim
+            if (-not $ac) { $ac = [ordered]@{ state='learning'; offset=$null; cands=@(); seeded=$false; trials=0; pending=$false; last=@{} } }
+            $state = "$($ac.state)"
+            if ($state -eq 'locked' -and $ac.offset) {
+                $off = "$($ac.offset)"
+                $n = 0; if ($rises.ContainsKey($off)) { $n = [int]$rises[$off] }
+                if ($n -gt 0) {
+                    Add-AutoClaims -Count $n -Date $(if ($after) { $after.ToString('yyyy-MM-dd') } else { "$($mk.dateBefore)" })
+                    $autoAdded = $n
+                }
+                $ac2 = [ordered]@{ state='locked'; offset=$ac.offset; cands=@($ac.cands); seeded=$true; trials=[int]$ac.trials; pending=$false; last=@{} }
+                Save-AutoClaim $ac2
+            } elseif ($rises.Count -gt 0 -and $rises.Count -le 6000) {
+                # still learning: keep this sortie's rises for confirmation
+                $ac3 = [ordered]@{
+                    state   = 'learning'
+                    offset  = $null
+                    cands   = @($ac.cands | ForEach-Object { "$_" })
+                    seeded  = [bool]$ac.seeded
+                    trials  = [int]$ac.trials
+                    pending = $true
+                    last    = $rises
+                }
+                Save-AutoClaim $ac3
             }
         }
     } catch { }
@@ -877,6 +894,7 @@ function Finalize-Flight {
         dateAfter  = if ($after) { $after.ToString('yyyy-MM-dd') } else { "$($mk.dateBefore)" }
         mode       = if ($mk.dateBefore) { 'campaign' } else { 'instant' }
         outcome    = $outcome
+        claims     = $autoAdded
     }
     Save-Sessions (@(Get-Sessions) + $sess)
     Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue
@@ -920,7 +938,97 @@ function Get-PlayerHonours {
     # double-wraps into the System.Object[] display bug
     $h
 }
-# Player-entered victory with the type shot down (auto claims are Tier 4).
+# =====================================================================
+#  Automatic claims (Tier 4)
+#
+#  The .BSR keeps the player's score, but the exact byte was never found
+#  by disassembly (Sqddiary's records are reached through pointers that
+#  do not survive into the file). So the Room LEARNS it instead: every
+#  sortie it diffs the save against the snapshot taken at PLAY and lists
+#  the bytes that went UP. Tell it how many you claimed and it keeps only
+#  the bytes that rose by exactly that much; a couple of sorties later
+#  one byte is left standing, and from then on claims are credited with
+#  no questions asked. It is the memory-scanner trick, applied to a file.
+# =====================================================================
+$AutoClaimPath = Join-Path $StateDir 'autoclaim.json'
+function Get-AutoClaim {
+    if (Test-Path $AutoClaimPath) {
+        try { return (Get-Content $AutoClaimPath -Raw | ConvertFrom-Json) } catch { }
+    }
+    $null
+}
+function Save-AutoClaim {
+    param($Obj)
+    try {
+        if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
+        $Obj | ConvertTo-Json -Depth 5 | Set-Content -Path $AutoClaimPath -Encoding UTF8
+    } catch { }
+}
+# Bytes that INCREASED by a plausible kill count. Same-length files only:
+# a different save slot shifts every offset and would poison the search.
+function Get-SaveRises {
+    param([string]$BeforePath, [string]$AfterPath)
+    $rises = @{}
+    try {
+        if (-not (Test-Path $BeforePath)) { return $rises }
+        if (-not (Test-Path $AfterPath))  { return $rises }
+        $a = [System.IO.File]::ReadAllBytes($BeforePath)
+        $b = [System.IO.File]::ReadAllBytes($AfterPath)
+        if ($a.Length -ne $b.Length) { return $rises }
+        for ($i = 40; $i -lt $a.Length; $i++) {
+            if ($b[$i] -gt $a[$i]) {
+                $d = [int]$b[$i] - [int]$a[$i]
+                if ($d -le 8) { $rises[[string]$i] = $d }
+            }
+        }
+    } catch { }
+    $rises
+}
+# Fold one sortie's confirmed score into the search.
+function Update-AutoClaimLearning {
+    param([int]$Confirmed)
+    $ac = Get-AutoClaim
+    if (-not $ac) { return $null }
+    $last = @{}
+    if ($ac.PSObject.Properties.Name -contains 'last' -and $ac.last) {
+        foreach ($p in $ac.last.PSObject.Properties) { $last[$p.Name] = [int]$p.Value }
+    }
+    $cands = @()
+    if ($ac.PSObject.Properties.Name -contains 'cands' -and $ac.cands) { $cands = @($ac.cands | ForEach-Object { "$_" }) }
+    $seeded = ($ac.PSObject.Properties.Name -contains 'seeded') -and $ac.seeded
+    $trials = 0; if ($ac.PSObject.Properties.Name -contains 'trials') { $trials = [int]$ac.trials }
+
+    if ($Confirmed -gt 0) {
+        $hit = @($last.Keys | Where-Object { $last[$_] -eq $Confirmed })
+        if (-not $seeded) { $cands = $hit; $seeded = $true }
+        else { $cands = @($cands | Where-Object { $hit -contains $_ }) }
+        $trials++
+    } elseif ($seeded) {
+        # a scoreless sortie: the true counter cannot have moved
+        $cands = @($cands | Where-Object { -not $last.ContainsKey($_) })
+    }
+
+    $state = 'learning'; $offset = $null
+    if ($seeded -and $cands.Count -eq 0) {
+        # contradiction (a mis-typed count, or the save slot changed):
+        # start the search over rather than lock on to a wrong byte
+        $seeded = $false; $trials = 0
+    } elseif ($cands.Count -eq 1 -and $trials -ge 2) {
+        $state = 'locked'; $offset = $cands[0]
+    }
+    $new = [ordered]@{
+        state   = $state
+        offset  = $offset
+        cands   = @($cands)
+        seeded  = $seeded
+        trials  = $trials
+        pending = $false
+        last    = @{}
+    }
+    Save-AutoClaim $new
+    $new
+}
+# Player-entered victory with the type shot down.
 function Add-Claim {
     param($Pilot, [string]$Type = '')
     $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
@@ -933,6 +1041,24 @@ function Add-Claim {
     $obj['claims'] = @($claims + $entry)
     Save-Pilot $obj
     Show-Logbook -Pilot (Get-Pilot)
+}
+# Several claims at once, as an automatic credit. The type is unknown to
+# the save, so these read "credited from the campaign" in the summary.
+function Add-AutoClaims {
+    param([int]$Count, [string]$Date = '')
+    if ($Count -le 0) { return }
+    $p = Get-Pilot
+    if (-not $p) { return }
+    $v = 0; if (($p.PSObject.Properties.Name -contains 'victories') -and $p.victories) { $v = [int]$p.victories }
+    $claims = @(); if (($p.PSObject.Properties.Name -contains 'claims') -and $p.claims) { $claims = @($p.claims) }
+    $when = $Date
+    if (-not $when) { $cd = Get-CampaignDate; $when = if ($cd) { $cd.ToString('yyyy-MM-dd') } else { (Get-Date).ToString('yyyy-MM-dd') } }
+    for ($i = 0; $i -lt $Count; $i++) { $claims += "$when credited from the campaign" }
+    $obj = [ordered]@{}
+    foreach ($pp in $p.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+    $obj['victories'] = $v + $Count
+    $obj['claims'] = @($claims)
+    Save-Pilot $obj
 }
 # "2 x Bf 109E, 1 x He 111" from the stored claim strings
 function Get-ClaimSummary {
@@ -1089,10 +1215,48 @@ function Show-Logbook {
     $cbtn = New-Object Windows.Controls.Button; $cbtn.Content = 'LOG A CLAIM'; $cbtn.MinWidth = 130
     $cbtn.Add_Click({ Add-Claim -Pilot (Get-Pilot) -Type ("$($script:ClaimType.SelectedItem)") })
     [void]$claimRow.Children.Add($cbtn)
-    $ct = New-TB -Text 'Record a victory you scored on your last sortie. Automatic claims from the game are still to come.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
+    $ct = New-TB -Text 'Record a victory the campaign has not credited you with.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
     $ct.VerticalAlignment = 'Center'; $ct.Margin = '16,0,0,0'; $ct.MaxWidth = 460
     [void]$claimRow.Children.Add($ct)
     [void]$script:Stage.Children.Add($claimRow)
+
+    # ---- automatic claims: the calibration question, or the status ----
+    $ac = Get-AutoClaim
+    $acState = if ($ac) { "$($ac.state)" } else { 'learning' }
+    $acPending = $ac -and ($ac.PSObject.Properties.Name -contains 'pending') -and $ac.pending
+    if ($acState -eq 'locked') {
+        $lockTxt = 'Automatic claims are ON. The campaign save is read after every sortie and your victories are credited without asking.'
+        $lk = New-TB -Text $lockTxt -Family 'Segoe UI' -Size 12.5 -Colour '#7FA98C' -Wrap
+        $lk.Margin = '0,-8,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($lk)
+    } elseif ($acPending) {
+        $cal = New-Object Windows.Controls.Border
+        $cal.Background = Res 'Panel'; $cal.BorderBrush = Res 'Brass'; $cal.BorderThickness = '1'; $cal.CornerRadius = '4'
+        $cal.Padding = '18,14'; $cal.Margin = '0,-8,0,22'; $cal.HorizontalAlignment = 'Left'; $cal.MaxWidth = 880
+        $cs2 = New-Object Windows.Controls.StackPanel
+        [void]$cs2.Children.Add((New-TB -Text 'TEACHING THE LOGBOOK TO READ YOUR SCORE' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+        $ask = New-TB -Text 'How many aircraft did you shoot down on that last sortie? Answer for a sortie or two and the logbook works out where the campaign keeps your score, after which victories are credited automatically.' -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Wrap
+        $ask.Margin = '0,8,0,12'; $ask.MaxWidth = 820
+        [void]$cs2.Children.Add($ask)
+        $btnRow2 = New-Object Windows.Controls.StackPanel; $btnRow2.Orientation = 'Horizontal'
+        foreach ($n in @(0,1,2,3,4)) {
+            $nb = New-Object Windows.Controls.Button
+            $nb.Content = "$n"; $nb.MinWidth = 54; $nb.Margin = '0,0,10,0'; $nb.Tag = $n
+            $nb.Add_Click({
+                param($s,$e)
+                $res = Update-AutoClaimLearning -Confirmed ([int]$s.Tag)
+                if ([int]$s.Tag -gt 0) { Add-AutoClaims -Count ([int]$s.Tag) }
+                if ($res -and "$($res.state)" -eq 'locked') {
+                    [System.Windows.MessageBox]::Show($Win, "Your score is now read straight from the campaign save. From here on victories are credited automatically after every sortie.", 'Automatic claims') | Out-Null
+                }
+                Show-Logbook -Pilot (Get-Pilot)
+            })
+            [void]$btnRow2.Children.Add($nb)
+        }
+        [void]$cs2.Children.Add($btnRow2)
+        $cal.Child = $cs2
+        [void]$script:Stage.Children.Add($cal)
+    }
 
     [void]$script:Stage.Children.Add((New-TB -Text 'SORTIES FLOWN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
     if (@($sessions).Count -eq 0) {
