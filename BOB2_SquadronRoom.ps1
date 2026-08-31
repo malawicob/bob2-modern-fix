@@ -978,17 +978,10 @@ function New-Nav {
         })
         [void]$nav.Children.Add($tb)
     }
-    # start again with a different squadron; the old career is archived
-    $nc = New-Object Windows.Controls.Border
-    $nc.Padding = '15,9'; $nc.Margin = '18,0,0,0'; $nc.CornerRadius = '3'; $nc.Cursor = 'Hand'
-    $nc.Background = B '#101B22'; $nc.BorderThickness = '0,0,0,2'; $nc.BorderBrush = B '#101B22'
-    $nc.Child = (New-TB -Text 'START A NEW CAREER' -Family $CondFam -Size 12.5 -Colour '#6F828C' -Bold)
-    $nc.Add_MouseLeftButtonUp({ Start-NewCareer })
-    [void]$nav.Children.Add($nc)
     $nav
 }
-# Archive the current man and choose a squadron for the next. Shared by
-# the nav tab and the red header button.
+# Archive the current man and choose a squadron for the next.
+# Called from the red header button.
 function Start-NewCareer {
     $ans = [System.Windows.MessageBox]::Show($Win,
         "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
