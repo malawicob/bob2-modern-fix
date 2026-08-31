@@ -876,6 +876,17 @@ function Finalize-Flight {
     try {
         $sameSave = $null
         if ($mk.PSObject.Properties.Name -contains 'savePath' -and $mk.savePath -and (Test-Path "$($mk.savePath)")) { $sameSave = "$($mk.savePath)" }
+        elseif ($GameDir -and (Test-Path $beforeSnap)) {
+            # a marker written before the launcher recorded the slot, or a
+            # save since renamed: fall back to the .BSR of the same size as
+            # the snapshot (same slot), else the newest one
+            $blen = (Get-Item $beforeSnap).Length
+            $cand = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue |
+                    Sort-Object LastWriteTime -Descending
+            $pick = @($cand | Where-Object { $_.Length -eq $blen }) | Select-Object -First 1
+            if (-not $pick) { $pick = @($cand) | Select-Object -First 1 }
+            if ($pick) { $sameSave = $pick.FullName }
+        }
         if ((Test-Path $beforeSnap) -and $sameSave) {
             $rises = Get-SaveRises -BeforePath $beforeSnap -AfterPath $sameSave
             $ac = Get-AutoClaim
