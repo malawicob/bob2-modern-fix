@@ -1,0 +1,678 @@
+[
+ {
+  "num": 1,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Tangmere",
+   "1940-08-12": "Northolt",
+   "1940-08-24": "Northolt",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Veteran",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 3,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Poor",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 17,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Debden",
+   "1940-08-12": "Debden",
+   "1940-08-24": "Tangmere",
+   "1940-09-07": "Debden"
+  },
+  "skill": "Veteran",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 19,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Duxford",
+   "1940-08-12": "Fowlmere",
+   "1940-08-24": "Fowlmere",
+   "1940-09-07": "Fowlmere"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 32,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Biggin Hill",
+   "1940-08-12": "Biggin Hill",
+   "1940-08-24": "Biggin Hill",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 41,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Hornchurch"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 43,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Tangmere",
+   "1940-08-12": "Tangmere",
+   "1940-08-24": "Tangmere",
+   "1940-09-07": "Tangmere"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 46,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Digby",
+   "1940-08-12": "Digby",
+   "1940-08-24": "Digby",
+   "1940-09-07": "Stapleford"
+  },
+  "skill": "Poor",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 54,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Rochford",
+   "1940-08-12": "Hornchurch",
+   "1940-08-24": "Hornchurch",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 56,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "North Weald",
+   "1940-08-12": "North Weald",
+   "1940-08-24": "North Weald",
+   "1940-09-07": "Colerne"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 64,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Kenley",
+   "1940-08-12": "Kenley",
+   "1940-08-24": "Digby",
+   "1940-09-07": "Middle Wallop"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 65,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Hornchurch",
+   "1940-08-12": "Hornchurch",
+   "1940-08-24": "Hornchurch",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Regular",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 66,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Digby",
+   "1940-08-12": "Coltishall",
+   "1940-08-24": "Coltishall",
+   "1940-09-07": "Kenley"
+  },
+  "skill": "Regular",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 72,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Croydon"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 73,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Coltishall",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Coltishall"
+  },
+  "skill": "Poor",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 74,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Hornchurch",
+   "1940-08-12": "Hornchurch",
+   "1940-08-24": "Kirton",
+   "1940-09-07": "Kirton"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 79,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Hawkinge",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "Biggin Hill",
+   "1940-09-07": "Biggin Hill"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 85,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Debden",
+   "1940-08-12": "Croydon",
+   "1940-08-24": "Croydon",
+   "1940-09-07": "Kirton"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 87,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Exeter",
+   "1940-08-12": "Exeter",
+   "1940-08-24": "Exeter",
+   "1940-09-07": "Exeter"
+  },
+  "skill": "Regular",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 92,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Pembrey",
+   "1940-08-12": "Pembrey",
+   "1940-08-24": "Pembrey",
+   "1940-09-07": "Pembrey"
+  },
+  "skill": "Poor",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 111,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Croydon",
+   "1940-08-12": "Croydon",
+   "1940-08-24": "Debden",
+   "1940-09-07": "Croydon"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 145,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Westhampnett",
+   "1940-08-12": "Westhampnett",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 151,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "North Weald",
+   "1940-08-12": "Stapleford",
+   "1940-08-24": "Stapleford",
+   "1940-09-07": "Digby"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 152,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "Warmwell",
+   "1940-08-24": "Warmwell",
+   "1940-09-07": "Warmwell"
+  },
+  "skill": "Poor",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 213,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Exeter",
+   "1940-08-12": "Exeter",
+   "1940-08-24": "Exeter",
+   "1940-09-07": "Tangmere"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 222,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Kirton",
+   "1940-08-12": "Kirton",
+   "1940-08-24": "Kirton",
+   "1940-09-07": "Hornchurch"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 229,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Wittering",
+   "1940-08-12": "Wittering",
+   "1940-08-24": "Wittering",
+   "1940-09-07": "Wittering"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 232,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Poor",
+  "fatigue": "Excellent",
+  "notes": "Inactive during BoB"
+ },
+ {
+  "num": 234,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Warmwell",
+   "1940-08-12": "Warmwell",
+   "1940-08-24": "Middle Wallop",
+   "1940-09-07": "Middle Wallop"
+  },
+  "skill": "Poor",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 238,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Middle Wallop",
+   "1940-08-12": "Middle Wallop",
+   "1940-08-24": "Exeter",
+   "1940-09-07": "Exeter"
+  },
+  "skill": "Poor",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 242,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Coltishall",
+   "1940-08-12": "Coltishall",
+   "1940-08-24": "Coltishall",
+   "1940-09-07": "Coltishall"
+  },
+  "skill": "Poor",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 249,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Coltishall",
+   "1940-08-12": "Coltishall",
+   "1940-08-24": "Middle Wallop",
+   "1940-09-07": "Northweald"
+  },
+  "skill": "Poor",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 253,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Kirton",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Kenley"
+  },
+  "skill": "Poor",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 257,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Northolt",
+   "1940-08-12": "Northolt",
+   "1940-08-24": "Debden",
+   "1940-09-07": "Martlesham"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 263,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Poor",
+  "fatigue": "Excellent",
+  "notes": "Inactive during BoB"
+ },
+ {
+  "num": 266,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Wittering",
+   "1940-08-12": "West Malling",
+   "1940-08-24": "Wittering",
+   "1940-09-07": "Wittering"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 302,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Fowlmere",
+   "1940-08-12": "Wittering",
+   "1940-08-24": "Wittering",
+   "1940-09-07": "Wittering"
+  },
+  "skill": "Veteran",
+  "fatigue": "Excellent",
+  "notes": "Polish squadron, activate 13 July"
+ },
+ {
+  "num": 303,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Northolt",
+   "1940-08-12": "Northolt",
+   "1940-08-24": "Northolt",
+   "1940-09-07": "Northolt"
+  },
+  "skill": "Veteran",
+  "fatigue": "Excellent",
+  "notes": "Polish squadron, activate 22 July"
+ },
+ {
+  "num": 310,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Duxford",
+   "1940-08-12": "Duxford",
+   "1940-08-24": "Duxford",
+   "1940-09-07": "Duxford"
+  },
+  "skill": "Veteran",
+  "fatigue": "Very Good",
+  "notes": "Czech squadron, activate 18 August"
+ },
+ {
+  "num": 312,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Duxford",
+   "1940-08-12": "Duxford",
+   "1940-08-24": "Duxford",
+   "1940-09-07": "Duxford"
+  },
+  "skill": "Veteran",
+  "fatigue": "Very Good",
+  "notes": "Czech squadron, activate 29 August"
+ },
+ {
+  "num": 501,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Middle Wallop",
+   "1940-08-12": "Gravesend",
+   "1940-08-24": "Gravesend",
+   "1940-09-07": "Gravesend"
+  },
+  "skill": "Veteran",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 504,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Northolt"
+  },
+  "skill": "Regular",
+  "fatigue": "Very Good",
+  "notes": ""
+ },
+ {
+  "num": 601,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "Tangmere",
+   "1940-08-12": "Debden",
+   "1940-08-24": "Debden",
+   "1940-09-07": "Exeter"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 602,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "Westhampnett",
+   "1940-09-07": "Westhampnett"
+  },
+  "skill": "Regular",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 603,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Hornchurch"
+  },
+  "skill": "Regular",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 605,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Croydon"
+  },
+  "skill": "Regular",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 607,
+  "type": "Hurricane I",
+  "bases": {
+   "1940-07-10": "13 Group",
+   "1940-08-12": "13 Group",
+   "1940-08-24": "13 Group",
+   "1940-09-07": "Tangmere"
+  },
+  "skill": "Regular",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 609,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Middle Wallop",
+   "1940-08-12": "Middle Wallop",
+   "1940-08-24": "Middle Wallop",
+   "1940-09-07": "Middle Wallop"
+  },
+  "skill": "Regular",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 610,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Biggin Hill",
+   "1940-08-12": "Biggin Hill",
+   "1940-08-24": "Biggin Hill",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Veteran",
+  "fatigue": "Medium",
+  "notes": ""
+ },
+ {
+  "num": 611,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Digby",
+   "1940-08-12": "Digby",
+   "1940-08-24": "Digby",
+   "1940-09-07": "Digby"
+  },
+  "skill": "Regular",
+  "fatigue": "Good",
+  "notes": ""
+ },
+ {
+  "num": 615,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Kenley",
+   "1940-08-12": "Kenley",
+   "1940-08-24": "Kenley",
+   "1940-09-07": "13 Group"
+  },
+  "skill": "Regular",
+  "fatigue": "Excellent",
+  "notes": ""
+ },
+ {
+  "num": 616,
+  "type": "Spitfire I",
+  "bases": {
+   "1940-07-10": "Wittering",
+   "1940-08-12": "Wittering",
+   "1940-08-24": "Kenley",
+   "1940-09-07": "Coltishall"
+  },
+  "skill": "Poor",
+  "fatigue": "Good",
+  "notes": ""
+ }
+]

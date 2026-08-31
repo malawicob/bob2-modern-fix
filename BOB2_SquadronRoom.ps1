@@ -101,9 +101,28 @@ function Get-Portraits {
     if (Test-Path $PortIndex) { try { return @(Get-Content $PortIndex -Raw | ConvertFrom-Json) } catch { } }
     @(Get-ChildItem $PortraitDir -Filter '*.jpg' -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { $_.Name })
 }
+# The squadron's own men. Researched rosters live one file per unit in
+# squadronroom/rosters (92's original seed file is still honoured).
 function Get-Historical {
-    if (Test-Path $SeedPath) { try { return @(Get-Content $SeedPath -Raw | ConvertFrom-Json) } catch { } }
+    param([int]$Sqn = 92)
+    $per = Join-Path (Join-Path $ModDir 'rosters') "$Sqn.json"
+    if (Test-Path $per) { try { return @(Get-Content $per -Raw | ConvertFrom-Json) } catch { } }
+    if ($Sqn -eq 92 -and (Test-Path $SeedPath)) { try { return @(Get-Content $SeedPath -Raw | ConvertFrom-Json) } catch { } }
     @()
+}
+# The game's own order of battle: real stations by campaign date, plus the
+# skill and fatigue ratings it starts each squadron with (English/TEXT/
+# RAF_OOB.htm, extracted to oob.json).
+$OobPath = Join-Path $ModDir 'oob.json'
+function Get-Oob {
+    param([int]$Sqn)
+    if (-not (Test-Path $OobPath)) { return $null }
+    try {
+        $all = @(Get-Content $OobPath -Raw | ConvertFrom-Json)
+        while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
+        foreach ($o in $all) { if ([int]$o.num -eq $Sqn) { return $o } }
+    } catch { }
+    $null
 }
 function Get-Pilot {
     if (Test-Path $PilotPath) { try { return (Get-Content $PilotPath -Raw | ConvertFrom-Json) } catch { } }
@@ -1376,13 +1395,49 @@ function Show-Roster {
     }
     [void]$ls.Children.Add((New-RosterRow -P $me -Index 0 -IsPlayer))
     $i = 1
-    if ($sqnum -eq 92) {
-        foreach ($h in (Get-Historical)) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
-    }
+    $men = @(Get-Historical -Sqn $sqnum)
+    foreach ($h in $men) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
-    if ($sqnum -ne 92) {
-        $nr = New-TB -Text 'Squadron roster research for this unit is still to come; your own record is on the board.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
+
+    # Every squadron gets its record of service, from the game's own order
+    # of battle: where it stood as the campaign moved, and how Fighter
+    # Command rated it on the first day.
+    $oob = Get-Oob -Sqn $sqnum
+    if ($oob) {
+        $card = New-Object Windows.Controls.Border
+        $card.Background = Res 'Panel'; $card.BorderBrush = Res 'Rule'; $card.BorderThickness = '1'; $card.CornerRadius = '4'
+        $card.Padding = '20,16'; $card.Margin = '0,16,0,0'; $card.HorizontalAlignment = 'Left'; $card.MaxWidth = 900
+        $cst = New-Object Windows.Controls.StackPanel
+        [void]$cst.Children.Add((New-TB -Text 'RECORD OF SERVICE' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+        $moves = @()
+        foreach ($d in @('1940-07-10','1940-08-12','1940-08-24','1940-09-07')) {
+            $b = "$($oob.bases.$d)"
+            if ($b) {
+                $lbl = ([datetime]::ParseExact($d,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)).ToString('d MMM')
+                # "13 Group" is the game's shorthand for resting in the north
+                $where = if ($b -eq '13 Group') { 'resting in the north' } else { "RAF $b" }
+                $moves += "$lbl  $where"
+            }
+        }
+        $sep = "     $([char]0x2022)     "
+        $mv = New-TB -Text ($moves -join $sep) -Family 'Segoe UI' -Size 13 -Colour '#C9D4CE' -Wrap
+        $mv.Margin = '0,9,0,0'; $mv.MaxWidth = 840
+        [void]$cst.Children.Add($mv)
+        $rate = "Flying $($oob.type).  Fighter Command rated the squadron $("$($oob.skill)".ToLower()) in skill, with $("$($oob.fatigue)".ToLower()) reserves of freshness."
+        if ("$($oob.notes)") { $rate += "  $($oob.notes)." }
+        $rt = New-TB -Text $rate -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Wrap
+        $rt.Margin = '0,8,0,0'; $rt.MaxWidth = 840
+        [void]$cst.Children.Add($rt)
+        if ($men.Count -eq 0) {
+            $pend = New-TB -Text 'The names of this squadron''s pilots are still being researched; yours is on the board above.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
+            $pend.Margin = '0,10,0,0'; $pend.MaxWidth = 840
+            [void]$cst.Children.Add($pend)
+        }
+        $card.Child = $cst
+        [void]$script:Stage.Children.Add($card)
+    } elseif ($men.Count -eq 0) {
+        $nr = New-TB -Text 'The names of this squadron''s pilots are still being researched; yours is on the board above.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
         $nr.Margin = '2,8,0,0'
         [void]$script:Stage.Children.Add($nr)
     }
