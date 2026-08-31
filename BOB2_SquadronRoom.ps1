@@ -418,8 +418,13 @@ function Fate-Colour { param([string]$s)
 }
 
 # --- campaign clock: the board is a snapshot of THIS day ----------------
-# Reads the newest campaign save the same way BOB2_Setup.ps1 does
-# (u32 seconds since 1901-01-01 at offset 61). $null when no campaign.
+# Reads the newest campaign save: u32 seconds since 1901-01-01 at OFFSET
+# 57, the campaign's CURRENT day. Offsets 49/53 hold the campaign start
+# and 61 a later date (a campaign end or scheduled event) - reading 61
+# put the whole Room a month ahead of the game. Verified against Bob.exe's
+# own constant (1247184000 = 10 Jul 1940) and against the game's Log Book
+# and Combat Report: across one sortie offset 57 moved 10 -> 11 July while
+# 61 sat still at 11 August. $null when no campaign.
 function Get-CampaignDate {
     if (-not $GameDir) { return $null }
     $dir = Join-Path $GameDir 'SAVEGAME'
@@ -431,7 +436,7 @@ function Get-CampaignDate {
         if ($b.Length -lt 70) { return $null }
         $hdr = [System.Text.Encoding]::ASCII.GetString($b, 1, 20)
         if ($hdr -notmatch '^Rowan Savegame: V 0') { return $null }
-        $secs = [BitConverter]::ToUInt32($b, 61)
+        $secs = [BitConverter]::ToUInt32($b, 57)
         if ($secs % 86400 -ne 0) { return $null }
         $date = ([datetime]'1901-01-01').AddSeconds($secs)
         if ($date.Year -lt 1939 -or $date.Year -gt 1941) { return $null }
@@ -889,18 +894,14 @@ function Finalize-Flight {
             $vBefore = Get-SaveVictories -Path $beforeSnap
             $vAfter  = Get-SaveVictories -Path $sameSave
             if (($null -ne $vBefore) -and ($null -ne $vAfter)) {
-                $gain = $vAfter - $vBefore
-                # a sane sortie's worth; anything wilder means a new campaign
-                # was started or the field is not what we think, so ignore it
-                if ($gain -gt 0 -and $gain -le 12) {
-                    Add-AutoClaims -Count $gain -Date $(if ($after) { $after.ToString('yyyy-MM-dd') } else { "$($mk.dateBefore)" })
-                    $autoAdded = $gain
-                }
+                # observed only: see the note above the offset constant
                 Save-AutoClaim ([ordered]@{
-                    offset   = (Get-ClaimOffset)
-                    lastRead = $vAfter
-                    lastGain = $autoAdded
+                    offset     = (Get-ClaimOffset)
+                    readBefore = $vBefore
+                    readAfter  = $vAfter
+                    moved      = ($vAfter - $vBefore)
                     lastFlight = (Get-Date).ToString('s')
+                    note       = 'Observed only. This counter is wider than one pilot, so nothing is credited from it.'
                 })
             }
         }
@@ -960,17 +961,19 @@ function Get-PlayerHonours {
 # =====================================================================
 #  Automatic claims (Tier 4)
 #
-#  The campaign save keeps the player's running victory total as a u16
-#  inside the fixed SaveDataSoftware block. It was found by differencing
-#  real saves either side of a sortie: across a three-victory flight this
-#  field went 1 -> 4 in both the named save and the autosave, while
-#  nothing else in the block moved by exactly three in both. The Room
-#  reads it after every flight and credits the difference. No questions.
+#  NOT YET TRUSTWORTHY - the Room does not credit victories by itself.
 #
-#  The save carries no record of WHICH types were shot down that the
-#  claim can be attributed to, so automatic credits are logged without a
-#  type; LOG A CLAIM remains for anyone who wants to name one.
-# =====================================================================
+#  The u16 at offset 11100 rose by exactly the three the player claimed,
+#  but the game's own Log Book totals three while that field reads FOUR,
+#  so it is counting something wider than one pilot (the squadron, most
+#  likely: it already stood at 1 when the player had none). Crediting
+#  from it would quietly inflate a career with other men's kills.
+#
+#  So the field is only OBSERVED: every sortie its movement is recorded
+#  in autoclaim.json for later study, and nothing is added to the pilot.
+#  The player's own per-sortie claims live in the save's variable-length
+#  tail, which does not diff by fixed offset; finding them needs sorties
+#  whose true score is known from the game's Log Book.
 $AutoClaimPath   = Join-Path $StateDir 'autoclaim.json'
 $ClaimOffset     = 11100      # u16, victories to date
 $SaveBlockStart  = 40
@@ -1203,11 +1206,11 @@ function Show-Logbook {
 
     # ---- automatic claims: a quiet statement of how it works ---------
     $ac = Get-AutoClaim
-    $acTxt = 'Victories are read from the campaign save after every sortie and credited here automatically.'
-    if ($ac -and ($ac.PSObject.Properties.Name -contains 'lastGain') -and ([int]$ac.lastGain) -gt 0) {
-        $acTxt += "  Your last flight was credited with $([int]$ac.lastGain)."
+    $acTxt = 'Automatic claims are not switched on: the counter found in the campaign save counts the whole squadron, not you alone, so your victories are the ones you log here.'
+    if ($ac -and ($ac.PSObject.Properties.Name -contains 'moved') -and ([int]$ac.moved) -gt 0) {
+        $acTxt += "  (The squadron's tally moved by $([int]$ac.moved) on your last sortie.)"
     }
-    $lk = New-TB -Text $acTxt -Family 'Segoe UI' -Size 12.5 -Colour '#7FA98C' -Wrap
+    $lk = New-TB -Text $acTxt -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Wrap
     $lk.Margin = '0,-8,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lk)
 

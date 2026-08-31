@@ -1065,7 +1065,9 @@ function Invoke-DriftCheck {
                 if ($sav) {
                     $bb = [System.IO.File]::ReadAllBytes($sav.FullName)
                     if (($bb.Length -ge 70) -and ([System.Text.Encoding]::ASCII.GetString($bb,1,20) -match '^Rowan Savegame: V 0')) {
-                        $secs = [BitConverter]::ToUInt32($bb,61)
+                        # offset 57 = the campaign's CURRENT day (61 is a later
+                        # date and put this a month ahead of the game)
+                        $secs = [BitConverter]::ToUInt32($bb,57)
                         if ($secs % 86400 -eq 0) {
                             $dt = ([datetime]'1901-01-01').AddSeconds($secs)
                             if ($dt.Year -ge 1939 -and $dt.Year -le 1941) { $before = $dt.ToString('yyyy-MM-dd') }

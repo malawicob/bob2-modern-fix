@@ -2045,11 +2045,13 @@ $VariantDefs = @(
     @{ Id='jabo'; Name='Bf 109E-4/B Jabo (experimental)'; Files=@(); Sig=$null }
 )
 
-# Campaign date (decoded 2026-08-25): .BSR saves store dates as u32
-# SECONDS SINCE 1901-01-01. Offsets 49/53/57 = campaign start (10 Jul
-# 1940), offset 61 = the CURRENT campaign date. Values are always whole
-# days (divisible by 86400); Bob.exe carries the same constants
-# (1247184000 = 10 Jul 1940 appears 7 times).
+# Campaign date: .BSR saves store dates as u32 SECONDS SINCE 1901-01-01.
+# Offsets 49/53 = campaign start (10 Jul 1940 = 1247184000, a constant
+# Bob.exe carries 7 times), offset 57 = the CURRENT campaign day, offset
+# 61 = a later date (campaign end or a scheduled event). Corrected
+# 2026-08-31: this read 61 and so ran a month ahead. Ground truth was one
+# sortie - the game's Log Book and Combat Report both showed 11 July while
+# 57 read 11 July and 61 read 11 August. Values are always whole days.
 $VariantAutoMarkerName = 'BOB2-Win11-Fix.variants-auto'
 $VariantIntroDates = @{ mk2 = [datetime]'1940-08-12'; e7 = [datetime]'1940-08-15'; d1 = [datetime]'1940-07-01' }
 
@@ -2066,7 +2068,7 @@ function Get-CampaignDate {
         if ($b.Length -lt 70) { return $null }
         $hdr = [System.Text.Encoding]::ASCII.GetString($b, 1, 20)
         if ($hdr -notmatch '^Rowan Savegame: V 0') { return $null }
-        $secs = [BitConverter]::ToUInt32($b, 61)
+        $secs = [BitConverter]::ToUInt32($b, 57)
         if ($secs % 86400 -ne 0) { return $null }
         $date = ([datetime]'1901-01-01').AddSeconds($secs)
         if ($date.Year -lt 1939 -or $date.Year -gt 1941) { return $null }
