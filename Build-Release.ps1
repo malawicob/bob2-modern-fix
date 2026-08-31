@@ -156,6 +156,14 @@ the ones you supply.
   https://github.com/martymcmodding/qUINT and copy the Shaders folder
   into reshade-shaders.
 
+  Morning Bulletin          Genuine 1940 headlines and extracts from New
+  headlines                 Zealand newspapers, digitised by Papers Past,
+                            National Library of New Zealand.
+                            https://paperspast.natlib.govt.nz
+                            CC BY-NC-SA 4.0, non-commercial use with
+                            attribution; each front page credits its
+                            source newspaper.
+
 $(if ($IncludeDxvk) { "  DXVK                      zlib/libpng licence - https://github.com/doitsujin/dxvk`n" } else { "" })
 NOT INCLUDED, and needed separately:
 

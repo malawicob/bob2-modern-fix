@@ -962,7 +962,7 @@ function New-Stat {
 function New-Nav {
     param([string]$Current)
     $nav = New-Object Windows.Controls.StackPanel; $nav.Orientation = 'Horizontal'; $nav.Margin = '0,0,0,22'
-    foreach ($t in @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'})) {
+    foreach ($t in @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'}, @{k='paper';l='MORNING BULLETIN'})) {
         $active = ($t.k -eq $Current)
         $tb = New-Object Windows.Controls.Border
         $tb.Padding = '15,9'; $tb.Margin = '0,0,10,0'; $tb.CornerRadius = '3'; $tb.Cursor = 'Hand'; $tb.Tag = $t.k
@@ -976,6 +976,7 @@ function New-Nav {
             $pl = Get-Pilot
             if ($s.Tag -eq 'logbook') { Show-Logbook -Pilot $pl }
             elseif ($s.Tag -eq 'map') { Show-Map -Pilot $pl }
+            elseif ($s.Tag -eq 'paper') { Show-Paper -Pilot $pl }
             else { Show-Roster -Pilot $pl }
         })
         [void]$nav.Children.Add($tb)
@@ -1324,6 +1325,146 @@ function Show-Map {
         $chip.Child = (New-TB -Text "No. $sqnum SQUADRON  $([char]0x2022)  $($base.ToUpper())  $([char]0x2022)  BEYOND THIS TABLE" -Family $CondFam -Size 12.5 -Colour '#FFE28A' -Bold)
         [void]$script:Stage.Children.Add($chip)
     }
+}
+# =====================================================================
+#  The Morning Bulletin: the day's paper, from the real 1940 cables
+# =====================================================================
+$PaperPath = Join-Path $ModDir 'paper.json'
+function Get-Paper {
+    # The comma keeps the array intact through the function return, so the
+    # caller gets every entry, not a single wrapped object whose members
+    # then enumerate into one mashed string.
+    $out = @()
+    if (Test-Path $PaperPath) { try { $out = @(Get-Content $PaperPath -Raw | ConvertFrom-Json) } catch { $out = @() } }
+    ,$out
+}
+function Format-ShortDate {
+    param([string]$s)
+    try { return ([datetime]::ParseExact($s,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)).ToString('d MMM') } catch { return $s }
+}
+function New-Rule {
+    param([string]$Colour = '#221E15', [double]$H = 1.5)
+    $r = New-Object Windows.Controls.Border
+    $r.Height = $H; $r.Background = B $Colour; $r.Margin = '0,10,0,10'
+    $r
+}
+function Show-Paper {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'paper'))
+    $Pilot = Ensure-Squadron -Pilot $Pilot
+    $sqnum = 92; if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
+
+    $entries = @(Get-Paper)
+    # ConvertFrom-Json plus the pipeline can nest the entry array several
+    # layers deep (a single flatten once shipped broken); peel until the
+    # real entries appear
+    while ($entries.Count -eq 1 -and ($entries[0] -is [System.Array])) { $entries = $entries[0] }
+
+    $leadIdx = -1
+    if ($script:CampaignDate) {
+        for ($k = 0; $k -lt $entries.Count; $k++) {
+            $ed = $null
+            try { $ed = [datetime]::ParseExact($entries[$k].date,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
+            if ($ed -and ($ed -le $script:CampaignDate)) { $leadIdx = $k }
+        }
+    }
+    # a campaign day before the first paper reads the first paper; no
+    # campaign at all shows the latest front page
+    if (($leadIdx -lt 0) -and $entries.Count) { $leadIdx = if ($script:CampaignDate) { 0 } else { $entries.Count - 1 } }
+
+    $paper = New-Object Windows.Controls.Border
+    $paper.Background = B '#E9E0CA'; $paper.CornerRadius = '2'; $paper.Padding = '40,26,40,34'
+    $paper.MaxWidth = 940; $paper.HorizontalAlignment = 'Left'
+    $paper.BorderBrush = B '#2A2418'; $paper.BorderThickness = '1'
+    $col = New-Object Windows.Controls.StackPanel
+
+    # ---- masthead ----
+    [void]$col.Children.Add((New-Rule '#1A1712' 3))
+    $mh = New-TB -Text 'The Morning Bulletin' -Family "Old English Text MT, Blackadder ITC, Georgia, 'Times New Roman', serif" -Size 50 -Colour '#141109'
+    $mh.HorizontalAlignment = 'Center'; $mh.Margin = '0,6,0,2'
+    [void]$col.Children.Add($mh)
+    [void]$col.Children.Add((New-Rule '#1A1712' 1))
+
+    $base = if ($sqnum -eq 92 -and $script:CampaignDate) { Get-Airfield $script:CampaignDate }
+            elseif ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { "$($Pilot.base)" }
+            else { $null }
+    $centTxt = if ($base) { $base.ToUpper() } else { 'FIGHTER COMMAND' }
+    $dstr = if ($script:CampaignDate) { $script:CampaignDate.ToString('dddd, d MMMM yyyy').ToUpper() } else { 'THE BATTLE OF BRITAIN, 1940' }
+    $dl = New-Object Windows.Controls.Grid; $dl.Margin = '0,5,0,5'
+    foreach ($w in @('*','*','*')) { $cd=New-Object Windows.Controls.ColumnDefinition; $cd.Width=New-Object Windows.GridLength(1,([Windows.GridUnitType]::Star)); [void]$dl.ColumnDefinitions.Add($cd) }
+    $dLeft  = New-TB -Text "No. $sqnum Squadron R.A.F." -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dLeft.VerticalAlignment='Center'
+    $dCent  = New-TB -Text $centTxt -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dCent.HorizontalAlignment='Center'; $dCent.VerticalAlignment='Center'
+    $dRight = New-TB -Text $dstr -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dRight.HorizontalAlignment='Right'; $dRight.VerticalAlignment='Center'
+    [Windows.Controls.Grid]::SetColumn($dLeft,0); [Windows.Controls.Grid]::SetColumn($dCent,1); [Windows.Controls.Grid]::SetColumn($dRight,2)
+    [void]$dl.Children.Add($dLeft); [void]$dl.Children.Add($dCent); [void]$dl.Children.Add($dRight)
+    [void]$col.Children.Add($dl)
+    [void]$col.Children.Add((New-Rule '#1A1712' 2.5))
+
+    # ---- two columns: lead story | latest signals ----
+    $bodyG = New-Object Windows.Controls.Grid; $bodyG.Margin = '0,12,0,0'
+    $g0=New-Object Windows.Controls.ColumnDefinition; $g0.Width=New-Object Windows.GridLength(2,([Windows.GridUnitType]::Star))
+    $g1=New-Object Windows.Controls.ColumnDefinition; $g1.Width=New-Object Windows.GridLength(26)
+    $g2=New-Object Windows.Controls.ColumnDefinition; $g2.Width=New-Object Windows.GridLength(1.15,([Windows.GridUnitType]::Star))
+    [void]$bodyG.ColumnDefinitions.Add($g0); [void]$bodyG.ColumnDefinitions.Add($g1); [void]$bodyG.ColumnDefinitions.Add($g2)
+
+    $lc = New-Object Windows.Controls.StackPanel
+    $lead = $null
+    if ($leadIdx -ge 0 -and $entries.Count) {
+        $lead = $entries[$leadIdx]
+        $hl = New-TB -Text ([string]$lead.headline) -Family 'Georgia, Cambria, serif' -Size 31 -Colour '#120F08' -Bold -Wrap
+        $hl.LineHeight = 34
+        [void]$lc.Children.Add($hl)
+        [void]$lc.Children.Add((New-Rule '#7A5E2E' 1))
+        $bd = New-TB -Text ([string]$lead.body) -Family 'Georgia, Cambria, serif' -Size 15 -Colour '#2A2620' -Wrap
+        $bd.LineHeight = 24; $bd.Margin = '0,8,0,0'; $bd.TextAlignment = 'Justify'
+        [void]$lc.Children.Add($bd)
+        # credit the real paper the story came from, as the cables did
+        if (($lead.PSObject.Properties.Name -contains 'paper') -and $lead.paper) {
+            $src = New-TB -Text ("$([char]0x2014) $($lead.paper), from the London cables") -Family 'Georgia, Cambria, serif' -Size 12.5 -Colour '#6B6250'
+            $src.Margin = '0,10,0,0'; $src.FontStyle = 'Italic'
+            [void]$lc.Children.Add($src)
+        }
+    }
+    [Windows.Controls.Grid]::SetColumn($lc,0); [void]$bodyG.Children.Add($lc)
+
+    $vr = New-Object Windows.Controls.Border; $vr.Width=1; $vr.Background=B '#3A3324'; $vr.HorizontalAlignment='Center'
+    [Windows.Controls.Grid]::SetColumn($vr,1); [void]$bodyG.Children.Add($vr)
+
+    $sc = New-Object Windows.Controls.StackPanel
+    [void]$sc.Children.Add((New-TB -Text 'LATEST SIGNALS' -Family $CondFam -Size 12 -Colour '#7A5E2E' -Bold))
+    [void]$sc.Children.Add((New-Rule '#7A5E2E' 1))
+    $shown = 0
+    # the day's own wire items when the entry carries them...
+    if ($lead -and ($lead.PSObject.Properties.Name -contains 'signals') -and $lead.signals) {
+        foreach ($sg in @($lead.signals)) {
+            if ($shown -ge 6) { break }
+            $item = New-TB -Text ([string]$sg) -Family 'Georgia, serif' -Size 14 -Colour '#1C1810' -Bold -Wrap
+            $item.Margin = '0,0,0,13'; $item.LineHeight = 17
+            [void]$sc.Children.Add($item)
+            $shown++
+        }
+    }
+    # ...otherwise the last few days' headlines, as before
+    for ($k = $leadIdx - 1; ($k -ge 0) -and ($shown -lt 6); $k--) {
+        $e = $entries[$k]
+        $item = New-Object Windows.Controls.StackPanel; $item.Margin = '0,0,0,13'
+        $dt = New-TB -Text (Format-ShortDate ([string]$e.date)) -Family $CondFam -Size 11 -Colour '#7A5E2E' -Bold
+        [void]$item.Children.Add($dt)
+        $hh = New-TB -Text ([string]$e.headline) -Family 'Georgia, serif' -Size 14 -Colour '#1C1810' -Bold -Wrap
+        $hh.Margin = '0,1,0,0'; $hh.LineHeight = 17
+        [void]$item.Children.Add($hh)
+        [void]$sc.Children.Add($item)
+        $shown++
+    }
+    if ($shown -eq 0) { [void]$sc.Children.Add((New-TB -Text 'Quiet on the wire.' -Family 'Georgia, serif' -Size 13 -Colour '#4A4436')) }
+    [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
+
+    [void]$col.Children.Add($bodyG)
+    [void]$col.Children.Add((New-Rule '#1A1712' 2))
+    $paper.Child = $col
+    [void]$script:Stage.Children.Add($paper)
 }
 # =====================================================================
 #  Postings: choose your squadron on the plotting map
