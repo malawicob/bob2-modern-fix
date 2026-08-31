@@ -1435,6 +1435,14 @@ function Show-Roster {
             $pend = New-TB -Text 'The names of this squadron''s pilots are still being researched; yours is on the board above.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
             $pend.Margin = '0,10,0,0'; $pend.MaxWidth = 840
             [void]$cst.Children.Add($pend)
+        } else {
+            # credit whoever the names came from; a roster may mix sources
+            $srcs = @($men | ForEach-Object { "$($_.src)" } | Where-Object { $_ } | Sort-Object -Unique)
+            if ($srcs.Count) {
+                $sl = New-TB -Text ("Names from " + ($srcs -join '; ') + ".") -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
+                $sl.Margin = '0,10,0,0'; $sl.MaxWidth = 840
+                [void]$cst.Children.Add($sl)
+            }
         }
         $card.Child = $cst
         [void]$script:Stage.Children.Add($card)

@@ -84,6 +84,7 @@ DXVK is excluded by default: 7.5 MB, two thirds of the package, for a wrapper th
 | **dgVoodoo2 2.8.7.3** | © Dege — <https://dege.freeweb.hu>. Shipped under the redistribution rights in the dgVoodoo readme: *"You can freely ship your game or game mod with individual dgVoodoo files included."* |
 | **Lucide icons** | ISC licence — <https://lucide.dev> |
 | **Photographs** | Imperial War Museums, public domain. IWM HU 54418 (32 Squadron at Hawkinge, 29 July 1940) and IWM CL186 (RAF Repair and Salvage Unit, Normandy, 19 June 1944) |
+| **Squadron rosters** | No. 32 Squadron names from the Air Ministry / John Holloway list of the Few, via Wikipedia's List of RAF aircrew in the Battle of Britain (CC BY-SA); one entry from an Imperial War Museums photograph caption. Victory totals for this squadron are not yet researched and are shown blank rather than estimated. No. 92 Squadron roster from the project's own research. |
 | **Morning Bulletin headlines** | Genuine 1940 headlines and extracts from New Zealand newspapers, digitised by Papers Past, National Library of New Zealand — <https://paperspast.natlib.govt.nz>. CC BY-NC-SA 4.0, non-commercial use with attribution; each front page credits its source paper. |
 | **PresentMon** | Intel, not shipped — a separate download |
 
