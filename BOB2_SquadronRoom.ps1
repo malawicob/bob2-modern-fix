@@ -964,8 +964,15 @@ function Save-AutoClaim {
         $Obj | ConvertTo-Json -Depth 5 | Set-Content -Path $AutoClaimPath -Encoding UTF8
     } catch { }
 }
-# Bytes that INCREASED by a plausible kill count. Same-length files only:
-# a different save slot shifts every offset and would poison the search.
+# Bytes that INCREASED by a plausible kill count.
+#
+# Scanned over the FIXED campaign block only (file 40..11609, the
+# SaveDataSoftware chunk of BSR_FORMAT.md). The .BSR grows from save to
+# save - its diary and package tail are variable length - so file offsets
+# only correspond inside this block. An earlier same-length requirement
+# made the scan return nothing at all on real saves.
+$SaveBlockStart = 40
+$SaveBlockEnd   = 11610      # exclusive
 function Get-SaveRises {
     param([string]$BeforePath, [string]$AfterPath)
     $rises = @{}
@@ -974,8 +981,8 @@ function Get-SaveRises {
         if (-not (Test-Path $AfterPath))  { return $rises }
         $a = [System.IO.File]::ReadAllBytes($BeforePath)
         $b = [System.IO.File]::ReadAllBytes($AfterPath)
-        if ($a.Length -ne $b.Length) { return $rises }
-        for ($i = 40; $i -lt $a.Length; $i++) {
+        if ($a.Length -lt $SaveBlockEnd -or $b.Length -lt $SaveBlockEnd) { return $rises }
+        for ($i = $SaveBlockStart; $i -lt $SaveBlockEnd; $i++) {
             if ($b[$i] -gt $a[$i]) {
                 $d = [int]$b[$i] - [int]$a[$i]
                 if ($d -le 8) { $rises[[string]$i] = $d }
