@@ -916,7 +916,9 @@ function Get-PlayerHonours {
     if ($v -ge 10) { $h += "Bar to $cross" }
     if ($v -ge 15) { $h += 'DSO' }
     if (($Pilot.PSObject.Properties.Name -contains 'awards') -and $Pilot.awards -and ($h -notcontains "$($Pilot.awards)")) { $h = @("$($Pilot.awards)") + $h }
-    ,$h
+    # no comma return: every caller collects with @(...), and comma + @()
+    # double-wraps into the System.Object[] display bug
+    $h
 }
 # Player-entered victory with the type shot down (auto claims are Tier 4).
 function Add-Claim {
@@ -1072,7 +1074,7 @@ function Show-Logbook {
     $isCmdr2 = (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander'))
     $pn = if ($isCmdr2) { 'You command the squadron. Its fortunes in the air are yours to answer for.' }
           elseif ($career.next) { "Next promotion to $($career.next) at $($career.nextAt) sorties." } else { 'At the top of the tree.' }
-    if ($honours.Count) { $pn = "Honours: $($honours -join ', ').  $pn" }
+    # honours read from the ribbon chips and the AWARDS tile; no text prefix
     $cs = Get-ClaimSummary $Pilot
     if ($cs) { $pn = "Claims: $cs.  $pn" }
     $pnt = New-TB -Text $pn -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap; $pnt.Margin = '0,2,0,18'; $pnt.MaxWidth = 860; $pnt.HorizontalAlignment = 'Left'
