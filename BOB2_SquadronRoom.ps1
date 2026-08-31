@@ -962,7 +962,7 @@ function New-Stat {
 function New-Nav {
     param([string]$Current)
     $nav = New-Object Windows.Controls.StackPanel; $nav.Orientation = 'Horizontal'; $nav.Margin = '0,0,0,22'
-    foreach ($t in @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"})) {
+    foreach ($t in @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'})) {
         $active = ($t.k -eq $Current)
         $tb = New-Object Windows.Controls.Border
         $tb.Padding = '15,9'; $tb.Margin = '0,0,10,0'; $tb.CornerRadius = '3'; $tb.Cursor = 'Hand'; $tb.Tag = $t.k
@@ -974,7 +974,9 @@ function New-Nav {
         $tb.Add_MouseLeftButtonUp({
             param($s,$e)
             $pl = Get-Pilot
-            if ($s.Tag -eq 'logbook') { Show-Logbook -Pilot $pl } else { Show-Roster -Pilot $pl }
+            if ($s.Tag -eq 'logbook') { Show-Logbook -Pilot $pl }
+            elseif ($s.Tag -eq 'map') { Show-Map -Pilot $pl }
+            else { Show-Roster -Pilot $pl }
         })
         [void]$nav.Children.Add($tb)
     }
@@ -1242,6 +1244,92 @@ function Invoke-Submit {
     Show-Roster -Pilot (Get-Pilot)
 }
 
+# =====================================================================
+#  The map: the plotting table with your own station ringed
+# =====================================================================
+function Show-Map {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'map'))
+    $Pilot = Ensure-Squadron -Pilot $Pilot
+    Set-Header $Pilot
+    $sqnum = 92; if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
+    # the same base rule as the dispersal: 92 moves with the campaign
+    # date, everyone else stands where their posting put them
+    $base = if ($sqnum -eq 92 -and $script:CampaignDate) { Get-Airfield $script:CampaignDate }
+            elseif ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { "$($Pilot.base)" }
+            else { 'RAF Biggin Hill' }
+    $eyebrow = if ($script:CampaignDate) { "FIGHTER COMMAND  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { 'FIGHTER COMMAND' }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at $base"))
+
+    $onTable = [bool]$MapStations[$base]
+    $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Your station today is ringed on the table." }
+               else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the edge of this table." }
+    $lead = New-TB -Text $leadTxt -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
+    $lead.Margin = '0,0,0,12'
+    [void]$script:Stage.Children.Add($lead)
+
+    $W = 1080.0; $H = [math]::Round($W * 800.0 / 1600.0)
+    $mapWrap = New-Object Windows.Controls.Border
+    $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
+    $mapWrap.Background = B '#0B141B'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
+    $grid = New-Object Windows.Controls.Grid
+    $imgPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.jpg'
+    $bg = New-Object Windows.Controls.Image
+    $bmp = Load-Image -Path $imgPath -DecodeWidth 1600
+    if ($bmp) { $bg.Source = $bmp }
+    $bg.Stretch = 'Uniform'; $bg.Width = $W; $bg.Height = $H
+    [void]$grid.Children.Add($bg)
+    $cv = New-Object Windows.Controls.Canvas; $cv.Width = $W; $cv.Height = $H; $cv.ClipToBounds = $true
+    [void]$grid.Children.Add($cv)
+    $mapWrap.Child = $grid
+
+    if ($onTable) {
+        $st = $MapStations[$base]
+        $cx = [double]$st[0] * $W; $cy = [double]$st[1] * $H
+        # honour a hand-corrected ring anchor from the plotting table
+        $rpPath = Join-Path $StateDir 'ringpos.json'
+        if (Test-Path $rpPath) {
+            try {
+                $rp = Get-Content $rpPath -Raw | ConvertFrom-Json
+                $ovp = $rp.PSObject.Properties["$base|$sqnum"]
+                if ($ovp -and $ovp.Value) { $cx = [double]$ovp.Value.x * $W; $cy = [double]$ovp.Value.y * $H }
+            } catch { }
+        }
+        # a breathing gold halo round the station, a firm ring inside it
+        $halo = New-Object Windows.Shapes.Ellipse
+        $halo.Width = 64; $halo.Height = 64; $halo.StrokeThickness = 3
+        $halo.Stroke = B '#FFE28A'; $halo.Fill = B '#22FFE28A'
+        [Windows.Controls.Canvas]::SetLeft($halo, $cx - 32); [Windows.Controls.Canvas]::SetTop($halo, $cy - 32)
+        $pulse = New-Object Windows.Media.Animation.DoubleAnimation(0.25, 0.95, [Windows.Duration]::new([TimeSpan]::FromSeconds(1.1)))
+        $pulse.AutoReverse = $true
+        $pulse.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
+        $halo.BeginAnimation([Windows.UIElement]::OpacityProperty, $pulse)
+        [void]$cv.Children.Add($halo)
+        $ring = New-Object Windows.Shapes.Ellipse
+        $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 3.5
+        $ring.Stroke = B '#FFE28A'; $ring.Fill = B '#01000000'
+        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
+        [void]$cv.Children.Add($ring)
+        $bl = New-TB -Text "No. $sqnum SQUADRON  $([char]0x2022)  $($base.ToUpper())" -Family $CondFam -Size 12.5 -Colour '#FFE28A' -Bold
+        $bl.IsHitTestVisible = $false
+        # keep the caption on the table when the station sits near an edge
+        $blx = [math]::Max(6.0, [math]::Min($cx - 70.0, $W - 260.0))
+        $bly = if ($cy + 62.0 -gt $H) { $cy - 58.0 } else { $cy + 38.0 }
+        [Windows.Controls.Canvas]::SetLeft($bl, $blx); [Windows.Controls.Canvas]::SetTop($bl, $bly)
+        [void]$cv.Children.Add($bl)
+    }
+    [void]$script:Stage.Children.Add($mapWrap)
+
+    if (-not $onTable) {
+        $chip = New-Object Windows.Controls.Border
+        $chip.Padding = '14,9'; $chip.Margin = '0,14,0,0'; $chip.CornerRadius = '3'; $chip.HorizontalAlignment = 'Left'
+        $chip.Background = B '#101B22'; $chip.BorderBrush = B '#FFE28A'; $chip.BorderThickness = '1.5'
+        $chip.Child = (New-TB -Text "No. $sqnum SQUADRON  $([char]0x2022)  $($base.ToUpper())  $([char]0x2022)  BEYOND THIS TABLE" -Family $CondFam -Size 12.5 -Colour '#FFE28A' -Bold)
+        [void]$script:Stage.Children.Add($chip)
+    }
+}
 # =====================================================================
 #  Postings: choose your squadron on the plotting map
 # =====================================================================
