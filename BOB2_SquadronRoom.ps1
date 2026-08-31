@@ -1424,7 +1424,9 @@ function Show-Roster {
         $mv = New-TB -Text ($moves -join $sep) -Family 'Segoe UI' -Size 13 -Colour '#C9D4CE' -Wrap
         $mv.Margin = '0,9,0,0'; $mv.MaxWidth = 840
         [void]$cst.Children.Add($mv)
-        $rate = "Flying $($oob.type).  Fighter Command rated the squadron $("$($oob.skill)".ToLower()) in skill, with $("$($oob.fatigue)".ToLower()) reserves of freshness."
+        # the game's own campaign ratings, said plainly as such rather than
+        # dressed up as a historical Fighter Command assessment
+        $rate = "Flying $($oob.type).  The campaign starts the squadron $("$($oob.skill)".ToLower()) in skill, with $("$($oob.fatigue)".ToLower()) reserves of freshness."
         if ("$($oob.notes)") { $rate += "  $($oob.notes)." }
         $rt = New-TB -Text $rate -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Wrap
         $rt.Margin = '0,8,0,0'; $rt.MaxWidth = 840
