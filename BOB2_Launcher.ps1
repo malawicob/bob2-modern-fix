@@ -131,6 +131,24 @@ function Get-GameVersion {
     return 'unknown'
 }
 
+function Get-GpuDriverSignature {
+    # Every display adapter's name and driver version, sorted, one line.
+    # BOB2 saves its 3D resolution as a POSITION in the driver's enumerated
+    # mode list; a new driver reorders that list and the saved position
+    # lands on a different mode (a 16:9 one on a 16:10 panel = black bars
+    # top and bottom). Proven 2026-09-06: identical settings files, one
+    # driver update, both installs broke. So the signature is recorded and
+    # a change is announced at Play with the one-minute cure.
+    try {
+        $gpus = @(Get-CimInstance Win32_VideoController -ErrorAction Stop |
+                  Where-Object { $_.DriverVersion } |
+                  ForEach-Object { '{0} {1}' -f ($_.Name -replace '\s+',' ').Trim(), $_.DriverVersion } |
+                  Sort-Object -Unique)
+        if ($gpus.Count) { return ($gpus -join ' | ') }
+    } catch { }
+    return $null
+}
+
 function Get-InstalledFixVersion {
     $vf = Join-Path $GameDir 'BOB2-Win11-Fix.version'
     if (Test-Path $vf) {
@@ -1049,6 +1067,34 @@ function Invoke-DriftCheck {
                     Show-Note ("The game's graphics settings file was damaged ($($chk.Reason)), which causes the low-resolution picture inside a black border. It has been repaired automatically.`n`n" + $r.Message) 'Graphics settings repaired' 'Information'
                 } else {
                     Show-Note ("The game's graphics settings file is damaged ($($chk.Reason)) but could not be repaired: $($r.Message)") 'Graphics settings damaged' 'Warning'
+                }
+            }
+        } catch { }
+    }
+
+    # Graphics driver changed since the last Play? Then the resolution the
+    # game saved is a position in a list that no longer exists in that
+    # order, and the picture comes up wrong. Say so once, with the cure,
+    # and record the new driver. Fully guarded - can never stop the game.
+    if (-not $script:DriverCheckDone) {
+        $script:DriverCheckDone = $true
+        try {
+            $sig = Get-GpuDriverSignature
+            if ($sig) {
+                $df = Join-Path $GameDir 'BOB2-Win11-Fix.driver'
+                $old = $null
+                if (Test-Path $df) {
+                    $m = Select-String -Path $df -Pattern '^Driver\s*=\s*(.+)$' -ErrorAction SilentlyContinue
+                    if ($m) { $old = $m.Matches[0].Groups[1].Value.Trim() }
+                }
+                if ($old -and ($old -ne $sig)) {
+                    Show-Note ("Your graphics driver has changed since you last flew.`n`n" +
+                        "Was:  $old`nNow:  $sig`n`n" +
+                        "Battle of Britain II remembers its 3D resolution as a position in the driver's list of display modes, and a new driver puts that list in a different order. The game may now start at the wrong resolution, with black bars above and below the picture.`n`n" +
+                        "The cure takes a minute, inside the game: Options, then Graphics. In the top Resolution list pick your resolution again (the exclamation marks only mean widescreen), press the tick, and quit the game from the menu so it saves. Then fly as normal.") 'Graphics driver changed' 'Warning'
+                }
+                if ($old -ne $sig) {
+                    @("Driver = $sig", "Recorded = $((Get-Date).ToString('s'))") | Set-Content -Path $df -Encoding UTF8
                 }
             }
         } catch { }
