@@ -339,13 +339,16 @@ function Get-Checks {
             }
             if ($cb) {
             $resOk = $true; $why = "$rw x $rh @ $rhz Hz"
-            if ($rhz -le 0 -or $rw -lt 800 -or $rh -lt 600) {
-                $resOk = $false; $why = "$rw x $rh @ $rhz Hz - a degraded fallback the game wrote after a failed mode switch"
-            } elseif ($rhz -gt 60) {
-                # High-refresh modes are what failed to hold in practice
-                # (2560x1600@240 -> 1024x768 fallback). 60Hz exists at
-                # every resolution this game can use.
-                $resOk = $false; $why = "$rw x $rh @ $rhz Hz - high refresh rates can fail to hold and drop the menus to 1024x768"
+            if ($rw -lt 800 -or $rh -lt 600) {
+                $resOk = $false; $why = "$rw x $rh @ $rhz Hz - the 1024x768 fallback the game writes after a failed mode switch"
+            } elseif ($rhz -gt 199) {
+                # The game never stores a refresh above 199 itself (its GFX
+                # dialog writes 0 for those) and a 240 written by an old
+                # repair made the map-screen switch fail: 4:3 menus in side
+                # bars and briefing text overprinting its tab row. A refresh
+                # of 0 is legitimate (it means "default"), so it is NOT
+                # flagged.
+                $resOk = $false; $why = "$rw x $rh @ $rhz Hz - the game cannot apply a refresh above 199 here; press Fix to set 60"
             }
             $out.Add([pscustomobject]@{
                 Name='Campaign resolution'; Ok=$resOk; Detail=$why

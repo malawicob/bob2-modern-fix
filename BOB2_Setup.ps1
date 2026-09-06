@@ -2132,10 +2132,16 @@ function Repair-KnownGoodSettings {
     $mode = Get-CurrentDisplayModeSafe
     $note = 'kept the known-good 1920x1080 @ 60'
     if ($mode) {
+        # Size from the desktop, refresh ALWAYS 60. The game itself never
+        # stores a map-screen refresh outside 60..199 (its GFX dialog writes
+        # 0 for anything else), and a 240 written here on 2026-08-31 made
+        # the mode switch fail: 4:3 menus in side bars, briefing text
+        # overprinting its tab row, and the desktop left at 1024x768 on
+        # exit. 60 Hz exists at every size this game can use.
         [BitConverter]::GetBytes([int]$mode.W).CopyTo($bytes, 1416)
         [BitConverter]::GetBytes([int]$mode.H).CopyTo($bytes, 1480)
-        [BitConverter]::GetBytes([int]$mode.Hz).CopyTo($bytes, 1544)
-        $note = "resolution set to your display: $($mode.W)x$($mode.H) @ $($mode.Hz)"
+        [BitConverter]::GetBytes([int]60).CopyTo($bytes, 1544)
+        $note = "resolution set to your display size: $($mode.W)x$($mode.H) @ 60"
     }
     $dir = Join-Path $GameFolder 'SAVEGAME'
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
