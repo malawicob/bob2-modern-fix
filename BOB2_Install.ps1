@@ -674,10 +674,16 @@ function Invoke-Step {
         # far; native size keeps the menus as large as the panel allows.
         $cfgP = Join-Path $GameDir 'SAVEGAME\settings.cfg'
         if (-not (Test-Path $cfgP)) { Add-Log 'settings.cfg not found.'; return }
+        # A mode the game's 2D path can HOLD, never the raw desktop size:
+        # 2560x1600 never held (menus fall back to a pillarboxed 1024x768
+        # canvas), 1920x1200 @ 60 holds on 16:10 panels, 1920x1080 @ 60 is
+        # the audited known-good. Same rule as Setup's Get-MapScreenMode.
         $w = 1920; $h = 1080
         try {
             $vc = Get-CimInstance Win32_VideoController | Select-Object -First 1
-            if ($vc.CurrentHorizontalResolution -ge 800) { $w = [int]$vc.CurrentHorizontalResolution; $h = [int]$vc.CurrentVerticalResolution }
+            $dw = [int]$vc.CurrentHorizontalResolution; $dh = [int]$vc.CurrentVerticalResolution
+            if ($dw -ge 800 -and $dw -lt 1920) { $w = $dw; $h = $dh }
+            elseif ($dh -gt 0 -and [math]::Abs(($dw / $dh) - (16.0 / 10.0)) -lt 0.02) { $h = 1200 }
         } catch { }
         $cb = [System.IO.File]::ReadAllBytes($cfgP)
         # Defence in depth: never write into a layout we cannot read.

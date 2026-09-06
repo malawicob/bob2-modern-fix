@@ -2103,6 +2103,24 @@ function Get-CurrentDisplayModeSafe {
     }
     $null
 }
+function Get-MapScreenMode {
+    # The MAP-SCREEN mode (settings.cfg 1416/1480/1544) must be one the
+    # game's 2D path can hold. Proven on a 2560x1600 @ 240 panel on
+    # 2026-09-06: 2560x1600 never held at any refresh (menus fell back to
+    # a pillarboxed 1024x768 canvas, rescaled dialogs overprinting), while
+    # 1920x1200 @ 60 held on the same panel and 1920x1080 @ 60 is the
+    # audited known-good. So: at most 1920 wide, 16:10 panels get
+    # 1920x1200, everything else 1920x1080, smaller desktops keep their
+    # own size; refresh always 60.
+    param($Desktop)
+    $w = 1920; $h = 1080
+    if ($Desktop -and $Desktop.W -gt 0 -and $Desktop.H -gt 0) {
+        if ($Desktop.W -lt 1920) { $w = [int]$Desktop.W; $h = [int]$Desktop.H }
+        elseif ([math]::Abs(($Desktop.W / $Desktop.H) - (16.0 / 10.0)) -lt 0.02) { $h = 1200 }
+    }
+    @{ W = $w; H = $h; Hz = 60 }
+}
+
 function Test-SettingsCfgHealthy {
     param([string]$GameFolder)
     # Healthy = the layout ChangeMode reads (int32 at offsets 1416/1480)
@@ -2129,20 +2147,11 @@ function Repair-KnownGoodSettings {
     if (-not (Test-Path $kg)) { return @{ Ok = $false; Message = 'knowngood\settings.cfg is missing from the fix folder.' } }
     $bytes = [System.IO.File]::ReadAllBytes($kg)
     if ($bytes.Length -ne 1786) { return @{ Ok = $false; Message = "known-good file is $($bytes.Length) bytes, expected 1786. Not applying." } }
-    $mode = Get-CurrentDisplayModeSafe
-    $note = 'kept the known-good 1920x1080 @ 60'
-    if ($mode) {
-        # Size from the desktop, refresh ALWAYS 60. The game itself never
-        # stores a map-screen refresh outside 60..199 (its GFX dialog writes
-        # 0 for anything else), and a 240 written here on 2026-08-31 made
-        # the mode switch fail: 4:3 menus in side bars, briefing text
-        # overprinting its tab row, and the desktop left at 1024x768 on
-        # exit. 60 Hz exists at every size this game can use.
-        [BitConverter]::GetBytes([int]$mode.W).CopyTo($bytes, 1416)
-        [BitConverter]::GetBytes([int]$mode.H).CopyTo($bytes, 1480)
-        [BitConverter]::GetBytes([int]60).CopyTo($bytes, 1544)
-        $note = "resolution set to your display size: $($mode.W)x$($mode.H) @ 60"
-    }
+    $mode = Get-MapScreenMode (Get-CurrentDisplayModeSafe)
+    [BitConverter]::GetBytes([int]$mode.W).CopyTo($bytes, 1416)
+    [BitConverter]::GetBytes([int]$mode.H).CopyTo($bytes, 1480)
+    [BitConverter]::GetBytes([int]$mode.Hz).CopyTo($bytes, 1544)
+    $note = "map-screen resolution set to $($mode.W)x$($mode.H) @ $($mode.Hz)"
     $dir = Join-Path $GameFolder 'SAVEGAME'
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     $dst = Join-Path $dir 'settings.cfg'
