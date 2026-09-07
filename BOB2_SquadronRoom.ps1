@@ -885,46 +885,25 @@ function Finalize-Flight {
         } else { $outcome = 'Practice flight' }
     } catch { }
     # ---- automatic claims -------------------------------------------
-    # Read the player's Log Book out of the save before and after the
-    # flight and credit every new kill, by type. Compared against the SAME
-    # save slot: the snapshot's own path when the marker recorded it,
-    # otherwise the save of matching size (same slot), otherwise the newest.
+    # Level the record with the campaign's Log Book (see Sync-CampaignClaims);
+    # the snapshot only records how many rows the flight added.
     $autoAdded = 0
     try {
-        $sameSave = $null
-        if ($mk.PSObject.Properties.Name -contains 'savePath' -and $mk.savePath -and (Test-Path "$($mk.savePath)")) { $sameSave = "$($mk.savePath)" }
-        elseif ($GameDir -and (Test-Path $beforeSnap)) {
-            $blen = (Get-Item $beforeSnap).Length
-            $cand = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue |
-                    Sort-Object LastWriteTime -Descending
-            $pick = @($cand | Where-Object { $_.Length -eq $blen }) | Select-Object -First 1
-            if (-not $pick) { $pick = @($cand) | Select-Object -First 1 }
-            if ($pick) { $sameSave = $pick.FullName }
-        }
-        if ((Test-Path $beforeSnap) -and $sameSave) {
-            $dBefore = Get-SaveDiary -Path $beforeSnap
-            $dAfter  = Get-SaveDiary -Path $sameSave
-            if ($dBefore -and $dAfter) {
-                $pl0 = Get-Pilot
-                $bins = $KillBinsRAF
-                if ($pl0 -and ($pl0.PSObject.Properties.Name -contains 'side') -and ("$($pl0.side)" -match '^(lw|luftwaffe|german)')) { $bins = $KillBinsLW }
-                $newTypes = @()
-                for ($k = 0; $k -lt 7; $k++) {
-                    $d = [int]$dAfter.kills[$k] - [int]$dBefore.kills[$k]
-                    for ($j = 0; $j -lt $d; $j++) { $newTypes += $bins[$k] }
-                }
-                $whenC = if ($after) { $after.ToString('yyyy-MM-dd') } else { '' }
-                if ($newTypes.Count -gt 0) { Add-AutoClaims -Types $newTypes -Date $whenC; $autoAdded = $newTypes.Count }
-                Save-AutoClaim ([ordered]@{
-                    table      = $dAfter.table
-                    rowsBefore = @($dBefore.rows).Count
-                    rowsAfter  = @($dAfter.rows).Count
-                    totalBefore= $dBefore.total
-                    totalAfter = $dAfter.total
-                    credited   = @($newTypes)
-                    lastFlight = (Get-Date).ToString('s')
-                })
-            }
+        $rowsBefore = -1
+        if (Test-Path $beforeSnap) { $dB = Get-SaveDiary -Path $beforeSnap; if ($dB) { $rowsBefore = @($dB.rows).Count } }
+        $v0 = 0; $p0 = Get-Pilot; if ($p0 -and ($p0.PSObject.Properties.Name -contains 'victories') -and $p0.victories) { $v0 = [int]$p0.victories }
+        $dA = Sync-CampaignClaims
+        $p1 = Get-Pilot; $v1 = 0; if ($p1 -and ($p1.PSObject.Properties.Name -contains 'victories') -and $p1.victories) { $v1 = [int]$p1.victories }
+        $autoAdded = [math]::Max(0, $v1 - $v0)
+        if ($dA) {
+            Save-AutoClaim ([ordered]@{
+                table      = $dA.table
+                rowsBefore = $rowsBefore
+                rowsAfter  = @($dA.rows).Count
+                totalAfter = $dA.total
+                credited   = $autoAdded
+                lastFlight = (Get-Date).ToString('s')
+            })
         }
     } catch { }
     Remove-Item $beforeSnap -Force -ErrorAction SilentlyContinue
@@ -1106,19 +1085,50 @@ function Get-LatestSaveDiary {
     if (-not $sav) { return $null }
     Get-SaveDiary -Path $sav.FullName
 }
-# Player-entered victory with the type shot down.
-function Add-Claim {
-    param($Pilot, [string]$Type = '')
-    $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
-    $claims = @(); if (($Pilot.PSObject.Properties.Name -contains 'claims') -and $Pilot.claims) { $claims = @($Pilot.claims) }
-    $cd = Get-CampaignDate; $when = if ($cd) { $cd.ToString('yyyy-MM-dd') } else { (Get-Date).ToString('yyyy-MM-dd') }
-    $entry = if ($Type) { "$when $Type" } else { "$when" }
+# Bring the pilot's record level with the campaign's own Log Book. The
+# record carries campaignKills, the seven bins it has already credited;
+# whatever the save shows above that is entered now, by type, dated with
+# the campaign day. Works whether the game was started from the launcher,
+# from this room, or by double-clicking Bob.exe, so no flight marker is
+# needed for claims. A save whose bins have gone DOWN is a new campaign:
+# the baseline is reset without crediting anything.
+function Sync-CampaignClaims {
+    $ld = Get-LatestSaveDiary
+    if (-not $ld) { return $null }
+    $p = Get-Pilot
+    if (-not $p) { return $ld }
+    $have = New-Object int[] 7
+    $known = ($p.PSObject.Properties.Name -contains 'campaignKills') -and $p.campaignKills
+    if ($known) {
+        $arr = @($p.campaignKills)
+        for ($k = 0; $k -lt 7 -and $k -lt $arr.Count; $k++) { $have[$k] = [int]$arr[$k] }
+    } else {
+        # First sync of a record that already holds claims: those claims
+        # were entered by hand for the same victories the save now shows,
+        # so take the save as the baseline rather than crediting twice. A
+        # record with no claims at all inherits the Log Book in full.
+        $claims = @(); if (($p.PSObject.Properties.Name -contains 'claims') -and $p.claims) { $claims = @($p.claims) }
+        if ($claims.Count -gt 0) { for ($k = 0; $k -lt 7; $k++) { $have[$k] = [int]$ld.kills[$k] } }
+    }
+    $lower = $false
+    for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -lt $have[$k]) { $lower = $true } }
+    $bins = $KillBinsRAF
+    if (($p.PSObject.Properties.Name -contains 'side') -and ("$($p.side)" -match '^(lw|luftwaffe|german)')) { $bins = $KillBinsLW }
+    $newTypes = @()
+    if (-not $lower) {
+        for ($k = 0; $k -lt 7; $k++) {
+            $d = [int]$ld.kills[$k] - $have[$k]
+            for ($j = 0; $j -lt $d; $j++) { $newTypes += $bins[$k] }
+        }
+    }
+    if ($newTypes.Count -gt 0) { Add-AutoClaims -Types $newTypes }
+    # record the baseline (re-read: Add-AutoClaims saved the pilot)
+    $p2 = Get-Pilot
     $obj = [ordered]@{}
-    foreach ($p in $Pilot.PSObject.Properties) { $obj[$p.Name] = $p.Value }
-    $obj['victories'] = $v + 1
-    $obj['claims'] = @($claims + $entry)
+    foreach ($pp in $p2.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+    $obj['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld.kills[$_] })
     Save-Pilot $obj
-    Show-Logbook -Pilot (Get-Pilot)
+    $ld
 }
 # Several claims at once, credited from the campaign's own Log Book, each
 # with the type the save recorded.
@@ -1293,7 +1303,10 @@ function Show-Logbook {
     $sessions = Get-Sessions
     # The campaign's own Log Book is the record of sorties when it can be
     # read; the launcher's timed sessions only supply the flying hours.
-    $ld = Get-LatestSaveDiary
+    # Level the record with it first, so victories scored in a game started
+    # any way at all are in before the tiles are drawn.
+    $ld = Sync-CampaignClaims
+    $Pilot = Get-Pilot
     $career = Get-Career $Pilot $sessions
     if ($ld) { $career = Get-Career $Pilot $sessions -Sorties (@($ld.rows).Count) }
     $vics = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $vics = [int]$Pilot.victories }
@@ -1320,20 +1333,6 @@ function Show-Logbook {
     $pnt = New-TB -Text $pn -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap; $pnt.Margin = '0,2,0,18'; $pnt.MaxWidth = 860; $pnt.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($pnt)
 
-    $claimRow = New-Object Windows.Controls.StackPanel; $claimRow.Orientation = 'Horizontal'; $claimRow.Margin = '0,0,0,22'
-    $script:ClaimType = New-Object Windows.Controls.ComboBox
-    $script:ClaimType.MinWidth = 150; $script:ClaimType.Margin = '0,0,12,0'; $script:ClaimType.VerticalAlignment = 'Center'
-    foreach ($t in @('Bf 109E','Bf 110','Do 17','He 111','Ju 87','Ju 88','Other')) { [void]$script:ClaimType.Items.Add($t) }
-    $script:ClaimType.SelectedIndex = 0
-    [void]$claimRow.Children.Add($script:ClaimType)
-    $cbtn = New-Object Windows.Controls.Button; $cbtn.Content = 'LOG A CLAIM'; $cbtn.MinWidth = 130
-    $cbtn.Add_Click({ Add-Claim -Pilot (Get-Pilot) -Type ("$($script:ClaimType.SelectedItem)") })
-    [void]$claimRow.Children.Add($cbtn)
-    $ct = New-TB -Text 'Record a victory the campaign has not credited you with.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
-    $ct.VerticalAlignment = 'Center'; $ct.Margin = '16,0,0,0'; $ct.MaxWidth = 460
-    [void]$claimRow.Children.Add($ct)
-    [void]$script:Stage.Children.Add($claimRow)
-
     # ---- automatic claims: one statement, the campaign's own figure ----
     if ($ld) {
         $byType = @()
@@ -1341,12 +1340,12 @@ function Show-Logbook {
         $acTxt = "Automatic claims are on: the campaign's Log Book credits you with " +
                  $(if ([int]$ld.total -eq 1) { 'one victory' } elseif ([int]$ld.total -eq 0) { 'no victories yet' } else { "$([int]$ld.total) victories" }) +
                  $(if ($byType.Count) { ', ' + ($byType -join ', ') } else { '' }) +
-                 ". New ones are entered when you land from a flight started here or from the launcher. Log a claim only for a victory the game did not credit."
+                 ". Every victory the campaign credits you with is entered here by itself, whichever way the game was started."
     } else {
-        $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Victories the campaign credits you with are entered when you land from a flight started here or from the launcher.'
+        $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Victories the campaign credits you with are entered here by themselves once there is one.'
     }
     $lk = New-TB -Text $acTxt -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Wrap
-    $lk.Margin = '0,-8,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
+    $lk.Margin = '0,0,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lk)
 
     [void]$script:Stage.Children.Add((New-TB -Text 'SORTIES FLOWN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
