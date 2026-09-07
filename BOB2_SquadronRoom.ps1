@@ -885,10 +885,10 @@ function Finalize-Flight {
         } else { $outcome = 'Practice flight' }
     } catch { }
     # ---- automatic claims -------------------------------------------
-    # Read the campaign's own victory total before and after the flight and
-    # credit whatever it went up by. Compared against the SAME save slot:
-    # the snapshot's own path when the marker recorded it, otherwise the
-    # save of matching size (same slot), otherwise the newest.
+    # Read the player's Log Book out of the save before and after the
+    # flight and credit every new kill, by type. Compared against the SAME
+    # save slot: the snapshot's own path when the marker recorded it,
+    # otherwise the save of matching size (same slot), otherwise the newest.
     $autoAdded = 0
     try {
         $sameSave = $null
@@ -902,17 +902,27 @@ function Finalize-Flight {
             if ($pick) { $sameSave = $pick.FullName }
         }
         if ((Test-Path $beforeSnap) -and $sameSave) {
-            $vBefore = Get-SaveVictories -Path $beforeSnap
-            $vAfter  = Get-SaveVictories -Path $sameSave
-            if (($null -ne $vBefore) -and ($null -ne $vAfter)) {
-                # observed only: see the note above the offset constant
+            $dBefore = Get-SaveDiary -Path $beforeSnap
+            $dAfter  = Get-SaveDiary -Path $sameSave
+            if ($dBefore -and $dAfter) {
+                $pl0 = Get-Pilot
+                $bins = $KillBinsRAF
+                if ($pl0 -and ($pl0.PSObject.Properties.Name -contains 'side') -and ("$($pl0.side)" -match '^(lw|luftwaffe|german)')) { $bins = $KillBinsLW }
+                $newTypes = @()
+                for ($k = 0; $k -lt 7; $k++) {
+                    $d = [int]$dAfter.kills[$k] - [int]$dBefore.kills[$k]
+                    for ($j = 0; $j -lt $d; $j++) { $newTypes += $bins[$k] }
+                }
+                $whenC = if ($after) { $after.ToString('yyyy-MM-dd') } else { '' }
+                if ($newTypes.Count -gt 0) { Add-AutoClaims -Types $newTypes -Date $whenC; $autoAdded = $newTypes.Count }
                 Save-AutoClaim ([ordered]@{
-                    offset     = (Get-ClaimOffset)
-                    readBefore = $vBefore
-                    readAfter  = $vAfter
-                    moved      = ($vAfter - $vBefore)
+                    table      = $dAfter.table
+                    rowsBefore = @($dBefore.rows).Count
+                    rowsAfter  = @($dAfter.rows).Count
+                    totalBefore= $dBefore.total
+                    totalAfter = $dAfter.total
+                    credited   = @($newTypes)
                     lastFlight = (Get-Date).ToString('s')
-                    note       = 'Observed only. This counter is wider than one pilot, so nothing is credited from it.'
                 })
             }
         }
@@ -970,25 +980,33 @@ function Get-PlayerHonours {
     $h
 }
 # =====================================================================
-#  Automatic claims (Tier 4)
+#  Automatic claims
 #
-#  NOT YET TRUSTWORTHY - the Room does not credit victories by itself.
+#  The game keeps the player's Log Book inside the campaign save as an
+#  array of 25-byte Diary::Player records, one per sortie:
+#      +0   u16   diarysquadindex
+#      +2   u32   howendedmission      (EndFlightStatus: 9 = baled out)
+#      +6   u8[6] specificdamage
+#      +12  u16   descriptionstringindex   (= 512 * row number)
+#      +14  u32   flyingcs
+#      +18  u8[7] kills, indexed by the victim's STATISTICS_TYPE bin
+#  The Log Book's Claims column is the sum of the seven kills bytes and
+#  Diary::AddKill is their only writer, so the player's own victories, by
+#  type, are read from here. Established 2026-09-07 from Bob212.pdb, a
+#  before/after sortie pair and the game's own Log Book (3 + 1 Ju 87).
 #
-#  The u16 at offset 11100 rose by exactly the three the player claimed,
-#  but the game's own Log Book totals three while that field reads FOUR,
-#  so it is counting something wider than one pilot (the squadron, most
-#  likely: it already stood at 1 when the player had none). Crediting
-#  from it would quietly inflate a career with other men's kills.
-#
-#  So the field is only OBSERVED: every sortie its movement is recorded
-#  in autoclaim.json for later study, and nothing is added to the pilot.
-#  The player's own per-sortie claims live in the save's variable-length
-#  tail, which does not diff by fixed offset; finding them needs sorties
-#  whose true score is known from the game's Log Book.
+#  The table sat at 99047 in every save seen (three files of three sizes:
+#  the save only grows after this block). It is verified by signature
+#  before use, and searched for when the check fails. Empty slots carry
+#  0xFFFF in the first and fourth fields.
 $AutoClaimPath   = Join-Path $StateDir 'autoclaim.json'
-$ClaimOffset     = 11100      # u16, victories to date
-$SaveBlockStart  = 40
-$SaveBlockEnd    = 11610      # exclusive: end of the fixed campaign block
+$DiaryRowSize    = 25
+$DiaryTableGuess = 99047
+$DiaryMaxRows    = 64
+# STATISTICS_TYPE bins for what an RAF pilot shoots down, and for a
+# Luftwaffe pilot (the last three of those are dummies in the game).
+$KillBinsRAF = @('Bf 109E','Bf 110','Ju 87','Do 17','Ju 88','He 111','He 59')
+$KillBinsLW  = @('Spitfire','Hurricane','Defiant','Blenheim','Other','Other','Other')
 function Get-AutoClaim {
     if (Test-Path $AutoClaimPath) {
         try { return (Get-Content $AutoClaimPath -Raw | ConvertFrom-Json) } catch { }
@@ -1002,26 +1020,83 @@ function Save-AutoClaim {
         $Obj | ConvertTo-Json -Depth 5 | Set-Content -Path $AutoClaimPath -Encoding UTF8
     } catch { }
 }
-# Which offset to read: the researched default unless a state file names
-# another (left as an escape hatch if a build ever moves the field).
-function Get-ClaimOffset {
-    $ac = Get-AutoClaim
-    if ($ac -and ($ac.PSObject.Properties.Name -contains 'offset') -and $ac.offset) {
-        $n = 0
-        if ([int]::TryParse("$($ac.offset)", [ref]$n) -and $n -ge $SaveBlockStart -and ($n + 1) -lt $SaveBlockEnd) { return $n }
+function Read-DiaryRow {
+    param([byte[]]$B, [int]$O)
+    if ($O -lt 0 -or ($O + $DiaryRowSize) -gt $B.Length) { return $null }
+    $k = New-Object int[] 7
+    for ($i = 0; $i -lt 7; $i++) { $k[$i] = [int]$B[$O + 18 + $i] }
+    [pscustomobject]@{
+        off   = $O
+        sq    = [int]$B[$O] + 256 * [int]$B[$O+1]
+        ended = [int]$B[$O+2] + 256 * [int]$B[$O+3] + 65536 * [int]$B[$O+4] + 16777216 * [int]$B[$O+5]
+        str   = [int]$B[$O+12] + 256 * [int]$B[$O+13]
+        kills = $k
+        total = ($k | Measure-Object -Sum).Sum
     }
-    $ClaimOffset
 }
-# The victory total the save is carrying, or $null if it cannot be read.
-function Get-SaveVictories {
+# True when a Diary::Player table starts at $P: row 0 used with string
+# index 0, and every following row either used with index 512*i and a sane
+# ending, or an empty slot.
+function Test-DiaryTableAt {
+    param([byte[]]$B, [int]$P)
+    $r0 = Read-DiaryRow $B $P
+    if (-not $r0 -or $r0.sq -eq 0xFFFF -or $r0.str -ne 0 -or $r0.ended -gt 9) { return $false }
+    for ($i = 1; $i -lt 3; $i++) {
+        $r = Read-DiaryRow $B ($P + $i * $DiaryRowSize)
+        if (-not $r) { return $false }
+        $empty = ($r.sq -eq 0xFFFF -and $r.str -eq 0xFFFF)
+        $used  = ($r.str -eq 512 * $i -and $r.ended -le 9 -and $r.sq -lt 0xFFFF)
+        if (-not ($empty -or $used)) { return $false }
+    }
+    $true
+}
+function Find-DiaryTable {
+    param([byte[]]$B)
+    if (Test-DiaryTableAt $B $DiaryTableGuess) { return $DiaryTableGuess }
+    $hi = [Math]::Min($B.Length - 200, 130000)
+    # Row 0's string index is two zero bytes at +12: skip everything else
+    # before paying for the full check (50,000 positions otherwise cost
+    # several seconds in PowerShell).
+    for ($p = 80000; $p -lt $hi; $p++) {
+        if ($B[$p + 12] -ne 0 -or $B[$p + 13] -ne 0) { continue }
+        if (Test-DiaryTableAt $B $p) { return $p }
+    }
+    -1
+}
+# The player's Log Book as the save holds it: rows, kills by bin, total.
+# $null when the file cannot be read or the table is not found.
+function Get-SaveDiary {
     param([string]$Path)
     try {
         if (-not (Test-Path $Path)) { return $null }
         $b = [System.IO.File]::ReadAllBytes($Path)
-        if ($b.Length -lt $SaveBlockEnd) { return $null }
-        $o = Get-ClaimOffset
-        return [int]$b[$o] + ([int]$b[$o+1] * 256)
+        $p = Find-DiaryTable $b
+        if ($p -lt 0) { return $null }
+        $rows = @(); $bins = New-Object int[] 7
+        for ($i = 0; $i -lt $DiaryMaxRows; $i++) {
+            $r = Read-DiaryRow $b ($p + $i * $DiaryRowSize)
+            if (-not $r) { break }
+            if ($r.sq -eq 0xFFFF -and $r.str -eq 0xFFFF) { continue }     # empty slot
+            if ($r.str -ne 512 * $i -or $r.ended -gt 9) { break }          # past the table
+            $rows += $r
+            for ($k = 0; $k -lt 7; $k++) { $bins[$k] += $r.kills[$k] }
+        }
+        return [pscustomobject]@{ table = $p; rows = $rows; kills = $bins; total = ($bins | Measure-Object -Sum).Sum }
     } catch { return $null }
+}
+# The victory total the save's Log Book carries, or $null.
+function Get-SaveVictories {
+    param([string]$Path)
+    $d = Get-SaveDiary -Path $Path
+    if ($d) { return [int]$d.total }
+    $null
+}
+# The newest campaign save's Log Book, for the logbook screen.
+function Get-LatestSaveDiary {
+    if (-not $GameDir) { return $null }
+    $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $sav) { return $null }
+    Get-SaveDiary -Path $sav.FullName
 }
 # Player-entered victory with the type shot down.
 function Add-Claim {
@@ -1037,21 +1112,21 @@ function Add-Claim {
     Save-Pilot $obj
     Show-Logbook -Pilot (Get-Pilot)
 }
-# Several claims at once, as an automatic credit. The type is unknown to
-# the save, so these read "credited from the campaign" in the summary.
+# Several claims at once, credited from the campaign's own Log Book, each
+# with the type the save recorded.
 function Add-AutoClaims {
-    param([int]$Count, [string]$Date = '')
-    if ($Count -le 0) { return }
+    param([string[]]$Types, [string]$Date = '')
+    if (-not $Types -or $Types.Count -le 0) { return }
     $p = Get-Pilot
     if (-not $p) { return }
     $v = 0; if (($p.PSObject.Properties.Name -contains 'victories') -and $p.victories) { $v = [int]$p.victories }
     $claims = @(); if (($p.PSObject.Properties.Name -contains 'claims') -and $p.claims) { $claims = @($p.claims) }
     $when = $Date
     if (-not $when) { $cd = Get-CampaignDate; $when = if ($cd) { $cd.ToString('yyyy-MM-dd') } else { (Get-Date).ToString('yyyy-MM-dd') } }
-    for ($i = 0; $i -lt $Count; $i++) { $claims += "$when" }
+    foreach ($t in $Types) { $claims += $(if ($t) { "$when $t" } else { "$when" }) }
     $obj = [ordered]@{}
     foreach ($pp in $p.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
-    $obj['victories'] = $v + $Count
+    $obj['victories'] = $v + $Types.Count
     $obj['claims'] = @($claims)
     Save-Pilot $obj
 }
@@ -1215,11 +1290,17 @@ function Show-Logbook {
     [void]$claimRow.Children.Add($ct)
     [void]$script:Stage.Children.Add($claimRow)
 
-    # ---- automatic claims: a quiet statement of how it works ---------
-    $ac = Get-AutoClaim
-    $acTxt = 'Automatic claims are not switched on: the counter found in the campaign save counts the whole squadron, not you alone, so your victories are the ones you log here.'
-    if ($ac -and ($ac.PSObject.Properties.Name -contains 'moved') -and ([int]$ac.moved) -gt 0) {
-        $acTxt += "  (The squadron's tally moved by $([int]$ac.moved) on your last sortie.)"
+    # ---- automatic claims: what the campaign's own Log Book says ------
+    $ld = Get-LatestSaveDiary
+    if ($ld) {
+        $byType = @()
+        for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($KillBinsRAF[$k])" } }
+        $acTxt = "Automatic claims are on. The campaign's own Log Book credits you with $([int]$ld.total) " +
+                 $(if ([int]$ld.total -eq 1) { 'victory' } else { 'victories' }) +
+                 $(if ($byType.Count) { ' (' + ($byType -join ', ') + ')' } else { '' }) +
+                 ". Fly from the launcher or from this room and each new one is entered here when you land; log a claim only for a victory the game did not credit."
+    } else {
+        $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Fly from the launcher or from this room and victories the campaign credits you with are entered here when you land.'
     }
     $lk = New-TB -Text $acTxt -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Wrap
     $lk.Margin = '0,-8,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
