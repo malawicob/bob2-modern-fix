@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.7.7'
+$FixVersion = '1.7.8'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -174,26 +174,25 @@ function Sync-FixVersion {
 }
 
 # ---------------------------------------------------------------------
-#  HIGHDPIAWARE must be PRESENT. This function used to remove it.
+#  Compatibility flags Windows puts back on Bob.exe by itself, stripped at
+#  Play. Two of them:
 #
-#  The old reasoning: the flag tells Windows the program handles DPI
-#  itself and must not be scaled; BOB2 does no such thing, so with it set
-#  the menus draw at true pixel size and look small. All true - but only
-#  about the 2D menus, and the menu rescale already solves that.
+#  HIGHDPIAWARE  - re-applied by the Program Compatibility Assistant. It
+#      stops Windows scaling the game, so the menus draw small and the
+#      menu rescale appears to do nothing. (An earlier comment here argued
+#      the flag was needed for the 3D view. It was not: the "3D in a
+#      corner" it described was the DesktopResolution fault in
+#      dgVoodoo.conf, cured in BOB2_Setup.ps1, and the game runs full
+#      screen without the flag.)
 #
-#  What it missed is the 3D view. Without the flag Windows DPI-virtualises
-#  the process, and dgVoodoo can no longer take exclusive fullscreen: the
-#  game renders at its own resolution into a small window in the corner of
-#  the screen. On a 2560x1600 display at 150% that is a 1024x768 image
-#  scaled to 1536x1152 in the top-left, with the desktop around it.
+#  DWM8And16BitMitigation - Windows applies this one to the game on its
+#      own. With it on, the game's display-mode switch before flight is
+#      virtualised and the driver refuses exclusive fullscreen: black
+#      bars top and bottom in the cockpit (2026-09-07). Windows also
+#      writes it at MACHINE level, which needs administrator rights to
+#      remove; that part is done by the Install and repair screen.
 #
-#  So the launcher was removing the flag before every single launch and
-#  breaking the 3D view to make the menus bigger - while shipping a menu
-#  rescale whose entire purpose is to make the menus bigger. It now
-#  ensures the flag instead, and the rescale does its job.
-#
-#  Verified on a 2560x1600 / 150% display against a working install that
-#  predates this package and has the flag set.
+#  Returns true when something had to be removed.
 # ---------------------------------------------------------------------
 function Repair-DpiShim {
     $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
@@ -203,8 +202,8 @@ function Repair-DpiShim {
         $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
         if (-not $props -or -not ($props.PSObject.Properties.Name -contains $exe)) { return $false }
         $cur = $props.$exe
-        if ($cur -notmatch 'HIGHDPIAWARE') { return $false }
-        $new = (($cur -split '\s+') | Where-Object { $_ -ne 'HIGHDPIAWARE' -and $_ -ne '' }) -join ' '
+        if ($cur -notmatch 'HIGHDPIAWARE|DWM8And16BitMitigation') { return $false }
+        $new = (($cur -split '\s+') | Where-Object { $_ -ne 'HIGHDPIAWARE' -and $_ -ne 'DWM8And16BitMitigation' -and $_ -ne '' }) -join ' '
         Set-ItemProperty $key -Name $exe -Value $new
         return $true          # we had to fix it
     }
@@ -234,8 +233,8 @@ function Remove-RunAsAdminShim {
     try {
         $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
         $cur = $props.$exe
-        # Keep every other flag - DWM8And16BitMitigation and
-        # DISABLEDXMAXIMIZEDWINDOWEDMODE are load bearing for this game.
+        # Keep every other flag. DISABLEDXMAXIMIZEDWINDOWEDMODE is load
+        # bearing for this game; DWM8And16BitMitigation is removed elsewhere.
         $new = (($cur -split '\s+') | Where-Object { $_ -ne 'RUNASADMIN' -and $_ -ne '' }) -join ' '
         if ($new -eq '~' -or -not $new) { Remove-ItemProperty $key -Name $exe -ErrorAction SilentlyContinue }
         else { Set-ItemProperty $key -Name $exe -Value $new }
@@ -415,7 +414,8 @@ function Get-WrapperState {
         $confTxt = ''
         try { $confTxt = Get-Content $confPath -Raw } catch { }
         $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and `
-                  ($confTxt -match 'Resolution\s*=\s*max') -and `
+                  ($confTxt -match '(?m)^\s*Resolution\s*=\s*(max|\d+x\d+)') -and `
+                  ($confTxt -match '(?m)^\s*DesktopResolution\s*=\s*\d+x\d+') -and `
                   ($confTxt -match 'VRAM\s*=\s*4096') -and `
                   ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and `
                   ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')
@@ -1001,8 +1001,8 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Windows had re-applied the HIGHDPIAWARE compatibility flag to Bob.exe, which " +
-                   "makes the menus draw small and cancels the menu rescale.`n`nRemoved it. Starting the game now.")
+        Show-Note ("Windows had put a compatibility flag back on Bob.exe (HIGHDPIAWARE makes the menus " +
+                   "draw small; DWM8And16BitMitigation puts black bars in the cockpit).`n`nRemoved it. Starting the game now.")
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would

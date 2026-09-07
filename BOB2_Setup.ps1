@@ -232,6 +232,139 @@ PrimarySurfaceBatchedUpdate = false
 SuppressAMDBlacklist = false
 "@
 
+# ---------------------------------------------------------------------
+#  Native desktop size, and the dgVoodoo.conf text built from the template.
+#
+#  WHY DesktopResolution MUST BE FILLED IN (found 2026-09-07, after a day
+#  of black bars top and bottom in flight):
+#
+#  Before it enters the 3D view the game calls ChangeDisplaySettings and
+#  puts the Windows desktop at 1024x768 for its briefing screens (the code
+#  in SaveDataLoad::ChangeMode hard-codes that size for every UI mode
+#  except the map). dgVoodoo then builds its fullscreen OUTPUT from the
+#  desktop it finds at the moment the Direct3D 9 device is created - so the
+#  2560x1600 render the game asked for was letterboxed into a 4:3 output,
+#  which the panel stretched: black bars top and bottom, on every card and
+#  driver. Whether it showed depended only on which 2D screen happened to
+#  come last before flight, which is why it looked like the driver, the
+#  refresh rate, DPI, or a compatibility flag, and was none of them.
+#
+#  dgVoodoo's own documentation for DesktopResolution names this case:
+#  "useful for rare applications that pre-set the desktop to other than
+#  the native resolution before dgVoodoo gets in action." Filled in with
+#  the panel's native size, the output is always full size, and exclusive
+#  fullscreen is granted at 2560x1600 (verified in the ReShade log).
+#
+#  The size comes from the REGISTRY display mode, not the current one: a
+#  game session that ends badly can leave the desktop at 1024x768, and
+#  reading the current mode then would bake the fault into the file.
+# ---------------------------------------------------------------------
+function Get-NativeDesktopSize {
+    $w = 0; $h = 0
+    try {
+        if (-not ('BobDisplay.Native' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+namespace BobDisplay {
+  public static class Native {
+    [StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)] public struct DEVMODEW {
+      [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmDeviceName; public ushort dmSpecVersion, dmDriverVersion, dmSize, dmDriverExtra; public uint dmFields;
+      public int x, y; public uint dmDisplayOrientation, dmDisplayFixedOutput; public short dmColor, dmDuplex, dmYResolution, dmTTOption, dmCollate;
+      [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmFormName; public ushort dmLogPixels; public uint dmBitsPerPel, dmPelsWidth, dmPelsHeight, dmDisplayFlags, dmDisplayFrequency, dmICMMethod, dmICMIntent, dmMediaType, dmDitherType, dmReserved1, dmReserved2, dmPanningWidth, dmPanningHeight; }
+    [DllImport("user32", CharSet=CharSet.Unicode)] static extern bool EnumDisplaySettingsW(string dev, int n, ref DEVMODEW dm);
+    // -2 = ENUM_REGISTRY_SETTINGS: the mode Windows returns to, not whatever a game left behind
+    public static int[] Registry() { var dm = new DEVMODEW(); dm.dmSize = (ushort)Marshal.SizeOf(typeof(DEVMODEW)); if (EnumDisplaySettingsW(null, -2, ref dm)) return new int[] { (int)dm.dmPelsWidth, (int)dm.dmPelsHeight }; return new int[] { 0, 0 }; }
+  }
+}
+'@
+        }
+        $r = [BobDisplay.Native]::Registry(); $w = $r[0]; $h = $r[1]
+    } catch { }
+    if ($w -lt 640 -or $h -lt 480) {
+        try {
+            $vc = Get-CimInstance -ClassName Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($vc) { $w = [int]$vc.CurrentHorizontalResolution; $h = [int]$vc.CurrentVerticalResolution }
+        } catch { }
+    }
+    if ($w -lt 640 -or $h -lt 480) { $w = 1920; $h = 1080 }
+    return @($w, $h)
+}
+
+function New-DgVoodooConfText {
+    param([int]$FpsLimit = 60)
+    $size = Get-NativeDesktopSize
+    $wh = "$($size[0])x$($size[1])"
+    $text = $DgVoodooConf -replace 'FPSLimit = 60', "FPSLimit = $FpsLimit"
+    $text = $text -replace '(?m)^DesktopResolution =\s*$', "DesktopResolution = $wh"
+    # Only the [DirectX] Resolution; [Glide] has its own, left "unforced".
+    $text = $text -replace '(?m)^Resolution = max\s*$', "Resolution = $wh"
+    return $text
+}
+
+# ---------------------------------------------------------------------
+#  Compatibility layer on Bob.exe: what it must be, and how to repair it.
+#  Shared by Step 8, the Install and repair screen, and the launcher's
+#  Play button. See Step 8 for why each flag is present or absent.
+# ---------------------------------------------------------------------
+$BobCompatLayerValue = '~ DISABLEDXMAXIMIZEDWINDOWEDMODE'
+
+function Get-BobCompatState {
+    param([string]$GameFolder)
+    $exe = Join-Path $GameFolder 'Bob.exe'
+    $user = $null; $machine = $null
+    try { $user = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers' -ErrorAction SilentlyContinue).$exe } catch { }
+    try { $machine = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers' -ErrorAction SilentlyContinue).$exe } catch { }
+    $problems = @()
+    if ($user -match 'HIGHDPIAWARE') { $problems += 'HIGHDPIAWARE is set (menus draw small)' }
+    if ($user -match 'DWM8And16BitMitigation') { $problems += 'DWM8And16BitMitigation is set (black bars in flight)' }
+    if ($machine) { $problems += "a machine-level entry '$machine' is set (black bars in flight)" }
+    return [pscustomobject]@{ User = $user; Machine = $machine; Problems = $problems; Ok = ($problems.Count -eq 0) }
+}
+
+function Remove-BobMachineCompatEntry {
+    # Returns 'none', 'removed' or 'failed'. HKLM needs administrator
+    # rights; when this process has none, reg.exe is run elevated, which
+    # shows one UAC prompt. Arguments are passed as a list so that the
+    # spaces in "Windows NT" and in the game path survive the elevation
+    # (a single -Command string loses its quotes on the way).
+    param([string]$GameFolder)
+    $exe = Join-Path $GameFolder 'Bob.exe'
+    $key = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
+    $cur = $null
+    try { $cur = (Get-ItemProperty $key -ErrorAction SilentlyContinue).$exe } catch { }
+    if (-not $cur) { return 'none' }
+    try { Remove-ItemProperty $key -Name $exe -ErrorAction Stop; return 'removed' } catch { }
+    try {
+        $p = Start-Process reg.exe -Verb RunAs -Wait -PassThru -ArgumentList @(
+            'delete', '"HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers"', '/v', "`"$exe`"", '/f')
+        $cur = (Get-ItemProperty $key -ErrorAction SilentlyContinue).$exe
+        if (-not $cur) { return 'removed' }
+    } catch { }
+    return 'failed'
+}
+
+function Repair-BobCompatLayer {
+    # Sets the user-level value to exactly what it should be and removes
+    # the machine-level entry. Returns the list of things it changed.
+    param([string]$GameFolder)
+    $exe = Join-Path $GameFolder 'Bob.exe'
+    $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
+    $done = @()
+    try {
+        if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+        $cur = (Get-ItemProperty $key -ErrorAction SilentlyContinue).$exe
+        if ($cur -ne $BobCompatLayerValue) {
+            Set-ItemProperty -Path $key -Name $exe -Value $BobCompatLayerValue
+            $done += "user-level flags set to '$BobCompatLayerValue' (were '$cur')"
+        }
+    } catch { $done += "could not write the user-level flags: $($_.Exception.Message)" }
+    switch (Remove-BobMachineCompatEntry -GameFolder $GameFolder) {
+        'removed' { $done += 'machine-level DWM8And16BitMitigation entry removed' }
+        'failed'  { $done += 'machine-level entry NOT removed (administrator rights were refused)' }
+    }
+    return $done
+}
+
 # Minimal bdg.txt with critical settings for fresh installs.
 #
 # NOTE ON DENSITY: OBJECT_DENSITY and PARTICLE_DENSITY are QUALITY settings, and
@@ -844,14 +977,19 @@ function Step-InstallDgVoodoo2 {
             $confOk = $false
             if (Test-Path $confPath) {
                 $confTxt = Get-Content $confPath -Raw
-                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match 'Resolution\s*=\s*max') -and ($confTxt -match 'VRAM\s*=\s*4096') -and ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')
+                $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($confTxt -match '(?m)^\s*Resolution\s*=\s*(max|\d+x\d+)') -and ($confTxt -match '(?m)^\s*DesktopResolution\s*=\s*\d+x\d+') -and ($confTxt -match 'VRAM\s*=\s*4096') -and ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')
             }
             if (-not $confOk) {
                 if (Test-Path $confPath) {
                     Copy-Item $confPath ($confPath + '.bad-backup') -Force
                     Write-Warn "dgVoodoo.conf was missing the recommended scaling/resolution settings - rewriting (old file kept as .bad-backup)"
                 }
-                Set-Content -Path $confPath -Value $DgVoodooConf -Encoding ASCII
+                # Through the generator, so DesktopResolution and the FPS limit
+                # are filled in here too. This path used to write the raw
+                # template, which left both blank.
+                $fps = 60
+                try { $vc = Get-CimInstance -ClassName Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1; if ($vc -and $vc.CurrentRefreshRate -gt 0 -and $vc.CurrentRefreshRate -le 500) { $fps = [int]$vc.CurrentRefreshRate } } catch { }
+                Set-Content -Path $confPath -Value (New-DgVoodooConfText -FpsLimit $fps) -Encoding ASCII
                 Write-OK "Created dgVoodoo.conf with recommended settings"
             }
             return $true
@@ -1012,9 +1150,10 @@ function Step-InstallDgVoodoo2 {
     }
     # Detect monitor refresh rate and set FPS limit
     $fpsLimit = Get-MonitorRefreshRate
-    $confContent = $DgVoodooConf -replace 'FPSLimit = 60', "FPSLimit = $fpsLimit"
+    $confContent = New-DgVoodooConfText -FpsLimit $fpsLimit
     Set-Content -Path $confPath -Value $confContent -Encoding ASCII
-    Write-OK "Created dgVoodoo.conf (FPS limit: $fpsLimit)"
+    $nat = Get-NativeDesktopSize
+    Write-OK "Created dgVoodoo.conf (FPS limit: $fpsLimit, desktop $($nat[0])x$($nat[1]))"
 
     return $allCopied
 }
@@ -1176,8 +1315,30 @@ function Step-Win11Tweaks {
                 Write-Info "  It stops Windows scaling the game, which makes the menus"
                 Write-Info "  small on a high-DPI display and defeats the menu rescale."
             }
-            Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DWM8And16BitMitigation WINXPSP3 RUNASADMIN DISABLEDXMAXIMIZEDWINDOWEDMODE"
+            # Exactly one flag, and three deliberately gone (2026-09-07):
+            #
+            #   DWM8And16BitMitigation  Windows also applies this one by itself,
+            #       at machine level, with a "$" prefix. With it on, the game's
+            #       own display-mode switch before flight is virtualised into
+            #       a "CompatWindowDesktopReplacement" window and the driver
+            #       refuses exclusive fullscreen outright. Measured: with the
+            #       shim on, SetFullscreenState(TRUE) was answered with FALSE
+            #       on every run; with it off, fullscreen was granted. The
+            #       game never asks for an 8- or 16-bit mode, so it loses
+            #       nothing. Both registry levels are cleaned by
+            #       Repair-BobCompatLayer.
+            #   WINXPSP3   Not needed by patch 2.13 on Windows 11, and it forces
+            #       the process DPI-unaware whatever else is set.
+            #   RUNASADMIN Not needed: the game folder is writable. It only
+            #       produced a UAC prompt before every launch.
+            #
+            # DISABLEDXMAXIMIZEDWINDOWEDMODE stays: it keeps Windows from
+            # turning the game's exclusive fullscreen into a borderless window.
+            Set-ItemProperty -Path $regPath -Name $bobExe -Value "~ DISABLEDXMAXIMIZEDWINDOWEDMODE"
             Write-OK "Set Bob.exe compatibility flags"
+            $machine = Remove-BobMachineCompatEntry -GameFolder $GameFolder
+            if ($machine -eq 'removed') { Write-OK "Removed the machine-level DWM8And16BitMitigation entry Windows had put on Bob.exe" }
+            elseif ($machine -eq 'failed') { Write-Warn "A machine-level compatibility entry is still on Bob.exe (needs administrator rights) - the Install and repair screen can remove it" }
 
             # Silence the Windows Error Reporting DIALOG (reports are still
             # recorded). If the game ever crashes, WER otherwise pops its

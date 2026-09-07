@@ -294,11 +294,11 @@ function Get-Checks {
         $dgConfOk = $false
         if (Test-Path $dgConfP) {
             $dgConfTxt = Get-Content $dgConfP -Raw
-            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match 'Resolution\s*=\s*max') -and ($dgConfTxt -match 'VRAM\s*=\s*4096') -and ($dgConfTxt -match 'OutputAPI\s*=\s*d3d11') -and ($dgConfTxt -match 'EnumerateRefreshRates\s*=\s*true')
+            $dgConfOk = ($dgConfTxt -match 'ScalingMode\s*=\s*stretched_ar') -and ($dgConfTxt -match '(?m)^\s*Resolution\s*=\s*(max|\d+x\d+)') -and ($dgConfTxt -match '(?m)^\s*DesktopResolution\s*=\s*\d+x\d+') -and ($dgConfTxt -match 'VRAM\s*=\s*4096') -and ($dgConfTxt -match 'OutputAPI\s*=\s*d3d11') -and ($dgConfTxt -match 'EnumerateRefreshRates\s*=\s*true')
         }
         if (-not $dgConfOk) {
             $wok = $false
-            $wrap = $(if (Test-Path $dgConfP) { 'dgVoodoo.conf is missing the recommended scaling and resolution settings (a control-panel Apply can overwrite them) - press Fix to restore it' } else { 'dgVoodoo.conf is missing - press Fix to create it' })
+            $wrap = $(if (Test-Path $dgConfP) { 'dgVoodoo.conf is missing the recommended scaling and resolution settings, or the DesktopResolution line that stops black bars in flight - press Fix to restore it' } else { 'dgVoodoo.conf is missing - press Fix to create it' })
         }
     }
     $out.Add([pscustomobject]@{
@@ -375,19 +375,16 @@ function Get-Checks {
         Detail=$(if ($di) { 'dinput8.dll present' } else { 'missing - the game can crash on the way into a mission' })
         Fix=$(if ($di) { $null } else { 'Step-ApplyCrashFix' }) })
 
-    # HIGHDPIAWARE is applied again by the Program Compatibility Assistant,
-    # so this one genuinely does come back on its own.
-    $layers = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
-    $exe = Join-Path $GameDir 'Bob.exe'
-    $dpi = $false
-    try {
-        $props = Get-ItemProperty $layers -ErrorAction SilentlyContinue
-        if ($props -and ($props.PSObject.Properties.Name -contains $exe)) { $dpi = $props.$exe -match 'HIGHDPIAWARE' }
-    } catch { }
+    # Windows puts flags back on its own: HIGHDPIAWARE through the Program
+    # Compatibility Assistant, DWM8And16BitMitigation at machine level with
+    # a "$" prefix. The second one costs exclusive fullscreen (black bars
+    # in flight), so both levels are checked. Get-BobCompatState comes
+    # from BOB2_Setup.ps1.
+    $compat = Get-BobCompatState -GameFolder $GameDir
     $out.Add([pscustomobject]@{
-        Name='Windows 11 flags'; Ok=(-not $dpi)
-        Detail=$(if ($dpi) { 'HIGHDPIAWARE has come back - it makes the menus draw small' } else { 'correct' })
-        Fix=$(if ($dpi) { 'DpiShim' } else { $null }) })
+        Name='Windows 11 flags'; Ok=$compat.Ok
+        Detail=$(if ($compat.Ok) { 'correct' } else { ($compat.Problems -join '; ') + ' - press Fix' })
+        Fix=$(if ($compat.Ok) { $null } else { 'Win11Flags' }) })
 
     # $FixVersion comes from BOB2_Setup.ps1, loaded as a library above, so
     # the package version and the installed stamp cannot drift apart here.
@@ -445,18 +442,6 @@ function Get-Checks {
         Fix=$(if ($rsState -eq 'partial') { 'Step-InstallReShade' } else { $null }) })
 
     return $out
-}
-
-function Repair-DpiShim {
-    $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
-    $exe = Join-Path $GameDir 'Bob.exe'
-    try {
-        $cur = (Get-ItemProperty $key -ErrorAction SilentlyContinue).$exe
-        if (-not $cur) { return }
-        $new = (($cur -split '\s+') | Where-Object { $_ -ne 'HIGHDPIAWARE' -and $_ -ne '' }) -join ' '
-        if ($new -eq '~' -or -not $new) { Remove-ItemProperty $key -Name $exe -ErrorAction SilentlyContinue }
-        else { Set-ItemProperty $key -Name $exe -Value $new }
-    } catch { }
 }
 
 # =====================================================================
@@ -662,7 +647,11 @@ function Invoke-Step {
     # Details rather than throwing it away - it is the evidence that used to
     # fill the whole screen.
     param([string]$Name)
-    if ($Name -eq 'DpiShim') { Repair-DpiShim; Add-Log 'Removed the HIGHDPIAWARE compatibility flag.'; return }
+    if ($Name -eq 'Win11Flags') {
+        $done = Repair-BobCompatLayer -GameFolder $GameDir
+        if ($done.Count) { Add-Log ($done | ForEach-Object { 'Windows 11 flags: ' + $_ }) } else { Add-Log 'Windows 11 flags were already correct.' }
+        return
+    }
     if ($Name -eq 'RemoveOld2873') {
         $old = Join-Path $ScriptDir 'dgv2873'
         if (Test-Path $old) { Remove-Item $old -Recurse -Force; Add-Log 'Removed the obsolete dgv2873 folder (broken dgVoodoo 2.8.7.3).' }
