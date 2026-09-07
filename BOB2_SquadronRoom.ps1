@@ -1059,6 +1059,8 @@ function Find-DiaryTable {
     # several seconds in PowerShell).
     for ($p = 80000; $p -lt $hi; $p++) {
         if ($B[$p + 12] -ne 0 -or $B[$p + 13] -ne 0) { continue }
+        # ...and row 1's index is 512 (bytes 00 02) or the empty marker FF FF
+        if (-not (($B[$p + 37] -eq 0 -and $B[$p + 38] -eq 2) -or ($B[$p + 37] -eq 0xFF -and $B[$p + 38] -eq 0xFF))) { continue }
         if (Test-DiaryTableAt $B $p) { return $p }
     }
     -1
