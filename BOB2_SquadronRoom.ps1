@@ -106,9 +106,20 @@ function Get-Portraits {
 function Get-Historical {
     param([int]$Sqn = 92)
     $per = Join-Path (Join-Path $ModDir 'rosters') "$Sqn.json"
-    if (Test-Path $per) { try { return @(Get-Content $per -Raw | ConvertFrom-Json) } catch { } }
-    if ($Sqn -eq 92 -and (Test-Path $SeedPath)) { try { return @(Get-Content $SeedPath -Raw | ConvertFrom-Json) } catch { } }
-    @()
+    $path = $null
+    if (Test-Path $per) { $path = $per }
+    elseif ($Sqn -eq 92 -and (Test-Path $SeedPath)) { $path = $SeedPath }
+    if (-not $path) { return @() }
+    try {
+        # ConvertFrom-Json hands a top-level JSON array back as ONE object,
+        # and @() then wraps that in a second array. Without unrolling it
+        # the whole roster rendered as a single airman whose name was every
+        # name and whose source line was every credit (seen 2026-09-07).
+        # Same loop as Get-Oob.
+        $men = @(Get-Content $path -Raw | ConvertFrom-Json)
+        while ($men.Count -eq 1 -and ($men[0] -is [System.Array])) { $men = $men[0] }
+        return @($men)
+    } catch { return @() }
 }
 # The game's own order of battle: real stations by campaign date, plus the
 # skill and fatigue ratings it starts each squadron with (English/TEXT/
