@@ -937,13 +937,19 @@ function Finalize-Flight {
         outcome    = $outcome
         claims     = $autoAdded
     }
-    Save-Sessions (@(Get-Sessions) + $sess)
+    # A marker is written at every Play, including the ones where nobody
+    # flew. Only a flight is a sortie: time in the air, a new Log Book row,
+    # or the campaign moved on. Everything else is dropped silently, which
+    # is what used to fill the table with 0-minute duplicates.
+    $flew = ($mins -gt 0) -or ($autoAdded -gt 0) -or ($outcome -eq 'Campaign day flown')
+    try { if ($ac2 = Get-AutoClaim) { if ([int]$ac2.rowsAfter -gt [int]$ac2.rowsBefore) { $flew = $true } } } catch { }
+    if ($flew) { Save-Sessions (@(Get-Sessions) + $sess) }
     Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue
 }
 
 function Get-Career {
-    param($Pilot, $Sessions)
-    $sorties = @($Sessions).Count
+    param($Pilot, $Sessions, [int]$Sorties = -1)
+    $sorties = if ($Sorties -ge 0) { $Sorties } else { @($Sessions).Count }
     $mins = 0; foreach ($s in $Sessions) { $mins += [int]$s.minutes }
     $hours = [math]::Round($mins / 60.0, 1)
     if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) {
@@ -1236,6 +1242,38 @@ function New-LogRow {
     }
     $b.Child = $g; $b
 }
+# What the game recorded for how each sortie ended (EndFlightStatus).
+$EndFlightNames = @{ 0='Returned'; 1='Landed'; 2='Landed at another airfield'; 3='Landed in a field'; 4='Forced landing'; 5='Aircraft lost'; 6='Killed'; 7='Crashed'; 8='Pilot lost'; 9='Baled out' }
+# A sortie as the campaign's own Log Book holds it. Claims by type from the
+# kills bytes; the row number is the game's, oldest first.
+function New-DiaryRow {
+    param($R, [int]$Number, [switch]$Header, [int]$Index = 0, [string[]]$Bins)
+    $b = New-Object Windows.Controls.Border
+    $b.Padding = '18,10,18,10'; $b.BorderThickness = '0,0,0,1'; $b.BorderBrush = Res 'Rule'
+    if ($Header) { $b.Background = B '#101B22' } elseif ($Index % 2 -eq 1) { $b.Background = Res 'Panel' } else { $b.Background = Res 'PanelHi' }
+    $g = New-Object Windows.Controls.Grid
+    foreach ($w in @('110','*','260')) {
+        $cd = New-Object Windows.Controls.ColumnDefinition
+        if ($w -eq '*') { $cd.Width = New-Object Windows.GridLength(1,([Windows.GridUnitType]::Star)) }
+        else { $cd.Width = New-Object Windows.GridLength([double]$w) }
+        [void]$g.ColumnDefinitions.Add($cd)
+    }
+    if ($Header) {
+        Add-Cell $g 'SORTIE'  0 $CondFam 12 '#C8973F' -Bold
+        Add-Cell $g 'OUTCOME' 1 $CondFam 12 '#C8973F' -Bold
+        Add-Cell $g 'CLAIMS'  2 $CondFam 12 '#C8973F' -Bold
+    } else {
+        Add-Cell $g "$Number" 0 $CondFam 13.5 '#E9E3D4'
+        $oc = "$($EndFlightNames[[int]$R.ended])"; if (-not $oc) { $oc = "Ended $($R.ended)" }
+        $occol = if ([int]$R.ended -in 1,2) { '#8FB56A' } elseif ([int]$R.ended -in 6,8) { '#D9534F' } elseif ([int]$R.ended -ge 3) { '#D9A441' } else { '#9FB0B8' }
+        Add-Cell $g $oc 1 $CondFam 13.5 $occol
+        $parts = @()
+        for ($k = 0; $k -lt 7; $k++) { if ([int]$R.kills[$k] -gt 0) { $parts += "$([int]$R.kills[$k]) x $($Bins[$k])" } }
+        $cl = if ($parts.Count) { $parts -join ', ' } else { [string][char]0x2014 }
+        Add-Cell $g $cl 2 $CondFam 13.5 $(if ($parts.Count) { '#E9E3D4' } else { '#6F828C' })
+    }
+    $b.Child = $g; $b
+}
 function Show-Logbook {
     param($Pilot)
     $script:Stage.Children.Clear()
@@ -1253,7 +1291,11 @@ function Show-Logbook {
     }
 
     $sessions = Get-Sessions
+    # The campaign's own Log Book is the record of sorties when it can be
+    # read; the launcher's timed sessions only supply the flying hours.
+    $ld = Get-LatestSaveDiary
     $career = Get-Career $Pilot $sessions
+    if ($ld) { $career = Get-Career $Pilot $sessions -Sorties (@($ld.rows).Count) }
     $vics = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $vics = [int]$Pilot.victories }
 
     $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,-6,0,12'
@@ -1274,7 +1316,7 @@ function Show-Logbook {
           elseif ($career.next) { "Next promotion to $($career.next) at $($career.nextAt) sorties." } else { 'At the top of the tree.' }
     # honours read from the ribbon chips and the AWARDS tile; no text prefix
     $cs = Get-ClaimSummary $Pilot
-    if ($cs) { $pn = "Claims: $cs.  $pn" }
+    if ($cs -and -not $ld) { $pn = "Claims: $cs.  $pn" }
     $pnt = New-TB -Text $pn -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap; $pnt.Margin = '0,2,0,18'; $pnt.MaxWidth = 860; $pnt.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($pnt)
 
@@ -1292,24 +1334,39 @@ function Show-Logbook {
     [void]$claimRow.Children.Add($ct)
     [void]$script:Stage.Children.Add($claimRow)
 
-    # ---- automatic claims: what the campaign's own Log Book says ------
-    $ld = Get-LatestSaveDiary
+    # ---- automatic claims: one statement, the campaign's own figure ----
     if ($ld) {
         $byType = @()
         for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($KillBinsRAF[$k])" } }
-        $acTxt = "Automatic claims are on. The campaign's own Log Book credits you with $([int]$ld.total) " +
-                 $(if ([int]$ld.total -eq 1) { 'victory' } else { 'victories' }) +
-                 $(if ($byType.Count) { ' (' + ($byType -join ', ') + ')' } else { '' }) +
-                 ". Fly from the launcher or from this room and each new one is entered here when you land; log a claim only for a victory the game did not credit."
+        $acTxt = "Automatic claims are on: the campaign's Log Book credits you with " +
+                 $(if ([int]$ld.total -eq 1) { 'one victory' } elseif ([int]$ld.total -eq 0) { 'no victories yet' } else { "$([int]$ld.total) victories" }) +
+                 $(if ($byType.Count) { ', ' + ($byType -join ', ') } else { '' }) +
+                 ". New ones are entered when you land from a flight started here or from the launcher. Log a claim only for a victory the game did not credit."
     } else {
-        $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Fly from the launcher or from this room and victories the campaign credits you with are entered here when you land.'
+        $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Victories the campaign credits you with are entered when you land from a flight started here or from the launcher.'
     }
     $lk = New-TB -Text $acTxt -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Wrap
     $lk.Margin = '0,-8,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lk)
 
     [void]$script:Stage.Children.Add((New-TB -Text 'SORTIES FLOWN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
-    if (@($sessions).Count -eq 0) {
+    if ($ld -and @($ld.rows).Count -gt 0) {
+        # the game's own Log Book, newest first
+        $lw = New-Object Windows.Controls.Border; $lw.BorderBrush = Res 'Rule'; $lw.BorderThickness = '1'; $lw.CornerRadius = '3'; $lw.Margin = '0,10,0,0'; $lw.ClipToBounds = $true
+        $ls = New-Object Windows.Controls.StackPanel
+        [void]$ls.Children.Add((New-DiaryRow -Header))
+        $arr = @($ld.rows); $i = 0
+        for ($k = $arr.Count - 1; $k -ge 0; $k--) { [void]$ls.Children.Add((New-DiaryRow -R $arr[$k] -Number ($k + 1) -Index $i -Bins $KillBinsRAF)); $i++ }
+        $lw.Child = $ls
+        [void]$script:Stage.Children.Add($lw)
+        $timed = @($sessions | Where-Object { [int]$_.minutes -gt 0 })
+        if ($timed.Count -gt 0) {
+            $tm = 0; foreach ($t in $timed) { $tm += [int]$t.minutes }
+            $tl = New-TB -Text "Read from the campaign save. Flying hours are timed by the launcher: $($timed.Count) timed flight$(if ($timed.Count -ne 1) { 's' }), $([math]::Round($tm/60.0,1)) h." -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
+            $tl.Margin = '0,8,0,0'
+            [void]$script:Stage.Children.Add($tl)
+        }
+    } elseif (@($sessions).Count -eq 0) {
         $none = New-TB -Text 'No sorties logged yet. Fly from the launcher and your logbook fills itself.' -Family 'Segoe UI' -Size 13.5 -Colour '#9FB0B8' -Wrap
         $none.Margin = '0,10,0,0'
         [void]$script:Stage.Children.Add($none)
