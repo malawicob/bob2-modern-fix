@@ -55,6 +55,7 @@ $excludeDirs = @(
     '_AxisProfiles'                 # somebody's joystick calibration
     '_ArtBackup'
     'work'
+    'docs'                          # showcase screenshots for the GitHub page: 17 MB, nothing in the app reads them (v1.7.8 zip was 25.7 MB with them, 6.8 MB before)
 )
 if (-not $IncludeDxvk) { $excludeDirs += 'dxvk' }
 

@@ -15,6 +15,39 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.7.8  (2026-09-07)
+--------------------
+  - FIXED: black bars top and bottom in flight (also seen as the 3D view
+    sitting in the top-left corner). Before it enters the 3D view the
+    game switches the Windows desktop to 1024x768 for its briefing
+    screens, and dgVoodoo sized its fullscreen output from that desktop,
+    so the full-resolution render was letterboxed into a 4:3 output that
+    the panel then stretched. Whether it showed depended only on which
+    screen came last before flight, which is why it looked like a driver,
+    refresh-rate or DPI problem. dgVoodoo.conf now carries
+    DesktopResolution = <your panel's native size> (dgVoodoo's own
+    documented remedy for programs that pre-set the desktop) and an
+    explicit Resolution to match. The setup writes both from the display
+    mode Windows returns to, never the current one, which a bad exit can
+    leave at 1024x768. Existing installs: the Graphics translator row on
+    Install and repair turns red and its Fix rewrites the file.
+  - FIXED: exclusive fullscreen refused (every run fell back to a window).
+    Windows had put the DWM8And16BitMitigation compatibility shim on
+    Bob.exe by itself, at machine level. With it on, the game's mode
+    switch is virtualised and the driver answers every fullscreen request
+    with no. The shim is now removed at both registry levels ("Windows 11
+    flags" on Install and repair, one administrator prompt for the
+    machine-level entry), and the Play button strips it if Windows puts
+    it back. WINXPSP3 and RUNASADMIN are dropped from Bob.exe as well;
+    the game needs neither, and the second one only caused a UAC prompt
+    before every launch.
+  - The launcher's comment claiming HIGHDPIAWARE keeps the 3D view full
+    screen was wrong (it was this same fault seen from the other side)
+    and is corrected. The flag is still stripped at Play: Windows
+    re-applies it on its own and it makes the menus draw small.
+  - Do not copy a dgVoodoo.conf between machines: DesktopResolution is
+    per panel. Run the setup or Install and repair on each PC instead.
+
 v1.7.7  (2026-08-29)
 --------------------
   - NEW: "_CLICK HERE TO START.bat". The fix folder holds thirty-odd
