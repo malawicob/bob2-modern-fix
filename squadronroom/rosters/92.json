@@ -1,0 +1,675 @@
+[
+ {
+  "pilot": "Allton, Leslie C.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": "1940-10-19",
+  "left_reason": "KIA",
+  "fate": {
+   "status": "KIA",
+   "date": "1940-10-19",
+   "note": "KIA 19 Oct 1940"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-P",
+  "serials": "R6838",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Crashed at Biggin Hill following combat with Bf 109s."
+ },
+ {
+  "pilot": "Barraclough, Stanley M.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-V",
+  "serials": "N3250",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Operational pilot throughout August and September."
+ },
+ {
+  "pilot": "Bartley, Anthony C.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 6,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-10-22"
+   }
+  ],
+  "codes": "QJ-D, QJ-K",
+  "serials": "X4272, N3244, P9372",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Achieved multiple aerial claims in X4272."
+ },
+ {
+  "pilot": "Bowen-Morris, Hugh",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-N",
+  "serials": "P9432, X4332",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Engaged extensively during the Biggin Hill defence sector patrols."
+ },
+ {
+  "pilot": "Bryson, John",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": null,
+  "left": "1940-09-24",
+  "left_reason": "KIA",
+  "fate": {
+   "status": "KIA",
+   "date": "1940-09-24",
+   "note": "KIA 24 Sept 1940"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-M",
+  "serials": "P9443",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Canadian pilot. Shot down over Kent by Bf 109s."
+ },
+ {
+  "pilot": "Bushell, Roger J.",
+  "rank": "Squadron Leader",
+  "historical": true,
+  "joined": null,
+  "left": "1940-05-23",
+  "left_reason": "POW",
+  "fate": {
+   "status": "POW",
+   "date": "1940-05-23",
+   "note": "POW (Captured May 1940)"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "documented",
+  "awards": [],
+  "codes": "QJ-Z",
+  "serials": "N3194",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Led Sqn initially; shot down near Dunkirk. Later led 'Great Escape'."
+ },
+ {
+  "pilot": "Carpenter, John 'Chips'",
+  "rank": "Flight Lieutenant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 3,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-C",
+  "serials": "X4559",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Prominent senior pilot in 'B' Flight."
+ },
+ {
+  "pilot": "Edwardes-Jones, C. H.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-L",
+  "serials": "P9381",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Flew defensive patrols from RAF Pembrey and Biggin Hill."
+ },
+ {
+  "pilot": "Edwards, Harold D.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": "1940-11-22",
+  "left_reason": "KIA",
+  "fate": {
+   "status": "KIA",
+   "date": "1940-11-22",
+   "note": "KIA 22 Nov 1940"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-R",
+  "serials": "P9458, R6765",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Canadian pilot. Heavily engaged in late September sweeps."
+ },
+ {
+  "pilot": "Green, Patrick 'Jamie'",
+  "rank": "Squadron Leader",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-S",
+  "serials": "X4036, X4591",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Took command of 92 Sqn during the autumn attrition."
+ },
+ {
+  "pilot": "Havercroft, T. S. 'Titch'",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-O",
+  "serials": "N3249",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Surviving pilot of the heavy September actions."
+ },
+ {
+  "pilot": "Hill, Howard P.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": "1940-09-20",
+  "left_reason": "KIA",
+  "fate": {
+   "status": "KIA",
+   "date": "1940-09-20",
+   "note": "KIA 20 Sept 1940"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-T",
+  "serials": "P9371",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "New Zealander. Shot down and killed over the Channel."
+ },
+ {
+  "pilot": "Holland, Robert H.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 5,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-10-22"
+   }
+  ],
+  "codes": "QJ-U",
+  "serials": "X4011",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Scored combat claims over Kent in late September."
+ },
+ {
+  "pilot": "Kingaby, James O.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 7,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFM",
+    "date": "1940-11-01"
+   }
+  ],
+  "codes": "QJ-B",
+  "serials": "X4561, R6596",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Scored 3 Bf 109s in a single day on 12 Oct 1940."
+ },
+ {
+  "pilot": "Kingcome, Brian E.A.",
+  "rank": "Flight Lieutenant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 9,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-10-22"
+   }
+  ],
+  "codes": "QJ-A, QJ-F",
+  "serials": "P9367, R6908, Q9154",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Flight Commander, acting Squadron Commander."
+ },
+ {
+  "pilot": "Mottram, Roy",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-X",
+  "serials": "N3193, P9374",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Bailed out safely on 18 Sept after combat over Hollingbourne."
+ },
+ {
+  "pilot": "Oldfield, T. G. 'Paddy'",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": "1940-10-07",
+  "left_reason": "KIA",
+  "fate": {
+   "status": "KIA",
+   "date": "1940-10-07",
+   "note": "KIA 7 Oct 1940"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-X",
+  "serials": "R6753",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Shot down and killed over Kent. Buried at Eltham."
+ },
+ {
+  "pilot": "Paterson, J. A.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": "1940-09-27",
+  "left_reason": "KIA",
+  "fate": {
+   "status": "KIA",
+   "date": "1940-09-27",
+   "note": "KIA 27 Sept 1940"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-Z",
+  "serials": "X4426",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Shot down over South London during massive daylight raid."
+ },
+ {
+  "pilot": "Saunders, C. H.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-K",
+  "serials": "R6703",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Ground-support and air-defense scramble regular."
+ },
+ {
+  "pilot": "Stanford Tuck, Robert R.",
+  "rank": "Flight Lieutenant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB (Later WIA/POW)"
+  },
+  "victories": [],
+  "victories_total": 12,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-06-11"
+   }
+  ],
+  "codes": "QJ-W, QJ-S",
+  "serials": "R6767, X4038, N3244",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Ace. Transferred to command 257 Sqn in Oct 1940."
+ },
+ {
+  "pilot": "Stephenson, Patrick J.T.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-E",
+  "serials": "X4160, X4427",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Regular combat entries in operational diaries."
+ },
+ {
+  "pilot": "Sydney, C.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-I",
+  "serials": "R6626",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Recorded flying multiple continuous scrambles in October."
+ },
+ {
+  "pilot": "Tomlinson, P. A.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-M",
+  "serials": "P9445",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Shared aircraft assignments with Flight 'B' members."
+ },
+ {
+  "pilot": "Villa, J. W.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 5,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-10-22"
+   }
+  ],
+  "codes": "QJ-A",
+  "serials": "X4054",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Flight Commander during October operations."
+ },
+ {
+  "pilot": "Wade, Trevor S.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-W",
+  "serials": "X4247",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Joined as a replacement pilot; later became a famous test pilot."
+ },
+ {
+  "pilot": "Wellum, Geoffrey H.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 2,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-G, QJ-H",
+  "serials": "X4425, P9513, N3180",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Author of 'First Light'. Youngest Spitfire pilot in BoB."
+ },
+ {
+  "pilot": "Williams, W. T.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-O",
+  "serials": "R6642",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Involved in intercepting high-altitude German fighter-bombers."
+ },
+ {
+  "pilot": "Wright, Alan C.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 5,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-10-22"
+   }
+  ],
+  "codes": "QJ-Y, QJ-R",
+  "serials": "N3284, X4260",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Became an ace during the Battle of Britain."
+ },
+ {
+  "pilot": "de Deveregh, John A.G.",
+  "rank": "Squadron Leader",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived BoB"
+  },
+  "victories": [],
+  "victories_total": 1,
+  "vic_source": "estimated",
+  "awards": [],
+  "codes": "QJ-Y",
+  "serials": "P9428",
+  "portrait": null,
+  "src": "No. 92 Squadron research for this project",
+  "note": "Briefly commanded 92 Sqn mid-battle."
+ }
+]

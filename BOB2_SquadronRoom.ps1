@@ -17,7 +17,6 @@ $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition }
 $ModDir      = Join-Path $ScriptDir 'squadronroom'
 $PortraitDir = Join-Path $ModDir 'portraits'
-$SeedPath    = Join-Path $ModDir 'roster.seed.json'
 $PortIndex   = Join-Path $ModDir 'portraits.json'
 $BadgeDir    = Join-Path $ModDir 'badges'
 
@@ -67,12 +66,26 @@ $MapStations = @{
     'RAF West Malling'  = @(0.624, 0.522)
     'RAF Westhampnett'  = @(0.411, 0.721)
 }
-# Squadron code letters as carried in 1940. A squadron with no confirmed
-# code is shown by its number alone rather than given an invented one.
+# Squadron code letters as carried during the Battle, 10 July to 31
+# October 1940. Every one confirmed against at least two dated sources
+# (the per-squadron histories on Wikipedia and rafweb, checked against
+# 1940 loss and photograph records).
+#
+# The trap here is the reallocation of September 1939: nearly every one of
+# these squadrons changed code at the outbreak of war, so BL for 609, AW
+# for 504, TM for 111, ZH for 501 and their like are 1938-39 codes and
+# wrong for the Battle. Only 145, 213 and 616 kept theirs through it. Two
+# changed during 1940 itself and had settled before 10 July: 92 from GR to
+# QJ in May, and 257 from DT to ML and back to DT in June. 92 and 616
+# genuinely shared QJ that summer.
 $SquadronCodes = @{
-    1='JX'; 17='YB'; 19='QV'; 32='GZ'; 43='FT'; 54='KL'; 56='US'; 64='SH'; 65='YT'
-    74='ZP'; 92='QJ'; 111='JU'; 151='DZ'; 213='AK'; 238='VK'; 242='LE'; 501='SD'
-    601='UF'; 609='PR'; 610='DW'; 611='FY'
+      1='JX';   3='QO';  17='YB';  19='QV';  32='GZ';  41='EB';  43='FT';  46='PO'
+     54='KL';  56='US';  64='SH';  65='YT';  66='LZ';  72='RN';  73='TP';  74='ZP'
+     79='NV';  85='VY';  87='LK';  92='QJ'; 111='JU'; 145='SO'; 151='DZ'; 152='UM'
+    213='AK'; 222='ZD'; 229='RE'; 232='EF'; 234='AZ'; 238='VK'; 242='LE'; 249='GN'
+    253='SW'; 257='DT'; 263='HE'; 266='UO'; 302='WX'; 303='RF'; 310='NN'; 312='DU'
+    501='SD'; 504='TM'; 601='UF'; 602='LO'; 603='XT'; 605='UP'; 607='AF'; 609='PR'
+    610='DW'; 611='FY'; 615='KW'; 616='QJ'
 }
 # The campaign's four starting points, and the order of battle date each
 # one reads. These are the game's own dates, not ours.
@@ -148,10 +161,8 @@ function Get-Portraits {
 function Get-Historical {
     param([int]$Sqn = 92)
     $per = Join-Path (Join-Path $ModDir 'rosters') "$Sqn.json"
-    $path = $null
-    if (Test-Path $per) { $path = $per }
-    elseif ($Sqn -eq 92 -and (Test-Path $SeedPath)) { $path = $SeedPath }
-    if (-not $path) { return @() }
+    if (-not (Test-Path $per)) { return @() }
+    $path = $per
     try {
         # ConvertFrom-Json hands a top-level JSON array back as ONE object,
         # and @() then wraps that in a second array. Without unrolling it
@@ -599,44 +610,111 @@ function Parse-FateDate {
     }
     return $null
 }
-# A pilot's fate date: an explicit fate_date wins, else parsed from status.
-function Get-FateDate {
-    param($P)
-    if (($P.PSObject.Properties.Name -contains 'fate_date') -and $P.fate_date) {
-        try { return [datetime]::ParseExact("$($P.fate_date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) } catch { }
+# One date out of a roster record, in the schema's yyyy-MM-dd form.
+function Get-RosterDate {
+    param($P, [string]$Field)
+    if (($P.PSObject.Properties.Name -contains $Field) -and $P.$Field) {
+        try { return [datetime]::ParseExact("$($P.$Field)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) } catch { }
     }
+    $null
+}
+# The day a man joined the squadron. Not researched for most men yet, and
+# a null means he was there when the Battle opened.
+function Get-JoinDate { param($P) Get-RosterDate $P 'joined' }
+# The day he left it, for whatever reason. Null means he was still on
+# strength when the Battle ended.
+function Get-LeaveDate {
+    param($P)
+    $d = Get-RosterDate $P 'left'
+    if ($d) { return $d }
+    if (($P.PSObject.Properties.Name -contains 'fate') -and $P.fate -and $P.fate.date) {
+        try { return [datetime]::ParseExact("$($P.fate.date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) } catch { }
+    }
+    # older files kept the date in the status text
     Parse-FateDate "$($P.status)"
+}
+function Get-FateDate { param($P) Get-LeaveDate $P }
+# Was this man on the squadron's strength on this day?
+function Test-OnStrength {
+    param($P, $Date)
+    if (-not $Date) { return $true }
+    $j = Get-JoinDate $P; if ($j -and ($Date -lt $j)) { return $false }
+    $l = Get-LeaveDate $P; if ($l -and ($Date -ge $l)) { return $false }
+    $true
+}
+# How his service ended, in words, from the schema's fate record.
+function Get-FateText {
+    param($P, [switch]$Short)
+    if (($P.PSObject.Properties.Name -contains 'fate') -and $P.fate) {
+        if ($P.fate.note -and -not $Short) { return "$($P.fate.note)" }
+        switch ("$($P.fate.status)") {
+            'KIA' { return 'Killed in action' }
+            'MIA' { return 'Missing' }
+            'DoW' { return 'Died of wounds' }
+            'POW' { return 'Prisoner of war' }
+            'WIA' { return 'Wounded' }
+            'Survived' { return 'Survived the Battle' }
+        }
+        return "$($P.fate.status)"
+    }
+    "$($P.status)"
 }
 # What this pilot's status reads AS OF the campaign date. Before his loss he
 # is on strength; on or after, his recorded fate. No date -> final record.
 function Resolve-Status {
     param($P, $Date)
-    $raw = "$($P.status)"
+    $raw = Get-FateText $P
     if ($Date) {
-        $fate = Get-FateDate $P
-        if ($fate) {
-            if ($Date -lt $fate) { return @{ Text = 'On strength'; Colour = '#8FB56A' } }
+        $j = Get-JoinDate $P
+        if ($j -and ($Date -lt $j)) { return @{ Text = "Joins $($j.ToString('d MMM'))"; Colour = '#6F828C' } }
+        $l = Get-LeaveDate $P
+        if ($l) {
+            if ($Date -lt $l) { return @{ Text = 'On strength'; Colour = '#8FB56A' } }
         }
         elseif ($Date -le $BattleEnd) {
-            # No date for this man's fate. While the Battle is still being
-            # fought nobody's ending is known yet, so he stands on strength:
-            # the board used to announce "Survived BoB" for every survivor
-            # on the first morning, which gave the whole war away.
+            # No date for this man's ending. While the Battle is still being
+            # fought nobody's is known yet, so he stands on strength: the
+            # board used to announce "Survived BoB" for every survivor on
+            # the first morning, which gave the whole war away.
             return @{ Text = 'On strength'; Colour = '#8FB56A' }
         }
     }
     @{ Text = $raw; Colour = (Fate-Colour $raw) }
 }
-# Victories credited by the campaign date. Documented for the aces, estimated
-# for the others from their combat record; accrued across their 1940 window.
+# Victories credited by the campaign date.
+#
+# Where a man's claims are researched they carry their own dates and are
+# simply counted up to the day. Where only his Battle total is known, it is
+# spread evenly across his time with the squadron, and the figure is an
+# estimate: the roster note on the board says which of the two this
+# squadron has.
+function Get-DatedVictories {
+    param($P)
+    if (($P.PSObject.Properties.Name -contains 'victories') -and $P.victories -and ($P.victories -is [System.Array] -or $P.victories.Count)) {
+        return @($P.victories)
+    }
+    @()
+}
 function Accrue-Victories {
     param($P, $Date)
+    $dated = Get-DatedVictories $P
+    if ($dated.Count -gt 0) {
+        if (-not $Date) { return "$($dated.Count)" }
+        $n = 0
+        foreach ($v in $dated) {
+            $vd = $null
+            try { $vd = [datetime]::ParseExact("$($v.date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) } catch { }
+            if ($vd -and ($vd -le $Date)) { $n++ }
+        }
+        return "$n"
+    }
     $total = 0
-    if (($P.PSObject.Properties.Name -contains 'victories') -and ($null -ne $P.victories)) { $total = [int]$P.victories }
+    if (($P.PSObject.Properties.Name -contains 'victories_total') -and ($null -ne $P.victories_total)) { $total = [int]$P.victories_total }
+    elseif (($P.PSObject.Properties.Name -contains 'victories') -and ($P.victories -is [int])) { $total = [int]$P.victories }
     if ($total -le 0) { return '' }
     if (-not $Date) { return "$total" }
-    $start = [datetime]'1940-05-10'
-    $end = Get-FateDate $P; if (-not $end) { $end = [datetime]'1940-10-31' }
+    $start = Get-JoinDate $P; if (-not $start) { $start = $BattleStart }
+    $end = Get-LeaveDate $P; if (-not $end) { $end = $BattleEnd }
     if ($Date -le $start) { return '0' }
     if ($end -le $start) { return "$total" }
     if ($Date -ge $end) { return "$total" }
@@ -644,18 +722,25 @@ function Accrue-Victories {
     "$([math]::Round($total * $frac))"
 }
 # Decorations, shown once the campaign date reaches the (approx) award date.
+# Decorations, each shown once the campaign date reaches its own date. An
+# award with no date is shown from the start, since we cannot say when it
+# was gazetted.
 function Get-Awards {
     param($P, $Date)
-    $aw = ''
-    if (($P.PSObject.Properties.Name -contains 'awards') -and $P.awards) { $aw = "$($P.awards)" }
-    if (-not $aw) { return '' }
-    if ($Date -and ($P.PSObject.Properties.Name -contains 'award_date') -and $P.award_date) {
-        try {
-            $ad = [datetime]::ParseExact("$($P.award_date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
-            if ($Date -lt $ad) { return '' }
-        } catch { }
+    if (-not (($P.PSObject.Properties.Name -contains 'awards') -and $P.awards)) { return '' }
+    $out = @()
+    foreach ($a in @($P.awards)) {
+        $name = if ($a -is [string]) { "$a" } else { "$($a.award)" }
+        if (-not $name) { continue }
+        if ($Date -and -not ($a -is [string]) -and $a.date) {
+            try {
+                $ad = [datetime]::ParseExact("$($a.date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+                if ($Date -lt $ad) { continue }
+            } catch { }
+        }
+        $out += $name
     }
-    $aw
+    ($out -join ', ')
 }
 
 # --- a framed photograph on the wall ------------------------------------
@@ -1662,9 +1747,60 @@ function Show-Roster {
     }
     [void]$ls.Children.Add((New-RosterRow -P $me -Index 0 -IsPlayer))
     $i = 1
-    foreach ($h in $men) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
+    # The board is the squadron AS IT STOOD: men who have not joined yet,
+    # and men already lost, are not on it. The lost are named underneath.
+    $onStrength = @($men | Where-Object { Test-OnStrength $_ $script:CampaignDate })
+    foreach ($h in $onStrength) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
+
+    # Who the squadron has lost, most recent first, and who went this week.
+    if ($script:CampaignDate) {
+        $gone = @()
+        foreach ($h in $men) {
+            $l = Get-LeaveDate $h
+            if ($l -and ($l -le $script:CampaignDate) -and ($l -ge $BattleStart)) {
+                $gone += [pscustomobject]@{ Man = $h; When = $l }
+            }
+        }
+        if ($gone.Count -gt 0) {
+            $gone = @($gone | Sort-Object When -Descending)
+            $week = @($gone | Where-Object { ($script:CampaignDate - $_.When).TotalDays -le 7 })
+            $hdr = New-TB -Text 'LOSSES' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold
+            $hdr.Margin = '0,26,0,0'
+            [void]$script:Stage.Children.Add($hdr)
+            $lead = if ($week.Count -eq 0) { "The squadron has lost $($gone.Count) $(if ($gone.Count -eq 1) { 'man' } else { 'men' }) since the Battle opened. None this week." }
+                    elseif ($week.Count -eq 1) { "One man lost in the past week, $($gone.Count) since the Battle opened." }
+                    else { "$($week.Count) men lost in the past week, $($gone.Count) since the Battle opened." }
+            $lt2 = New-TB -Text $lead -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap
+            $lt2.Margin = '0,8,0,8'; $lt2.MaxWidth = 900
+            [void]$script:Stage.Children.Add($lt2)
+            $lossWrap = New-Object Windows.Controls.Border
+            $lossWrap.BorderBrush = Res 'Rule'; $lossWrap.BorderThickness = '1'; $lossWrap.CornerRadius = '3'; $lossWrap.ClipToBounds = $true
+            $lsx = New-Object Windows.Controls.StackPanel
+            $j = 0
+            foreach ($g in ($gone | Select-Object -First 12)) {
+                $row = New-Object Windows.Controls.Border
+                $row.Padding = '18,8'; $row.BorderThickness = '0,0,0,1'; $row.BorderBrush = Res 'Rule'
+                $row.Background = if ($j % 2 -eq 1) { Res 'Panel' } else { Res 'PanelHi' }
+                $gg = New-Object Windows.Controls.Grid
+                foreach ($w in @('130','*','220')) {
+                    $cd = New-Object Windows.Controls.ColumnDefinition
+                    if ($w -eq '*') { $cd.Width = New-Object Windows.GridLength(1,([Windows.GridUnitType]::Star)) }
+                    else { $cd.Width = New-Object Windows.GridLength([double]$w) }
+                    [void]$gg.ColumnDefinitions.Add($cd)
+                }
+                Add-Cell $gg $g.When.ToString('d MMM') 0 $CondFam 13 '#9FB0B8'
+                Add-Cell $gg "$($g.Man.pilot)" 1 $SerifFam 14.5 '#E9E3D4'
+                Add-Cell $gg (Get-FateText $g.Man -Short) 2 $CondFam 13 (Fate-Colour (Get-FateText $g.Man))
+                $row.Child = $gg
+                [void]$lsx.Children.Add($row)
+                $j++
+            }
+            $lossWrap.Child = $lsx
+            [void]$script:Stage.Children.Add($lossWrap)
+        }
+    }
 
     # Every squadron gets its record of service, from the game's own order
     # of battle: where it stood as the campaign moved, and how Fighter

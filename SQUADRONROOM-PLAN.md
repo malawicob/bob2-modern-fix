@@ -187,8 +187,8 @@ name within a squadron; or a real ace with zero victories.
 
 | Step | What | Days |
 |---|---|---|
-| 1 | B1 fixes 1 to 5, 7 to 12, and the dead code | 1 |
-| 2 | Roster schema (A1), loader, validator (A6); No. 32 converted | 1 |
+| 1 | B1 fixes 1 to 5, 7 to 12, and the dead code | DONE 2026-09-08 |
+| 2 | Roster schema (A1), loader, validator (A6); No. 32 converted | DONE 2026-09-08 |
 | 3 | No. 32 research: aces, dates, codes (A2) | 1 to 2 |
 | 4 | Strength model and invented men (A3, A4); board by date; features B2.1, B2.2, B2.8 | 2 |
 | 5 | Decode the Diary's squadron records; per-row dates (B1.6, B2.5); simulation for the player's squadron (A5) | 2 |
@@ -200,6 +200,24 @@ name within a squadron; or a real ace with zero victories.
 Roughly three working weeks of sessions. Steps 1 and 2 first, then No. 32
 end to end (3, 4, 5) so the whole idea is proven on the player's own
 squadron before the other 21 are researched.
+
+## Done so far
+
+- **Step 1** (commit 49f8fa8, plus aba1c91 for the new-career baseline):
+  every audit fix. Squadrons move with the campaign, the board no longer
+  gives the war away, one source for a career, rank and honours persisted.
+- **The postings map** (commit 7f0a2b0): opened to all 52 squadrons from
+  the game's own order of battle, four campaign periods, fifteen more
+  stations placed from latitude and longitude.
+- **Squadron codes**: all 52 confirmed against two dated sources each.
+  One correction found: No. 152 carried UM, not the SN we held. The
+  September 1939 reallocation is the trap - BL for 609, AW for 504, TM
+  for 111 and their like are 1938-39 codes.
+- **Step 2**: the schema above is live. tools/roster_convert.py converts
+  a roster to it, tools/roster_validate.py checks one before it is
+  committed (neither ships). No. 32 and No. 92 are on it; the 92 seed
+  file is gone and 92 is now an ordinary roster. The board shows the men
+  on strength on the day and names the losses beneath it.
 
 ## Rules
 
