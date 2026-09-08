@@ -2179,8 +2179,12 @@ function Show-Roster {
     $wg = New-BadgeImage -File 'wings.png' -Height 52 -Tip "Qualified pilot's flying badge"
     if ($wg) { [void]$chipRow.Children.Add($wg) }
     if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
-    $heroHon = @(Get-PlayerHonours $Pilot (Get-Career $Pilot @(Get-Sessions)))
-    $heroRib = New-RibbonRow $heroHon
+    # The ribbons on the tunic are the ribbons in the record, not a second
+    # opinion. This used to work the honours out again from the launcher's
+    # timed sessions alone, with no Log Book: it counted a different number
+    # of sorties, so it could disagree with the roster row below it about
+    # rank, and it could never show the VC, which is read from the Book.
+    $heroRib = New-RibbonRow $ph0
     if ($heroRib) { $heroRib.Margin = '0,10,0,0'; $heroRib.HorizontalAlignment = 'Left'; [void]$d.Children.Add($heroRib) }
     $st = New-TB -Text 'ON STRENGTH' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold; $st.Margin = '0,16,0,0'
     [void]$d.Children.Add($st)
