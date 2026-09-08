@@ -2344,7 +2344,7 @@ function Format-FieldName {
 function Measure-PlaqueName {
     param([string]$Text)
     # 10px condensed. Near enough for collision work and it costs nothing.
-    [math]::Max(30.0, $Text.Length * 5.4 + 4.0)
+    [math]::Max(30.0, $Text.Length * 5.9 + 8.0)
 }
 function Set-PlaqueSize {
     param($G)
@@ -2481,7 +2481,8 @@ function Short-Rank {
 
 # Every squadron on the day's sheet, laid out and drawn.
 function Add-SquadronPlaques {
-    param($Canvas, $Fields, [double]$W, [double]$H, [int]$Mine, $Date)
+    param($Canvas, $Fields, [double]$W, [double]$H, [int]$Mine, $Date,
+          $OnSelect, [switch]$AlwaysName, [switch]$Activity)
 
     # ---- 1. bundle the fields that are one anchor at this scale --------
     $groups = @()
@@ -2507,9 +2508,23 @@ function Add-SquadronPlaques {
         $g.Members = @($g.Members | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
         foreach ($m in $g.Members) {
             $m.PW = $PlaqueTileW * $m.Sqns.Count + 1.0
-            $m.Label = Format-FieldName "$($m.Base)"
+            $m.Full = Format-FieldName "$($m.Base)"
+            $m.Short = ''
+            if ($Activity) {
+                # how hard this station was being fought over, as the board
+                # has always shown it
+                $act = 'L'
+                foreach ($q3 in $m.Sqns) { if ("$($q3.Act)" -eq 'H') { $act = 'H' } elseif ("$($q3.Act)" -eq 'M' -and $act -ne 'H') { $act = 'M' } }
+                $pips = switch ($act) { 'H' { "$([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { "$([char]0x25B2)$([char]0x25B2)" } default { "$([char]0x25B2)" } }
+                $m.Short = $pips
+                $m.Full = "$($m.Full)  $pips"
+            }
+            # Beside its own field a plaque need not repeat a name the
+            # sheet already prints; on a rail, or where the sheet keeps
+            # quiet, it must carry one.
+            $m.Named = if ($AlwaysName) { $true } else { [bool]$MapUnnamed["$($m.Base)"] }
+            $m.Label = if ($MapUnnamed["$($m.Base)"] -or -not $m.Short) { $m.Full } else { $m.Short }
             $m.NW = Measure-PlaqueName $m.Label
-            $m.Named = [bool]$MapUnnamed["$($m.Base)"]
         }
         $g.AX = [double]$g.Members[0].X; $g.AY = [double]$g.Members[0].Y
         $g.Docked = $true
@@ -2576,10 +2591,24 @@ function Add-SquadronPlaques {
     }
 
     # ---- 5. the rest dock to the North Sea and the Channel -------------
-    $dock = @($groups | Where-Object { $_.Docked })
+    # Bundling exists so that three fields a dozen pixels apart do not try
+    # to hold three plaques between them. Out on a rail there is room, and
+    # a stack of three named rows is narrower and plainer than one wide
+    # plaque, so a bundle that docks comes apart again.
+    $dock = @()
+    foreach ($g in @($groups | Where-Object { $_.Docked })) {
+        if ($g.Members.Count -le 1) { $dock += ,$g; continue }
+        $groups = @($groups | Where-Object { $_ -ne $g })
+        foreach ($m in $g.Members) {
+            $one = @{ Members = @($m); AX = [double]$m.X; AY = [double]$m.Y; Docked = $true }
+            $groups += ,$one; $dock += ,$one
+        }
+    }
     if ($dock.Count) {
         foreach ($g in $dock) {
-            foreach ($m in $g.Members) { $m.Named = $true }
+            foreach ($m in $g.Members) {
+                $m.Named = $true; $m.Label = $m.Full; $m.NW = Measure-PlaqueName $m.Label
+            }
             Set-PlaqueSize $g
         }
         $mx = 0.0; $my = 0.0
@@ -2646,6 +2675,7 @@ function Add-SquadronPlaques {
 
     # ---- 6. draw ------------------------------------------------------
     $script:MapAssemblies = @()
+    $script:MapTiles = @()
     foreach ($g in $groups) {
         $ox = [double]$g.BX
         foreach ($m in $g.Members) {
@@ -2700,7 +2730,7 @@ function Add-SquadronPlaques {
             $lead.Stroke = B '#7A6E7C93'; $lead.StrokeThickness = 1
             [void]$Canvas.Children.Add($lead); [Windows.Controls.Panel]::SetZIndex($lead, 5)
 
-            $asm = @{ Plaque = $plaque; Lead = $lead; Dot = $dot; Name = $nameTb; DotCol = $dotCol; Mine = $isMine }
+            $asm = @{ Plaque = $plaque; Lead = $lead; Dot = $dot; Name = $nameTb; DotCol = $dotCol; Mine = $isMine; Sel = $false }
             $script:MapAssemblies += ,$asm
 
             $n = 0
@@ -2723,7 +2753,12 @@ function Add-SquadronPlaques {
                 $tb.VerticalAlignment = 'Center'; $tb.HorizontalAlignment = 'Stretch'
                 $tile.Child = $tb
                 $tile.Tag = @{ Asm = $asm; Text = $tb; Colour = $tcol; Num = [int]$q2.Num
-                               Type = "$($q2.Type)"; Base = "$($m.Base)"; Mine = $mineTile; Date = $Date }
+                               Type = "$($q2.Type)"; Base = "$($m.Base)"; Mine = $mineTile; Date = $Date
+                               Sqn = $q2; Sel = $false }
+                if ($OnSelect) {
+                    $script:MapTiles += ,$tile
+                    $tile.Add_MouseLeftButtonUp({ param($sender, $e) & $script:SelectSq $sender.Tag.Sqn; $e.Handled = $true })
+                }
                 $tile.Add_MouseEnter({
                     param($sender, $e)
                     $t = $sender.Tag
@@ -2758,10 +2793,10 @@ function Add-SquadronPlaques {
                 $tile.Add_MouseLeave({
                     param($sender, $e)
                     $t = $sender.Tag
-                    $sender.Background = B '#00000000'
-                    $t.Text.Foreground = B $t.Colour
+                    $sender.Background = if ($t.Sel) { B '#33FFC24A' } else { B '#00000000' }
+                    $t.Text.Foreground = if ($t.Sel) { B '#FFE28A' } else { B $t.Colour }
                     $a = $t.Asm
-                    $a.Plaque.BorderBrush = B $(if ($a.Mine) { '#FFE28A' } else { '#2C3A52' })
+                    $a.Plaque.BorderBrush = B $(if ($a.Mine -or $a.Sel) { '#FFE28A' } else { '#2C3A52' })
                     $a.Plaque.Background = B '#EB0E1626'
                     $a.Lead.Stroke = B '#7A6E7C93'; $a.Lead.StrokeThickness = 1
                     if ($a.Dot.Width -gt 8) {
@@ -3093,7 +3128,7 @@ function Show-SquadronSelect {
     [void]$script:Stage.Children.Add($segRow)
 
     $perDef = $Periods | Where-Object { $_.Id -eq $script:SelPeriod } | Select-Object -First 1
-    $lead = New-TB -Text "The board for $($perDef.Desc). $([char]0x25B2)$([char]0x25B2)$([char]0x25B2) heavy fighting  $([char]0x25B2)$([char]0x25B2) steady  $([char]0x25B2) quiet. Click a ring to see the squadron, then report to it. A ring off its station can be dragged onto it." -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
+    $lead = New-TB -Text "The board for $($perDef.Desc). $([char]0x25B2)$([char]0x25B2)$([char]0x25B2) heavy fighting  $([char]0x25B2)$([char]0x25B2) steady  $([char]0x25B2) quiet. Click a squadron's number to see it, then report to it. Hold the pointer on a number for the squadron's card." -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
     $lead.Margin = '0,0,0,12'
     [void]$script:Stage.Children.Add($lead)
 
@@ -3112,24 +3147,9 @@ function Show-SquadronSelect {
     [void]$grid.Children.Add($cv)
     $mapWrap.Child = $grid
 
-    # hand-corrected ring anchors (per station name, so they hold across periods)
-    $script:RingPosPath = Join-Path $StateDir 'ringpos.json'
-    $script:RingPos = @{}
-    if (Test-Path $script:RingPosPath) {
-        try {
-            $rp = Get-Content $script:RingPosPath -Raw | ConvertFrom-Json
-            foreach ($pp in $rp.PSObject.Properties) {
-                # an anchor outside the map would put the ring where nobody can
-                # click it, and there would be no way back. Drop it instead.
-                $vx = [double]$pp.Value.x; $vy = [double]$pp.Value.y
-                if ($vx -ge 0 -and $vx -le 1 -and $vy -ge 0 -and $vy -le 1) { $script:RingPos[$pp.Name] = $pp.Value }
-            }
-        } catch { }
-    }
-
     Enable-MapZoom -Frame $mapWrap -Content $grid
     $script:SelSq = $null
-    $script:SqDots = @()
+    $script:MapTiles = @()
     $script:SqChips = @()
     $detail = New-TB -Text 'No squadron selected.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
     $btn = New-Object Windows.Controls.Button
@@ -3140,16 +3160,19 @@ function Show-SquadronSelect {
     $script:SelectSq = {
         param($q2)
         $script:SelSq = $q2
-        foreach ($d in $script:SqDots) {
-            $d.Stroke = if ("$($d.Tag.Type)" -match 'Spitfire') { B '#5FD0E8' } else { B '#F5A83C' }
-            $d.StrokeThickness = 2.5; $d.Width = 26; $d.Height = 26
-            [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 13); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 13)
+        foreach ($t in $script:MapTiles) {
+            $tg = $t.Tag
+            $tg.Sel = ([int]$tg.Num -eq [int]$q2.Num)
+            $tg.Asm.Sel = $tg.Sel -or $tg.Asm.Sel
+            $t.Background = if ($tg.Sel) { B '#33FFC24A' } else { B '#00000000' }
+            $tg.Text.Foreground = if ($tg.Sel) { B '#FFE28A' } else { B $tg.Colour }
         }
-        foreach ($d in $script:SqDots) {
-            if ($d.Tag.Num -eq $q2.Num) {
-                $d.Stroke = B '#FFE28A'; $d.StrokeThickness = 3.5; $d.Width = 34; $d.Height = 34
-                [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 17); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 17)
-            }
+        # the plaque holding the chosen squadron wears the gold, and no
+        # other one does
+        foreach ($t in $script:MapTiles) { $t.Tag.Asm.Sel = $false }
+        foreach ($t in $script:MapTiles) { if ($t.Tag.Sel) { $t.Tag.Asm.Sel = $true } }
+        foreach ($a in $script:MapAssemblies) {
+            $a.Plaque.BorderBrush = B $(if ($a.Sel) { '#FFE28A' } else { '#2C3A52' })
         }
         foreach ($cp in $script:SqChips) {
             $cp.BorderBrush = if ($cp.Tag -and $cp.Tag.Num -eq $q2.Num) { B '#FFE28A' } else { Res 'Rule' }
@@ -3160,115 +3183,26 @@ function Show-SquadronSelect {
         $script:SqButton.IsEnabled = $true
     }
 
-    # shared-station fan-out: count squadrons per station this period
-    $stationCount = @{}
-    foreach ($q in (Get-Squadrons)) {
-        $po = Get-Posting $q $script:SelPeriod
-        if ($po -and $po.Mx -ge 0) { $stationCount[$po.Base] = 1 + [int]$stationCount[$po.Base] }
-    }
-    $stationSeen = @{}
+    # the day's postings, gathered by field: the same layer the sector map
+    # draws, so the board a man chooses from is the board he will fly from
+    $byField = @{}
     $farActive = @(); $resting = @()
     foreach ($q in (Get-Squadrons)) {
         $po = Get-Posting $q $script:SelPeriod
         if (-not $po) { $resting += $q; continue }
         $qt = @{ Num=$q.Num; Code=$q.Code; Type=$q.Type; Base=$po.Base; Act=$po.Act; Period=$script:SelPeriod }
         if ($po.Mx -lt 0) { $farActive += $qt; continue }
-        # Several squadrons at one station are fanned out around it. This
-        # used to offset the first left and EVERY other one right, so a
-        # third squadron sat exactly on top of the second.
-        # same rule as the map tab: clear of the field, and away from the
-        # side its name is printed on
-        $nAt = [int]$stationCount[$po.Base]
-        $ix = [int]$stationSeen[$po.Base]; $stationSeen[$po.Base] = $ix + 1
-        $rad = 20.0 + 3.0 * [math]::Max(0, $nAt - 1)
-        $spread = [math]::PI * 1.05
-        $ang = if ($nAt -le 1) { [math]::PI } else { ([math]::PI - $spread / 2.0) + $spread * $ix / ($nAt - 1) }
-        $offX = $rad * [math]::Cos($ang); $offY = $rad * [math]::Sin($ang)
-        $cx = $po.Mx * $W + $offX
-        $cy = $po.My * $H + $offY
-        $ov = $script:RingPos["$($po.Base)|$($q.Num)"]
-        if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
-        $isSpit = ("$($q.Type)" -match 'Spitfire')
-        $ring = New-Object Windows.Shapes.Ellipse
-        $ring.Width = 26; $ring.Height = 26; $ring.StrokeThickness = 2.5
-        $ring.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
-        $ring.Fill = B '#CC0B141B'
-        $ring.Cursor = 'Hand'
-        $qt.CX = $cx; $qt.CY = $cy; $qt.MapW = $W; $qt.MapH = $H
-        $qt.Drag = $false; $qt.Moved = $false; $qt.CanMove = $false; $qt.OX = 0.0; $qt.OY = 0.0
-        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 13); [Windows.Controls.Canvas]::SetTop($ring, $cy - 13)
-        # the number inside the ring, the activity pips just under it
-        $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 10.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
-        $nl.IsHitTestVisible = $false
-        $nl.Width = 26; $nl.TextAlignment = 'Center'
-        [Windows.Controls.Canvas]::SetLeft($nl, $cx - 13); [Windows.Controls.Canvas]::SetTop($nl, $cy - 9)
-        $pips = switch ("$($po.Act)") { 'H' { "$([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { "$([char]0x25B2)$([char]0x25B2)" } default { "$([char]0x25B2)" } }
-        $pl2 = New-TB -Text $pips -Family $CondFam -Size 7.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' })
-        $pl2.IsHitTestVisible = $false; $pl2.Width = 26; $pl2.TextAlignment = 'Center'
-        [Windows.Controls.Canvas]::SetLeft($pl2, $cx - 13); [Windows.Controls.Canvas]::SetTop($pl2, $cy + 3)
-        [void]$cv.Children.Add($pl2)
-        $qt.Label = $nl
-        $qt.Pips = $pl2
-        $ring.Tag = $qt
-        # the same card the sector map shows, so a man choosing his
-        # squadron sees what he is choosing
-        $ring.Add_MouseEnter({
-            param($sender,$e)
-            if ($sender.ToolTip) { return }
-            $t = $sender.Tag
-            $d = $null
-            foreach ($per in $Periods) { if ($per.Id -eq $script:SelPeriod) { try { $d = [datetime]$per.Key } catch { } } }
-            $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num ([int]$t.Num) -Type "$($t.Type)" -Base "$($t.Base)" -Mine $false -Date $d)
-            [Windows.Controls.ToolTipService]::SetInitialShowDelay($sender, 90)
-            [Windows.Controls.ToolTipService]::SetShowDuration($sender, 90000)
-        })
-        $ring.Add_MouseLeftButtonDown({
-            param($sender,$e)
-            $t = $sender.Tag
-            $pt = $e.GetPosition($sender.Parent)
-            $t.Drag = $true; $t.Moved = $false
-            # Moving an anchor is a deliberate act, held under Ctrl. Without
-            # that a shaky click nudged the ring instead of selecting the
-            # squadron, and the posting button never came alive.
-            $t.CanMove = ([Windows.Input.Keyboard]::Modifiers -band [Windows.Input.ModifierKeys]::Control) -ne 0
-            $t.OX = $pt.X - $t.CX; $t.OY = $pt.Y - $t.CY
-            [void]$sender.CaptureMouse(); $e.Handled = $true
-        })
-        $ring.Add_MouseMove({
-            param($sender,$e)
-            $t = $sender.Tag
-            if ($t.Drag -and $t.CanMove) {
-                $pt = $e.GetPosition($sender.Parent)
-                $nx = $pt.X - $t.OX; $ny = $pt.Y - $t.OY
-                if ([math]::Abs($nx - $t.CX) -gt 3 -or [math]::Abs($ny - $t.CY) -gt 3) { $t.Moved = $true }
-                if ($t.Moved) {
-                    $t.CX = $nx; $t.CY = $ny
-                    $half = $sender.Width / 2.0
-                    [Windows.Controls.Canvas]::SetLeft($sender, $nx - $half); [Windows.Controls.Canvas]::SetTop($sender, $ny - $half)
-                    [Windows.Controls.Canvas]::SetLeft($t.Label, $nx - 13); [Windows.Controls.Canvas]::SetTop($t.Label, $ny - 9)
-                    if ($t.Pips) { [Windows.Controls.Canvas]::SetLeft($t.Pips, $nx - 13); [Windows.Controls.Canvas]::SetTop($t.Pips, $ny + 3) }
-                }
-            }
-        })
-        $ring.Add_MouseLeftButtonUp({
-            param($sender,$e)
-            $t = $sender.Tag
-            if ($t.Drag) {
-                $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
-                if ($t.Moved) {
-                    $fx = [math]::Max(0.0, [math]::Min(1.0, $t.CX / $t.MapW))
-                    $fy = [math]::Max(0.0, [math]::Min(1.0, $t.CY / $t.MapH))
-                    $script:RingPos["$($t.Base)|$($t.Num)"] = @{ x = [math]::Round($fx, 4); y = [math]::Round($fy, 4) }
-                    try { $script:RingPos | ConvertTo-Json | Set-Content -Path $script:RingPosPath -Encoding UTF8 } catch { }
-                } else {
-                    & $script:SelectSq $t
-                }
-            }
-        })
-        $script:SqDots += $ring
-        [void]$cv.Children.Add($ring)
-        [void]$cv.Children.Add($nl)
+        $k = "$($po.Base)"
+        if (-not $byField.ContainsKey($k)) {
+            $byField[$k] = @{ Base = $k; X = [double]$po.Mx * $W; Y = [double]$po.My * $H; Sqns = @() }
+        }
+        $byField[$k].Sqns = @($byField[$k].Sqns) + @($qt)
     }
+    $perDate = $null
+    foreach ($per in $Periods) { if ($per.Id -eq $script:SelPeriod) { try { $perDate = [datetime]$per.Key } catch { } } }
+    $fields = @($byField.Values | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
+    Add-SquadronPlaques -Canvas $cv -Fields $fields -W $W -H $H -Mine 0 -Date $perDate `
+                        -OnSelect $true -AlwaysName -Activity
 
     [void]$script:Stage.Children.Add($mapWrap)
 
