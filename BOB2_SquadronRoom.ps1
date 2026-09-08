@@ -840,11 +840,15 @@ function New-Frame {
 
 # --- the player's aircraft: a Spitfire profile with live codes and serial --
 # per-type profile art and marking defaults (roundel positions measured)
+# The serial was painted about eight inches high on the rear fuselage,
+# against code letters of twenty-four to thirty: roughly a quarter their
+# height, not the two thirds it was drawn at. The wheel adjusts it from
+# there, and what you choose is kept per mark of aircraft.
 function Get-AircraftSpec { param([string]$Type)
     if ($Type -match 'Hurricane') {
-        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.4118; SqY=0.3474; IndX=0.6313; IndY=0.3532; SerX=0.7182; SerTy=0.4750; CodeSize=78.0; SerSize=46.0 }
+        return @{ Img='hurricane.png'; Ratio=(300.0/1000.0); SqX=0.4118; SqY=0.3474; IndX=0.6313; IndY=0.3532; SerX=0.7182; SerTy=0.4900; CodeSize=78.0; SerSize=22.0 }
     }
-    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.4194; SqY=0.3461; IndX=0.6727; IndY=0.3326; SerX=0.7443; SerTy=0.4487; CodeSize=84.0; SerSize=32.0 }
+    @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.4194; SqY=0.3461; IndX=0.6727; IndY=0.3326; SerX=0.7443; SerTy=0.4650; CodeSize=84.0; SerSize=24.0 }
 }
 $AcW          = 760.0            # on-screen width; height follows the image
 # historically-approximate: RAF 'Sky' grey block codes, black serial
@@ -986,8 +990,16 @@ function Get-AcPos {
             $j = Get-Content $AcPosPath -Raw -Encoding UTF8 | ConvertFrom-Json
             foreach ($p in $j.PSObject.Properties) {
                 $x = [double]$p.Value.x; $y = [double]$p.Value.y
-                # a mark dragged off the picture could never be caught again
-                if ($x -ge -0.05 -and $x -le 1.05 -and $y -ge -0.05 -and $y -le 1.05) { $t[$p.Name] = @{ x = $x; y = $y } }
+                $sz = 0.0
+                if ($p.Value.PSObject.Properties.Name -contains 's') { $sz = [double]$p.Value.s }
+                # a mark dragged off the picture, or shrunk to nothing, could
+                # never be caught again
+                if ($sz -gt 0 -and ($sz -lt 8 -or $sz -gt 140)) { $sz = 0.0 }
+                if ($x -ge -0.05 -and $x -le 1.05 -and $y -ge -0.05 -and $y -le 1.05) {
+                    $rec = @{ x = $x; y = $y }
+                    if ($sz -gt 0) { $rec['s'] = $sz }
+                    $t[$p.Name] = $rec
+                }
             }
         } catch { }
     }
@@ -1041,26 +1053,51 @@ function New-Aircraft {
 # last put by hand, and draggable to somewhere better. Dragging is the
 # whole point of it, so no modifier is asked for -- but a press that does
 # not move is not a drag, and nothing is written for it.
+function Save-AcMark {
+    param($Mark)
+    $t = $Mark.Tag
+    $script:AcPos[$t.Key] = @{
+        x = [math]::Round([Windows.Controls.Canvas]::GetLeft($Mark) / $t.W, 4)
+        y = [math]::Round([Windows.Controls.Canvas]::GetTop($Mark)  / $t.H, 4)
+        s = [math]::Round($Mark.FontSize, 2)
+    }
+    Save-AcPos $script:AcPos
+}
 function Add-AcMark {
     param($Canvas, [string]$Key, [string]$Text, [string]$Family, [double]$Size,
           [string]$Colour, [double]$DX, [double]$DY, [double]$W, [double]$H)
-    $fx = $DX; $fy = $DY
-    if ($script:AcPos.ContainsKey($Key)) { $fx = [double]$script:AcPos[$Key].x; $fy = [double]$script:AcPos[$Key].y }
-    $tb = New-TB -Text $Text -Family $Family -Size $Size -Colour $Colour -Bold
+    $fx = $DX; $fy = $DY; $pt = $Size
+    if ($script:AcPos.ContainsKey($Key)) {
+        $rec = $script:AcPos[$Key]
+        $fx = [double]$rec.x; $fy = [double]$rec.y
+        if ($rec.ContainsKey('s') -and [double]$rec.s -gt 0) { $pt = [double]$rec.s }
+    }
+    $tb = New-TB -Text $Text -Family $Family -Size $pt -Colour $Colour -Bold
     # a TextBlock with no brush is hit-testable only on its glyphs, and the
     # gaps between letters would drop the drag
     $tb.Background = B '#00000000'
     $tb.Cursor = 'SizeAll'
-    $tb.ToolTip = 'Drag to move. Double-click to put it back where the research says.'
+    $tb.ToolTip = 'Drag to move, roll the wheel to size it. Double-click to put it back where the research says.'
     [Windows.Controls.Canvas]::SetLeft($tb, $fx * $W)
     [Windows.Controls.Canvas]::SetTop($tb,  $fy * $H)
-    $tb.Tag = @{ Key = $Key; W = $W; H = $H; DX = $DX; DY = $DY; Drag = $false; Moved = $false; OX = 0.0; OY = 0.0 }
+    $tb.Tag = @{ Key = $Key; W = $W; H = $H; DX = $DX; DY = $DY; DS = $Size
+                 Drag = $false; Moved = $false; OX = 0.0; OY = 0.0 }
+    $tb.Add_MouseWheel({
+        param($sender, $e)
+        $t = $sender.Tag
+        $n = $sender.FontSize * $(if ($e.Delta -gt 0) { 1.06 } else { 1.0 / 1.06 })
+        $n = [math]::Max(8.0, [math]::Min(140.0, $n))
+        $sender.FontSize = $n
+        Save-AcMark $sender
+        $e.Handled = $true
+    })
     $tb.Add_MouseLeftButtonDown({
         param($sender, $e)
         $t = $sender.Tag
         if ($e.ClickCount -ge 2) {
             [Windows.Controls.Canvas]::SetLeft($sender, $t.DX * $t.W)
             [Windows.Controls.Canvas]::SetTop($sender,  $t.DY * $t.H)
+            $sender.FontSize = $t.DS
             $script:AcPos.Remove($t.Key); Save-AcPos $script:AcPos
             $e.Handled = $true; return
         }
@@ -1090,11 +1127,7 @@ function Add-AcMark {
         if (-not $t.Drag) { return }
         $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
         if (-not $t.Moved) { return }
-        $script:AcPos[$t.Key] = @{
-            x = [math]::Round([Windows.Controls.Canvas]::GetLeft($sender) / $t.W, 4)
-            y = [math]::Round([Windows.Controls.Canvas]::GetTop($sender)  / $t.H, 4)
-        }
-        Save-AcPos $script:AcPos
+        Save-AcMark $sender
     })
     [void]$Canvas.Children.Add($tb)
     $tb
@@ -2300,8 +2333,9 @@ function Show-Roster {
         [void]$script:Stage.Children.Add($ac)
         $acHint = New-TB -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap -Text (
             'The squadron code, your letter and the serial can be dragged to sit better on the ' +
-            'aeroplane. Where you put them is remembered for this mark of aircraft, so a Spitfire ' +
-            'and a Hurricane keep their own. Double-click a mark to put it back where the research says.')
+            'aeroplane, and the wheel sizes them. Where you put them is remembered for this mark of ' +
+            'aircraft, so a Spitfire and a Hurricane keep their own. Double-click a marking to put it ' +
+            'back where the research says.')
         $acHint.Margin = '0,-4,0,16'; $acHint.MaxWidth = 760
         [void]$script:Stage.Children.Add($acHint)
     }
