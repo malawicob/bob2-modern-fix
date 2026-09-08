@@ -9,8 +9,8 @@ why, his victories with their dates, and his awards with theirs.
 Nothing is invented here. What the old file did not know comes across as
 null, and the validator lists what is still missing.
 
-    python3 tools/roster_convert.py squadronroom/rosters/32.json
-    python3 tools/roster_convert.py squadronroom/roster.seed.json -o squadronroom/rosters/92.json
+    python3 dev/roster_convert.py squadronroom/rosters/32.json
+    python3 dev/roster_convert.py squadronroom/roster.seed.json -o squadronroom/rosters/92.json
 """
 import json, re, sys, argparse, datetime, os
 

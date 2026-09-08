@@ -4,7 +4,7 @@
 ERRORS make the file unusable and fail the run. WARNINGS are things still
 to research, and are expected while a squadron is being worked on.
 
-    python3 tools/roster_validate.py squadronroom/rosters/*.json
+    python3 dev/roster_validate.py squadronroom/rosters/*.json
 """
 import json, sys, glob, datetime, collections
 

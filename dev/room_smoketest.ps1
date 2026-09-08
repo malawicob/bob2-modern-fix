@@ -7,7 +7,7 @@
 # while a screen is being built. This builds all of them, and the
 # dispersal for every squadron on the map at three campaign dates.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -STA -File tools\room_smoketest.ps1 \
+#   powershell -NoProfile -ExecutionPolicy Bypass -STA -File dev\room_smoketest.ps1 \
 #       -Room "D:\Battle of Britain II\BOB2-Win11-Fix\BOB2_SquadronRoom.ps1"
 #
 # Exit code 0 means every screen built. It does not judge how they look.

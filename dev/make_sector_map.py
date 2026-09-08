@@ -7,7 +7,13 @@ real latitude and longitude, so every mile of it has to be true. This
 renders Natural Earth's 1:10m land, coastline and river data straight to
 the image, and every airfield and town is placed from its own coordinates.
 
-    python3 dev/make_sector_map.py --data /tmp --out squadronroom/map/sector-map.jpg
+    python3 dev/fetch_relief.py --out /tmp/relief.npz          (once)
+    python3 dev/make_sector_map.py --data /tmp --relief /tmp/relief.npz \
+        --out squadronroom/map/sector-map.jpg
+
+  --data is a folder holding Natural Earth's ne_10m_land.geojson,
+  ne_10m_coastline.geojson and ne_10m_rivers_lake_centerlines.geojson,
+  saved as .json. Without --relief the land is drawn flat.
 
 The projection is written to squadronroom/map/sector-map.json beside it, so
 the Room places its rings from the same numbers the map was drawn with,
@@ -35,7 +41,16 @@ INK = {
     'town':     (159, 176, 184),
     'title':    (200, 151, 63),
     'london':   (60, 78, 96),
+    'seaname':  (108, 141, 166),
+    'tick':     (140, 160, 172),
 }
+
+# Waters, lettered the way a chart letters them.
+SEAS = [
+    ('NORTH SEA', 53.05, 2.55), ('ENGLISH CHANNEL', 50.45, -1.55),
+    ("ST GEORGE'S CH.", 52.55, -5.10), ('BRISTOL CHANNEL', 51.35, -4.35),
+    ('STRAIT OF DOVER', 50.85, 1.75),
+]
 
 # Fighter Command airfields named in the game's order of battle, plus the
 # handful of well-known ones that give the map its shape.
@@ -114,9 +129,10 @@ def load(path, want):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--data', default='/tmp')
+    ap.add_argument('--relief', default='/tmp/relief.npz')
     ap.add_argument('--out', required=True)
     a = ap.parse_args()
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
     SS = 2                      # draw at double size and shrink: cheap antialiasing
     iw, ih = W * SS, H * SS
@@ -126,33 +142,75 @@ def main():
         y = (NORTH - lat) / (NORTH - SOUTH) * ih
         return (x, y)
 
-    img = Image.new('RGB', (iw, ih), INK['sea'])
+    # --- the ground itself -------------------------------------------
+    # The land is shaded from real elevation, lit from the north-west as a
+    # relief map is, and the sea is shaded by depth. Flat colour looked
+    # like a diagram; this looks like country, without costing an ounce of
+    # accuracy, because the elevation grid is on the same projection.
+    land = load(os.path.join(a.data, 'ne_10m_land.json'), 'Polygon')
+    mask = Image.new('L', (iw, ih), 0)
+    md = ImageDraw.Draw(mask)
+    drawn = 0
+    for _, rings in land:
+        pts = [px(c[0], c[1]) for c in rings[0]]
+        xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
+        if max(xs) < -50 or min(xs) > iw + 50 or max(ys) < -50 or min(ys) > ih + 50:
+            continue
+        if len(pts) >= 3:
+            md.polygon(pts, fill=255); drawn += 1
+        for hole in rings[1:]:
+            hp = [px(c[0], c[1]) for c in hole]
+            if len(hp) >= 3: md.polygon(hp, fill=0)
+
+    ground = None
+    if os.path.exists(a.relief):
+        import numpy as np
+        z = np.load(a.relief)
+        elev = z['elev']
+        eh, ew = elev.shape
+        # to the output grid
+        yi = np.clip((np.arange(ih) / ih * eh).astype(np.int32), 0, eh - 1)
+        xi = np.clip((np.arange(iw) / iw * ew).astype(np.int32), 0, ew - 1)
+        E = elev[yi[:, None], xi[None, :]].astype(np.float32)
+
+        # hillshade, light from the north-west
+        gy, gx = np.gradient(E)
+        scale = 9.0
+        slope = np.arctan(np.hypot(gx, gy) / scale)
+        aspect = np.arctan2(-gx, gy)
+        az, alt = math.radians(315.0), math.radians(45.0)
+        shade = (math.sin(alt) * np.cos(slope) +
+                 math.cos(alt) * np.sin(slope) * np.cos(az - aspect))
+        shade = np.clip(shade, 0.0, 1.0)
+
+        h = np.clip(E, 0, 900) / 900.0            # high ground goes drier and paler
+        lo = np.array(INK['land'], dtype=np.float32)
+        hi = np.array(INK['land_hi'], dtype=np.float32)
+        base = lo[None, None, :] * (1 - h[..., None]) + hi[None, None, :] * h[..., None]
+        lit = base * (0.62 + 0.76 * shade[..., None])
+        land_rgb = np.clip(lit, 0, 255).astype(np.uint8)
+
+        # the sea, shaded by depth: the shallow Channel and the Dogger reads
+        # lighter than the deep water off Brittany
+        dep = np.clip(-E, 0, 120) / 120.0
+        s_lo = np.array(INK['sea'], dtype=np.float32)
+        s_hi = np.array(INK['sea_deep'], dtype=np.float32)
+        sea_rgb = np.clip(s_lo[None, None, :] * (1 - dep[..., None]) +
+                          s_hi[None, None, :] * dep[..., None], 0, 255).astype(np.uint8)
+        ground = Image.composite(Image.fromarray(land_rgb), Image.fromarray(sea_rgb), mask)
+    else:
+        ground = Image.composite(Image.new('RGB', (iw, ih), INK['land']),
+                                 Image.new('RGB', (iw, ih), INK['sea']), mask)
+    img = ground
     d = ImageDraw.Draw(img)
 
-    # a faint sea grid, one degree
+    # a faint grid, one degree
     lon = math.ceil(WEST)
     while lon <= EAST:
         x = px(lon, 0)[0]; d.line([(x, 0), (x, ih)], fill=INK['grid'], width=SS); lon += 1
     lat = math.ceil(SOUTH)
     while lat <= NORTH:
         y = px(0, lat)[1]; d.line([(0, y), (iw, y)], fill=INK['grid'], width=SS); lat += 1
-
-    # land
-    land = load(os.path.join(a.data, 'ne_10m_land.json'), 'Polygon')
-    drawn = 0
-    for _, rings in land:
-        outer = rings[0]
-        pts = [px(c[0], c[1]) for c in outer]
-        xs = [p[0] for p in pts]; ys = [p[1] for p in pts]
-        if max(xs) < -50 or min(xs) > iw + 50 or max(ys) < -50 or min(ys) > ih + 50:
-            continue
-        if len(pts) >= 3:
-            d.polygon(pts, fill=INK['land'])
-            drawn += 1
-        for hole in rings[1:]:
-            hp = [px(c[0], c[1]) for c in hole]
-            if len(hp) >= 3:
-                d.polygon(hp, fill=INK['sea'])
 
     # rivers, the Thames above all
     rivers = load(os.path.join(a.data, 'ne_10m_rivers_lake_centerlines.json'), 'LineString')
@@ -209,7 +267,39 @@ def main():
                 except Exception: pass
         return ImageFont.load_default()
 
-    f_af, f_town, f_grp, f_title = font(15), font(12), font(16, True), font(21, True)
+    f_af, f_town, f_grp, f_title = font(15), font(12), font(16, True), font(23, True)
+    f_sea, f_tick = font(15), font(11, True)
+
+    # the waters, lettered wide and faint so they sit under everything
+    def serif(size):
+        for p2 in ('/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf',
+                   '/mnt/c/Windows/Fonts/georgiai.ttf', '/mnt/c/Windows/Fonts/timesi.ttf'):
+            if os.path.exists(p2):
+                try: return ImageFont.truetype(p2, int(size * SS))
+                except Exception: pass
+        return font(size)
+    f_water = serif(19)
+    for name, la, lo in SEAS:
+        if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
+        x, y = px(lo, la)
+        spaced = ' '.join(name)
+        try: w = d.textbbox((0, 0), spaced, font=f_water)[2]
+        except Exception: w = f_water.getsize(spaced)[0]
+        tx = min(max(x - w / 2, 12 * SS), iw - w - 12 * SS)
+        d.text((tx, y), spaced, font=f_water, fill=INK['seaname'])
+
+    # degrees down the left edge and along the bottom
+    lon = math.ceil(WEST)
+    while lon <= EAST:
+        x = px(lon, 0)[0]
+        lab = '0' if lon == 0 else f'{abs(lon)}' + ('W' if lon < 0 else 'E')
+        d.text((x + 4 * SS, ih - 20 * SS), lab, font=f_tick, fill=INK['tick'])
+        lon += 1
+    lat = math.ceil(SOUTH)
+    while lat <= NORTH:
+        y = px(0, lat)[1]
+        d.text((7 * SS, y - 14 * SS), f'{lat}N', font=f_tick, fill=INK['tick'])
+        lat += 1
 
     # Labels are placed so they do not sit on top of one another. Southern
     # England has airfields three miles apart, and set naively the names
@@ -238,9 +328,11 @@ def main():
     for name, la, lo in AIRFIELDS:
         if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
         x, y = px(lo, la)
-        r = 3.6 * SS
-        d.rectangle([x - r, y - r, x + r, y + r], outline=INK['label'], width=int(1.5 * SS))
-        taken.append((x - r - SS, y - r - SS, x + r + SS, y + r + SS))
+        r = 4.0 * SS
+        d.ellipse([x - r, y - r, x + r, y + r], fill=INK['label'])
+        d.ellipse([x - r - SS, y - r - SS, x + r + SS, y + r + SS],
+                  outline=(20, 32, 40), width=int(1.2 * SS))
+        taken.append((x - r - 2 * SS, y - r - 2 * SS, x + r + 2 * SS, y + r + 2 * SS))
     missed = 0
     for name, la, lo in AIRFIELDS:
         if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
@@ -261,8 +353,9 @@ def main():
         x, y = px(lo, la)
         d.text((x, y), label, font=f_grp, fill=INK['boundary'])
 
-    d.text((28 * SS, 22 * SS), 'FIGHTER COMMAND', font=f_title, fill=INK['title'])
-    d.text((28 * SS, 50 * SS), 'SECTOR AND FIGHTER AIRFIELDS, 1940', font=f_grp, fill=INK['title'])
+    d.text((30 * SS, 24 * SS), 'FIGHTER COMMAND', font=f_title, fill=INK['title'])
+    d.text((30 * SS, 55 * SS), 'SECTOR AND FIGHTER AIRFIELDS, 1940', font=f_grp, fill=INK['title'])
+    d.line([(30 * SS, 80 * SS), (352 * SS, 80 * SS)], fill=INK['title'], width=int(1.5 * SS))
 
     img = img.resize((W, H), Image.LANCZOS)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
