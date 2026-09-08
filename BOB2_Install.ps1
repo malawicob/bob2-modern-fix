@@ -413,16 +413,32 @@ function Get-Checks {
     # only offers Fix when a partial install needs repairing.
     $dkState = 'partial'
     try { $dkState = Get-DunkirkPackState $GameDir } catch { }
+    # Optional content, so it is never a fault and never swept up by "fix
+    # everything". The row offers the action its state calls for instead.
+    # Until now the only way to install it was option 11 of the console
+    # setup tool, which nobody opens, so the pack shipped invisible.
     $out.Add([pscustomobject]@{
         Name='Dunkirk missions (optional)'
         Ok=($dkState -ne 'partial')
         Detail=$(switch ($dkState) {
-            'installed' { 'installed - four Battle of France missions, the Tiger Moth school shares their menu' }
-            'none'      { 'not installed. Optional mission pack - install it from the setup tool if wanted' }
+            'installed' { 'installed - four Battle of France missions over the evacuation, Dunkerque added to the map, the beaches dressed and the little ships in the Channel. Find them under Instant Action.' }
+            'none'      { 'not installed. Four Battle of France missions over the Dunkirk evacuation, with Dunkerque added to the game map' }
             'foreign'   { 'quick.dat carries a different mission set (another mod?) - left strictly alone' }
-            default     { 'incomplete install - press Fix to repair it' }
+            default     { 'incomplete install - press Repair' }
         })
-        Fix=$(if ($dkState -eq 'partial') { 'Step-InstallDunkirkPack' } else { $null }) })
+        Fix=$null
+        Action=$(switch ($dkState) {
+            'installed' { 'Step-RemoveDunkirkPack' }
+            'none'      { 'Step-InstallDunkirkPack' }
+            'partial'   { 'Step-InstallDunkirkPack' }
+            default     { $null }
+        })
+        ActionLabel=$(switch ($dkState) {
+            'installed' { 'Remove' }
+            'none'      { 'Install' }
+            'partial'   { 'Repair' }
+            default     { $null }
+        }) })
 
     # ReShade is OPTIONAL and off by default: this row never counts as a
     # problem when absent (so "Fix N things" cannot auto-install it) and
@@ -767,7 +783,31 @@ function New-Row {
     [Windows.Controls.Grid]::SetColumn($det, 2)
     [void]$g.Children.Add($det)
 
-    # A row that is fine offers no button. Only problems get an action.
+    # Optional content offers a button without being a fault: Install or
+    # Remove, never counted among the things that are wrong and never
+    # applied by "fix everything".
+    if ($Check.PSObject.Properties.Name -contains 'Action' -and $Check.Action) {
+        $ab = New-Object Windows.Controls.Button
+        $ab.Content = "$($Check.ActionLabel)"; $ab.MinWidth = 74; $ab.Margin = '12,0,0,0'
+        $ab.Tag = $Check.Action
+        $ab.Add_Click({
+            param($s,$e)
+            # Removing puts game files back from their stock backups, so it
+            # asks first. Installing is additive and does not need to.
+            if ("$($s.Tag)" -like 'Step-Remove*') {
+                $r = [Windows.MessageBox]::Show($Win,
+                    "Remove the Dunkirk mission pack?`n`nThe four missions, the Dunkerque map entry, the beach scenery and the flotilla are taken out, and the game's own files are put back from the backups made when the pack was installed. Your campaign and your saves are untouched.",
+                    'Remove the Dunkirk pack', 'YesNo', 'Question')
+                if ($r -ne 'Yes') { return }
+            }
+            Invoke-Step $s.Tag
+            Refresh-Rows
+            Set-Result 'Done.'
+        }.GetNewClosure())
+        [Windows.Controls.Grid]::SetColumn($ab, 3)
+        [void]$g.Children.Add($ab)
+    }
+    # A row that is fine offers no button. Only problems get a fix.
     if ($Check.Fix) {
         $b = New-Object Windows.Controls.Button
         $b.Content = 'Fix'; $b.MinWidth = 74; $b.Margin = '12,0,0,0'
