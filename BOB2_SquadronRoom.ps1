@@ -1190,6 +1190,117 @@ function Get-PlayerHonours {
     $h
 }
 # =====================================================================
+#  The squadron's own war, out of the campaign save
+#
+#  The game keeps a diary for every squadron, not only for the player: a
+#  table of 24-byte records, one per squadron per action, holding how many
+#  aircraft it put up, what it claimed by enemy type, how many aircraft
+#  and pilots it lost, and when it landed.
+#
+#      +0  u8    squadron, as an index into the game's own list
+#      +1  u8    aircraft lost      +2 u8  aircraft damaged
+#      +3  u8    pilots lost        +8 u8  aircraft launched
+#      +9  u16   which intercept    +11 u32 landing time, seconds into the day
+#      +17 u8[7] claims, by the same seven bins as the player's Log Book
+#
+#  The game names nobody. It knows twelve aircraft went up and one pilot
+#  did not come back; it does not know who he was. The names are the one
+#  thing history supplies and the game lacks, which is why the readiness
+#  board is worth having at all.
+# =====================================================================
+$SquadronDiaryRow = 24
+# The game's squadron list, from its own symbols. The index in the save is
+# NOT the RAF number: 64 means No. 32, and read raw the table appears to
+# describe squadrons that never existed.
+$SquadIndexToRAF = @{
+     64=32;  65=610;  66=501;  67=56;  68=151;  69=85;  70=64;  71=615;  72=111
+     74=54;  75=65;   76=74;   77=266; 78=43;   79=601; 80=145; 81=17;   83=1
+     84=257; 85=303;  86=87;   87=213; 88=238;  89=609; 90=152; 91=234;  92=92
+     93=310; 94=19;   95=66;   96=242; 97=222;  98=611; 99=46; 100=229; 101=72
+    102=249; 103=253; 104=605; 105=603; 106=41; 107=607; 108=602; 109=73
+    110=504; 111=79;  112=302; 113=616; 114=3;  115=232; 116=245
+}
+function Test-SquadronRow {
+    param([byte[]]$B, [int]$O)
+    if (($O + $SquadronDiaryRow) -gt $B.Length) { return $false }
+    if (-not $SquadIndexToRAF.ContainsKey([int]$B[$O])) { return $false }
+    if ($B[$O+8] -gt 24) { return $false }                       # launched
+    if ($B[$O+1] -gt 12 -or $B[$O+2] -gt 12 -or $B[$O+3] -gt 12) { return $false }
+    $k = 0
+    for ($i = 0; $i -lt 7; $i++) { if ($B[$O+17+$i] -gt 12) { return $false }; $k += $B[$O+17+$i] }
+    ($k -le 25)
+}
+# Every action in the save, or an empty list. Slow enough to want caching,
+# so the answer is kept until the save changes.
+function Get-SquadronDiary {
+    if (-not $GameDir) { return @() }
+    $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue |
+           Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $sav) { return @() }
+    $stamp = "$($sav.FullName)|$($sav.LastWriteTime.Ticks)"
+    if ($script:SqDiaryStamp -eq $stamp) { return $script:SqDiaryRows }
+    $rows = @()
+    try {
+        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        # Find the longest run of well-formed records. A quarter of a
+        # million calls to Test-SquadronRow took twenty-six seconds and
+        # froze the window, so the search is two cheap byte tests first
+        # and the full check only where those pass.
+        $isIdx = New-Object bool[] 256
+        foreach ($k in $SquadIndexToRAF.Keys) { $isIdx[[int]$k] = $true }
+        $bestAt = -1; $bestN = 0; $o = 40; $end = $b.Length - $SquadronDiaryRow
+        while ($o -lt $end) {
+            if ($isIdx[$b[$o]] -and $b[$o+8] -le 24 -and $b[$o+1] -le 12) {
+                if (Test-SquadronRow $b $o) {
+                    $n = 0
+                    while (Test-SquadronRow $b ($o + $n * $SquadronDiaryRow)) { $n++ }
+                    if ($n -gt $bestN) { $bestN = $n; $bestAt = $o }
+                    $o += [Math]::Max(1, $n * $SquadronDiaryRow)
+                    continue
+                }
+            }
+            $o++
+        }
+        if ($bestN -ge 6) {
+            for ($i = 0; $i -lt $bestN; $i++) {
+                $p = $bestAt + $i * $SquadronDiaryRow
+                $k = New-Object int[] 7
+                for ($j = 0; $j -lt 7; $j++) { $k[$j] = [int]$b[$p+17+$j] }
+                $rows += [pscustomobject]@{
+                    Sqn      = [int]$SquadIndexToRAF[[int]$b[$p]]
+                    Launched = [int]$b[$p+8]
+                    AcLost   = [int]$b[$p+1]
+                    AcDamaged= [int]$b[$p+2]
+                    PilotsLost = [int]$b[$p+3]
+                    Kills    = $k
+                    Landed   = [int][BitConverter]::ToUInt32($b, $p+11)
+                }
+            }
+        }
+    } catch { }
+    $script:SqDiaryStamp = $stamp
+    $script:SqDiaryRows = $rows
+    $rows
+}
+# What one squadron has done in this campaign, summed.
+function Get-SquadronRecord {
+    param([int]$Sqn)
+    $rows = @(Get-SquadronDiary | Where-Object { $_.Sqn -eq $Sqn })
+    if ($rows.Count -eq 0) { return $null }
+    $k = New-Object int[] 7
+    foreach ($r in $rows) { for ($i = 0; $i -lt 7; $i++) { $k[$i] += $r.Kills[$i] } }
+    [pscustomobject]@{
+        Actions    = $rows.Count
+        Launched   = ($rows | Measure-Object Launched -Sum).Sum
+        AcLost     = ($rows | Measure-Object AcLost -Sum).Sum
+        AcDamaged  = ($rows | Measure-Object AcDamaged -Sum).Sum
+        PilotsLost = ($rows | Measure-Object PilotsLost -Sum).Sum
+        Kills      = $k
+        Total      = ($k | Measure-Object -Sum).Sum
+    }
+}
+
+# =====================================================================
 #  Automatic claims
 #
 #  The game keeps the player's Log Book inside the campaign save as an
@@ -1773,6 +1884,32 @@ function Show-Roster {
     foreach ($h in $onStrength) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
+
+    # What the squadron itself has done in this campaign, out of the game's
+    # own diary. The game counts; history names. Neither alone is a
+    # squadron.
+    $sqrec = $null
+    try { $sqrec = Get-SquadronRecord -Sqn $sqnum } catch { }
+    if ($sqrec) {
+        $h2 = New-TB -Text 'THE SQUADRON IN THIS CAMPAIGN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold
+        $h2.Margin = '0,26,0,0'
+        [void]$script:Stage.Children.Add($h2)
+        $byType = @()
+        for ($k = 0; $k -lt 7; $k++) { if ([int]$sqrec.Kills[$k] -gt 0) { $byType += "$([int]$sqrec.Kills[$k]) x $($KillBinsRAF[$k])" } }
+        $line = "$($sqrec.Actions) $(if ($sqrec.Actions -eq 1) { 'action' } else { 'actions' }), " +
+                "$($sqrec.Launched) sorties flown. " +
+                $(if ($sqrec.Total -gt 0) { "Claims: $($sqrec.Total) ($($byType -join ', ')). " } else { 'No claims yet. ' }) +
+                $(if ($sqrec.AcLost -gt 0 -or $sqrec.PilotsLost -gt 0) {
+                    "Lost $($sqrec.AcLost) aircraft and $($sqrec.PilotsLost) $(if ($sqrec.PilotsLost -eq 1) { 'pilot' } else { 'pilots' })" +
+                    $(if ($sqrec.AcDamaged -gt 0) { ", $($sqrec.AcDamaged) more damaged." } else { '.' })
+                } else { 'No losses.' })
+        $lt3 = New-TB -Text $line -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        $lt3.Margin = '0,8,0,4'; $lt3.MaxWidth = 900
+        [void]$script:Stage.Children.Add($lt3)
+        $note2 = New-TB -Text 'Read from the campaign save. The game keeps this tally for every squadron but names nobody: it knows a pilot did not come back, not which of the men above he was.' -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
+        $note2.Margin = '0,0,0,4'; $note2.MaxWidth = 900
+        [void]$script:Stage.Children.Add($note2)
+    }
 
     # Who the squadron has lost, most recent first, and who went this week.
     if ($script:CampaignDate) {
