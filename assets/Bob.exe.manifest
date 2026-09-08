@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
+  <assemblyIdentity type="win32" name="Bob.exe" version="2.13.0.0" processorArchitecture="x86"/>
+  <!-- The game's own embedded manifest is an empty stub: it declares no DPI
+       awareness at all, so Windows guesses, and the Program Compatibility
+       Assistant guesses HIGHDPIAWARE. That lays the 2D menus out at 144 DPI
+       on a 150% display and the briefing tab row prints over the text.
+       Saying "false" outright leaves nothing to guess. -->
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">false</dpiAware>
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">unaware</dpiAwareness>
+    </windowsSettings>
+  </application>
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security><requestedPrivileges><requestedExecutionLevel level="asInvoker" uiAccess="false"/></requestedPrivileges></security>
+  </trustInfo>
+</assembly>

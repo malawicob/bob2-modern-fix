@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.8.0'
+$FixVersion = '1.8.1'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -177,24 +177,27 @@ function Sync-FixVersion {
 #  Compatibility flags Windows puts back on Bob.exe by itself, stripped at
 #  Play. Two of them:
 #
-#  HIGHDPIAWARE  - LEFT ALONE, and the reason is worth reading before
-#      anybody removes it again. The launcher claimed to strip it on
-#      every launch and never did: the Program Compatibility Assistant
-#      appends a NUL and its own binary blob INSIDE the layer string, so
-#      the last token was "HIGHDPIAWARE<NUL><junk>" and a token filter
-#      walked straight past it. The game has therefore run WITH the flag
-#      for as long as this message has existed, which is the state
-#      everyone has been testing against and is happy with.
+#  HIGHDPIAWARE  - STRIPPED, and the history is worth reading before
+#      anybody changes this again.
 #
-#      On 8 September 2026 the filter was fixed, the flag genuinely came
-#      off, and DPIUNAWARE was stated in its place. DPIUNAWARE means
-#      "scaling performed by System": Windows renders the game at 96 DPI
-#      and then magnifies the result, and on a scaled display the game
-#      came up enormous. It was put back within the hour.
+#      Windows re-applies it every time the game runs, and with it on the
+#      2D menus are laid out for a surface they do not get: the briefing
+#      tab row prints on top of the text. With no DPI layer at all the
+#      menus are right AND the cockpit is right. That was proved on
+#      2026-09-08 on a 2560x1600 panel at 150%: a clean layer with the
+#      flag removed gave a correct briefing screen, and flying put the
+#      flag back and broke it again in the same session.
 #
-#      So: the flag stays. If it is ever taken off again, expect the
-#      whole game to change size, and test on a display running above
-#      100% scaling before believing otherwise.
+#      The strip had never actually worked. The Program Compatibility
+#      Assistant appends a NUL and its own binary blob INSIDE the value,
+#      so the last token was "HIGHDPIAWARE<NUL><junk>" and never compared
+#      equal, while the -match test still found the word: the launcher
+#      announced a fix on every launch and changed nothing. The value is
+#      truncated at the NUL before it is read now.
+#
+#      DO NOT write DPIUNAWARE in its place. That was tried the same day
+#      and it forces 96-DPI bitmap scaling: the cockpit came up enormous.
+#      Removing the flag is right; naming a replacement is not.
 #
 #  DWM8And16BitMitigation - Windows applies this one to the game on its
 #      own. With it on, the game's display-mode switch before flight is
@@ -220,8 +223,9 @@ function Repair-DpiShim {
         $nul = $cur.IndexOf([char]0)
         if ($nul -ge 0) { $cur = $cur.Substring(0, $nul) }
         $cur = $cur.Trim()
-        if ($cur -notmatch 'DWM8And16BitMitigation') { return $false }
-        $keep = @($cur -split '\s+' | Where-Object { $_ -and $_.ToUpper() -ne 'DWM8AND16BITMITIGATION' -and $_ -ne '~' })
+        if ($cur -notmatch 'HIGHDPIAWARE|DWM8And16BitMitigation') { return $false }
+        $drop = @('HIGHDPIAWARE', 'DWM8AND16BITMITIGATION', '~')
+        $keep = @($cur -split '\s+' | Where-Object { $_ -and ($drop -notcontains $_.ToUpper()) })
         $new = '~ ' + ($keep -join ' ')
         if ($new -eq $cur) { return $false }
         Set-ItemProperty $key -Name $exe -Value $new
@@ -436,6 +440,12 @@ function Get-WrapperState {
         $confOk = ($confTxt -match 'ScalingMode\s*=\s*stretched_ar') -and `
                   ($confTxt -match '(?m)^\s*Resolution\s*=\s*(max|\d+x\d+)') -and `
                   ($confTxt -match '(?m)^\s*DesktopResolution\s*=\s*\d+x\d+') -and `
+                  # NOT compared against the panel: with the DPI manifest in
+                  # place the game is handed a virtual desktop, and dgVoodoo
+                  # must render THAT. Demanding the panel here would flag the
+                  # correct setting as damage and invite a Repair that undoes
+                  # it -- which is how this was lost repeatedly on 2026-09-08.
+
                   ($confTxt -match 'VRAM\s*=\s*4096') -and `
                   ($confTxt -match 'OutputAPI\s*=\s*d3d11') -and `
                   ($confTxt -match 'EnumerateRefreshRates\s*=\s*true')

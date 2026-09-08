@@ -213,8 +213,8 @@ squadron before the other 21 are researched.
   One correction found: No. 152 carried UM, not the SN we held. The
   September 1939 reallocation is the trap - BL for 609, AW for 504, TM
   for 111 and their like are 1938-39 codes.
-- **Step 2**: the schema above is live. tools/roster_convert.py converts
-  a roster to it, tools/roster_validate.py checks one before it is
+- **Step 2**: the schema above is live. dev/roster_convert.py converts
+  a roster to it, dev/roster_validate.py checks one before it is
   committed (neither ships). No. 32 and No. 92 are on it; the 92 seed
   file is gone and 92 is now an ordinary roster. The board shows the men
   on strength on the day and names the losses beneath it.

@@ -290,9 +290,104 @@ namespace BobDisplay {
     return @($w, $h)
 }
 
+# The size dgVoodoo must render, which is NOT always the panel.
+#
+# The game declares itself DPI-unaware (BOB2-Win11-Fix writes an external
+# Bob.exe.manifest saying so, because the one embedded in the exe is an
+# empty stub and Windows was left guessing HIGHDPIAWARE, which laid the
+# 2D menus out at the wrong DPI and printed the briefing tab row on top
+# of the text). An unaware process is handed a VIRTUAL desktop -- on a
+# 2560x1600 panel at 150% that is 1707x1067 -- and Windows magnifies its
+# output back up. So dgVoodoo has to render the virtual size: give it the
+# panel and the result is scaled again on top and comes out half as big
+# again. Proved on 2026-09-08.
+# Put the external manifest beside Bob.exe, and let Windows read it.
+#
+# Bob.exe's embedded manifest is an empty stub that declares NO DPI
+# awareness, so Windows decides for it -- and the Program Compatibility
+# Assistant decides HIGHDPIAWARE, every launch, re-adding the flag as the
+# process starts. That lays the 2D menus out at the display's real DPI
+# while the game draws its text at 96, and the briefing tab row prints on
+# top of the description. Stripping the flag beforehand cannot win: it is
+# re-applied at process creation.
+#
+# Saying "unaware" outright leaves nothing to guess at. Proved on a
+# 2560x1600 panel at 150% on 2026-09-08, including across a flight, which
+# is what defeated every registry-side attempt.
+function Install-BobManifest {
+    param([string]$GameFolder)
+    $src = $null
+    foreach ($base in @($ScriptDir, $GameFolder, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $c = Join-Path $base 'assets\Bob.exe.manifest'
+        if (Test-Path $c) { $src = $c; break }
+    }
+    if (-not $src) { Write-Warn 'assets\Bob.exe.manifest not found; the DPI fix cannot be applied.'; return $false }
+    $dst = Join-Path $GameFolder 'Bob.exe.manifest'
+    Copy-Item $src $dst -Force
+    Write-OK 'Installed Bob.exe.manifest (declares the game DPI-unaware).'
+    # Windows prefers the EMBEDDED manifest unless told otherwise, and the
+    # embedded one is the empty stub, so this switch is what makes the file
+    # count. It is machine-wide; only programs that ship a .manifest file
+    # beside them are affected, which is rare.
+    try {
+        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide' `
+            -Name PreferExternalManifest -PropertyType DWord -Value 1 -Force -ErrorAction Stop | Out-Null
+        Write-OK 'Enabled external manifests (PreferExternalManifest).'
+    }
+    catch {
+        Write-Warn 'Could not set PreferExternalManifest - run the setup as administrator.'
+        return $false
+    }
+    # With the app speaking for itself, the Assistant has nothing to guess:
+    # clear what it has already written for this exe.
+    $exe = Join-Path $GameFolder 'Bob.exe'
+    foreach ($k in @('HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers',
+                     'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store')) {
+        try { Remove-ItemProperty -Path $k -Name $exe -ErrorAction Stop } catch { }
+    }
+    $true
+}
+function Get-DgVoodooRenderSize {
+    # Get-NativeDesktopSize returns @(w, h); keep the same shape.
+    $native = @(Get-NativeDesktopSize)
+    if ($native.Count -lt 2 -or [int]$native[0] -le 0) { return $native }
+    $scale = Get-DisplayScalePercent
+    if ($scale -le 100) { return $native }
+    @([int][math]::Round([int]$native[0] * 100.0 / $scale),
+      [int][math]::Round([int]$native[1] * 100.0 / $scale))
+}
+# What Windows is scaling the desktop by, as a percentage. A DPI-unaware
+# process sees the panel divided by this.
+function Get-DisplayScalePercent {
+    try {
+        if (-not ('BobDpi.Native' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+namespace BobDpi {
+  public static class Native {
+    [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
+    [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
+    [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int i);
+    // 118 = DESKTOPHORZRES (true pixels), 8 = HORZRES (what this process sees)
+    public static int Percent() {
+      IntPtr dc = GetDC(IntPtr.Zero);
+      int real = GetDeviceCaps(dc, 118), seen = GetDeviceCaps(dc, 8);
+      ReleaseDC(IntPtr.Zero, dc);
+      if (seen <= 0) return 100;
+      return (int)Math.Round(real * 100.0 / seen);
+    }
+  }
+}
+'@
+        }
+        $p = [BobDpi.Native]::Percent()
+        if ($p -ge 100 -and $p -le 400) { return $p }
+    } catch { }
+    100
+}
 function New-DgVoodooConfText {
     param([int]$FpsLimit = 60)
-    $size = Get-NativeDesktopSize
+    $size = Get-DgVoodooRenderSize
     $wh = "$($size[0])x$($size[1])"
     $text = $DgVoodooConf -replace 'FPSLimit = 60', "FPSLimit = $FpsLimit"
     $text = $text -replace '(?m)^DesktopResolution =\s*$', "DesktopResolution = $wh"
@@ -1285,6 +1380,10 @@ function Step-Win11Tweaks {
     param([string]$GameFolder)
 
     Write-Step "Step 8: Windows 11 Tweaks"
+
+    # The DPI manifest goes on here: it is the thing that stops Windows
+    # guessing HIGHDPIAWARE and laying the 2D menus out at the wrong DPI.
+    [void](Install-BobManifest -GameFolder $GameFolder)
 
     $bobExe = Join-Path $GameFolder "Bob.exe"
 

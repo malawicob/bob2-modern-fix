@@ -15,6 +15,43 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.8.1  (2026-09-08)
+--------------------
+  THE MENUS DRAW CORRECTLY NOW, AND THE COCKPIT STAYS RIGHT
+
+  - FIXED: the briefing and training pages printed their tab row on top
+    of the description text. Bob.exe carries an 86-byte embedded manifest
+    that declares NO DPI awareness at all, so Windows decides for it, and
+    the Program Compatibility Assistant decides HIGHDPIAWARE - re-adding
+    that flag AS THE PROCESS STARTS, every launch. The 2D dialogs were
+    then laid out at the display's real DPI while the game drew its text
+    at 96, and the two disagreed.
+
+    Stripping the flag beforehand could never work: it is re-applied at
+    process creation, which is why the launcher's message about removing
+    it was followed by the same broken screen. The fix is to leave nothing
+    to guess at. An external Bob.exe.manifest now declares the game
+    DPI-unaware outright, and PreferExternalManifest tells Windows to read
+    it in place of the empty stub.
+
+  - CHANGED: dgVoodoo now renders the VIRTUAL desktop, not the panel. A
+    DPI-unaware process is handed a smaller desktop - 1707x1067 on a
+    2560x1600 panel at 150% - and Windows magnifies its output back up.
+    Given the panel it would be scaled again on top, which is what made
+    the cockpit come up half again too big. The setup computes this from
+    the display scaling, so it is right on any machine.
+
+  - Both halves were proved together on a 2560x1600 panel at 150%,
+    INCLUDING ACROSS A FLIGHT. Flying is what defeated every earlier
+    attempt: Windows re-applied the flag mid-session and the menus broke
+    again. The manifest holds because the application is declaring its own
+    awareness rather than us arguing with Windows afterwards.
+
+  - Install and repair now checks the manifest and offers to put it back,
+    and the dgVoodoo health check no longer compares the render size
+    against the panel - doing so would flag the correct setting as damage
+    and invite a Repair that undid the fix.
+
 v1.8.0  (2026-09-08)
 --------------------
   THE SQUADRON ROOM

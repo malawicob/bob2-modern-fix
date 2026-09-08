@@ -446,7 +446,22 @@ function Get-Checks {
     # and preset choice live in Settings, GFX screen page.
     $rsState = Get-ReShadeState $GameDir
     $rsPreset = if ($rsState -eq 'on') { Get-ReShadePreset $GameDir } else { $null }
+        # The DPI manifest: without it Windows guesses HIGHDPIAWARE for a game
+    # whose embedded manifest declares nothing, and the briefing tab row
+    # prints on top of the text. Checked here so a missing one shows up as
+    # something to fix rather than a mystery on the briefing screen.
+    $manOk = Test-Path (Join-Path $GameDir 'Bob.exe.manifest')
+    $pem = $null
+    try { $pem = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide' -Name PreferExternalManifest -ErrorAction SilentlyContinue).PreferExternalManifest } catch { }
     $out.Add([pscustomobject]@{
+        Name='DPI manifest'
+        Ok=($manOk -and $pem -eq 1)
+        Detail=$(if ($manOk -and $pem -eq 1) { 'the game declares itself DPI-unaware; menus lay out correctly' }
+                 elseif (-not $manOk) { 'Bob.exe.manifest is missing - the menus will draw wrong' }
+                 else { 'external manifests are switched off - the file is there but Windows ignores it' })
+        Fix='Step-Win11Tweaks' })
+
+$out.Add([pscustomobject]@{
         Name='ReShade (optional)'
         Ok=($rsState -ne 'partial')
         Detail=$(switch ($rsState) {
