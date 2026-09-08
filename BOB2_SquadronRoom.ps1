@@ -1892,6 +1892,78 @@ function Invoke-Submit {
 # =====================================================================
 #  The map: the plotting table with your own station ringed
 # =====================================================================
+# Make a map pan and zoom under the mouse, and clip it to its frame.
+#
+# Fifty-two squadrons on one table crowd badly around Biggin Hill and
+# Hornchurch. The wheel zooms about the pointer, a drag moves the sheet,
+# and a double-click puts it back. The rings scale with the map, so a
+# knot of them opens out as you go in.
+function Enable-MapZoom {
+    param($Frame, $Content, [double]$Min = 1.0, [double]$Max = 6.0)
+    $sc = New-Object Windows.Media.ScaleTransform 1, 1
+    $tr = New-Object Windows.Media.TranslateTransform 0, 0
+    $tg = New-Object Windows.Media.TransformGroup
+    [void]$tg.Children.Add($sc); [void]$tg.Children.Add($tr)
+    $Content.RenderTransform = $tg
+    $Frame.ClipToBounds = $true
+    $st = @{ Sc = $sc; Tr = $tr; Min = $Min; Max = $Max; Drag = $false; PX = 0.0; PY = 0.0; Moved = $false }
+    $Frame.Tag = $st
+    $Frame.Add_MouseWheel({
+        param($sender, $e)
+        $t = $sender.Tag
+        $p = $e.GetPosition($sender)
+        $old = $t.Sc.ScaleX
+        $new = if ($e.Delta -gt 0) { $old * 1.25 } else { $old / 1.25 }
+        if ($new -lt $t.Min) { $new = $t.Min }
+        if ($new -gt $t.Max) { $new = $t.Max }
+        if ($new -eq $old) { $e.Handled = $true; return }
+        # hold the point under the pointer still
+        $t.Tr.X = $p.X - ($p.X - $t.Tr.X) * ($new / $old)
+        $t.Tr.Y = $p.Y - ($p.Y - $t.Tr.Y) * ($new / $old)
+        $t.Sc.ScaleX = $new; $t.Sc.ScaleY = $new
+        Limit-MapPan $sender
+        $e.Handled = $true
+    })
+    $Frame.Add_MouseLeftButtonDown({
+        param($sender, $e)
+        $t = $sender.Tag
+        if ($e.ClickCount -ge 2) {
+            $t.Sc.ScaleX = 1.0; $t.Sc.ScaleY = 1.0; $t.Tr.X = 0.0; $t.Tr.Y = 0.0
+            $e.Handled = $true; return
+        }
+        if ($t.Sc.ScaleX -le $t.Min) { return }
+        $p = $e.GetPosition($sender)
+        $t.PX = $p.X; $t.PY = $p.Y; $t.Drag = $true; $t.Moved = $false
+        [void]$sender.CaptureMouse()
+    })
+    $Frame.Add_MouseMove({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $p = $e.GetPosition($sender)
+        $t.Tr.X += ($p.X - $t.PX); $t.Tr.Y += ($p.Y - $t.PY)
+        $t.PX = $p.X; $t.PY = $p.Y; $t.Moved = $true
+        Limit-MapPan $sender
+    })
+    $Frame.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        $t = $sender.Tag
+        if ($t.Drag) { $t.Drag = $false; [void]$sender.ReleaseMouseCapture() }
+    })
+}
+# Keep the sheet over the frame: no dragging the map off into space.
+function Limit-MapPan {
+    param($Frame)
+    $t = $Frame.Tag
+    $w = $Frame.ActualWidth; $h = $Frame.ActualHeight
+    if ($w -le 0) { $w = $Frame.Width }; if ($h -le 0) { $h = $Frame.Height }
+    $over = ($t.Sc.ScaleX - 1.0)
+    $maxX = $w * $over; $maxY = $h * $over
+    if ($t.Tr.X -gt 0) { $t.Tr.X = 0 }
+    if ($t.Tr.Y -gt 0) { $t.Tr.Y = 0 }
+    if ($t.Tr.X -lt -$maxX) { $t.Tr.X = -$maxX }
+    if ($t.Tr.Y -lt -$maxY) { $t.Tr.Y = -$maxY }
+}
 function Show-Map {
     param($Pilot)
     $script:Stage.Children.Clear()
@@ -1922,9 +1994,13 @@ function Show-Map {
     }
     $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Your station is ringed in gold; the other squadrons in the line are plotted beside theirs, blue for Spitfires and amber for Hurricanes." }
                else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the western edge of this table, so your squadron is named below it. The squadrons plotted here are the rest of the line, blue for Spitfires and amber for Hurricanes." }
+    $leadTxt += '  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
     $lead = New-TB -Text $leadTxt -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
-    $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1080
+    $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1180
     [void]$script:Stage.Children.Add($lead)
+    # what the pointer is over, read out under the table
+    $script:MapInfo = New-TB -Text ' ' -Family $CondFam -Size 14 -Colour '#9FB0B8'
+    $script:MapInfo.Margin = '2,10,0,0'; $script:MapInfo.Height = 22
 
     $W = 1180.0; $H = [math]::Round($W * 1600.0 / 2560.0)
     $mapWrap = New-Object Windows.Controls.Border
@@ -1961,7 +2037,18 @@ function Show-Map {
         $dot.Width = 15; $dot.Height = 15; $dot.StrokeThickness = 2
         $dot.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
         $dot.Fill = B '#66101B22'
-        $dot.ToolTip = "No. $($o.Num) Squadron  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)"
+        $oob = Get-Oob -Sqn $o.Num
+        $extra = ''
+        if ($oob) {
+            $extra = "  $([char]0x2022)  $($oob.skill), $($oob.fatigue) condition"
+            if ($oob.notes) { $extra += "  $([char]0x2022)  $($oob.notes)" }
+        }
+        $code = ''
+        if ($SquadronCodes.ContainsKey([int]$o.Num)) { $code = "  $([char]0x2022)  codes $($SquadronCodes[[int]$o.Num])-" }
+        $dot.Tag = "No. $($o.Num) Squadron  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)  $([char]0x2022)  No. $(Get-GroupForBase $o.Base) Group$code$extra"
+        $dot.ToolTip = $dot.Tag
+        $dot.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
+        $dot.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
         [Windows.Controls.Canvas]::SetLeft($dot, $ocx - 7.5); [Windows.Controls.Canvas]::SetTop($dot, $ocy - 7.5)
         [void]$cv.Children.Add($dot)
         $nlbl = New-TB -Text "$($o.Num)" -Family $CondFam -Size 10 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
@@ -1996,11 +2083,17 @@ function Show-Map {
         $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 3.5
         $ring.Stroke = B '#FFE28A'; $ring.Fill = B '#01000000'
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
+        $ring.Tag = "No. $sqnum Squadron  $([char]0x2022)  YOUR SQUADRON  $([char]0x2022)  $base  $([char]0x2022)  No. $(Get-GroupForBase $base) Group"
+        $ring.ToolTip = $ring.Tag
+        $ring.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
+        $ring.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
         [void]$cv.Children.Add($ring)
         # no caption: the station's name is already printed on the map,
         # and the rings' open centres leave it readable
     }
+    Enable-MapZoom -Frame $mapWrap -Content $grid
     [void]$script:Stage.Children.Add($mapWrap)
+    [void]$script:Stage.Children.Add($script:MapInfo)
 
     # Your own squadron, when its station is off the table
     if (-not $onTable) {
@@ -2224,6 +2317,7 @@ function Show-SquadronSelect {
         } catch { }
     }
 
+    Enable-MapZoom -Frame $mapWrap -Content $grid
     $script:SelSq = $null
     $script:SqDots = @()
     $script:SqChips = @()
