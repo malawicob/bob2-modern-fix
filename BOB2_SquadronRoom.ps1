@@ -2285,6 +2285,124 @@ function Limit-MapPan {
     if ($t.Tr.X -lt -$maxX) { $t.Tr.X = -$maxX }
     if ($t.Tr.Y -lt -$maxY) { $t.Tr.Y = -$maxY }
 }
+# A squadron on the table is drawn as a callout: a small dot on its
+# actual field, a thin elbowed leader, and a numbered circle set where
+# there is room for it. Rings drawn on the fields themselves buried the
+# map's own lettering and each other, and no amount of fanning fixed it
+# once fifty-two squadrons were on one sheet.
+#
+# Placement is a coarse grid. Each circle takes the nearest free cell to
+# its own field, so a lone squadron sits just beside its station and a
+# crowded one steps outward until it finds space.
+function New-CalloutLayout {
+    param([double]$W, [double]$H, [double]$Cell = 30.0)
+    [pscustomobject]@{
+        Cell = $Cell
+        Cols = [int][math]::Ceiling($W / $Cell)
+        Rows = [int][math]::Ceiling($H / $Cell)
+        Used = @{}
+        W = $W; H = $H
+    }
+}
+function Get-CalloutSlot {
+    param($Layout, [double]$X, [double]$Y, [double]$MinAway = 26.0)
+    $c = $Layout.Cell
+    $cx = [int][math]::Round(($X / $c)); $cy = [int][math]::Round(($Y / $c))
+    for ($r = 1; $r -lt 14; $r++) {
+        $best = $null; $bestD = [double]::MaxValue
+        for ($dy = -$r; $dy -le $r; $dy++) {
+            for ($dx = -$r; $dx -le $r; $dx++) {
+                if ([math]::Max([math]::Abs($dx), [math]::Abs($dy)) -ne $r) { continue }
+                $gx = $cx + $dx; $gy = $cy + $dy
+                if ($gx -lt 0 -or $gy -lt 0 -or $gx -ge $Layout.Cols -or $gy -ge $Layout.Rows) { continue }
+                $key = "$gx,$gy"
+                if ($Layout.Used.ContainsKey($key)) { continue }
+                $px2 = ($gx + 0.5) * $c; $py2 = ($gy + 0.5) * $c
+                $d = [math]::Sqrt(([math]::Pow($px2 - $X, 2)) + ([math]::Pow($py2 - $Y, 2)))
+                if ($d -lt $MinAway) { continue }
+                # to the left by preference: the map prints each field's
+                # name to the right of it
+                $score = $d + $(if ($px2 -gt $X) { 26.0 } else { 0.0 })
+                if ($score -lt $bestD) { $bestD = $score; $best = @{ K = $key; X = $px2; Y = $py2 } }
+            }
+        }
+        if ($best) { $Layout.Used[$best.K] = $true; return $best }
+    }
+    $Layout.Used["$cx,$cy"] = $true
+    @{ K = "$cx,$cy"; X = $X; Y = $Y }
+}
+# dot, elbow, circle and number - one squadron, four shapes that light up
+# together when the pointer finds any of them
+function Add-SquadronCallout {
+    param($Canvas, [double]$SX, [double]$SY, [double]$TX, [double]$TY,
+          [string]$Colour, [string]$Dim, [string]$Number, [string]$Info,
+          [double]$R = 13.0, [switch]$IsPlayer)
+
+    $stroke = B $Colour
+    $dot = New-Object Windows.Shapes.Ellipse
+    $dot.Width = 7; $dot.Height = 7; $dot.Fill = $stroke; $dot.StrokeThickness = 0
+    [Windows.Controls.Canvas]::SetLeft($dot, $SX - 3.5); [Windows.Controls.Canvas]::SetTop($dot, $SY - 3.5)
+
+    # an elbow, as a draughtsman would draw it: out, across, in
+    $line = New-Object Windows.Shapes.Polyline
+    $line.Stroke = $stroke; $line.StrokeThickness = 1.2
+    $line.StrokeLineJoin = 'Round'
+    $pts = New-Object Windows.Media.PointCollection
+    $side = if ($TX -lt $SX) { -1.0 } else { 1.0 }
+    $edge = $TX - $side * $R
+    $mid = $SX + ($edge - $SX) * 0.55
+    [void]$pts.Add((New-Object Windows.Point($SX, $SY)))
+    [void]$pts.Add((New-Object Windows.Point($mid, $SY)))
+    [void]$pts.Add((New-Object Windows.Point($mid, $TY)))
+    [void]$pts.Add((New-Object Windows.Point($edge, $TY)))
+    $line.Points = $pts
+
+    $ring = New-Object Windows.Shapes.Ellipse
+    $ring.Width = $R * 2; $ring.Height = $R * 2
+    $ring.Stroke = $stroke; $ring.StrokeThickness = $(if ($IsPlayer) { 2.6 } else { 1.6 })
+    $ring.Fill = B '#E60B141B'; $ring.Cursor = 'Hand'
+    [Windows.Controls.Canvas]::SetLeft($ring, $TX - $R); [Windows.Controls.Canvas]::SetTop($ring, $TY - $R)
+
+    $txt = New-TB -Text $Number -Family $CondFam -Size $(if ($Number.Length -ge 3) { 10.5 } else { 11.5 }) -Colour $Dim -Bold
+    $txt.IsHitTestVisible = $false; $txt.Width = $R * 2; $txt.TextAlignment = 'Center'
+    [Windows.Controls.Canvas]::SetLeft($txt, $TX - $R); [Windows.Controls.Canvas]::SetTop($txt, $TY - 8)
+
+    $grp = @{ Dot = $dot; Line = $line; Ring = $ring; Text = $txt
+              Colour = $Colour; Dim = $Dim; Info = $Info; Lit = $false }
+    $ring.Tag = $grp
+    $ring.ToolTip = $Info
+    $ring.Add_MouseEnter({
+        param($sender, $e)
+        $t = $sender.Tag
+        $hot = B '#FFE28A'
+        $t.Ring.Stroke = $hot; $t.Line.Stroke = $hot; $t.Dot.Fill = $hot
+        $t.Ring.StrokeThickness = 3.0; $t.Line.StrokeThickness = 2.0
+        $t.Text.Foreground = $hot
+        [Windows.Controls.Panel]::SetZIndex($t.Ring, 90)
+        if ($script:MapInfo) { $script:MapInfo.Text = "$($t.Info)" }
+    })
+    $ring.Add_MouseLeave({
+        param($sender, $e)
+        $t = $sender.Tag
+        $c = B $t.Colour
+        $t.Ring.Stroke = $c; $t.Line.Stroke = $c; $t.Dot.Fill = $c
+        $t.Ring.StrokeThickness = 1.6; $t.Line.StrokeThickness = 1.2
+        $t.Text.Foreground = B $t.Dim
+        [Windows.Controls.Panel]::SetZIndex($t.Ring, 10)
+        if ($script:MapInfo) { $script:MapInfo.Text = ' ' }
+    })
+
+    [void]$Canvas.Children.Add($line)
+    [void]$Canvas.Children.Add($dot)
+    [void]$Canvas.Children.Add($ring)
+    [void]$Canvas.Children.Add($txt)
+    [Windows.Controls.Panel]::SetZIndex($line, 5)
+    [Windows.Controls.Panel]::SetZIndex($dot, 8)
+    [Windows.Controls.Panel]::SetZIndex($ring, 10)
+    [Windows.Controls.Panel]::SetZIndex($txt, 11)
+    $grp
+}
+
 function Show-Map {
     param($Pilot)
     $script:Stage.Children.Clear()
@@ -2313,11 +2431,15 @@ function Show-Map {
         if ($qst) { $others += @{ Num=$q.Num; Type=$q.Type; Base=$qb; St=$qst } }
         else { $offTable += @{ Num=$q.Num; Type=$q.Type; Base=$qb } }
     }
-    $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Your station is ringed in gold; the other squadrons in the line are plotted beside theirs, blue for Spitfires and amber for Hurricanes." }
-               else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the western edge of this table, so your squadron is named below it. The squadrons plotted here are the rest of the line, blue for Spitfires and amber for Hurricanes." }
+    # your own squadron, if the order of battle did not already list it
+    if ($onTable -and -not ($others | Where-Object { $_.Num -eq $sqnum })) {
+        $others += @{ Num=$sqnum; Type=$(if ($Pilot.actype) { "$($Pilot.actype)" } else { '' }); Base=$base; St=$MapStations[$base] }
+    }
+    $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Every squadron in the line is a dot on its own field with its number beside it, gold for yours, blue for Spitfires and amber for Hurricanes." }
+               else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the western edge of this table, so your squadron is named below it. Every other squadron in the line is a dot on its own field with its number beside it, blue for Spitfires and amber for Hurricanes." }
     $secNow = Get-SectorText $base
     if ($secNow) { $leadTxt += "  Your station is the $secNow." }
-    $leadTxt += '  A ringed field on the table is a sector station, the one holding the operations room that fought that sector.  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
+    $leadTxt += '  A ringed field is a sector station, the one holding the operations room that fought that sector.  Point at a number to light its squadron and read it out below.  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
     $lead = New-TB -Text $leadTxt -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
     $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1180
     [void]$script:Stage.Children.Add($lead)
@@ -2340,37 +2462,18 @@ function Show-Map {
     [void]$grid.Children.Add($cv)
     $mapWrap.Child = $grid
 
-    # the rest of the line first, so your own ring sits over them
-    $seenAt = @{}
-    $countAt = @{}
-    foreach ($o in $others) { $countAt[$o.Base] = 1 + [int]$countAt[$o.Base] }
-    foreach ($o in $others) {
-        if ($o.Num -eq $sqnum) { continue }
-        # A ring is NEVER drawn on the field itself: the map prints the
-        # station's name to the right of its marker, and a ring centred
-        # there covered both. They fan out to the LEFT, away from the name.
-        $nAt = [int]$countAt[$o.Base]
-        $ix = [int]$seenAt[$o.Base]; $seenAt[$o.Base] = $ix + 1
-        $rad = 17.0 + 2.5 * [math]::Max(0, $nAt - 1)
-        $spread = [math]::PI * 1.05
-        $ang = if ($nAt -le 1) { [math]::PI } else { ([math]::PI - $spread / 2.0) + $spread * $ix / ($nAt - 1) }
-        $ox = $rad * [math]::Cos($ang); $oy = $rad * [math]::Sin($ang)
-        $ocx = [double]$o.St[0] * $W + $ox; $ocy = [double]$o.St[1] * $H + $oy
+    # Every squadron as a callout: a dot on its field, a leader out to a
+    # numbered circle placed where there is room. Your own is gold and
+    # drawn last so it sits above the rest.
+    $layout = New-CalloutLayout -W $W -H $H
+    $ordered = @($others | Sort-Object @{ e = { [double]$_.St[1] } }, @{ e = { [double]$_.St[0] } })
+    foreach ($o in $ordered) {
+        $sx = [double]$o.St[0] * $W; $sy = [double]$o.St[1] * $H
+        $slot = Get-CalloutSlot -Layout $layout -X $sx -Y $sy
         $isSpit = ("$($o.Type)" -match 'Spitfire')
-        # a hair line back to the field, so a ring fanned out from a
-        # crowded station cannot be read as belonging to its neighbour
-        if ($ox -ne 0.0 -or $oy -ne 0.0) {
-            $ln = New-Object Windows.Shapes.Line
-            $ln.X1 = [double]$o.St[0] * $W; $ln.Y1 = [double]$o.St[1] * $H
-            $ln.X2 = $ocx; $ln.Y2 = $ocy
-            $ln.Stroke = if ($isSpit) { B '#4C5FD0E8' } else { B '#4CF5A83C' }
-            $ln.StrokeThickness = 1.0; $ln.IsHitTestVisible = $false
-            [void]$cv.Children.Add($ln)
-        }
-        $dot = New-Object Windows.Shapes.Ellipse
-        $dot.Width = 21; $dot.Height = 21; $dot.StrokeThickness = 2
-        $dot.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
-        $dot.Fill = B '#CC0B141B'
+        $isMine = ($o.Num -eq $sqnum)
+        $col = if ($isMine) { '#FFE28A' } elseif ($isSpit) { '#5FD0E8' } else { '#F5A83C' }
+        $dim = if ($isMine) { '#FFE9A8' } elseif ($isSpit) { '#9FE0F0' } else { '#F8C87E' }
         $oob = Get-Oob -Sqn $o.Num
         $extra = ''
         if ($oob) {
@@ -2380,58 +2483,13 @@ function Show-Map {
         $code = ''
         if ($SquadronCodes.ContainsKey([int]$o.Num)) { $code = "  $([char]0x2022)  codes $($SquadronCodes[[int]$o.Num])-" }
         $secTxt = Get-SectorText "$($o.Base)"
-        $dot.Tag = "No. $($o.Num) Squadron  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)  $([char]0x2022)  No. $(Get-GroupForBase $o.Base) Group" +
-                   $(if ($secTxt) { "  $([char]0x2022)  $secTxt" } else { '' }) + "$code$extra"
-        $dot.ToolTip = $dot.Tag
-        $dot.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
-        $dot.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
-        [Windows.Controls.Canvas]::SetLeft($dot, $ocx - 10.5); [Windows.Controls.Canvas]::SetTop($dot, $ocy - 10.5)
-        [void]$cv.Children.Add($dot)
-        # the number sits INSIDE the ring; below it, it collided with the
-        # ring under it and with the map's own lettering
-        $nlbl = New-TB -Text "$($o.Num)" -Family $CondFam -Size 9.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
-        $nlbl.IsHitTestVisible = $false
-        $nlbl.Width = 21; $nlbl.TextAlignment = 'Center'
-        [Windows.Controls.Canvas]::SetLeft($nlbl, $ocx - 10.5); [Windows.Controls.Canvas]::SetTop($nlbl, $ocy - 7.5)
-        [void]$cv.Children.Add($nlbl)
+        $info = $(if ($isMine) { "No. $($o.Num) Squadron  $([char]0x2022)  YOUR SQUADRON" } else { "No. $($o.Num) Squadron" }) +
+                "  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)  $([char]0x2022)  No. $(Get-GroupForBase $o.Base) Group" +
+                $(if ($secTxt) { "  $([char]0x2022)  $secTxt" } else { '' }) + "$code$extra"
+        [void](Add-SquadronCallout -Canvas $cv -SX $sx -SY $sy -TX $slot.X -TY $slot.Y `
+               -Colour $col -Dim $dim -Number "$($o.Num)" -Info $info -IsPlayer:$isMine)
     }
 
-    if ($onTable) {
-        $st = $MapStations[$base]
-        $cx = [double]$st[0] * $W; $cy = [double]$st[1] * $H
-        # honour a hand-corrected ring anchor from the plotting table
-        $rpPath = Join-Path $StateDir 'ringpos.json'
-        if (Test-Path $rpPath) {
-            try {
-                $rp = Get-Content $rpPath -Raw | ConvertFrom-Json
-                $ovp = $rp.PSObject.Properties["$base|$sqnum"]
-                if ($ovp -and $ovp.Value) { $cx = [double]$ovp.Value.x * $W; $cy = [double]$ovp.Value.y * $H }
-            } catch { }
-        }
-        # a breathing gold halo round the station, a firm ring inside it
-        $halo = New-Object Windows.Shapes.Ellipse
-        $halo.Width = 46; $halo.Height = 46; $halo.StrokeThickness = 2.5
-        $halo.Stroke = B '#FFE28A'; $halo.Fill = B '#22FFE28A'
-        [Windows.Controls.Canvas]::SetLeft($halo, $cx - 23); [Windows.Controls.Canvas]::SetTop($halo, $cy - 23)
-        $pulse = New-Object Windows.Media.Animation.DoubleAnimation(0.25, 0.95, [Windows.Duration]::new([TimeSpan]::FromSeconds(1.1)))
-        $pulse.AutoReverse = $true
-        $pulse.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
-        $halo.BeginAnimation([Windows.UIElement]::OpacityProperty, $pulse)
-        [void]$cv.Children.Add($halo)
-        $ring = New-Object Windows.Shapes.Ellipse
-        $ring.Width = 24; $ring.Height = 24; $ring.StrokeThickness = 3
-        $ring.Stroke = B '#FFE28A'; $ring.Fill = B '#01000000'
-        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 12); [Windows.Controls.Canvas]::SetTop($ring, $cy - 12)
-        $mySec = Get-SectorText $base
-        $ring.Tag = "No. $sqnum Squadron  $([char]0x2022)  YOUR SQUADRON  $([char]0x2022)  $base  $([char]0x2022)  No. $(Get-GroupForBase $base) Group" +
-                    $(if ($mySec) { "  $([char]0x2022)  $mySec" } else { '' })
-        $ring.ToolTip = $ring.Tag
-        $ring.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
-        $ring.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
-        [void]$cv.Children.Add($ring)
-        # no caption: the station's name is already printed on the map,
-        # and the rings' open centres leave it readable
-    }
     # an invisible patch over every station, so hovering a field tells you
     # its name, its group and which squadrons are standing on it today
     $atField = @{}
