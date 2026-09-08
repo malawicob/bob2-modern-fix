@@ -123,14 +123,15 @@ effects.
 
 THE LAUNCHER - AND WHY THE ORDER MATTERS
 ----------------------------------------
-BOB2.bat opens a small window with six things on it:
+BOB2.bat opens a small window with these on it:
 
   PLAY                 launches the game pinned to your CPU's fast cores
-  SETTINGS             graphics, view, gameplay, key bindings and joystick
-  MEASURE FRAME RATE   60-second PresentMon capture while you fly
-  GRAPHICS WRAPPER     dgVoodoo2 or native Direct3D 9
-  MENU SIZE            how large the in-game menus are drawn
-  SETUP AND REPAIR     the setup tool you used to install
+  INSTALL AND REPAIR   every part of the fix, with its real state
+  SQUADRON ROOM        your pilot, the roster and the day's readiness
+  FLIGHT TRAINING      fly the Tiger Moth: six 1940 training exercises
+  SETTINGS             graphics, view, gameplay, key bindings, joystick,
+                       the setup wizard, the graphics translator, the
+                       in-game menu size and the frame rate test
 
 It is not just a menu over the .bat files. It exists because the order
 you do things in matters, and nothing used to tell you that.
@@ -167,6 +168,90 @@ dgVoodoo2.
 
 The old .bat files still work on their own if you prefer them. The
 launcher just calls them.
+
+
+THE SQUADRON ROOM
+-----------------
+A dispersal hut for your own pilot, opened from the launcher. It reads
+your campaign save; it never writes to the game.
+
+  THE DISPERSAL   Your photograph on the wall, your rank badge and the
+                  ribbons you have earned, your aircraft with your code
+                  letter and serial on it, and the squadron's readiness
+                  board: the men who really flew in your squadron, as
+                  they stood on the campaign's own date, with the losses
+                  named underneath.
+
+  PILOT'S LOGBOOK Sorties, flying hours, victories, awards and rank.
+                  The sorties come out of the campaign save itself: the
+                  game keeps your Log Book in there, one record per
+                  sortie with how it ended and what you shot down, and
+                  the Room reads it. So a victory the campaign credits
+                  you with is in your logbook when you land, by type,
+                  with no typing and no guesswork, and the count always
+                  agrees with the game's own Log Book because it is the
+                  same data.
+
+  MAP             Fighter Command's disposition on the day: every
+                  squadron in the line at its station, blue for
+                  Spitfires and amber for Hurricanes, with your own
+                  ringed in gold. Roll the wheel to zoom, drag to move
+                  the sheet, double-click to set it back. Hover a
+                  squadron or a field to read it out.
+
+  MORNING BULLETIN
+                  The day's paper. Real 1940 headlines and extracts,
+                  from New Zealand papers carrying the London cables,
+                  which is how the news actually reached the Empire: a
+                  day late, and in the same words. One front page for
+                  every day of the Battle.
+
+Starting a new career archives the old pilot, it never deletes him, and
+you choose a squadron for the new man from the plotting table. Start a
+new campaign in the game as well: the Room reads the campaign save, so a
+new pilot left flying the old campaign inherits its date and squadron.
+He will not inherit its victories - he is credited only with what he
+scores from the day he is posted.
+
+Your pilot lives in a SquadronRoom folder beside Bob.exe, not inside the
+fix folder, so updating the fix never touches him.
+
+
+THE DUNKIRK MISSIONS (OPTIONAL, NOT INSTALLED BY DEFAULT)
+---------------------------------------------------------
+Four Battle of France missions over the evacuation, from late May and
+June 1940, flying Spitfires of No. 92 Squadron and escorting Blenheims
+to St Omer. They appear in the game under Instant Action, under their
+own heading.
+
+Installing them also adds DUNKERQUE to the game's map - the first new
+named place on it - dresses the harbour and the beaches, and puts the
+evacuation flotilla in the Channel: destroyers, trawlers, barges and
+rowing boats along the coast and the evacuation lanes.
+
+Turn it on from INSTALL AND REPAIR: the "Dunkirk missions" row has an
+Install button, and a Remove button once it is on. It is optional
+content, so it is never counted as a fault and "fix everything" leaves
+it alone. Every game file it touches is backed up first, and Remove puts
+them all back.
+
+If your quick.dat already carries somebody else's mission set, the row
+says so and refuses to touch it.
+
+
+FLIGHT TRAINING: THE TIGER MOTH
+-------------------------------
+BOB2 ships a de Havilland Tiger Moth that was never made flyable: the
+model, the cockpit and the sounds are all in the game, but the line that
+would let you fly it is missing. FLIGHT TRAINING puts it back for one
+session, with six 1940 training exercises.
+
+It works by lending the Tiger Moth the Hurricane Ib's slot while you
+train, and it puts everything back when the game exits, so nothing is
+changed permanently. The launcher's FLIGHT TRAINING panel glows amber
+while the swap is armed, so you can always see that a session is
+active, and INSTALL AND REPAIR will offer to put things back if the game
+ever exits badly.
 
 
 MENU SIZE
@@ -424,6 +509,19 @@ WHAT'S INCLUDED IN THIS PACKAGE
   dinput8.dll           - Crash guard DLL (installed by the setup tool)
   README.txt            - This file
   CHANGELOG.txt         - What changed in each fix version
+
+  BOB2_SquadronRoom.ps1 - The Squadron Room (see its section above)
+  squadronroom\         - What it reads: the squadron rosters, Fighter
+                          Command's order of battle, the sector map and
+                          the 1940 newspaper front pages
+  dunkirk\              - The Dunkirk mission pack, installed only if
+                          you ask for it from Install and repair
+  training\             - The Tiger Moth flight training module
+  reshade\              - ReShade and its presets, off unless you
+                          enable it
+  variants\             - Optional aircraft: Spitfire Mk II, the
+                          cannon-armed Mk Ib, and extra range for the
+                          109E-7 and 110D-1
 
   The launcher calls the tools below. They still work on their own, but
   the launcher is what stops you running them in an order that loses
@@ -761,6 +859,31 @@ CREDITS
 Fix developed March 2026; substantially revised August 2026.
 Tested on Windows 11 with dgVoodoo2 v2.86.5, on an i9-13900HX /
 RTX 4080 at 2560x1600.
+
+  The men on the readiness board are real. The names come from the Air
+  Ministry / John Holloway list of the Few, through Wikipedia's List of
+  RAF aircrew in the Battle of Britain (CC BY-SA), with one from an
+  Imperial War Museums photograph caption. No. 92 Squadron's roster is
+  this project's own research. Where a squadron's victories have not
+  been researched yet the column is left blank rather than estimated,
+  and the board says so.
+
+  The Morning Bulletin's headlines and extracts are genuine, digitised
+  by Papers Past at the National Library of New Zealand and used under
+  CC BY-NC-SA 4.0, non-commercial with attribution. Each front page
+  credits the paper it came from. New Zealand papers carried the London
+  cables, which is how the news reached the Empire: a day late, and in
+  the same words.
+
+  The sector map is drawn, not photographed. Coastlines, land and rivers
+  are Natural Earth (public domain) and the land is shaded from public
+  elevation data. Every airfield on it is placed from its own latitude
+  and longitude, and the Room plots squadrons from the same projection,
+  so a ring cannot drift from the field it belongs to.
+
+  Fighter Command's order of battle - which squadron stood where, and
+  what Fighter Command thought of it - is read out of the game's own
+  files.
 
 418 Squadron RCAF - "Piyautailili" (We who are hunters)
 

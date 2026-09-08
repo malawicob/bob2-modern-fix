@@ -23,6 +23,12 @@ A companion app for **Battle of Britain II: Wings of Victory** — gets the 2005
 
 **Measures instead of guessing.** A frame-rate capture that never requires Alt-Tab, because BOB2 loses its D3D9 device and crashes if it does.
 
+**Gives you a squadron.** The Squadron Room is a dispersal hut for your own pilot: your photograph on the wall, your rank badge and ribbons, your aircraft with your code letter on it, and the readiness board of the men who really flew in your squadron, as they stood on the campaign's own date, with the losses named underneath. Your logbook fills itself, because the game keeps your Log Book inside the campaign save, one record per sortie with how it ended and what you shot down, and the Room reads it. Land from a scramble and the Ju 87 you got is already there, by type. There is a plotting table showing Fighter Command's disposition for the day, and a morning paper carrying real 1940 headlines for every day of the Battle.
+
+**Flies the aircraft the game forgot.** BOB2 ships a Tiger Moth that was never made flyable: the model, the cockpit and the sounds are all there, but the one line that would let you fly it is missing. Flight Training puts it back for a session, with six 1940 exercises, and takes it out again when the game exits.
+
+**Takes you to Dunkirk.** An optional pack of four Battle of France missions over the evacuation. It adds Dunkerque to the game's map, the first new named place on it, dresses the harbour and the beaches, and puts the little ships in the Channel.
+
 ---
 
 ## What you need
@@ -54,6 +60,8 @@ First launch offers to walk you through setup — six questions, about three min
 | | |
 |---|---|
 | **Play** | Launches the game pinned to the P-cores |
+| **Squadron Room** | Your pilot, the squadron's readiness board, your logbook, the plotting table and the morning paper |
+| **Flight training** | The Tiger Moth, and six 1940 training exercises |
 | **Setup wizard** | Six steps: find the game, install the fix, graphics, menu size, joystick, frame rate |
 | **Settings** | Graphics, view, weather, realism, key bindings, joystick axes, and every `bdg.txt` value |
 | **Frame rate test** | Arm it, fly, press `ALT+SHIFT+F11`. Needs [PresentMon](https://github.com/GameTechDev/PresentMon/releases) in `tools\` |
@@ -84,7 +92,9 @@ DXVK is excluded by default: 7.5 MB, two thirds of the package, for a wrapper th
 | **dgVoodoo2 2.8.7.3** | © Dege — <https://dege.freeweb.hu>. Shipped under the redistribution rights in the dgVoodoo readme: *"You can freely ship your game or game mod with individual dgVoodoo files included."* |
 | **Lucide icons** | ISC licence — <https://lucide.dev> |
 | **Photographs** | Imperial War Museums, public domain. IWM HU 54418 (32 Squadron at Hawkinge, 29 July 1940) and IWM CL186 (RAF Repair and Salvage Unit, Normandy, 19 June 1944) |
-| **Squadron rosters** | No. 32 Squadron names from the Air Ministry / John Holloway list of the Few, via Wikipedia's List of RAF aircrew in the Battle of Britain (CC BY-SA); one entry from an Imperial War Museums photograph caption. Victory totals for this squadron are not yet researched and are shown blank rather than estimated. No. 92 Squadron roster from the project's own research. |
+| **Squadron rosters** | Names from the Air Ministry / John Holloway list of the Few, via Wikipedia's List of RAF aircrew in the Battle of Britain (CC BY-SA); one entry from an Imperial War Museums photograph caption. No. 92 Squadron's roster is the project's own research. Where a squadron's victories are not yet researched the column is left blank rather than estimated, and the board says so. |
+| **Sector map** | Drawn, not photographed. Coastlines, land and rivers from [Natural Earth](https://www.naturalearthdata.com) (public domain), shaded from public elevation data. Every airfield placed from its own latitude and longitude, and squadrons plotted from the same projection. |
+| **Order of battle** | Which squadron stood where, and how Fighter Command rated it, read out of the game's own files. |
 | **Morning Bulletin headlines** | Genuine 1940 headlines and extracts from New Zealand newspapers, digitised by Papers Past, National Library of New Zealand — <https://paperspast.natlib.govt.nz>. CC BY-NC-SA 4.0, non-commercial use with attribution; each front page credits its source paper. |
 | **PresentMon** | Intel, not shipped — a separate download |
 
