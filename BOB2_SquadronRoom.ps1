@@ -871,8 +871,32 @@ $SquadronMottoes = @{
     32 = 'ADESTE COMITES'
     92 = 'AUT PUGNA AUT MORERE'
 }
+# PLAY and START A NEW CAREER belong to a career that exists. While a man
+# is still picking his squadron there is nothing to play and nothing to
+# start over, and the board's own button is the only thing to press.
+function Show-ChromeButtons {
+    param([bool]$Show)
+    foreach ($n in @('RoomPlay', 'RoomNewCareer')) {
+        $el = C $n
+        if ($el) { $el.Visibility = $(if ($Show) { 'Visible' } else { 'Collapsed' }) }
+    }
+}
+# A way back out of the two career screens, so a man who changes his mind
+# is not trapped there.
+function New-BackButton {
+    param([string]$Text, $OnClick)
+    $b = New-Object Windows.Controls.Border
+    $b.Padding = '14,8'; $b.CornerRadius = '3'; $b.Cursor = 'Hand'; $b.HorizontalAlignment = 'Left'
+    $b.Background = B '#101B22'; $b.BorderBrush = Res 'Rule'; $b.BorderThickness = '1'
+    $b.Child = (New-TB -Text ("$([char]0x2190)  " + $Text) -Family $CondFam -Size 12 -Colour '#9FB0B8' -Bold)
+    $b.Add_MouseLeftButtonUp($OnClick)
+    $b.Add_MouseEnter({ param($se,$e) $se.BorderBrush = (B '#C8973F') })
+    $b.Add_MouseLeave({ param($se,$e) $se.BorderBrush = (Res 'Rule') })
+    $b
+}
 function Set-Header {
     param($Pilot)
+    Show-ChromeButtons $true
     # No default squadron: an unposted pilot gets the service, not 92's
     # number and 92's group, which is what this used to show.
     $num = 0; $grp = 0
@@ -1579,12 +1603,53 @@ function Get-SortieCount {
     }
     @($Sessions).Count
 }
+# The campaign's Log Book holds every sortie the SAVE has flown, and a new
+# man posted into a campaign already under way inherits none of them. The
+# counters already knew that; the sortie table and the claims line did
+# not, so a fresh career opened showing the last man's flying. This trims
+# the book to the career: the rows after his baseline, and the victories
+# recounted from those rows alone.
+function Get-CareerDiary {
+    param($Diary, $Pilot)
+    if (-not $Diary) { return $null }
+    $rows = @($Diary.rows)
+    $base = 0
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'campaignSorties') -and ($null -ne $Pilot.campaignSorties)) {
+        $base = [int]$Pilot.campaignSorties
+    }
+    # fewer rows than the baseline means the game began a new campaign of
+    # its own, and the whole book is his
+    if ($base -gt 0 -and $rows.Count -ge $base) { $rows = @($rows | Select-Object -Skip $base) }
+    $bins = New-Object int[] 7
+    foreach ($r in $rows) { for ($k = 0; $k -lt 7; $k++) { $bins[$k] += [int]$r.kills[$k] } }
+    [pscustomobject]@{ table = $Diary.table; rows = $rows; kills = $bins; total = ($bins | Measure-Object -Sum).Sum }
+}
 # The newest campaign save's Log Book, for the logbook screen.
+# Every .BSR in the game's SAVEGAME folder, newest first.
+function Get-SaveFiles {
+    if (-not $GameDir) { return @() }
+    @(Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+}
+# WHICH save is this career's campaign. Newest-wins is only a guess: a man
+# with two campaigns on the go, or who saves under his own names, would
+# have his sorties and victories read out of somebody else's war. Once he
+# says which file is his it is written into his record and used from then
+# on, and only falls back to the newest if that file has gone.
+function Get-CampaignSavePath {
+    param($Pilot)
+    if (-not $Pilot) { $Pilot = Get-Pilot }
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'savePath') -and "$($Pilot.savePath)" -and (Test-Path "$($Pilot.savePath)")) {
+        return "$($Pilot.savePath)"
+    }
+    $f = Get-SaveFiles | Select-Object -First 1
+    if ($f) { return $f.FullName }
+    $null
+}
 function Get-LatestSaveDiary {
-    if (-not $GameDir) { return $null }
-    $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $sav) { return $null }
-    Get-SaveDiary -Path $sav.FullName
+    param($Pilot)
+    $p = Get-CampaignSavePath -Pilot $Pilot
+    if (-not $p) { return $null }
+    Get-SaveDiary -Path $p
 }
 # Bring the pilot's record level with the campaign's own Log Book. The
 # record carries campaignKills, the seven bins it has already credited;
@@ -1798,6 +1863,65 @@ function New-DiaryRow {
     }
     $b.Child = $g; $b
 }
+# Asked once, after his first operation: which of the game's saves is this
+# career's campaign. Only worth asking when there is more than one to
+# choose between; a single save needs no confirming.
+function New-SaveChooser {
+    param($Pilot, [switch]$Settled)
+    $files = @(Get-SaveFiles)
+    if ($files.Count -eq 0) { return $null }
+    $cur = Get-CampaignSavePath -Pilot $Pilot
+    $bd = New-Object Windows.Controls.Border
+    $bd.CornerRadius = '3'; $bd.Padding = '16,12'; $bd.Margin = '0,0,0,20'
+    $bd.HorizontalAlignment = 'Left'; $bd.MaxWidth = 900
+    $bd.Background = B $(if ($Settled) { '#101B22' } else { '#2A2418' })
+    $bd.BorderBrush = B $(if ($Settled) { '#22303C' } else { '#C8973F' }); $bd.BorderThickness = '1'
+    $sp = New-Object Windows.Controls.StackPanel
+    if ($Settled) {
+        $t = New-TB -Text ("Reading your campaign from " + (Split-Path $cur -Leaf) + ". Pick another if that is the wrong war.") -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
+        [void]$sp.Children.Add($t)
+    } else {
+        [void]$sp.Children.Add((New-TB -Text 'WHICH CAMPAIGN IS YOURS?' -Family $CondFam -Size 12 -Colour '#E0952F' -Bold))
+        $t = New-TB -Text ("The game keeps " + $files.Count + " saves, and your sorties and victories are read out of one of them. Say which is this career's campaign so the Room reads the right war. It is remembered, and you can change it here at any time.") -Family 'Segoe UI' -Size 13 -Colour '#C9D4CE' -Wrap
+        $t.Margin = '0,6,0,10'; $t.MaxWidth = 860
+        [void]$sp.Children.Add($t)
+    }
+    $wrap = New-Object Windows.Controls.WrapPanel; $wrap.Margin = '0,8,0,0'; $wrap.MaxWidth = 860
+    foreach ($fl in $files) {
+        $chip = New-Object Windows.Controls.Border
+        $chip.Padding = '11,7'; $chip.Margin = '0,0,8,8'; $chip.CornerRadius = '3'; $chip.Cursor = 'Hand'
+        $isCur = ($fl.FullName -eq $cur)
+        $chip.Background = B $(if ($isCur) { '#213540' } else { '#101B22' })
+        $chip.BorderBrush = B $(if ($isCur) { '#FFE28A' } else { '#22303C' }); $chip.BorderThickness = '1'
+        $when = $fl.LastWriteTime.ToString('ddd d MMM, HH:mm')
+        $inner = New-Object Windows.Controls.StackPanel
+        [void]$inner.Children.Add((New-TB -Text $fl.BaseName -Family $CondFam -Size 12.5 -Colour $(if ($isCur) { '#FFE28A' } else { '#C8D4DC' }) -Bold))
+        [void]$inner.Children.Add((New-TB -Text "saved $when" -Family 'Segoe UI' -Size 11 -Colour '#6F828C'))
+        $chip.Child = $inner
+        $chip.Tag = $fl.FullName
+        $chip.Add_MouseLeftButtonUp({
+            param($sender, $e)
+            $p = Get-Pilot
+            if ($p) {
+                $o = @{}
+                foreach ($pp in $p.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
+                $o['savePath'] = "$($sender.Tag)"
+                $o['saveAsked'] = $true
+                # The victory baseline is deliberately NOT touched here.
+                # Zeroing it would re-credit every kill in the newly named
+                # campaign, and he would be paid twice for the ones he has
+                # already been given. Choosing a save chooses the file to
+                # read, nothing more.
+                Save-Pilot ([pscustomobject]$o)
+            }
+            Show-Logbook -Pilot (Get-Pilot)
+        })
+        [void]$wrap.Children.Add($chip)
+    }
+    [void]$sp.Children.Add($wrap)
+    $bd.Child = $sp
+    $bd
+}
 function Show-Logbook {
     param($Pilot)
     $script:Stage.Children.Clear()
@@ -1822,6 +1946,8 @@ function Show-Logbook {
     $ld = Sync-CampaignClaims
     $p2 = Get-Pilot; if ($p2) { $Pilot = $p2 }
     $career = Get-Career $Pilot $sessions -Sorties (Get-SortieCount -Diary $ld -Sessions $sessions -Pilot $Pilot)
+    # everything below the counters is this career's book, not the save's
+    $ld = Get-CareerDiary -Diary $ld -Pilot $Pilot
     $vics = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $vics = [int]$Pilot.victories }
 
     $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,-6,0,12'
@@ -1850,7 +1976,7 @@ function Show-Logbook {
     # ---- automatic claims: one statement, the campaign's own figure ----
     $binsL = $KillBinsRAF
     if (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -match '^(lw|luftwaffe|german)')) { $binsL = $KillBinsLW }
-    if ($ld) {
+    if ($ld -and @($ld.rows).Count -gt 0) {
         $byType = @()
         for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($binsL[$k])" } }
         $acTxt = "Automatic claims are on: the campaign's Log Book credits you with " +
@@ -1858,7 +1984,7 @@ function Show-Logbook {
                  $(if ($byType.Count) { ', ' + ($byType -join ', ') } else { '' }) +
                  ". Every victory the campaign credits you with is entered here by itself, whichever way the game was started."
     } elseif ($ld) {
-        $acTxt = "Automatic claims are on. The campaign's Log Book has no sorties in it yet; fly one and it appears here by itself."
+        $acTxt = "Automatic claims are on. You have not flown an operation yet; fly one and it appears here by itself, victories and all."
     } else {
         $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Victories the campaign credits you with are entered here by themselves once there is one.'
     }
@@ -1866,16 +1992,29 @@ function Show-Logbook {
     $lk.Margin = '0,0,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lk)
 
+    # which save this career is being read from
+    $flownAny = ($ld -and @($ld.rows).Count -gt 0)
+    $asked = (($Pilot.PSObject.Properties.Name -contains 'saveAsked') -and $Pilot.saveAsked)
+    $nSaves = @(Get-SaveFiles).Count
+    if ($flownAny -and $nSaves -gt 1 -and -not $asked) {
+        $ch = New-SaveChooser -Pilot $Pilot
+        if ($ch) { [void]$script:Stage.Children.Add($ch) }
+    } elseif ($flownAny -and $nSaves -gt 0) {
+        $ch = New-SaveChooser -Pilot $Pilot -Settled
+        if ($ch) { [void]$script:Stage.Children.Add($ch) }
+    }
+
     [void]$script:Stage.Children.Add((New-TB -Text 'SORTIES FLOWN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
     if ($ld -and @($ld.rows).Count -gt 0) {
         # the game's own Log Book, newest first
         $lw = New-Object Windows.Controls.Border; $lw.BorderBrush = Res 'Rule'; $lw.BorderThickness = '1'; $lw.CornerRadius = '3'; $lw.Margin = '0,10,0,0'; $lw.ClipToBounds = $true
         $ls = New-Object Windows.Controls.StackPanel
         [void]$ls.Children.Add((New-DiaryRow -Header))
+        # numbered as HIS sorties, first to last: the save's own slot
+        # numbers carry the previous man's flying in them
         $arr = @($ld.rows); $i = 0
         for ($k = $arr.Count - 1; $k -ge 0; $k--) {
-            $num = if ($arr[$k].PSObject.Properties.Name -contains 'slot') { [int]$arr[$k].slot } else { $k + 1 }
-            [void]$ls.Children.Add((New-DiaryRow -R $arr[$k] -Number $num -Index $i -Bins $binsL)); $i++
+            [void]$ls.Children.Add((New-DiaryRow -R $arr[$k] -Number ($k + 1) -Index $i -Bins $binsL)); $i++
         }
         $lw.Child = $ls
         [void]$script:Stage.Children.Add($lw)
@@ -1886,8 +2025,8 @@ function Show-Logbook {
             $tl.Margin = '0,8,0,0'
             [void]$script:Stage.Children.Add($tl)
         }
-    } elseif (@($sessions).Count -eq 0) {
-        $none = New-TB -Text 'No sorties logged yet. Fly from the launcher and your logbook fills itself.' -Family 'Segoe UI' -Size 13.5 -Colour '#9FB0B8' -Wrap
+    } elseif ($ld -or @($sessions).Count -eq 0) {
+        $none = New-TB -Text 'No sorties logged yet. Fly your first operation and your logbook fills itself.' -Family 'Segoe UI' -Size 13.5 -Colour '#9FB0B8' -Wrap
         $none.Margin = '0,10,0,0'
         [void]$script:Stage.Children.Add($none)
     } else {
@@ -2479,6 +2618,45 @@ function Short-Rank {
     }
 }
 
+# One squadron lit and the rest held back. Hover does it for as long as
+# the pointer is there; a selection does it until the choice changes. Both
+# go through here so that letting go of a hover restores the SELECTION
+# rather than lighting the whole sheet again.
+function Set-MapFocus {
+    param($Asm)
+    $lit = $Asm
+    if (-not $lit) { foreach ($a in $script:MapAssemblies) { if ($a.Sel) { $lit = $a; break } } }
+    foreach ($a in $script:MapAssemblies) {
+        $on = ((-not $lit) -or ($a -eq $lit) -or $a.Mine)
+        $o = if ($on) { 1.0 } else { 0.3 }
+        $a.Plaque.Opacity = $o; $a.Lead.Opacity = $o; $a.Dot.Opacity = $o
+        if ($a.Name) { $a.Name.Opacity = $o }
+        $top = ($a -eq $lit)
+        [Windows.Controls.Panel]::SetZIndex($a.Plaque, $(if ($top) { 40 } else { 10 }))
+        [Windows.Controls.Panel]::SetZIndex($a.Lead,   $(if ($top) { 38 } else { 5 }))
+        [Windows.Controls.Panel]::SetZIndex($a.Dot,    $(if ($top) { 39 } else { 8 }))
+        if ($a.Name) { [Windows.Controls.Panel]::SetZIndex($a.Name, $(if ($top) { 41 } else { 12 })) }
+        # the chosen squadron's own plaque keeps its gold and its glow
+        $a.Plaque.BorderBrush = B $(if ($a.Sel) { '#FFE28A' } elseif ($a.Mine) { '#FFE28A' } elseif ($top) { '#5A6B85' } else { '#2C3A52' })
+        $a.Plaque.Background  = B $(if ($a.Sel -or $top) { '#0E1626' } else { '#EB0E1626' })
+        if (-not $top) {
+            $a.Lead.Stroke = B $(if ($a.Sel) { '#FFE28A' } else { '#7A6E7C93' })
+            $a.Lead.StrokeThickness = $(if ($a.Sel) { 2 } else { 1 })
+            if ($a.Dot.Width -gt 8 -and -not $a.Sel) { Set-DotSize $a 8 }
+            if ($a.Sel) { Set-DotSize $a 12; $a.Dot.Fill = B '#FFE28A' } else { $a.Dot.Fill = B $a.DotCol }
+        }
+    }
+}
+function Set-DotSize {
+    param($Asm, [double]$Size)
+    $d = $Asm.Dot
+    $cx = [Windows.Controls.Canvas]::GetLeft($d) + $d.Width / 2.0
+    $cy = [Windows.Controls.Canvas]::GetTop($d) + $d.Height / 2.0
+    $d.Width = $Size; $d.Height = $Size
+    [Windows.Controls.Canvas]::SetLeft($d, $cx - $Size / 2.0)
+    [Windows.Controls.Canvas]::SetTop($d, $cy - $Size / 2.0)
+}
+
 # Every squadron on the day's sheet, laid out and drawn.
 function Add-SquadronPlaques {
     param($Canvas, $Fields, [double]$W, [double]$H, [int]$Mine, $Date,
@@ -2772,19 +2950,9 @@ function Add-SquadronPlaques {
                     $sender.Background = B ('#30' + $t.Colour.Substring(1))
                     $t.Text.Foreground = $hot
                     $a = $t.Asm
-                    $a.Plaque.BorderBrush = B '#5A6B85'; $a.Plaque.Background = B '#0E1626'
+                    Set-MapFocus $a
                     $a.Lead.Stroke = $hot; $a.Lead.StrokeThickness = 2
-                    $a.Dot.Fill = $hot; $a.Dot.Width = 12; $a.Dot.Height = 12
-                    [Windows.Controls.Canvas]::SetLeft($a.Dot, [Windows.Controls.Canvas]::GetLeft($a.Dot) - 2)
-                    [Windows.Controls.Canvas]::SetTop($a.Dot, [Windows.Controls.Canvas]::GetTop($a.Dot) - 2)
-                    foreach ($o in $script:MapAssemblies) {
-                        [Windows.Controls.Panel]::SetZIndex($o.Plaque, $(if ($o -eq $a) { 40 } else { 10 }))
-                        [Windows.Controls.Panel]::SetZIndex($o.Lead, $(if ($o -eq $a) { 38 } else { 5 }))
-                        [Windows.Controls.Panel]::SetZIndex($o.Dot, $(if ($o -eq $a) { 39 } else { 8 }))
-                        if ($o -eq $a -or $o.Mine) { continue }
-                        $o.Plaque.Opacity = 0.3; $o.Lead.Opacity = 0.3; $o.Dot.Opacity = 0.3
-                        if ($o.Name) { $o.Name.Opacity = 0.3 }
-                    }
+                    Set-DotSize $a 12; $a.Dot.Fill = $hot
                     Set-MapReadout @{ Title = "No. $($t.Num) Squadron"
                                       Where = "$($t.Base)   $([char]0x2022)   $($t.Type)"
                                       Note  = 'Hold the pointer still for the squadron card.'
@@ -2795,19 +2963,7 @@ function Add-SquadronPlaques {
                     $t = $sender.Tag
                     $sender.Background = if ($t.Sel) { B '#33FFC24A' } else { B '#00000000' }
                     $t.Text.Foreground = if ($t.Sel) { B '#FFE28A' } else { B $t.Colour }
-                    $a = $t.Asm
-                    $a.Plaque.BorderBrush = B $(if ($a.Mine -or $a.Sel) { '#FFE28A' } else { '#2C3A52' })
-                    $a.Plaque.Background = B '#EB0E1626'
-                    $a.Lead.Stroke = B '#7A6E7C93'; $a.Lead.StrokeThickness = 1
-                    if ($a.Dot.Width -gt 8) {
-                        [Windows.Controls.Canvas]::SetLeft($a.Dot, [Windows.Controls.Canvas]::GetLeft($a.Dot) + 2)
-                        [Windows.Controls.Canvas]::SetTop($a.Dot, [Windows.Controls.Canvas]::GetTop($a.Dot) + 2)
-                    }
-                    $a.Dot.Fill = B $a.DotCol; $a.Dot.Width = 8; $a.Dot.Height = 8
-                    foreach ($o in $script:MapAssemblies) {
-                        $o.Plaque.Opacity = 1; $o.Lead.Opacity = 1; $o.Dot.Opacity = 1
-                        if ($o.Name) { $o.Name.Opacity = 1 }
-                    }
+                    Set-MapFocus $null
                     Set-MapReadout $null
                 })
                 [void]$tiles.Children.Add($tile)
@@ -3107,8 +3263,17 @@ function Show-SquadronSelect {
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
     Set-Header $null
+    Show-ChromeButtons $false
     $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Fighter Command' }
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  POSTINGS" }
+    # a man who opened this board by accident, with a career already
+    # running, can go back to it
+    $standing = Get-Pilot
+    if ($standing) {
+        $bk = New-BackButton 'BACK TO THE DISPERSAL' { $script:NewCareerPending = $false; Show-Roster -Pilot (Get-Pilot) }
+        $bk.Margin = '0,0,0,10'
+        [void]$script:Stage.Children.Add($bk)
+    }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE PLOTTING TABLE' -Title 'Choose your campaign and squadron'))
 
     # campaign period: squadrons moved as the battle moved, so pick the
@@ -3163,17 +3328,14 @@ function Show-SquadronSelect {
         foreach ($t in $script:MapTiles) {
             $tg = $t.Tag
             $tg.Sel = ([int]$tg.Num -eq [int]$q2.Num)
-            $tg.Asm.Sel = $tg.Sel -or $tg.Asm.Sel
             $t.Background = if ($tg.Sel) { B '#33FFC24A' } else { B '#00000000' }
             $tg.Text.Foreground = if ($tg.Sel) { B '#FFE28A' } else { B $tg.Colour }
         }
         # the plaque holding the chosen squadron wears the gold, and no
         # other one does
-        foreach ($t in $script:MapTiles) { $t.Tag.Asm.Sel = $false }
+        foreach ($a in $script:MapAssemblies) { $a.Sel = $false }
         foreach ($t in $script:MapTiles) { if ($t.Tag.Sel) { $t.Tag.Asm.Sel = $true } }
-        foreach ($a in $script:MapAssemblies) {
-            $a.Plaque.BorderBrush = B $(if ($a.Sel) { '#FFE28A' } else { '#2C3A52' })
-        }
+        Set-MapFocus $null
         foreach ($cp in $script:SqChips) {
             $cp.BorderBrush = if ($cp.Tag -and $cp.Tag.Num -eq $q2.Num) { B '#FFE28A' } else { Res 'Rule' }
         }
@@ -3248,9 +3410,13 @@ function Show-Create {
         $script:SelSq = @{ Num=92; Code='QJ'; Type='Spitfire I'; Base=$po92.Base; Act=$po92.Act; Period='P1' }
     }
     Set-Header $null
+    Show-ChromeButtons $false
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $($script:SelSq.Num) Squadron" }
     $perDef2 = $Periods | Where-Object { $_.Id -eq "$($script:SelSq.Period)" } | Select-Object -First 1
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  $($script:SelSq.Type.ToUpper())S AT $($script:SelSq.Base.ToUpper())$(if ($perDef2) { "  $([char]0x2022)  $($perDef2.Label)" })" }
+    $bk2 = New-BackButton 'BACK TO THE BOARD' { Show-SquadronSelect }
+    $bk2.Margin = '0,0,0,10'
+    [void]$script:Stage.Children.Add($bk2)
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
     $lead = New-TB -Text 'Summer 1940. Give your name and pick your photograph. Your aircraft, code letter and rank are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
