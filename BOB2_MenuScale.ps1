@@ -374,6 +374,23 @@ for ($i = 0; $i -lt ($buf.Length - $dbg.Length); $i++) {
 
 [System.IO.File]::WriteAllBytes($BobPath, $buf)
 
+# The briefing pages draw on a 1024-wide surface whatever the panel, and
+# a scale patch changes the coordinates AND the font - a dialog unit is a
+# fraction of the font's character width, so 8pt to 11pt widens a dialog
+# a second time. The widest briefing page is 806px stock, 997 at 1.10x,
+# 1504 at 1.40x.
+#
+# That makes the two faults on a briefing pull opposite ways, measured on
+# a 2560x1600 panel on 2026-09-08:
+#   stock / 1.10x - the long NOTE line wraps correctly, but the tab row
+#                   lands on top of the body text
+#   1.40x         - the tab row sits clear on its own line, and the NOTE
+#                   line loses its tail off the right edge
+# No single scale does both, so the language DLL follows the menu scale
+# (1.40x being the more readable of the two) and the real fix is a
+# targeted edit to that one text control's width. Do not "correct" this
+# by capping the language scale: that was tried and it puts the tab row
+# back on the text.
 Apply-LangScale $(if ($LangScale) { $LangScale } else { $Scale })
 
 $s = $SCALES[$Scale]
