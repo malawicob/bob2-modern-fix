@@ -60,7 +60,10 @@ if not errorlevel 1 (
 
 echo.
 echo Restoring the original Bob.exe...
-copy /y "%GAMEDIR%\Bob.exe.unscaled" "%GAMEDIR%\Bob.exe" >nul
+REM A raw copy of Bob.exe.unscaled also removes the DebugBreak-to-GetVersion
+REM crash fix and leaves the language DLL rescaled. The tool's own
+REM "original" path restores both files and keeps the crash fix.
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0BOB2_MenuScale.ps1" -Scale original
 if errorlevel 1 (
     echo FAILED. Try running this as administrator.
     pause

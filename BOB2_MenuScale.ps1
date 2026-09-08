@@ -45,7 +45,12 @@
 
 param(
     # 102, 110, 125, 140, or 'original'. Omit for an interactive menu.
-    [string]$Scale
+    [string]$Scale,
+    # The briefing and training pages draw on a 1024-wide surface whatever
+    # the panel, so they clip a notch before the menus do. On a 2560x1600
+    # panel 1.40x menus with 1.25x briefings was the fit (2026-09-08).
+    # Leave this blank and the language DLL follows the menu scale.
+    [string]$LangScale = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -104,29 +109,62 @@ $BobPath  = Join-Path $GameDir 'Bob.exe'
 $OrigPath = Join-Path $GameDir 'Bob.exe.unscaled'
 
 # ---------------------------------------------------------------------
-# v1.6.28 briefly rescaled English\TEXT\boblang.dll as well. That was
-# reverted - the menu problems it chased were caused by the campaign
-# resolution falling back to 1024x768, not by the language DLL. If a
-# scaled boblang.dll is still in place from that version, put the stock
-# one back so this tool's Bob.exe scale is the only thing in play.
+# The menus live in TWO files. Bob.exe holds 154 dialog templates and
+# English\TEXT\boblang.dll holds them all again plus one, and MFC loads
+# the LANGUAGE DLL's copy first: sixty screens - every mission briefing
+# and training page among them - are drawn from boblang.dll, and
+# rescaling Bob.exe changes nothing the player sees on them.
+#
+# v1.6.28 patched both files. v1.6.29 reverted the language half and this
+# block then RESTORED STOCK boblang.dll on every run, so those sixty
+# screens sat at stock size inside a rescaled UI: the tab row printed on
+# top of the briefing text. On 8 September 2026, with the Bob.exe menus
+# correct and only the briefing pages wrong, applying langscale140 put
+# the tab row back on its own line - and this block then silently undid
+# it four seconds later. It now applies the MATCHING language patch, and
+# the two files are always scaled together.
 # ---------------------------------------------------------------------
 $langPath = Join-Path $GameDir 'English\TEXT\boblang.dll'
 $langOrig = "$langPath.unscaled"
-if ((Test-Path $langOrig) -and (Test-Path $langPath)) {
-    $a = [System.IO.File]::ReadAllBytes($langPath)
-    $b = [System.IO.File]::ReadAllBytes($langOrig)
-    if ((Get-Md5 $a) -ne (Get-Md5 $b)) {
-        [System.IO.File]::WriteAllBytes($langPath, $b)
-        Write-OK 'Restored stock boblang.dll (a v1.6.28 rescaled copy was found).'
-        # The Dunkirk pack adds the "Dunkerque" name to this DLL; a stock
-        # restore strips it, so put it back when the pack is installed.
-        try {
-            . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
-            if ((Get-DunkirkPackState $GameDir) -ne 'none' -and -not (Test-DunkerqueName $GameDir)) {
-                if (Add-DunkerqueName $GameDir) { Write-OK 'Re-added the Dunkerque name after the restore.' }
-            }
-        } catch { }
+$script:LangDone = $false
+function Apply-LangScale {
+    param([string]$Scale)
+    if (-not (Test-Path $langOrig)) {
+        if (Test-Path $langPath) { Copy-Item $langPath $langOrig; Write-OK 'Backed up boblang.dll as boblang.dll.unscaled' }
+        else { return }
     }
+    $lp = Join-Path $ScriptDir "menuscale\langscale$Scale.bin"
+    if (-not (Test-Path $lp)) { Write-Warn "langscale$Scale.bin is missing; the briefing pages will stay at stock size."; return }
+    $p = [System.IO.File]::ReadAllBytes($lp)
+    if ([System.Text.Encoding]::ASCII.GetString($p[0..7]) -ne 'BOB2MSL1') { Write-Warn 'langscale patch is not a BOB2 language-scale patch.'; return }
+    $src = [System.IO.File]::ReadAllBytes($langOrig)
+    $want = ($p[16..31] | ForEach-Object { $_.ToString('x2') }) -join ''
+    if ((Get-Md5 $src) -ne $want) {
+        Write-Warn 'boblang.dll.unscaled is not the build this language patch was made for (a non-English or re-patched DLL?). Left alone.'
+        return
+    }
+    $count = [BitConverter]::ToUInt32($p, 12)
+    $buf = [byte[]]::new($src.Length); [Array]::Copy($src, $buf, $src.Length)
+    $off = 48; $bad = 0
+    for ($i = 0; $i -lt $count; $i++) {
+        $o = [BitConverter]::ToUInt32($p, $off); $exp = [BitConverter]::ToUInt16($p, $off + 4); $nw = [BitConverter]::ToUInt16($p, $off + 6); $off += 8
+        if ([BitConverter]::ToUInt16($buf, $o) -ne $exp) { $bad++; continue }
+        [Array]::Copy([BitConverter]::GetBytes([uint16]$nw), 0, $buf, $o, 2)
+    }
+    if ($bad -gt 0) { Write-Warn "$bad of $count language edits did not match. boblang.dll left alone."; return }
+    $out = ($p[32..47] | ForEach-Object { $_.ToString('x2') }) -join ''
+    if ((Get-Md5 $buf) -ne $out) { Write-Warn 'Language rescale checksum mismatch. boblang.dll left alone.'; return }
+    [System.IO.File]::WriteAllBytes($langPath, $buf)
+    Write-OK "Briefing and training pages rescaled to match ($count edits, verified)."
+    # The Dunkirk pack adds the "Dunkerque" name to this DLL; patching from
+    # stock drops it, so put it back when the pack is installed.
+    try {
+        . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+        if ((Get-DunkirkPackState $GameDir) -ne 'none' -and -not (Test-DunkerqueName $GameDir)) {
+            if (Add-DunkerqueName $GameDir) { Write-OK 'Re-added the Dunkerque name.' }
+        }
+    } catch { }
+    $script:LangDone = $true
 }
 
 if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
@@ -221,6 +259,17 @@ if ($Scale -eq 'original') {
         if ($m) { [Array]::Copy($gv0, 0, $rbuf, $i, $gv0.Length); break }
     }
     [System.IO.File]::WriteAllBytes($BobPath, $rbuf)
+    # the language DLL goes back to stock with it, Dunkerque name and all
+    if ((Test-Path $langOrig) -and (Test-Path $langPath)) {
+        [System.IO.File]::WriteAllBytes($langPath, [System.IO.File]::ReadAllBytes($langOrig))
+        Write-OK 'Briefing and training pages restored to their original size.'
+        try {
+            . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+            if ((Get-DunkirkPackState $GameDir) -ne 'none' -and -not (Test-DunkerqueName $GameDir)) {
+                if (Add-DunkerqueName $GameDir) { Write-OK 'Re-added the Dunkerque name.' }
+            }
+        } catch { }
+    }
     Write-Host ''
     Write-OK 'Restored the original menu size. The Windows 10/11 crash fix was kept.'
     Write-Info 'Bob.exe.unscaled has been left in place so a scale can be reapplied.'
@@ -324,6 +373,8 @@ for ($i = 0; $i -lt ($buf.Length - $dbg.Length); $i++) {
 }
 
 [System.IO.File]::WriteAllBytes($BobPath, $buf)
+
+Apply-LangScale $(if ($LangScale) { $LangScale } else { $Scale })
 
 $s = $SCALES[$Scale]
 Write-Host ''
