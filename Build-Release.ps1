@@ -48,6 +48,7 @@ $excludeFiles = @(
     'DESIGN.md'                     # design notes, not user documentation
     'SQUADRONROOM-PLAN.md'          # the living-squadrons plan, not user documentation
     'BOB2_UITest.bat'               # menu-rescale prototype, developer only
+    '.gitignore'                    # means nothing to a player
 )
 $excludeDirs = @(
     '.git'                          # -Force picks it up; 14 MB of history shipped by accident up to v1.7.2
@@ -56,6 +57,8 @@ $excludeDirs = @(
     '_AxisProfiles'                 # somebody's joystick calibration
     '_ArtBackup'
     'work'
+    'dev'                           # roster tools and the Room's smoke test: developer only
+                                    # (tools\ DOES ship - that is where PresentMon goes)
     'docs'                          # showcase screenshots for the GitHub page: 17 MB, nothing in the app reads them (v1.7.8 zip was 25.7 MB with them, 6.8 MB before)
 )
 if (-not $IncludeDxvk) { $excludeDirs += 'dxvk' }

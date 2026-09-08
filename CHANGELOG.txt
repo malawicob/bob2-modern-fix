@@ -15,6 +15,84 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.8.0  (2026-09-08)
+--------------------
+  THE SQUADRON ROOM
+
+  - NEW: the sector map is redrawn. Forty-one squadrons could never work
+    as forty-one circles: ten fields in the London approaches held
+    twenty-one of them. There is now ONE PLAQUE PER AIRFIELD carrying its
+    squadrons as numbered tiles, which takes the day's forty-one objects
+    down to twenty-one. Fields within 22 pixels of each other share a
+    plaque, because Croydon, Kenley and Biggin Hill are not three
+    drawable points at that scale. A plaque sits beside its own field
+    where there is room and docks to a rail down the North Sea or along
+    the Channel where there is not, with a straight leader back to the
+    dot. Each rail is ordered by its anchors, so no two leaders cross.
+    The sheet no longer prints the names of the twenty-one fields packed
+    into the south-east; their plaque carries the name instead.
+  - NEW: pointing at a squadron raises its card - the aeroplane it flew,
+    its station and sector, what the order of battle made of it, and the
+    three highest scorers on its strength that morning. The rest of the
+    layer drops back while the card is up. It used to print
+    "System.Collections.Hashtable".
+  - NEW: the postings board uses the same layer, so the board you choose
+    a squadron from is the board you will fly from. Clicking a number
+    selects it. Hand-placed ring anchors are gone: the layout is computed.
+  - NEW: you may come to the squadron as a SERGEANT PILOT or with a
+    commission as a PILOT OFFICER. It decides which cross you are
+    decorated with, as the RAF actually did.
+  - NEW: the Victoria Cross, a Bar to the DSO, and the decorations of an
+    allied government - the Virtuti Militari and the Cross of Valour on
+    302 and 303, the Czechoslovak War Cross on 310 and 312, worn after
+    every British award as they were. The VC is the one award no score
+    can earn: it is read out of the Log Book, three or more claims in a
+    single sortie from an aeroplane you did not bring back.
+  - NEW: the squadron code, your letter and the serial can be dragged
+    about the aeroplane and sized with the wheel, remembered per mark of
+    aircraft so a Spitfire and a Hurricane keep their own.
+  - NEW: after your first operation the Room asks which save is this
+    career's campaign, when there is more than one to choose between,
+    and remembers the answer.
+  - FIXED: a new career opened showing the previous pilot's war. The
+    counters knew about the baseline; the sortie table and the claims
+    line did not, so a man posted this morning was shown four sorties and
+    four Ju 87s he had never seen.
+  - FIXED: Polish and Czech names came out as mojibake. Every JSON file
+    is read as UTF-8 now - PowerShell 5.1 reads a file with no byte order
+    mark as ANSI - and the roster builder no longer abbreviates forenames
+    with a class that stops dead at a diacritic, which had made Frantisek
+    "F.e." and Vaclav "V.c.". 45 names repaired.
+  - FIXED: the serial on the aircraft profile was drawn at two thirds the
+    height of the code letters and ran onto the tail. The RAF painted it
+    about eight inches high against codes of twenty-four to thirty.
+  - FIXED: selecting a squadron and pressing REPORT TO THIS SQUADRON did
+    nothing. Any pointer movement over 3px counted as dragging the ring
+    rather than clicking it, so nothing was ever selected.
+  - CHANGED: the screen's action and its way back live in the header,
+    which does not scroll. PLAY and START A NEW CAREER are hidden while a
+    man is still choosing.
+  - CHANGED: the DFM's ribbon is redrawn at half the DFC's stripe pitch.
+    Both are violet and white diagonals and they were indistinguishable;
+    the real pair differ by the width of the stripe.
+
+  THE LAUNCHER AND THE GAME
+
+  - FIXED: "Windows had put a compatibility flag back on Bob.exe" on
+    every single launch, with the menus still small. It was removing
+    nothing. The Program Compatibility Assistant appends a NUL and its
+    own binary blob INSIDE the layer string, so the last token was not
+    equal to HIGHDPIAWARE and the filter walked past it while the match
+    test still found the word. The value is truncated at the NUL now, the
+    Assistant's standing decision in its Store is cleared - that is what
+    put the flag back after every run - and DPIUNAWARE is stated outright
+    rather than leaving the setting absent.
+  - NEW: ReShade can be switched OFF again, not only removed. There was
+    an install step and a remove step and nothing in between, so turning
+    the shaders off meant throwing away the presets with them. Off
+    remains the default; nothing installs or enables it on its own.
+  - CHANGED: the Squadron Room row in the launcher carries the roundel.
+
 v1.7.8  (2026-09-07)
 --------------------
   - FIXED: black bars top and bottom in flight (also seen as the 3D view
