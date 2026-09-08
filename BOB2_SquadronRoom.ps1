@@ -45,6 +45,7 @@ $FlightOpen   = Join-Path $StateDir 'flight.open'
 # every station beyond them had to be fitted to those.
 $MapStations = @{}
 $MapSectors  = @{}
+$MapUnnamed  = @{}
 $MapProj = $null
 $MapProjPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.json'
 if (Test-Path $MapProjPath) {
@@ -52,6 +53,11 @@ if (Test-Path $MapProjPath) {
         $MapProj = Get-Content $MapProjPath -Raw | ConvertFrom-Json
         foreach ($pp in $MapProj.stations.PSObject.Properties) {
             $MapStations[$pp.Name] = @([double]$pp.Value[0], [double]$pp.Value[1])
+        }
+        # The fields whose names the sheet does not print, because they are
+        # packed too tightly to carry them. Their plaque says who they are.
+        if ($MapProj.PSObject.Properties.Name -contains 'unnamed') {
+            foreach ($nm in @($MapProj.unnamed)) { $MapUnnamed["$nm"] = $true; $MapUnnamed['RAF ' + $nm] = $true }
         }
         # which sector each field belonged to, and what it was in it
         if ($MapProj.PSObject.Properties.Name -contains 'sectors') {
@@ -72,7 +78,7 @@ function Get-SectorText {
     $letter = "$($sec.letter)"; $station = "$($sec.station)"; $role = "$($sec.role)"
     $t = ''
     if ($role -eq 'sector station') {
-        $t = if ($letter) { "$letter Sector station" } else { 'sector station' }
+        $t = if ($letter) { "Sector station for $letter Sector" } else { 'sector station' }
     }
     elseif ($station) {
         $whose = if ($letter) { "$letter Sector" } else { "$station's sector" }
@@ -2310,121 +2316,470 @@ function Set-MapReadout {
     $script:MapWhere.Text = "$($Info.Where)"
     $script:MapNote.Text  = "$($Info.Note)"
 }
-function New-CalloutLayout {
-    param([double]$W, [double]$H, [double]$Cell = 30.0)
-    [pscustomobject]@{
-        Cell = $Cell
-        Cols = [int][math]::Ceiling($W / $Cell)
-        Rows = [int][math]::Ceiling($H / $Cell)
-        Used = @{}
-        W = $W; H = $H
-    }
+# =====================================================================
+#  The squadron layer on the sector map
+#
+#  Forty-one squadrons will not go on as forty-one circles. Ten fields in
+#  the London approaches hold twenty-one of them, and nothing readable
+#  packs into that square. So the layer draws ONE PLAQUE PER AIRFIELD
+#  carrying its squadrons as numbered tiles, bundles fields that sit on
+#  top of one another at this scale, and docks the plaque to a margin
+#  rail where the field has no room to hold it. Leaders are straight:
+#  an elbow reads as a wiring diagram and costs twice the ink for
+#  nothing. The sheet itself no longer prints the names of the packed
+#  fields, so their plaque carries the name instead.
+# =====================================================================
+$PlaqueTileW = 29.0     # 28px tile plus its hairline
+$PlaqueH     = 24.0
+$PlaqueNameH = 13.0
+$PlaqueBundle = 22.0    # dots closer than this are one drawable anchor
+
+function Format-FieldName {
+    param([string]$Base)
+    $n = "$Base" -replace '^RAF ', ''
+    $sec = $MapSectors[$Base]
+    if ($sec -and "$($sec.role)" -eq 'sector station' -and "$($sec.letter)") { $n = "$n ($($sec.letter))" }
+    $n
 }
-function Get-CalloutSlot {
-    param($Layout, [double]$X, [double]$Y, [double]$MinAway = 26.0)
-    $c = $Layout.Cell
-    $cx = [int][math]::Round(($X / $c)); $cy = [int][math]::Round(($Y / $c))
-    for ($r = 1; $r -lt 14; $r++) {
-        $best = $null; $bestD = [double]::MaxValue
-        for ($dy = -$r; $dy -le $r; $dy++) {
-            for ($dx = -$r; $dx -le $r; $dx++) {
-                if ([math]::Max([math]::Abs($dx), [math]::Abs($dy)) -ne $r) { continue }
-                $gx = $cx + $dx; $gy = $cy + $dy
-                if ($gx -lt 0 -or $gy -lt 0 -or $gx -ge $Layout.Cols -or $gy -ge $Layout.Rows) { continue }
-                $key = "$gx,$gy"
-                if ($Layout.Used.ContainsKey($key)) { continue }
-                $px2 = ($gx + 0.5) * $c; $py2 = ($gy + 0.5) * $c
-                $d = [math]::Sqrt(([math]::Pow($px2 - $X, 2)) + ([math]::Pow($py2 - $Y, 2)))
-                if ($d -lt $MinAway) { continue }
-                # to the left by preference: the map prints each field's
-                # name to the right of it
-                $score = $d + $(if ($px2 -gt $X) { 26.0 } else { 0.0 })
-                if ($score -lt $bestD) { $bestD = $score; $best = @{ K = $key; X = $px2; Y = $py2 } }
-            }
+function Measure-PlaqueName {
+    param([string]$Text)
+    # 10px condensed. Near enough for collision work and it costs nothing.
+    [math]::Max(30.0, $Text.Length * 5.4 + 4.0)
+}
+function Set-PlaqueSize {
+    param($G)
+    $gw = 0.0; $anyName = $false
+    foreach ($m in $G.Members) {
+        $m.OW = if ($m.Named) { [math]::Max($m.PW, $m.NW) } else { $m.PW }
+        if ($m.Named) { $anyName = $true }
+        if ($gw -gt 0) { $gw += 10.0 }
+        $gw += $m.OW
+    }
+    $G.W = $gw
+    $G.NameRow = $anyName
+    $G.H = $PlaqueH + $(if ($anyName) { $PlaqueNameH } else { 0.0 })
+}
+function Test-BoxClear {
+    param($Box, $Obstacles)
+    foreach ($t in $Obstacles) {
+        if (-not ($Box[2] -lt $t[0] -or $Box[0] -gt $t[2] -or $Box[3] -lt $t[1] -or $Box[1] -gt $t[3])) { return $false }
+    }
+    $true
+}
+
+# What the pointer gets when it finds a squadron: not a line of text but
+# the squadron's own card, with its aeroplane, where it stood that day,
+# what Fighter Command thought of it, and the men on its strength.
+function New-SquadronTip {
+    param($Card)
+    # WPF's own tooltip chrome is a pale bordered box, which would frame
+    # the card in daylight. Take it off and let the card be the tooltip.
+    $tt = New-Object Windows.Controls.ToolTip
+    $tt.Content = $Card
+    $tt.Background = B '#00000000'
+    $tt.BorderThickness = '0'
+    $tt.Padding = '0'
+    $tt.HasDropShadow = $false
+    $tt.Placement = 'Right'
+    $tt.HorizontalOffset = 10
+    $tt
+}
+function New-SquadronCard {
+    param([int]$Num, [string]$Type, [string]$Base, [bool]$Mine, $Date)
+    $card = New-Object Windows.Controls.Border
+    $card.Background = B '#F20B141B'; $card.BorderBrush = B $(if ($Mine) { '#FFE28A' } else { '#2C3A52' })
+    $card.BorderThickness = '1'; $card.CornerRadius = '3'; $card.Padding = '0'
+    $card.MaxWidth = 430
+    $col = New-Object Windows.Controls.StackPanel
+
+    # the head: the aeroplane it flew, and who it is
+    $head = New-Object Windows.Controls.Border
+    $head.Background = B '#14202B'; $head.Padding = '16,12,16,11'
+    $hrow = New-Object Windows.Controls.StackPanel; $hrow.Orientation = 'Horizontal'
+    $silPath = Join-Path (Join-Path $ModDir 'aircraft') $(if ("$Type" -match 'Spitfire') { 'spitfire.png' } else { 'hurricane.png' })
+    $sil = Load-Image -Path $silPath -DecodeWidth 320
+    if ($sil) {
+        $im = New-Object Windows.Controls.Image
+        $im.Source = $sil; $im.Width = 96; $im.Stretch = 'Uniform'
+        $im.Opacity = 0.85; $im.Margin = '0,0,14,0'; $im.VerticalAlignment = 'Center'
+        [void]$hrow.Children.Add($im)
+    }
+    $hc = New-Object Windows.Controls.StackPanel; $hc.VerticalAlignment = 'Center'
+    $ttl = New-TB -Text "No. $Num Squadron" -Family $SerifFam -Size 19 -Colour $(if ($Mine) { '#FFE28A' } else { '#E9E3D4' })
+    [void]$hc.Children.Add($ttl)
+    $sub = "$Type"
+    if ($SquadronCodes.ContainsKey([int]$Num)) { $sub += "   $([char]0x2022)   code $($SquadronCodes[[int]$Num])" }
+    [void]$hc.Children.Add((New-TB -Text $sub -Family $CondFam -Size 12.5 -Colour '#8FBEDA'))
+    [void]$hrow.Children.Add($hc)
+    $head.Child = $hrow
+    [void]$col.Children.Add($head)
+
+    $body = New-Object Windows.Controls.StackPanel; $body.Margin = '16,12,16,14'
+
+    # where it stood
+    $where = "$Base"
+    $g = Get-GroupForBase $Base
+    if ($g) { $where += "   $([char]0x2022)   No. $g Group" }
+    [void]$body.Children.Add((New-TB -Text $where -Family $CondFam -Size 13 -Colour '#C8D4DC'))
+    $secTxt = Get-SectorText $Base
+    if ($secTxt) {
+        $st = New-TB -Text $secTxt -Family 'Segoe UI' -Size 11.5 -Colour '#6F828C' -Wrap
+        $st.Margin = '0,2,0,0'; [void]$body.Children.Add($st)
+    }
+
+    # what the order of battle thought of it
+    $oob = Get-Oob -Sqn $Num
+    if ($oob) {
+        $cond = "$($oob.skill) squadron, $("$($oob.fatigue)".ToLower()) condition"
+        $ct = New-TB -Text $cond -Family $CondFam -Size 12 -Colour '#8FB56A'
+        $ct.Margin = '0,8,0,0'; [void]$body.Children.Add($ct)
+        if ("$($oob.notes)") {
+            $nt = New-TB -Text "$($oob.notes)" -Family 'Segoe UI' -Size 11.5 -Colour '#6F828C' -Wrap
+            $nt.Margin = '0,3,0,0'; $nt.MaxWidth = 396; [void]$body.Children.Add($nt)
         }
-        if ($best) { $Layout.Used[$best.K] = $true; return $best }
     }
-    $Layout.Used["$cx,$cy"] = $true
-    @{ K = "$cx,$cy"; X = $X; Y = $Y }
+
+    # and the men on its strength this morning
+    $men = @(Get-Historical -Sqn $Num | Where-Object { $_.historical -and (Test-OnStrength $_ $Date) })
+    if ($men.Count) {
+        $rule = New-Object Windows.Shapes.Rectangle
+        $rule.Height = 1; $rule.Fill = B '#22303C'; $rule.Margin = '0,12,0,10'
+        [void]$body.Children.Add($rule)
+        $hdr = New-TB -Text "ON STRENGTH  $([char]0x2022)  $($men.Count) PILOTS" -Family $CondFam -Size 10.5 -Colour '#C8973F' -Bold
+        [void]$body.Children.Add($hdr)
+        $best = @($men | Sort-Object @{ e = { [int](Accrue-Victories $_ $Date) }; Descending = $true } | Select-Object -First 3)
+        foreach ($m in $best) {
+            $v = [int](Accrue-Victories $m $Date)
+            $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,5,0,0'
+            $nm = New-TB -Text "$($m.pilot)" -Family 'Segoe UI' -Size 12 -Colour '#C8D4DC'
+            $nm.Width = 210; [void]$row.Children.Add($nm)
+            $rk = New-TB -Text (Short-Rank "$($m.rank)") -Family $CondFam -Size 11.5 -Colour '#6F828C'
+            $rk.Width = 62; [void]$row.Children.Add($rk)
+            if ($v -gt 0) {
+                $vt = New-TB -Text "$v victor$(if ($v -eq 1) { 'y' } else { 'ies' })" -Family $CondFam -Size 11.5 -Colour '#F5A83C'
+                [void]$row.Children.Add($vt)
+            }
+            [void]$body.Children.Add($row)
+        }
+    }
+    [void]$col.Children.Add($body)
+    $card.Child = $col
+    $card
 }
-# dot, elbow, circle and number - one squadron, four shapes that light up
-# together when the pointer finds any of them
-function Add-SquadronCallout {
-    param($Canvas, [double]$SX, [double]$SY, [double]$TX, [double]$TY,
-          [string]$Colour, [string]$Dim, [string]$Number, [string]$Info,
-          [double]$R = 13.0, [switch]$IsPlayer)
+function Short-Rank {
+    param([string]$R)
+    switch -Regex ("$R") {
+        'Squadron Leader'   { 'S/Ldr' ; break }
+        'Flight Lieutenant' { 'F/Lt'  ; break }
+        'Flying Officer'    { 'F/O'   ; break }
+        'Pilot Officer'     { 'P/O'   ; break }
+        'Sergeant'          { 'Sgt'   ; break }
+        'Wing Commander'    { 'W/Cdr' ; break }
+        default             { "$R" }
+    }
+}
 
-    $stroke = B $Colour
-    $dot = New-Object Windows.Shapes.Ellipse
-    $dot.Width = 7; $dot.Height = 7; $dot.Fill = $stroke; $dot.StrokeThickness = 0
-    [Windows.Controls.Canvas]::SetLeft($dot, $SX - 3.5); [Windows.Controls.Canvas]::SetTop($dot, $SY - 3.5)
+# Every squadron on the day's sheet, laid out and drawn.
+function Add-SquadronPlaques {
+    param($Canvas, $Fields, [double]$W, [double]$H, [int]$Mine, $Date)
 
-    # an elbow, as a draughtsman would draw it: out, across, in
-    $line = New-Object Windows.Shapes.Polyline
-    $line.Stroke = $stroke; $line.StrokeThickness = 1.2
-    $line.StrokeLineJoin = 'Round'
-    $pts = New-Object Windows.Media.PointCollection
-    $side = if ($TX -lt $SX) { -1.0 } else { 1.0 }
-    $edge = $TX - $side * $R
-    $mid = $SX + ($edge - $SX) * 0.55
-    [void]$pts.Add((New-Object Windows.Point($SX, $SY)))
-    [void]$pts.Add((New-Object Windows.Point($mid, $SY)))
-    [void]$pts.Add((New-Object Windows.Point($mid, $TY)))
-    [void]$pts.Add((New-Object Windows.Point($edge, $TY)))
-    $line.Points = $pts
+    # ---- 1. bundle the fields that are one anchor at this scale --------
+    $groups = @()
+    foreach ($f in $Fields) {
+        $into = $null
+        foreach ($g in $groups) {
+            foreach ($m in $g.Members) {
+                if ([math]::Sqrt([math]::Pow($m.X - $f.X, 2) + [math]::Pow($m.Y - $f.Y, 2)) -le $PlaqueBundle) { $into = $g; break }
+            }
+            if ($into) { break }
+        }
+        if ($into) { $into.Members = @($into.Members) + @($f) }
+        else { $groups += ,@{ Members = @($f) } }
+    }
 
-    $ring = New-Object Windows.Shapes.Ellipse
-    $ring.Width = $R * 2; $ring.Height = $R * 2
-    $ring.Stroke = $stroke; $ring.StrokeThickness = $(if ($IsPlayer) { 2.6 } else { 1.6 })
-    $ring.Fill = B '#E60B141B'; $ring.Cursor = 'Hand'
-    [Windows.Controls.Canvas]::SetLeft($ring, $TX - $R); [Windows.Controls.Canvas]::SetTop($ring, $TY - $R)
+    # ---- 2. measure each one ------------------------------------------
+    # A plaque beside its own field needs no name: the sheet prints one,
+    # unless the field is in the packed quadrant where it does not. A
+    # plaque out on a rail always needs one, because nothing else out
+    # there says which field it belongs to. So measuring runs twice, once
+    # before placement and again for whatever ends up docked.
+    foreach ($g in $groups) {
+        $g.Members = @($g.Members | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
+        foreach ($m in $g.Members) {
+            $m.PW = $PlaqueTileW * $m.Sqns.Count + 1.0
+            $m.Label = Format-FieldName "$($m.Base)"
+            $m.NW = Measure-PlaqueName $m.Label
+            $m.Named = [bool]$MapUnnamed["$($m.Base)"]
+        }
+        $g.AX = [double]$g.Members[0].X; $g.AY = [double]$g.Members[0].Y
+        $g.Docked = $true
+        Set-PlaqueSize $g
+    }
 
-    $txt = New-TB -Text $Number -Family $CondFam -Size $(if ($Number.Length -ge 3) { 10.5 } else { 11.5 }) -Colour $Dim -Bold
-    $txt.IsHitTestVisible = $false; $txt.Width = $R * 2; $txt.TextAlignment = 'Center'
-    [Windows.Controls.Canvas]::SetLeft($txt, $TX - $R); [Windows.Controls.Canvas]::SetTop($txt, $TY - 8)
+    # ---- 3. what the placement has to keep clear of --------------------
+    $obs = @()
+    foreach ($pp in $MapStations.GetEnumerator()) {
+        $nm = "$($pp.Key)"
+        if ($nm -notmatch '^RAF ') { continue }
+        $fx = [double]$pp.Value[0] * $W; $fy = [double]$pp.Value[1] * $H
+        if ($fx -lt 0 -or $fx -gt $W -or $fy -lt 0 -or $fy -gt $H) { continue }
+        $obs += ,@(($fx - 11.0), ($fy - 11.0), ($fx + 11.0), ($fy + 11.0))
+        # where the sheet still prints the field's name, that box is taken
+        if (-not $MapUnnamed[$nm]) { $obs += ,@(($fx - 4.0), ($fy - 17.0), ($fx + 106.0), ($fy + 17.0)) }
+    }
 
-    $grp = @{ Dot = $dot; Line = $line; Ring = $ring; Text = $txt
-              Colour = $Colour; Dim = $Dim; Info = $Info; Lit = $false }
-    $ring.Tag = $grp
-    $ring.ToolTip = $Info
-    $ring.Add_MouseEnter({
-        param($sender, $e)
-        $t = $sender.Tag
-        $hot = B '#FFE28A'
-        $t.Ring.Stroke = $hot; $t.Line.Stroke = $hot; $t.Dot.Fill = $hot
-        $t.Ring.StrokeThickness = 3.0; $t.Line.StrokeThickness = 2.0
-        $t.Text.Foreground = $hot
-        # the number must rise WITH its circle: raising the circle alone
-        # put its fill over the number and the squadron went blank
-        [Windows.Controls.Panel]::SetZIndex($t.Line, 88)
-        [Windows.Controls.Panel]::SetZIndex($t.Dot, 89)
-        [Windows.Controls.Panel]::SetZIndex($t.Ring, 90)
-        [Windows.Controls.Panel]::SetZIndex($t.Text, 91)
-        Set-MapReadout $t.Info
-    })
-    $ring.Add_MouseLeave({
-        param($sender, $e)
-        $t = $sender.Tag
-        $c = B $t.Colour
-        $t.Ring.Stroke = $c; $t.Line.Stroke = $c; $t.Dot.Fill = $c
-        $t.Ring.StrokeThickness = 1.6; $t.Line.StrokeThickness = 1.2
-        $t.Text.Foreground = B $t.Dim
-        [Windows.Controls.Panel]::SetZIndex($t.Line, 5)
-        [Windows.Controls.Panel]::SetZIndex($t.Dot, 8)
-        [Windows.Controls.Panel]::SetZIndex($t.Ring, 10)
-        [Windows.Controls.Panel]::SetZIndex($t.Text, 11)
-        Set-MapReadout $null
-    })
+    # The margins belong to the rails. Without this a plaque placed beside
+    # a field in the south-east sat exactly where a docked one was about
+    # to land, and the two overlapped.
+    $railW = 0.0
+    foreach ($g in $groups) { if ($g.W -gt $railW) { $railW = [math]::Max($railW, $g.W) } }
+    $railW = [math]::Min($railW + 24.0, 0.24 * $W)
+    $obs += ,@(($W - $railW), 0.0, $W, $H)
+    $obs += ,@(0.0, ($H - 52.0), $W, $H)
 
-    [void]$Canvas.Children.Add($line)
-    [void]$Canvas.Children.Add($dot)
-    [void]$Canvas.Children.Add($ring)
-    [void]$Canvas.Children.Add($txt)
-    [Windows.Controls.Panel]::SetZIndex($line, 5)
-    [Windows.Controls.Panel]::SetZIndex($dot, 8)
-    [Windows.Controls.Panel]::SetZIndex($ring, 10)
-    [Windows.Controls.Panel]::SetZIndex($txt, 11)
-    $grp
+    # ---- 4. near the field where there is room -------------------------
+    # Isolated fields claim their slot first, so the crowded ones fall
+    # through to the rails, which is where they were going anyway.
+    foreach ($g in $groups) {
+        $n = 0
+        foreach ($h2 in $groups) {
+            if ($h2 -eq $g) { continue }
+            if ([math]::Sqrt([math]::Pow($h2.AX - $g.AX, 2) + [math]::Pow($h2.AY - $g.AY, 2)) -le 120.0) { $n++ }
+        }
+        $g.Dens = $n
+    }
+    foreach ($g in @($groups | Sort-Object @{ e = { $_.Dens } }, @{ e = { $_.AX } })) {
+        $gw = $g.W; $gh = $g.H
+        # PowerShell's comma binds tighter than its arithmetic, so every
+        # element of these tables has to be parenthesised or the list comes
+        # out as one long subtraction.
+        $west = @(
+            ,@(($g.AX - 12.0 - $gw), ($g.AY - $gh / 2.0))
+            ,@(($g.AX - 10.0 - $gw), ($g.AY + 20.0 - $gh / 2.0))
+            ,@(($g.AX - 10.0 - $gw), ($g.AY - 20.0 - $gh / 2.0))
+            ,@(($g.AX - $gw / 2.0), ($g.AY + 16.0))
+            ,@(($g.AX - $gw / 2.0), ($g.AY - 16.0 - $gh))
+            ,@(($g.AX + 102.0), ($g.AY - $gh / 2.0))
+        )
+        # near the western edge the map's own names run east, so go south
+        if ($g.AX -lt 0.35 * $W) {
+            $west = @($west[3], $west[1], $west[4], $west[2], $west[0], $west[5])
+        }
+        foreach ($c in $west) {
+            $b = @($c[0], $c[1], ($c[0] + $gw), ($c[1] + $gh))
+            if ($b[0] -lt 16 -or $b[1] -lt 16 -or $b[2] -gt $W - 16 -or $b[3] -gt $H - 16) { continue }
+            if (-not (Test-BoxClear $b $obs)) { continue }
+            $g.BX = $c[0]; $g.BY = $c[1]; $g.Docked = $false
+            $obs += ,@(($b[0] - 12.0), ($b[1] - 12.0), ($b[2] + 12.0), ($b[3] + 12.0))
+            break
+        }
+    }
+
+    # ---- 5. the rest dock to the North Sea and the Channel -------------
+    $dock = @($groups | Where-Object { $_.Docked })
+    if ($dock.Count) {
+        foreach ($g in $dock) {
+            foreach ($m in $g.Members) { $m.Named = $true }
+            Set-PlaqueSize $g
+        }
+        $mx = 0.0; $my = 0.0
+        foreach ($g in $dock) { $mx += $g.AX; $my += $g.AY }
+        $mx = $mx / $dock.Count; $my = $my / $dock.Count
+        foreach ($g in $dock) {
+            # the x clause sends the rightmost low anchors east rather than
+            # dragging them all the way across the Channel
+            $g.Rail = if (($g.AY -le $my + 10.0) -or ($g.AX -ge $mx + 55.0)) { 'E' } else { 'S' }
+        }
+        # Ordering each rail by its anchor is the whole crossing defence:
+        # with the slots monotone in the same axis, no two leaders can
+        # cross, so there is nothing left to untangle afterwards.
+        $railE = @($dock | Where-Object { $_.Rail -eq 'E' } | Sort-Object @{ e = { $_.AY } })
+        $railS = @($dock | Where-Object { $_.Rail -eq 'S' } | Sort-Object @{ e = { $_.AX } })
+        $eW = 0.0; foreach ($g in $railE) { if ($g.W -gt $eW) { $eW = $g.W } }
+        $eX = $W - 24.0 - $eW
+        $sY = $H - 18.0
+        foreach ($g in $railS) { $sY = [math]::Min($sY, $H - 18.0 - $g.H) }
+
+        # slide each slot toward its anchor, then push the run apart
+        $p = @(); foreach ($g in $railE) { $p += ($g.AY - $g.H / 2.0) }
+        for ($pass = 0; $pass -lt 3; $pass++) {
+            for ($i = 1; $i -lt $railE.Count; $i++) {
+                $min = $p[$i - 1] + $railE[$i - 1].H + 10.0
+                if ($p[$i] -lt $min) { $p[$i] = $min }
+            }
+            for ($i = $railE.Count - 1; $i -ge 0; $i--) {
+                $max = if ($i -eq $railE.Count - 1) { $H - 20.0 - $railE[$i].H } else { $p[$i + 1] - $railE[$i].H - 10.0 }
+                if ($p[$i] -gt $max) { $p[$i] = $max }
+            }
+            if ($railE.Count -and $p[0] -lt 20.0) { $p[0] = 20.0 }
+        }
+        for ($i = 0; $i -lt $railE.Count; $i++) { $railE[$i].BX = $eX; $railE[$i].BY = $p[$i] }
+
+        $q = @(); foreach ($g in $railS) { $q += ($g.AX - $g.W / 2.0) }
+        for ($pass = 0; $pass -lt 3; $pass++) {
+            for ($i = 1; $i -lt $railS.Count; $i++) {
+                $min = $q[$i - 1] + $railS[$i - 1].W + 28.0
+                if ($q[$i] -lt $min) { $q[$i] = $min }
+            }
+            for ($i = $railS.Count - 1; $i -ge 0; $i--) {
+                $max = if ($i -eq $railS.Count - 1) { $W - 20.0 - $railS[$i].W } else { $q[$i + 1] - $railS[$i].W - 28.0 }
+                if ($q[$i] -gt $max) { $q[$i] = $max }
+            }
+            if ($railS.Count -and $q[0] -lt 20.0) { $q[0] = 20.0 }
+        }
+        for ($i = 0; $i -lt $railS.Count; $i++) { $railS[$i].BX = $q[$i]; $railS[$i].BY = $sY }
+
+        # a hairline behind each rail turns a row of blocks into a column
+        if ($railE.Count -gt 1) {
+            $r = New-Object Windows.Shapes.Line
+            $r.X1 = $eX - 10.0; $r.X2 = $eX - 10.0; $r.Y1 = $p[0]; $r.Y2 = $p[$railE.Count - 1] + $railE[$railE.Count - 1].H
+            $r.Stroke = B '#662C3A52'; $r.StrokeThickness = 1
+            [void]$Canvas.Children.Add($r); [Windows.Controls.Panel]::SetZIndex($r, 2)
+        }
+        if ($railS.Count -gt 1) {
+            $r = New-Object Windows.Shapes.Line
+            $r.Y1 = $sY - 9.0; $r.Y2 = $sY - 9.0; $r.X1 = $q[0]; $r.X2 = $q[$railS.Count - 1] + $railS[$railS.Count - 1].W
+            $r.Stroke = B '#662C3A52'; $r.StrokeThickness = 1
+            [void]$Canvas.Children.Add($r); [Windows.Controls.Panel]::SetZIndex($r, 2)
+        }
+    }
+
+    # ---- 6. draw ------------------------------------------------------
+    $script:MapAssemblies = @()
+    foreach ($g in $groups) {
+        $ox = [double]$g.BX
+        foreach ($m in $g.Members) {
+            $isMine = [bool](@($m.Sqns | Where-Object { [int]$_.Num -eq $Mine }).Count)
+            $mx2 = $ox + ($m.OW - $m.PW) / 2.0
+            $my2 = [double]$g.BY + $(if ($g.NameRow) { $PlaqueNameH } else { 0.0 })
+
+            # the field's name, where the sheet no longer prints it
+            $nameTb = $null
+            if ($m.Named) {
+                $nameTb = New-TB -Text $m.Label -Family $CondFam -Size 10.5 -Colour '#93A0B5'
+                $nameTb.IsHitTestVisible = $false
+                [Windows.Controls.Canvas]::SetLeft($nameTb, $ox); [Windows.Controls.Canvas]::SetTop($nameTb, [double]$g.BY - 1.0)
+                [void]$Canvas.Children.Add($nameTb); [Windows.Controls.Panel]::SetZIndex($nameTb, 12)
+            }
+
+            # the plaque, and its squadron tiles
+            $plaque = New-Object Windows.Controls.Border
+            $plaque.Background = B '#EB0E1626'
+            $plaque.BorderBrush = B $(if ($isMine) { '#FFE28A' } else { '#2C3A52' })
+            $plaque.BorderThickness = '1'; $plaque.CornerRadius = '3'
+            $plaque.Height = $PlaqueH; $plaque.Width = $m.PW
+            $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'
+            $plaque.Child = $tiles
+            [Windows.Controls.Canvas]::SetLeft($plaque, $mx2); [Windows.Controls.Canvas]::SetTop($plaque, $my2)
+            [void]$Canvas.Children.Add($plaque); [Windows.Controls.Panel]::SetZIndex($plaque, 10)
+
+            # the dot on the field, and one straight leader out to the plaque
+            $dot = New-Object Windows.Shapes.Ellipse
+            $dot.Width = 8; $dot.Height = 8; $dot.StrokeThickness = 0
+            $types = @($m.Sqns | ForEach-Object { if ("$($_.Type)" -match 'Spitfire') { 'S' } else { 'H' } } | Sort-Object -Unique)
+            $dotCol = if ($isMine) { '#FFE28A' } elseif ($types.Count -gt 1) { '#E8EDF5' } elseif ($types[0] -eq 'S') { '#5FD0E8' } else { '#F5A83C' }
+            $dot.Fill = B $dotCol
+            [Windows.Controls.Canvas]::SetLeft($dot, [double]$m.X - 4.0); [Windows.Controls.Canvas]::SetTop($dot, [double]$m.Y - 4.0)
+            [void]$Canvas.Children.Add($dot); [Windows.Controls.Panel]::SetZIndex($dot, 8)
+
+            $bx1 = $mx2; $by1 = $my2; $bx2 = $mx2 + $m.PW; $by2 = $my2 + $PlaqueH
+            $cx2 = ($bx1 + $bx2) / 2.0; $cy2 = ($by1 + $by2) / 2.0
+            $dx = $cx2 - [double]$m.X; $dy = $cy2 - [double]$m.Y
+            if ([math]::Abs($dy) -gt [math]::Abs($dx)) {
+                $ex = [math]::Max($bx1 + 8.0, [math]::Min($bx2 - 8.0, [double]$m.X))
+                $ey = if ($dy -gt 0) { $by1 } else { $by2 }
+            } else {
+                $ex = if ($dx -gt 0) { $bx1 } else { $bx2 }
+                $ey = [math]::Max($by1 + 6.0, [math]::Min($by2 - 6.0, [double]$m.Y))
+            }
+            $len = [math]::Sqrt($dx * $dx + $dy * $dy)
+            $sx2 = [double]$m.X; $sy2 = [double]$m.Y
+            if ($len -gt 8.0) { $sx2 += 6.0 * $dx / $len; $sy2 += 6.0 * $dy / $len }
+            $lead = New-Object Windows.Shapes.Line
+            $lead.X1 = $sx2; $lead.Y1 = $sy2; $lead.X2 = $ex; $lead.Y2 = $ey
+            $lead.Stroke = B '#7A6E7C93'; $lead.StrokeThickness = 1
+            [void]$Canvas.Children.Add($lead); [Windows.Controls.Panel]::SetZIndex($lead, 5)
+
+            $asm = @{ Plaque = $plaque; Lead = $lead; Dot = $dot; Name = $nameTb; DotCol = $dotCol; Mine = $isMine }
+            $script:MapAssemblies += ,$asm
+
+            $n = 0
+            foreach ($q2 in @($m.Sqns | Sort-Object { [int]$_.Num })) {
+                if ($n -gt 0) {
+                    $sep = New-Object Windows.Shapes.Rectangle
+                    $sep.Width = 1; $sep.Fill = B '#2C3A52'
+                    [void]$tiles.Children.Add($sep)
+                }
+                $n++
+                $isSpit = ("$($q2.Type)" -match 'Spitfire')
+                $mineTile = ([int]$q2.Num -eq $Mine)
+                $tcol = if ($mineTile) { '#FFC24A' } elseif ($isSpit) { '#8FBEDA' } else { '#E0952F' }
+                $tile = New-Object Windows.Controls.Border
+                $tile.Width = 28; $tile.Height = 22; $tile.Cursor = 'Hand'
+                $tile.Background = B '#00000000'
+                $tile.BorderBrush = B $tcol; $tile.BorderThickness = '0,0,0,3'
+                $tb = New-TB -Text "$($q2.Num)" -Family $CondFam -Size 11.5 -Colour $tcol -Bold
+                $tb.IsHitTestVisible = $false; $tb.TextAlignment = 'Center'
+                $tb.VerticalAlignment = 'Center'; $tb.HorizontalAlignment = 'Stretch'
+                $tile.Child = $tb
+                $tile.Tag = @{ Asm = $asm; Text = $tb; Colour = $tcol; Num = [int]$q2.Num
+                               Type = "$($q2.Type)"; Base = "$($m.Base)"; Mine = $mineTile; Date = $Date }
+                $tile.Add_MouseEnter({
+                    param($sender, $e)
+                    $t = $sender.Tag
+                    if (-not $sender.ToolTip) {
+                        $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date)
+                        [Windows.Controls.ToolTipService]::SetInitialShowDelay($sender, 90)
+                        [Windows.Controls.ToolTipService]::SetShowDuration($sender, 90000)
+                        [Windows.Controls.ToolTipService]::SetBetweenShowDelay($sender, 0)
+                    }
+                    $hot = B '#FFE28A'
+                    $sender.Background = B ('#30' + $t.Colour.Substring(1))
+                    $t.Text.Foreground = $hot
+                    $a = $t.Asm
+                    $a.Plaque.BorderBrush = B '#5A6B85'; $a.Plaque.Background = B '#0E1626'
+                    $a.Lead.Stroke = $hot; $a.Lead.StrokeThickness = 2
+                    $a.Dot.Fill = $hot; $a.Dot.Width = 12; $a.Dot.Height = 12
+                    [Windows.Controls.Canvas]::SetLeft($a.Dot, [Windows.Controls.Canvas]::GetLeft($a.Dot) - 2)
+                    [Windows.Controls.Canvas]::SetTop($a.Dot, [Windows.Controls.Canvas]::GetTop($a.Dot) - 2)
+                    foreach ($o in $script:MapAssemblies) {
+                        [Windows.Controls.Panel]::SetZIndex($o.Plaque, $(if ($o -eq $a) { 40 } else { 10 }))
+                        [Windows.Controls.Panel]::SetZIndex($o.Lead, $(if ($o -eq $a) { 38 } else { 5 }))
+                        [Windows.Controls.Panel]::SetZIndex($o.Dot, $(if ($o -eq $a) { 39 } else { 8 }))
+                        if ($o -eq $a -or $o.Mine) { continue }
+                        $o.Plaque.Opacity = 0.3; $o.Lead.Opacity = 0.3; $o.Dot.Opacity = 0.3
+                        if ($o.Name) { $o.Name.Opacity = 0.3 }
+                    }
+                    Set-MapReadout @{ Title = "No. $($t.Num) Squadron"
+                                      Where = "$($t.Base)   $([char]0x2022)   $($t.Type)"
+                                      Note  = 'Hold the pointer still for the squadron card.'
+                                      Mine  = $t.Mine }
+                })
+                $tile.Add_MouseLeave({
+                    param($sender, $e)
+                    $t = $sender.Tag
+                    $sender.Background = B '#00000000'
+                    $t.Text.Foreground = B $t.Colour
+                    $a = $t.Asm
+                    $a.Plaque.BorderBrush = B $(if ($a.Mine) { '#FFE28A' } else { '#2C3A52' })
+                    $a.Plaque.Background = B '#EB0E1626'
+                    $a.Lead.Stroke = B '#7A6E7C93'; $a.Lead.StrokeThickness = 1
+                    if ($a.Dot.Width -gt 8) {
+                        [Windows.Controls.Canvas]::SetLeft($a.Dot, [Windows.Controls.Canvas]::GetLeft($a.Dot) + 2)
+                        [Windows.Controls.Canvas]::SetTop($a.Dot, [Windows.Controls.Canvas]::GetTop($a.Dot) + 2)
+                    }
+                    $a.Dot.Fill = B $a.DotCol; $a.Dot.Width = 8; $a.Dot.Height = 8
+                    foreach ($o in $script:MapAssemblies) {
+                        $o.Plaque.Opacity = 1; $o.Lead.Opacity = 1; $o.Dot.Opacity = 1
+                        if ($o.Name) { $o.Name.Opacity = 1 }
+                    }
+                    Set-MapReadout $null
+                })
+                [void]$tiles.Children.Add($tile)
+            }
+            $ox += $m.OW + 10.0
+        }
+    }
 }
 
 function Show-Map {
@@ -2463,7 +2818,7 @@ function Show-Map {
                else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the western edge of this table, so your squadron is named below it. Every other squadron in the line is a dot on its own field with its number beside it, blue for Spitfires and amber for Hurricanes." }
     $secNow = Get-SectorText $base
     if ($secNow) { $leadTxt += "  Your station is the $secNow." }
-    $leadTxt += '  A ringed field is a sector station, the one holding the operations room that fought that sector.  Point at a number to light its squadron and read it out below.  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
+    $leadTxt += '  A ringed field is a sector station, the one holding the operations room that fought that sector.  Point at a squadron number for its card: the aeroplane, the station, what Fighter Command made of it, and the men on its strength that morning.  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
     $lead = New-TB -Text $leadTxt -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
     $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1180
     [void]$script:Stage.Children.Add($lead)
@@ -2501,35 +2856,19 @@ function Show-Map {
     [void]$grid.Children.Add($cv)
     $mapWrap.Child = $grid
 
-    # Every squadron as a callout: a dot on its field, a leader out to a
-    # numbered circle placed where there is room. Your own is gold and
-    # drawn last so it sits above the rest.
-    $layout = New-CalloutLayout -W $W -H $H
-    $ordered = @($others | Sort-Object @{ e = { [double]$_.St[1] } }, @{ e = { [double]$_.St[0] } })
-    foreach ($o in $ordered) {
-        $sx = [double]$o.St[0] * $W; $sy = [double]$o.St[1] * $H
-        $slot = Get-CalloutSlot -Layout $layout -X $sx -Y $sy
-        $isSpit = ("$($o.Type)" -match 'Spitfire')
-        $isMine = ($o.Num -eq $sqnum)
-        $col = if ($isMine) { '#FFE28A' } elseif ($isSpit) { '#5FD0E8' } else { '#F5A83C' }
-        $dim = if ($isMine) { '#FFE9A8' } elseif ($isSpit) { '#9FE0F0' } else { '#F8C87E' }
-        $oob = Get-Oob -Sqn $o.Num
-        $secTxt = Get-SectorText "$($o.Base)"
-        $where = "$($o.Base)   $([char]0x2022)   No. $(Get-GroupForBase $o.Base) Group"
-        if ($secTxt) { $where += "   $([char]0x2022)   $secTxt" }
-        $note = ''
-        if ($oob) {
-            $note = "$($oob.skill) squadron in $($oob.fatigue.ToLower()) condition."
-            if ($oob.notes) { $note += " $($oob.notes)" }
+    # One plaque per field, carrying the squadrons standing on it that
+    # morning. Where the field has no room the plaque docks to a margin
+    # rail and a straight leader runs back to the dot.
+    $byField = @{}
+    foreach ($o in $others) {
+        $k = "$($o.Base)"
+        if (-not $byField.ContainsKey($k)) {
+            $byField[$k] = @{ Base = $k; X = [double]$o.St[0] * $W; Y = [double]$o.St[1] * $H; Sqns = @() }
         }
-        $title = "No. $($o.Num) Squadron"
-        if ("$($o.Type)") { $title += "   $($o.Type)" }
-        if ($SquadronCodes.ContainsKey([int]$o.Num)) { $title += "   $($SquadronCodes[[int]$o.Num])" }
-        if ($isMine) { $title += '   YOUR SQUADRON' }
-        $info = @{ Title = $title; Where = $where; Note = $note; Mine = $isMine }
-        [void](Add-SquadronCallout -Canvas $cv -SX $sx -SY $sy -TX $slot.X -TY $slot.Y `
-               -Colour $col -Dim $dim -Number "$($o.Num)" -Info $info -IsPlayer:$isMine)
+        $byField[$k].Sqns = @($byField[$k].Sqns) + @($o)
     }
+    $fields = @($byField.Values | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
+    Add-SquadronPlaques -Canvas $cv -Fields $fields -W $W -H $H -Mine $sqnum -Date $script:CampaignDate
 
     # an invisible patch over every station, so hovering a field tells you
     # its name, its group and which squadrons are standing on it today
@@ -2871,6 +3210,18 @@ function Show-SquadronSelect {
         $qt.Label = $nl
         $qt.Pips = $pl2
         $ring.Tag = $qt
+        # the same card the sector map shows, so a man choosing his
+        # squadron sees what he is choosing
+        $ring.Add_MouseEnter({
+            param($sender,$e)
+            if ($sender.ToolTip) { return }
+            $t = $sender.Tag
+            $d = $null
+            foreach ($per in $Periods) { if ($per.Id -eq $script:SelPeriod) { try { $d = [datetime]$per.Key } catch { } } }
+            $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num ([int]$t.Num) -Type "$($t.Type)" -Base "$($t.Base)" -Mine $false -Date $d)
+            [Windows.Controls.ToolTipService]::SetInitialShowDelay($sender, 90)
+            [Windows.Controls.ToolTipService]::SetShowDuration($sender, 90000)
+        })
         $ring.Add_MouseLeftButtonDown({
             param($sender,$e)
             $t = $sender.Tag

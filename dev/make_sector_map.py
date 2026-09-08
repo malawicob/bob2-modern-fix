@@ -52,6 +52,18 @@ SEAS = [
     ('STRAIT OF DOVER', 50.85, 1.75),
 ]
 
+# The fields packed into the London approaches and the Sussex coast. Their
+# names are the single worst source of clutter on the sheet: a dozen 90px
+# boxes inside one 200px square, with the squadron plaques trying to find
+# room among them. The Room draws these names on the plaque instead, so the
+# sheet keeps only the dot. Every other field still carries its own name.
+SUPPRESS_NAMES = {
+    'Northolt', 'Croydon', 'Kenley', 'Biggin Hill', 'North Weald', 'Hornchurch',
+    'Debden', 'Duxford', 'Fowlmere', 'Rochford', 'Coltishall', 'Tangmere',
+    'Westhampnett', 'Castle Camps', 'Stapleford Tawney', 'Gravesend', 'Detling',
+    'Hawkinge', 'Lympne', 'Manston', 'Martlesham Heath',
+}
+
 # Fighter Command airfields named in the game's order of battle, plus the
 # handful of well-known ones that give the map its shape.
 AIRFIELDS = [
@@ -404,6 +416,7 @@ def main():
     missed = 0
     for name, la, lo in AIRFIELDS:
         if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
+        if name in SUPPRESS_NAMES: continue
         x, y = px(lo, la)
         sec = SECTORS.get(name)
         txt = name
@@ -463,6 +476,7 @@ def main():
         json.dump({'west': WEST, 'east': EAST, 'south': SOUTH, 'north': NORTH,
                    'width': W, 'height': H,
                    'note': 'x = (lon - west) / (east - west); y = (north - lat) / (north - south)',
+                   'unnamed': sorted(SUPPRESS_NAMES),
                    'stations': dict(sorted(stations.items())),
                    'sectors': dict(sorted(sectors_out.items()))},
                   f, indent=1)
