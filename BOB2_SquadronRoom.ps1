@@ -2294,6 +2294,22 @@ function Limit-MapPan {
 # Placement is a coarse grid. Each circle takes the nearest free cell to
 # its own field, so a lone squadron sits just beside its station and a
 # crowded one steps outward until it finds space.
+# What the pointer is over, set out as a card rather than one long line of
+# bullet points. Pass a hashtable of the parts; $null clears it.
+function Set-MapReadout {
+    param($Info)
+    if (-not $script:MapTitle) { return }
+    if (-not $Info) {
+        $script:MapTitle.Text = ' '
+        $script:MapWhere.Text = ' '
+        $script:MapNote.Text  = ' '
+        return
+    }
+    $script:MapTitle.Text = "$($Info.Title)"
+    $script:MapTitle.Foreground = B $(if ($Info.Mine) { '#FFE28A' } else { '#E9E3D4' })
+    $script:MapWhere.Text = "$($Info.Where)"
+    $script:MapNote.Text  = "$($Info.Note)"
+}
 function New-CalloutLayout {
     param([double]$W, [double]$H, [double]$Cell = 30.0)
     [pscustomobject]@{
@@ -2378,8 +2394,13 @@ function Add-SquadronCallout {
         $t.Ring.Stroke = $hot; $t.Line.Stroke = $hot; $t.Dot.Fill = $hot
         $t.Ring.StrokeThickness = 3.0; $t.Line.StrokeThickness = 2.0
         $t.Text.Foreground = $hot
+        # the number must rise WITH its circle: raising the circle alone
+        # put its fill over the number and the squadron went blank
+        [Windows.Controls.Panel]::SetZIndex($t.Line, 88)
+        [Windows.Controls.Panel]::SetZIndex($t.Dot, 89)
         [Windows.Controls.Panel]::SetZIndex($t.Ring, 90)
-        if ($script:MapInfo) { $script:MapInfo.Text = "$($t.Info)" }
+        [Windows.Controls.Panel]::SetZIndex($t.Text, 91)
+        Set-MapReadout $t.Info
     })
     $ring.Add_MouseLeave({
         param($sender, $e)
@@ -2388,8 +2409,11 @@ function Add-SquadronCallout {
         $t.Ring.Stroke = $c; $t.Line.Stroke = $c; $t.Dot.Fill = $c
         $t.Ring.StrokeThickness = 1.6; $t.Line.StrokeThickness = 1.2
         $t.Text.Foreground = B $t.Dim
+        [Windows.Controls.Panel]::SetZIndex($t.Line, 5)
+        [Windows.Controls.Panel]::SetZIndex($t.Dot, 8)
         [Windows.Controls.Panel]::SetZIndex($t.Ring, 10)
-        if ($script:MapInfo) { $script:MapInfo.Text = ' ' }
+        [Windows.Controls.Panel]::SetZIndex($t.Text, 11)
+        Set-MapReadout $null
     })
 
     [void]$Canvas.Children.Add($line)
@@ -2444,8 +2468,23 @@ function Show-Map {
     $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1180
     [void]$script:Stage.Children.Add($lead)
     # what the pointer is over, read out under the table
-    $script:MapInfo = New-TB -Text ' ' -Family $CondFam -Size 14 -Colour '#9FB0B8'
-    $script:MapInfo.Margin = '2,10,0,0'; $script:MapInfo.Height = 22
+    # a three-line card under the table: who, where, and what Fighter
+    # Command thought of them
+    $script:MapReadout = New-Object Windows.Controls.Border
+    $script:MapReadout.Background = Res 'Panel'; $script:MapReadout.BorderBrush = Res 'Rule'
+    $script:MapReadout.BorderThickness = '1'; $script:MapReadout.CornerRadius = '3'
+    $script:MapReadout.Padding = '16,10'; $script:MapReadout.Margin = '0,12,0,0'
+    $script:MapReadout.HorizontalAlignment = 'Left'; $script:MapReadout.MinWidth = 560
+    $rd = New-Object Windows.Controls.StackPanel
+    $script:MapTitle = New-TB -Text ' ' -Family $SerifFam -Size 17 -Colour '#E9E3D4'
+    $script:MapWhere = New-TB -Text ' ' -Family $CondFam -Size 13 -Colour '#9FB0B8'
+    $script:MapWhere.Margin = '0,3,0,0'
+    $script:MapNote  = New-TB -Text ' ' -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
+    $script:MapNote.Margin = '0,3,0,0'; $script:MapNote.MaxWidth = 780
+    [void]$rd.Children.Add($script:MapTitle)
+    [void]$rd.Children.Add($script:MapWhere)
+    [void]$rd.Children.Add($script:MapNote)
+    $script:MapReadout.Child = $rd
 
     $W = 1180.0; $H = [math]::Round($W * 1600.0 / 2560.0)
     $mapWrap = New-Object Windows.Controls.Border
@@ -2475,17 +2514,19 @@ function Show-Map {
         $col = if ($isMine) { '#FFE28A' } elseif ($isSpit) { '#5FD0E8' } else { '#F5A83C' }
         $dim = if ($isMine) { '#FFE9A8' } elseif ($isSpit) { '#9FE0F0' } else { '#F8C87E' }
         $oob = Get-Oob -Sqn $o.Num
-        $extra = ''
-        if ($oob) {
-            $extra = "  $([char]0x2022)  $($oob.skill), $($oob.fatigue) condition"
-            if ($oob.notes) { $extra += "  $([char]0x2022)  $($oob.notes)" }
-        }
-        $code = ''
-        if ($SquadronCodes.ContainsKey([int]$o.Num)) { $code = "  $([char]0x2022)  codes $($SquadronCodes[[int]$o.Num])-" }
         $secTxt = Get-SectorText "$($o.Base)"
-        $info = $(if ($isMine) { "No. $($o.Num) Squadron  $([char]0x2022)  YOUR SQUADRON" } else { "No. $($o.Num) Squadron" }) +
-                "  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)  $([char]0x2022)  No. $(Get-GroupForBase $o.Base) Group" +
-                $(if ($secTxt) { "  $([char]0x2022)  $secTxt" } else { '' }) + "$code$extra"
+        $where = "$($o.Base)   $([char]0x2022)   No. $(Get-GroupForBase $o.Base) Group"
+        if ($secTxt) { $where += "   $([char]0x2022)   $secTxt" }
+        $note = ''
+        if ($oob) {
+            $note = "$($oob.skill) squadron in $($oob.fatigue.ToLower()) condition."
+            if ($oob.notes) { $note += " $($oob.notes)" }
+        }
+        $title = "No. $($o.Num) Squadron"
+        if ("$($o.Type)") { $title += "   $($o.Type)" }
+        if ($SquadronCodes.ContainsKey([int]$o.Num)) { $title += "   $($SquadronCodes[[int]$o.Num])" }
+        if ($isMine) { $title += '   YOUR SQUADRON' }
+        $info = @{ Title = $title; Where = $where; Note = $note; Mine = $isMine }
         [void](Add-SquadronCallout -Canvas $cv -SX $sx -SY $sy -TX $slot.X -TY $slot.Y `
                -Colour $col -Dim $dim -Number "$($o.Num)" -Info $info -IsPlayer:$isMine)
     }
@@ -2508,17 +2549,17 @@ function Show-Map {
                elseif ($here.Count -eq 1) { "No. $($here[0]) Squadron" }
                else { 'Nos. ' + (($here | ForEach-Object { "$_" }) -join ', ') + ' Squadrons' }
         $secTxt = Get-SectorText $nm
-        $hit.Tag = "$nm  $([char]0x2022)  No. $(Get-GroupForBase $nm) Group" +
-                   $(if ($secTxt) { "  $([char]0x2022)  $secTxt" } else { '' }) +
-                   "  $([char]0x2022)  $who"
-        $hit.ToolTip = $hit.Tag
-        $hit.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo -and $script:MapInfo.Text.Trim() -eq '') { $script:MapInfo.Text = "$($sender.Tag)" } })
-        $hit.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
+        $hit.Tag = @{ Title = $nm
+                      Where = "No. $(Get-GroupForBase $nm) Group" + $(if ($secTxt) { "   $([char]0x2022)   $secTxt" } else { '' })
+                      Note  = $who; Mine = $false }
+        $hit.ToolTip = "$nm  $([char]0x2022)  $who"
+        $hit.Add_MouseEnter({ param($sender,$e) if ($script:MapTitle -and $script:MapTitle.Text.Trim() -eq '') { Set-MapReadout $sender.Tag } })
+        $hit.Add_MouseLeave({ param($sender,$e) Set-MapReadout $null })
         [void]$cv.Children.Insert(0, $hit)
     }
     Enable-MapZoom -Frame $mapWrap -Content $grid
     [void]$script:Stage.Children.Add($mapWrap)
-    [void]$script:Stage.Children.Add($script:MapInfo)
+    [void]$script:Stage.Children.Add($script:MapReadout)
 
     # Your own squadron, when its station is off the table
     if (-not $onTable) {
