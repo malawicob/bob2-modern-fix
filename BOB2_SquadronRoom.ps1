@@ -973,6 +973,33 @@ function Set-Header {
                   else { "ROYAL AIR FORCE  $([char]0x2022)  FIGHTER COMMAND" }
     }
 }
+# Where the code letters and the serial sit on the aeroplane. The spec
+# gives the researched position; anything nudged by hand is kept here,
+# and kept PER TYPE, because a Hurricane's fuselage is not a Spitfire's
+# and a letter that sits right on one lands on the roundel of the other.
+$AcPosPath = Join-Path $StateDir 'acpos.json'
+function Get-AcKey { param([string]$Type) if ("$Type" -match 'Hurricane') { 'Hurricane' } else { 'Spitfire' } }
+function Get-AcPos {
+    $t = @{}
+    if (Test-Path $AcPosPath) {
+        try {
+            $j = Get-Content $AcPosPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            foreach ($p in $j.PSObject.Properties) {
+                $x = [double]$p.Value.x; $y = [double]$p.Value.y
+                # a mark dragged off the picture could never be caught again
+                if ($x -ge -0.05 -and $x -le 1.05 -and $y -ge -0.05 -and $y -le 1.05) { $t[$p.Name] = @{ x = $x; y = $y } }
+            }
+        } catch { }
+    }
+    $t
+}
+function Save-AcPos {
+    param($Table)
+    try {
+        if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
+        ($Table | ConvertTo-Json -Depth 4) | Set-Content -Path $AcPosPath -Encoding UTF8
+    } catch { }
+}
 function New-Aircraft {
     param($Pilot)
     $ptype = 'Spitfire I'
@@ -995,25 +1022,82 @@ function New-Aircraft {
     $sq = ($codes -replace '-.*','')
     $ind = ''; if ($codes -match '-(.+)$') { $ind = $matches[1] }
 
-    $tSq = New-TB -Text $sq -Family $CodeFont -Size ([double]$spec.CodeSize) -Colour $CodeColour -Bold
-    [Windows.Controls.Canvas]::SetLeft($tSq, [double]$spec.SqX * $AcW)
-    [Windows.Controls.Canvas]::SetTop($tSq,  [double]$spec.SqY * $acH)
-    [void]$cv.Children.Add($tSq)
+    $script:AcPos = Get-AcPos
+    $acKey = Get-AcKey $ptype
 
-    $tInd = New-TB -Text $ind -Family $CodeFont -Size ([double]$spec.CodeSize) -Colour $CodeColour -Bold
-    [Windows.Controls.Canvas]::SetLeft($tInd, [double]$spec.IndX * $AcW)
-    [Windows.Controls.Canvas]::SetTop($tInd,  [double]$spec.IndY * $acH)
-    [void]$cv.Children.Add($tInd)
-
+    $tSq  = Add-AcMark -Canvas $cv -Key "$acKey|sq"  -Text $sq  -Family $CodeFont   -Size ([double]$spec.CodeSize) `
+                       -Colour $CodeColour   -DX ([double]$spec.SqX)  -DY ([double]$spec.SqY)  -W $AcW -H $acH
+    $tInd = Add-AcMark -Canvas $cv -Key "$acKey|ind" -Text $ind -Family $CodeFont   -Size ([double]$spec.CodeSize) `
+                       -Colour $CodeColour   -DX ([double]$spec.IndX) -DY ([double]$spec.IndY) -W $AcW -H $acH
     $ser = "$($Pilot.serials)"
     if ($ser) {
-        $tSer = New-TB -Text $ser -Family $SerialFont -Size ([double]$spec.SerSize) -Colour $SerialColour -Bold
-        [Windows.Controls.Canvas]::SetLeft($tSer, [double]$spec.SerX * $AcW)
-        [Windows.Controls.Canvas]::SetTop($tSer,  [double]$spec.SerTy * $acH)
-        [void]$cv.Children.Add($tSer)
+        [void](Add-AcMark -Canvas $cv -Key "$acKey|ser" -Text $ser -Family $SerialFont -Size ([double]$spec.SerSize) `
+                          -Colour $SerialColour -DX ([double]$spec.SerX) -DY ([double]$spec.SerTy) -W $AcW -H $acH)
     }
     [void]$wrap.Children.Add($cv)
     $wrap
+}
+# One mark on the aeroplane: drawn where the spec says, or where it was
+# last put by hand, and draggable to somewhere better. Dragging is the
+# whole point of it, so no modifier is asked for -- but a press that does
+# not move is not a drag, and nothing is written for it.
+function Add-AcMark {
+    param($Canvas, [string]$Key, [string]$Text, [string]$Family, [double]$Size,
+          [string]$Colour, [double]$DX, [double]$DY, [double]$W, [double]$H)
+    $fx = $DX; $fy = $DY
+    if ($script:AcPos.ContainsKey($Key)) { $fx = [double]$script:AcPos[$Key].x; $fy = [double]$script:AcPos[$Key].y }
+    $tb = New-TB -Text $Text -Family $Family -Size $Size -Colour $Colour -Bold
+    # a TextBlock with no brush is hit-testable only on its glyphs, and the
+    # gaps between letters would drop the drag
+    $tb.Background = B '#00000000'
+    $tb.Cursor = 'SizeAll'
+    $tb.ToolTip = 'Drag to move. Double-click to put it back where the research says.'
+    [Windows.Controls.Canvas]::SetLeft($tb, $fx * $W)
+    [Windows.Controls.Canvas]::SetTop($tb,  $fy * $H)
+    $tb.Tag = @{ Key = $Key; W = $W; H = $H; DX = $DX; DY = $DY; Drag = $false; Moved = $false; OX = 0.0; OY = 0.0 }
+    $tb.Add_MouseLeftButtonDown({
+        param($sender, $e)
+        $t = $sender.Tag
+        if ($e.ClickCount -ge 2) {
+            [Windows.Controls.Canvas]::SetLeft($sender, $t.DX * $t.W)
+            [Windows.Controls.Canvas]::SetTop($sender,  $t.DY * $t.H)
+            $script:AcPos.Remove($t.Key); Save-AcPos $script:AcPos
+            $e.Handled = $true; return
+        }
+        $p = $e.GetPosition($sender.Parent)
+        $t.OX = $p.X - [Windows.Controls.Canvas]::GetLeft($sender)
+        $t.OY = $p.Y - [Windows.Controls.Canvas]::GetTop($sender)
+        $t.Drag = $true; $t.Moved = $false
+        [void]$sender.CaptureMouse(); $e.Handled = $true
+    })
+    $tb.Add_MouseMove({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $p = $e.GetPosition($sender.Parent)
+        $nx = $p.X - $t.OX; $ny = $p.Y - $t.OY
+        if (-not $t.Moved -and ([math]::Abs($nx - [Windows.Controls.Canvas]::GetLeft($sender)) -le 2) `
+                          -and ([math]::Abs($ny - [Windows.Controls.Canvas]::GetTop($sender)) -le 2)) { return }
+        $t.Moved = $true
+        $nx = [math]::Max(-20.0, [math]::Min($t.W - 10.0, $nx))
+        $ny = [math]::Max(-20.0, [math]::Min($t.H - 10.0, $ny))
+        [Windows.Controls.Canvas]::SetLeft($sender, $nx)
+        [Windows.Controls.Canvas]::SetTop($sender, $ny)
+    })
+    $tb.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
+        if (-not $t.Moved) { return }
+        $script:AcPos[$t.Key] = @{
+            x = [math]::Round([Windows.Controls.Canvas]::GetLeft($sender) / $t.W, 4)
+            y = [math]::Round([Windows.Controls.Canvas]::GetTop($sender)  / $t.H, 4)
+        }
+        Save-AcPos $script:AcPos
+    })
+    [void]$Canvas.Children.Add($tb)
+    $tb
 }
 
 function New-Heading {
@@ -2214,6 +2298,12 @@ function Show-Roster {
     $ac = if ($flown) { New-Aircraft -Pilot $Pilot } else { $null }
     if ($ac) {
         [void]$script:Stage.Children.Add($ac)
+        $acHint = New-TB -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap -Text (
+            'The squadron code, your letter and the serial can be dragged to sit better on the ' +
+            'aeroplane. Where you put them is remembered for this mark of aircraft, so a Spitfire ' +
+            'and a Hurricane keep their own. Double-click a mark to put it back where the research says.')
+        $acHint.Margin = '0,-4,0,16'; $acHint.MaxWidth = 760
+        [void]$script:Stage.Children.Add($acHint)
     }
 
     # the squadron as a records book: names, victories, fate
