@@ -1918,10 +1918,23 @@ function Show-Map {
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at $base"))
 
     $onTable = [bool]$MapStations[$base]
-    $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Your station today is ringed on the table." }
-               else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the edge of this table." }
+    # Where every squadron in Fighter Command stood on this day, so the
+    # table is the day's dispositions and not one lonely ring. Squadrons
+    # resting in the north, or at a station off the western edge, are named
+    # underneath instead.
+    $others = @(); $offTable = @()
+    foreach ($q in (Get-Squadrons)) {
+        $qb = Get-SquadronBase -Sqn $q.Num -Date $script:CampaignDate -Pilot $null
+        if (-not $qb) { continue }
+        if ($qb -eq 'resting in the north') { continue }
+        $qst = $MapStations[$qb]
+        if ($qst) { $others += @{ Num=$q.Num; Type=$q.Type; Base=$qb; St=$qst } }
+        else { $offTable += @{ Num=$q.Num; Type=$q.Type; Base=$qb } }
+    }
+    $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Your station is ringed in gold; the other squadrons in the line are plotted beside theirs, blue for Spitfires and amber for Hurricanes." }
+               else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the western edge of this table, so your squadron is named below it. The squadrons plotted here are the rest of the line, blue for Spitfires and amber for Hurricanes." }
     $lead = New-TB -Text $leadTxt -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
-    $lead.Margin = '0,0,0,12'
+    $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1080
     [void]$script:Stage.Children.Add($lead)
 
     $W = 1080.0; $H = [math]::Round($W * 800.0 / 1600.0)
@@ -1938,6 +1951,35 @@ function Show-Map {
     $cv = New-Object Windows.Controls.Canvas; $cv.Width = $W; $cv.Height = $H; $cv.ClipToBounds = $true
     [void]$grid.Children.Add($cv)
     $mapWrap.Child = $grid
+
+    # the rest of the line first, so your own ring sits over them
+    $seenAt = @{}
+    $countAt = @{}
+    foreach ($o in $others) { $countAt[$o.Base] = 1 + [int]$countAt[$o.Base] }
+    foreach ($o in $others) {
+        if ($o.Num -eq $sqnum) { continue }
+        $ox = 0.0; $oy = 0.0
+        $nAt = [int]$countAt[$o.Base]
+        if ($nAt -gt 1) {
+            $ix = [int]$seenAt[$o.Base]; $seenAt[$o.Base] = $ix + 1
+            $ang = (2.0 * [math]::PI * $ix / $nAt) - ([math]::PI / 2.0)
+            $rad = 13.0 + 2.0 * $nAt
+            $ox = $rad * [math]::Cos($ang); $oy = $rad * [math]::Sin($ang)
+        }
+        $ocx = [double]$o.St[0] * $W + $ox; $ocy = [double]$o.St[1] * $H + $oy
+        $isSpit = ("$($o.Type)" -match 'Spitfire')
+        $dot = New-Object Windows.Shapes.Ellipse
+        $dot.Width = 15; $dot.Height = 15; $dot.StrokeThickness = 2
+        $dot.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
+        $dot.Fill = B '#66101B22'
+        $dot.ToolTip = "No. $($o.Num) Squadron  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)"
+        [Windows.Controls.Canvas]::SetLeft($dot, $ocx - 7.5); [Windows.Controls.Canvas]::SetTop($dot, $ocy - 7.5)
+        [void]$cv.Children.Add($dot)
+        $nlbl = New-TB -Text "$($o.Num)" -Family $CondFam -Size 10 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
+        $nlbl.IsHitTestVisible = $false
+        [Windows.Controls.Canvas]::SetLeft($nlbl, $ocx - 8); [Windows.Controls.Canvas]::SetTop($nlbl, $ocy + 8)
+        [void]$cv.Children.Add($nlbl)
+    }
 
     if ($onTable) {
         $st = $MapStations[$base]
@@ -1971,12 +2013,31 @@ function Show-Map {
     }
     [void]$script:Stage.Children.Add($mapWrap)
 
+    # Your own squadron, when its station is off the table
     if (-not $onTable) {
         $chip = New-Object Windows.Controls.Border
         $chip.Padding = '14,9'; $chip.Margin = '0,14,0,0'; $chip.CornerRadius = '3'; $chip.HorizontalAlignment = 'Left'
         $chip.Background = B '#101B22'; $chip.BorderBrush = B '#FFE28A'; $chip.BorderThickness = '1.5'
         $chip.Child = (New-TB -Text "No. $sqnum SQUADRON  $([char]0x2022)  $($base.ToUpper())  $([char]0x2022)  BEYOND THIS TABLE" -Family $CondFam -Size 12.5 -Colour '#FFE28A' -Bold)
         [void]$script:Stage.Children.Add($chip)
+    }
+    # and the other squadrons whose stations lie off it
+    $offOthers = @($offTable | Where-Object { $_.Num -ne $sqnum })
+    if ($offOthers.Count -gt 0) {
+        $oh = New-TB -Text 'ALSO IN THE LINE, BEYOND THIS TABLE' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold
+        $oh.Margin = '0,18,0,8'
+        [void]$script:Stage.Children.Add($oh)
+        $wrap = New-Object Windows.Controls.WrapPanel
+        $wrap.MaxWidth = 1080
+        foreach ($o in ($offOthers | Sort-Object { "$($_.Base)" }, { [int]$_.Num })) {
+            $c2 = New-Object Windows.Controls.Border
+            $c2.Padding = '10,6'; $c2.Margin = '0,0,8,8'; $c2.CornerRadius = '3'
+            $c2.Background = B '#101B22'; $c2.BorderBrush = Res 'Rule'; $c2.BorderThickness = '1'
+            $col = if ("$($o.Type)" -match 'Spitfire') { '#9FE0F0' } else { '#F8C87E' }
+            $c2.Child = (New-TB -Text "No. $($o.Num)  $([char]0x2022)  $($o.Base)" -Family $CondFam -Size 11.5 -Colour $col)
+            [void]$wrap.Children.Add($c2)
+        }
+        [void]$script:Stage.Children.Add($wrap)
     }
 }
 # =====================================================================
