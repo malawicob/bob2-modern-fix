@@ -2508,6 +2508,38 @@ function Get-ReShadePreset {
     return $null
 }
 
+# The other half of the switch. Installing could re-enable a disabled
+# ReShade, but nothing could turn it off again short of removing it
+# altogether, which throws away the presets with it. This only moves the
+# hook DLL aside: everything else stays where it is, so switching it back
+# on is a rename.
+function Step-DisableReShade {
+    param([string]$GameFolder)
+    Write-Step "Switch ReShade off (keeping it installed)"
+    $dll = Join-Path $GameFolder "dxgi.dll"
+    $off = Join-Path $GameFolder "dxgi.dll.disabled"
+    if (-not (Test-Path $dll)) {
+        if (Test-Path $off) { Write-OK "ReShade is already switched off" ; return $true }
+        Write-Warn "ReShade is not installed, so there is nothing to switch off."
+        return $false
+    }
+    if ((Get-Item $dll).Length -ne $ReShadeDllSize) {
+        Write-Warn "The dxgi.dll here is not the one this fix ships. Leaving it strictly alone."
+        return $false
+    }
+    try {
+        if (Test-Path $off) { Remove-Item $off -Force }
+        Rename-Item $dll "dxgi.dll.disabled"
+        Write-OK "ReShade switched off. Your presets and shaders are untouched."
+        Write-Info "  Switch it back on from this menu whenever you want it."
+        return $true
+    }
+    catch {
+        Write-Warn "Could not rename dxgi.dll: $($_.Exception.Message)"
+        Write-Info "  Close the game first: Windows will not rename a DLL that is loaded."
+        return $false
+    }
+}
 function Step-InstallReShade {
     param([string]$GameFolder)
     Write-Step "Install ReShade (optional visual enhancement)"
@@ -3191,7 +3223,13 @@ function Do-IndividualSteps {
         Write-Host "  7. Check version" -ForegroundColor White
         Write-Host "  8. Validate installation" -ForegroundColor White
         Write-Host "  9. Launcher desktop shortcut" -ForegroundColor White
-        Write-Host " 10. Install ReShade (optional)" -ForegroundColor White
+        $rs10 = Get-ReShadeState $gameFolder
+        Write-Host $(switch ($rs10) {
+            'on'      { " 10. Switch ReShade OFF (optional shaders, currently on)" }
+            'off'     { " 10. Switch ReShade ON (optional shaders, currently off)" }
+            'partial' { " 10. Repair ReShade (optional shaders, install incomplete)" }
+            default   { " 10. Install ReShade (optional shaders, off by default)" }
+        }) -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
         Write-Host " 13. Back to main menu" -ForegroundColor White
@@ -3210,7 +3248,12 @@ function Do-IndividualSteps {
             "7" { Step-CheckVersion $gameFolder; Pause-Continue }
             "8" { Step-Validate $gameFolder; Pause-Continue }
             "9" { Step-InstallLauncher $gameFolder; Pause-Continue }
-            "10" { Step-InstallReShade $gameFolder; Pause-Continue }
+            "10" {
+                # one key, and it does whatever the current state needs
+                if ((Get-ReShadeState $gameFolder) -eq 'on') { Step-DisableReShade $gameFolder }
+                else { Step-InstallReShade $gameFolder }
+                Pause-Continue
+            }
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
             "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
             "13" { return }
