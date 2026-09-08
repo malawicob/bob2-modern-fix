@@ -37,35 +37,24 @@ $FlightOpen   = Join-Path $StateDir 'flight.open'
 # P2 = Eagle Day and the airfields (13 Aug), P3 = London (7 Sep).
 # Each period entry is 'Station,ActionRating' or '-' when the squadron is
 # resting in the north. Station anchors are image fractions on the table.
-$MapStations = @{
-    'RAF Duxford'       = @(0.565, 0.075)
-    'RAF Debden'        = @(0.624, 0.210)
-    'RAF North Weald'   = @(0.570, 0.288)
-    'RAF Rochford'      = @(0.694, 0.381)
-    'RAF Hornchurch'    = @(0.599, 0.396)
-    'RAF Northolt'      = @(0.449, 0.349)
-    'RAF Croydon'       = @(0.518, 0.487)
-    'RAF Kenley'        = @(0.525, 0.542)
-    'RAF Biggin Hill'   = @(0.553, 0.547)
-    'RAF Gravesend'     = @(0.624, 0.459)
-    'RAF Tangmere'      = @(0.426, 0.742)
-    'RAF Middle Wallop' = @(0.258, 0.601)
-    'RAF Warmwell'      = @(0.134, 0.737)
-    # The thirteen above were placed by hand on the map image. The rest are
-    # placed from their real latitude and longitude, through a straight-line
-    # fit of those thirteen (x = 0.1832*lon + 0.5501, y = -0.4813*lat +
-    # 25.2022; worst residual 0.06 of the image width). Six of the order of
-    # battle's stations fall outside the table altogether and are listed as
-    # off-table postings instead, which is what the map already does for a
-    # squadron resting in the north.
-    'RAF Colerne'       = @(0.132, 0.442)
-    'RAF Fowlmere'      = @(0.559, 0.133)
-    'RAF Hawkinge'      = @(0.762, 0.598)
-    'RAF Martlesham'    = @(0.785, 0.145)
-    'RAF Stapleford'    = @(0.579, 0.339)
-    'RAF West Malling'  = @(0.624, 0.522)
-    'RAF Westhampnett'  = @(0.411, 0.721)
+# Where each station sits on the sector map, as a fraction of its width
+# and height. Read from squadronroom\map\sector-map.json, which the map
+# renderer writes when it draws the image: the map and these positions
+# come out of the same projection, so a ring cannot drift from the field
+# it belongs to. The old table was thirteen anchors placed by eye, and
+# every station beyond them had to be fitted to those.
+$MapStations = @{}
+$MapProj = $null
+$MapProjPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.json'
+if (Test-Path $MapProjPath) {
+    try {
+        $MapProj = Get-Content $MapProjPath -Raw | ConvertFrom-Json
+        foreach ($pp in $MapProj.stations.PSObject.Properties) {
+            $MapStations[$pp.Name] = @([double]$pp.Value[0], [double]$pp.Value[1])
+        }
+    } catch { }
 }
+
 # Squadron code letters as carried during the Battle, 10 July to 31
 # October 1940. Every one confirmed against at least two dated sources
 # (the per-squadron histories on Wikipedia and rafweb, checked against
@@ -1937,14 +1926,14 @@ function Show-Map {
     $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1080
     [void]$script:Stage.Children.Add($lead)
 
-    $W = 1080.0; $H = [math]::Round($W * 800.0 / 1600.0)
+    $W = 1180.0; $H = [math]::Round($W * 1600.0 / 2560.0)
     $mapWrap = New-Object Windows.Controls.Border
     $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
     $mapWrap.Background = B '#0B141B'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
     $grid = New-Object Windows.Controls.Grid
     $imgPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.jpg'
     $bg = New-Object Windows.Controls.Image
-    $bmp = Load-Image -Path $imgPath -DecodeWidth 1600
+    $bmp = Load-Image -Path $imgPath -DecodeWidth 2560
     if ($bmp) { $bg.Source = $bmp }
     $bg.Stretch = 'Uniform'; $bg.Width = $W; $bg.Height = $H
     [void]$grid.Children.Add($bg)
@@ -2210,14 +2199,14 @@ function Show-SquadronSelect {
     $lead.Margin = '0,0,0,12'
     [void]$script:Stage.Children.Add($lead)
 
-    $W = 1080.0; $H = [math]::Round($W * 800.0 / 1600.0)
+    $W = 1180.0; $H = [math]::Round($W * 1600.0 / 2560.0)
     $mapWrap = New-Object Windows.Controls.Border
     $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
     $mapWrap.Background = B '#0B141B'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
     $grid = New-Object Windows.Controls.Grid
     $imgPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.jpg'
     $bg = New-Object Windows.Controls.Image
-    $bmp = Load-Image -Path $imgPath -DecodeWidth 1600
+    $bmp = Load-Image -Path $imgPath -DecodeWidth 2560
     if ($bmp) { $bg.Source = $bmp }
     $bg.Stretch = 'Uniform'; $bg.Width = $W; $bg.Height = $H
     [void]$grid.Children.Add($bg)

@@ -1,0 +1,307 @@
+{
+ "west": -5.6,
+ "east": 4.0,
+ "south": 50.0,
+ "north": 53.8,
+ "width": 2560,
+ "height": 1600,
+ "note": "x = (lon - west) / (east - west); y = (north - lat) / (north - south)",
+ "stations": {
+  "Biggin Hill": [
+   0.58672,
+   0.64979
+  ],
+  "Boscombe Down": [
+   0.40133,
+   0.69679
+  ],
+  "Castle Camps": [
+   0.62269,
+   0.45782
+  ],
+  "Colerne": [
+   0.34569,
+   0.62121
+  ],
+  "Coltishall": [
+   0.72471,
+   0.27508
+  ],
+  "Croydon": [
+   0.57179,
+   0.64311
+  ],
+  "Debden": [
+   0.61157,
+   0.47463
+  ],
+  "Detling": [
+   0.64549,
+   0.65724
+  ],
+  "Digby": [
+   0.53768,
+   0.18618
+  ],
+  "Duxford": [
+   0.59676,
+   0.44918
+  ],
+  "Exeter": [
+   0.22772,
+   0.80674
+  ],
+  "Filton": [
+   0.31346,
+   0.60016
+  ],
+  "Fowlmere": [
+   0.58854,
+   0.45247
+  ],
+  "Gravesend": [
+   0.62523,
+   0.62784
+  ],
+  "Hawkinge": [
+   0.70379,
+   0.7065
+  ],
+  "Hendon": [
+   0.55822,
+   0.58232
+  ],
+  "Hornchurch": [
+   0.60625,
+   0.59445
+  ],
+  "Kenley": [
+   0.57344,
+   0.65666
+  ],
+  "Kirton": [
+   0.52283,
+   0.09226
+  ],
+  "Kirton in Lindsey": [
+   0.52283,
+   0.09226
+  ],
+  "Lympne": [
+   0.68883,
+   0.71579
+  ],
+  "Manston": [
+   0.72355,
+   0.64679
+  ],
+  "Martlesham": [
+   0.71696,
+   0.45876
+  ],
+  "Martlesham Heath": [
+   0.71696,
+   0.45876
+  ],
+  "Middle Wallop": [
+   0.41994,
+   0.69716
+  ],
+  "North Weald": [
+   0.59945,
+   0.54692
+  ],
+  "Northolt": [
+   0.53976,
+   0.59129
+  ],
+  "Northweald": [
+   0.59945,
+   0.54692
+  ],
+  "Pembrey": [
+   0.13325,
+   0.54897
+  ],
+  "RAF Biggin Hill": [
+   0.58672,
+   0.64979
+  ],
+  "RAF Boscombe Down": [
+   0.40133,
+   0.69679
+  ],
+  "RAF Castle Camps": [
+   0.62269,
+   0.45782
+  ],
+  "RAF Colerne": [
+   0.34569,
+   0.62121
+  ],
+  "RAF Coltishall": [
+   0.72471,
+   0.27508
+  ],
+  "RAF Croydon": [
+   0.57179,
+   0.64311
+  ],
+  "RAF Debden": [
+   0.61157,
+   0.47463
+  ],
+  "RAF Detling": [
+   0.64549,
+   0.65724
+  ],
+  "RAF Digby": [
+   0.53768,
+   0.18618
+  ],
+  "RAF Duxford": [
+   0.59676,
+   0.44918
+  ],
+  "RAF Exeter": [
+   0.22772,
+   0.80674
+  ],
+  "RAF Filton": [
+   0.31346,
+   0.60016
+  ],
+  "RAF Fowlmere": [
+   0.58854,
+   0.45247
+  ],
+  "RAF Gravesend": [
+   0.62523,
+   0.62784
+  ],
+  "RAF Hawkinge": [
+   0.70379,
+   0.7065
+  ],
+  "RAF Hendon": [
+   0.55822,
+   0.58232
+  ],
+  "RAF Hornchurch": [
+   0.60625,
+   0.59445
+  ],
+  "RAF Kenley": [
+   0.57344,
+   0.65666
+  ],
+  "RAF Kirton": [
+   0.52283,
+   0.09226
+  ],
+  "RAF Kirton in Lindsey": [
+   0.52283,
+   0.09226
+  ],
+  "RAF Lympne": [
+   0.68883,
+   0.71579
+  ],
+  "RAF Manston": [
+   0.72355,
+   0.64679
+  ],
+  "RAF Martlesham": [
+   0.71696,
+   0.45876
+  ],
+  "RAF Martlesham Heath": [
+   0.71696,
+   0.45876
+  ],
+  "RAF Middle Wallop": [
+   0.41994,
+   0.69716
+  ],
+  "RAF North Weald": [
+   0.59945,
+   0.54692
+  ],
+  "RAF Northolt": [
+   0.53976,
+   0.59129
+  ],
+  "RAF Northweald": [
+   0.59945,
+   0.54692
+  ],
+  "RAF Pembrey": [
+   0.13325,
+   0.54897
+  ],
+  "RAF Rochford": [
+   0.65579,
+   0.58647
+  ],
+  "RAF Stapleford": [
+   0.59956,
+   0.56505
+  ],
+  "RAF Stapleford Tawney": [
+   0.59956,
+   0.56505
+  ],
+  "RAF Tangmere": [
+   0.50978,
+   0.77755
+  ],
+  "RAF Warmwell": [
+   0.33854,
+   0.81768
+  ],
+  "RAF West Malling": [
+   0.62534,
+   0.66476
+  ],
+  "RAF Westhampnett": [
+   0.50434,
+   0.77389
+  ],
+  "RAF Wittering": [
+   0.53374,
+   0.3125
+  ],
+  "Rochford": [
+   0.65579,
+   0.58647
+  ],
+  "Stapleford": [
+   0.59956,
+   0.56505
+  ],
+  "Stapleford Tawney": [
+   0.59956,
+   0.56505
+  ],
+  "Tangmere": [
+   0.50978,
+   0.77755
+  ],
+  "Warmwell": [
+   0.33854,
+   0.81768
+  ],
+  "West Malling": [
+   0.62534,
+   0.66476
+  ],
+  "Westhampnett": [
+   0.50434,
+   0.77389
+  ],
+  "Wittering": [
+   0.53374,
+   0.3125
+  ]
+ }
+}
