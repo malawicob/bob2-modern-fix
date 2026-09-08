@@ -306,8 +306,11 @@ def main():
                 d.line([(x1 + (x2 - x1) * s0 / seg, y1 + (y2 - y1) * s0 / seg),
                         (x1 + (x2 - x1) * s1 / seg, y1 + (y2 - y1) * s1 / seg)],
                        fill=fill, width=width)
-    for pts in BOUNDARIES:
-        dashed([px(lo, la) for la, lo in pts], INK['boundary'], int(2 * SS))
+    # The group boundaries are not drawn. They cluttered a table whose job
+    # is to carry fifty-two squadron rings, and the two that could honestly
+    # be drawn were the least interesting part of it. The groups are still
+    # lettered in open country.
+    _ = dashed  # kept: the helper is still wanted if they ever come back
 
     def font(size, bold=False):
         for p in ('/usr/share/fonts/truetype/dejavu/DejaVuSans%s.ttf' % ('-Bold' if bold else ''),

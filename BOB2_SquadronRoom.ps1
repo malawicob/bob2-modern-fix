@@ -2346,14 +2346,15 @@ function Show-Map {
     foreach ($o in $others) { $countAt[$o.Base] = 1 + [int]$countAt[$o.Base] }
     foreach ($o in $others) {
         if ($o.Num -eq $sqnum) { continue }
-        $ox = 0.0; $oy = 0.0
+        # A ring is NEVER drawn on the field itself: the map prints the
+        # station's name to the right of its marker, and a ring centred
+        # there covered both. They fan out to the LEFT, away from the name.
         $nAt = [int]$countAt[$o.Base]
-        if ($nAt -gt 1) {
-            $ix = [int]$seenAt[$o.Base]; $seenAt[$o.Base] = $ix + 1
-            $ang = (2.0 * [math]::PI * $ix / $nAt) - ([math]::PI / 2.0)
-            $rad = 13.0 + 2.0 * $nAt
-            $ox = $rad * [math]::Cos($ang); $oy = $rad * [math]::Sin($ang)
-        }
+        $ix = [int]$seenAt[$o.Base]; $seenAt[$o.Base] = $ix + 1
+        $rad = 17.0 + 2.5 * [math]::Max(0, $nAt - 1)
+        $spread = [math]::PI * 1.05
+        $ang = if ($nAt -le 1) { [math]::PI } else { ([math]::PI - $spread / 2.0) + $spread * $ix / ($nAt - 1) }
+        $ox = $rad * [math]::Cos($ang); $oy = $rad * [math]::Sin($ang)
         $ocx = [double]$o.St[0] * $W + $ox; $ocy = [double]$o.St[1] * $H + $oy
         $isSpit = ("$($o.Type)" -match 'Spitfire')
         # a hair line back to the field, so a ring fanned out from a
@@ -2367,9 +2368,9 @@ function Show-Map {
             [void]$cv.Children.Add($ln)
         }
         $dot = New-Object Windows.Shapes.Ellipse
-        $dot.Width = 15; $dot.Height = 15; $dot.StrokeThickness = 2
+        $dot.Width = 21; $dot.Height = 21; $dot.StrokeThickness = 2
         $dot.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
-        $dot.Fill = B '#66101B22'
+        $dot.Fill = B '#CC0B141B'
         $oob = Get-Oob -Sqn $o.Num
         $extra = ''
         if ($oob) {
@@ -2384,11 +2385,14 @@ function Show-Map {
         $dot.ToolTip = $dot.Tag
         $dot.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
         $dot.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
-        [Windows.Controls.Canvas]::SetLeft($dot, $ocx - 7.5); [Windows.Controls.Canvas]::SetTop($dot, $ocy - 7.5)
+        [Windows.Controls.Canvas]::SetLeft($dot, $ocx - 10.5); [Windows.Controls.Canvas]::SetTop($dot, $ocy - 10.5)
         [void]$cv.Children.Add($dot)
-        $nlbl = New-TB -Text "$($o.Num)" -Family $CondFam -Size 10 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
+        # the number sits INSIDE the ring; below it, it collided with the
+        # ring under it and with the map's own lettering
+        $nlbl = New-TB -Text "$($o.Num)" -Family $CondFam -Size 9.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
         $nlbl.IsHitTestVisible = $false
-        [Windows.Controls.Canvas]::SetLeft($nlbl, $ocx - 8); [Windows.Controls.Canvas]::SetTop($nlbl, $ocy + 8)
+        $nlbl.Width = 21; $nlbl.TextAlignment = 'Center'
+        [Windows.Controls.Canvas]::SetLeft($nlbl, $ocx - 10.5); [Windows.Controls.Canvas]::SetTop($nlbl, $ocy - 7.5)
         [void]$cv.Children.Add($nlbl)
     }
 
@@ -2406,18 +2410,18 @@ function Show-Map {
         }
         # a breathing gold halo round the station, a firm ring inside it
         $halo = New-Object Windows.Shapes.Ellipse
-        $halo.Width = 64; $halo.Height = 64; $halo.StrokeThickness = 3
+        $halo.Width = 46; $halo.Height = 46; $halo.StrokeThickness = 2.5
         $halo.Stroke = B '#FFE28A'; $halo.Fill = B '#22FFE28A'
-        [Windows.Controls.Canvas]::SetLeft($halo, $cx - 32); [Windows.Controls.Canvas]::SetTop($halo, $cy - 32)
+        [Windows.Controls.Canvas]::SetLeft($halo, $cx - 23); [Windows.Controls.Canvas]::SetTop($halo, $cy - 23)
         $pulse = New-Object Windows.Media.Animation.DoubleAnimation(0.25, 0.95, [Windows.Duration]::new([TimeSpan]::FromSeconds(1.1)))
         $pulse.AutoReverse = $true
         $pulse.RepeatBehavior = [Windows.Media.Animation.RepeatBehavior]::Forever
         $halo.BeginAnimation([Windows.UIElement]::OpacityProperty, $pulse)
         [void]$cv.Children.Add($halo)
         $ring = New-Object Windows.Shapes.Ellipse
-        $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 3.5
+        $ring.Width = 24; $ring.Height = 24; $ring.StrokeThickness = 3
         $ring.Stroke = B '#FFE28A'; $ring.Fill = B '#01000000'
-        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
+        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 12); [Windows.Controls.Canvas]::SetTop($ring, $cy - 12)
         $mySec = Get-SectorText $base
         $ring.Tag = "No. $sqnum Squadron  $([char]0x2022)  YOUR SQUADRON  $([char]0x2022)  $base  $([char]0x2022)  No. $(Get-GroupForBase $base) Group" +
                     $(if ($mySec) { "  $([char]0x2022)  $mySec" } else { '' })
@@ -2695,13 +2699,13 @@ function Show-SquadronSelect {
         $script:SelSq = $q2
         foreach ($d in $script:SqDots) {
             $d.Stroke = if ("$($d.Tag.Type)" -match 'Spitfire') { B '#5FD0E8' } else { B '#F5A83C' }
-            $d.StrokeThickness = 2.5; $d.Width = 30; $d.Height = 30
-            [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 15); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 15)
+            $d.StrokeThickness = 2.5; $d.Width = 26; $d.Height = 26
+            [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 13); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 13)
         }
         foreach ($d in $script:SqDots) {
             if ($d.Tag.Num -eq $q2.Num) {
-                $d.Stroke = B '#FFE28A'; $d.StrokeThickness = 3.5; $d.Width = 38; $d.Height = 38
-                [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 19); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 19)
+                $d.Stroke = B '#FFE28A'; $d.StrokeThickness = 3.5; $d.Width = 34; $d.Height = 34
+                [Windows.Controls.Canvas]::SetLeft($d, $d.Tag.CX - 17); [Windows.Controls.Canvas]::SetTop($d, $d.Tag.CY - 17)
             }
         }
         foreach ($cp in $script:SqChips) {
@@ -2729,35 +2733,39 @@ function Show-SquadronSelect {
         # Several squadrons at one station are fanned out around it. This
         # used to offset the first left and EVERY other one right, so a
         # third squadron sat exactly on top of the second.
-        $offX = 0.0; $offY = 0.0
+        # same rule as the map tab: clear of the field, and away from the
+        # side its name is printed on
         $nAt = [int]$stationCount[$po.Base]
-        if ($nAt -gt 1) {
-            $ix = [int]$stationSeen[$po.Base]; $stationSeen[$po.Base] = $ix + 1
-            if ($nAt -eq 2) { $offX = $(if ($ix -eq 0) { -13.0 } else { 13.0 }) }
-            else {
-                $ang = (2.0 * [math]::PI * $ix / $nAt) - ([math]::PI / 2.0)
-                $rad = 15.0 + 3.0 * $nAt
-                $offX = $rad * [math]::Cos($ang); $offY = $rad * [math]::Sin($ang)
-            }
-        }
+        $ix = [int]$stationSeen[$po.Base]; $stationSeen[$po.Base] = $ix + 1
+        $rad = 20.0 + 3.0 * [math]::Max(0, $nAt - 1)
+        $spread = [math]::PI * 1.05
+        $ang = if ($nAt -le 1) { [math]::PI } else { ([math]::PI - $spread / 2.0) + $spread * $ix / ($nAt - 1) }
+        $offX = $rad * [math]::Cos($ang); $offY = $rad * [math]::Sin($ang)
         $cx = $po.Mx * $W + $offX
         $cy = $po.My * $H + $offY
         $ov = $script:RingPos["$($po.Base)|$($q.Num)"]
         if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
         $isSpit = ("$($q.Type)" -match 'Spitfire')
         $ring = New-Object Windows.Shapes.Ellipse
-        $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 2.5
+        $ring.Width = 26; $ring.Height = 26; $ring.StrokeThickness = 2.5
         $ring.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
-        $ring.Fill = B '#01000000'
+        $ring.Fill = B '#CC0B141B'
         $ring.Cursor = 'Hand'
         $qt.CX = $cx; $qt.CY = $cy; $qt.MapW = $W; $qt.MapH = $H
         $qt.Drag = $false; $qt.Moved = $false; $qt.OX = 0.0; $qt.OY = 0.0
-        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
-        $pips = switch ("$($po.Act)") { 'H' { " $([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { " $([char]0x25B2)$([char]0x25B2)" } default { " $([char]0x25B2)" } }
-        $nl = New-TB -Text "$($q.Num)$pips" -Family $CondFam -Size 11.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
+        [Windows.Controls.Canvas]::SetLeft($ring, $cx - 13); [Windows.Controls.Canvas]::SetTop($ring, $cy - 13)
+        # the number inside the ring, the activity pips just under it
+        $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 10.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
         $nl.IsHitTestVisible = $false
-        [Windows.Controls.Canvas]::SetLeft($nl, $cx - 10); [Windows.Controls.Canvas]::SetTop($nl, $cy + 17)
+        $nl.Width = 26; $nl.TextAlignment = 'Center'
+        [Windows.Controls.Canvas]::SetLeft($nl, $cx - 13); [Windows.Controls.Canvas]::SetTop($nl, $cy - 9)
+        $pips = switch ("$($po.Act)") { 'H' { "$([char]0x25B2)$([char]0x25B2)$([char]0x25B2)" } 'M' { "$([char]0x25B2)$([char]0x25B2)" } default { "$([char]0x25B2)" } }
+        $pl2 = New-TB -Text $pips -Family $CondFam -Size 7.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' })
+        $pl2.IsHitTestVisible = $false; $pl2.Width = 26; $pl2.TextAlignment = 'Center'
+        [Windows.Controls.Canvas]::SetLeft($pl2, $cx - 13); [Windows.Controls.Canvas]::SetTop($pl2, $cy + 3)
+        [void]$cv.Children.Add($pl2)
         $qt.Label = $nl
+        $qt.Pips = $pl2
         $ring.Tag = $qt
         $ring.Add_MouseLeftButtonDown({
             param($sender,$e)
@@ -2778,7 +2786,8 @@ function Show-SquadronSelect {
                     $t.CX = $nx; $t.CY = $ny
                     $half = $sender.Width / 2.0
                     [Windows.Controls.Canvas]::SetLeft($sender, $nx - $half); [Windows.Controls.Canvas]::SetTop($sender, $ny - $half)
-                    [Windows.Controls.Canvas]::SetLeft($t.Label, $nx - 10); [Windows.Controls.Canvas]::SetTop($t.Label, $ny + 17)
+                    [Windows.Controls.Canvas]::SetLeft($t.Label, $nx - 13); [Windows.Controls.Canvas]::SetTop($t.Label, $ny - 9)
+                    if ($t.Pips) { [Windows.Controls.Canvas]::SetLeft($t.Pips, $nx - 13); [Windows.Controls.Canvas]::SetTop($t.Pips, $ny + 3) }
                 }
             }
         })
