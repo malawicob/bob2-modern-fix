@@ -23,3 +23,6 @@ work/
 
 # Stale artifact
 BOB2-Win11-Fix.tar.gz
+
+# Squadron Room state when run standalone: a personal pilot record, never shipped
+squadronroom/state/

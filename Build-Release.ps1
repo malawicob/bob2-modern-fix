@@ -76,6 +76,14 @@ New-Item -ItemType Directory -Path $stage -Force | Out-Null
 
 Write-Host "Building $version" -ForegroundColor Cyan
 
+# Nested folders that must never ship: the Squadron Room keeps a pilot's
+# record under squadronroom\state when it runs without a game folder (the
+# standalone test mode), and v1.7.8 shipped the developer's own pilot that
+# way. Removed from the staging copy after the recursive copy.
+$excludeNested = @(
+    'squadronroom\state'
+)
+
 $copied = 0; $skipped = @()
 Get-ChildItem $src -Force | ForEach-Object {
     if ($_.PSIsContainer) {
@@ -86,6 +94,15 @@ Get-ChildItem $src -Force | ForEach-Object {
         if ($excludeFiles -contains $_.Name) { $skipped += $_.Name; return }
         Copy-Item $_.FullName -Destination $stage -Force
         $copied++
+    }
+}
+
+foreach ($rel in $excludeNested) {
+    $p = Join-Path $stage $rel
+    if (Test-Path $p) {
+        $copied -= (Get-ChildItem $p -Recurse -File).Count
+        Remove-Item $p -Recurse -Force
+        $skipped += "$rel\"
     }
 }
 
