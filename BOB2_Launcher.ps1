@@ -214,6 +214,17 @@ function Repair-DpiShim {
     $exe = Join-Path $GameDir 'Bob.exe'
     try {
         if (-not (Test-Path $key)) { return $false }
+        # When Bob.exe.manifest is in place the application declares its own
+        # DPI awareness, and ANY layer entry only argues with it. Rewriting
+        # one is how a truncated ' HIGHDPIAWA' ended up in the registry on
+        # 2026-09-08 and the game changed size again. Remove it outright.
+        if (Test-Path (Join-Path $GameDir 'Bob.exe.manifest')) {
+            $props0 = Get-ItemProperty $key -ErrorAction SilentlyContinue
+            if ($props0 -and ($props0.PSObject.Properties.Name -contains $exe)) {
+                try { Remove-ItemProperty -Path $key -Name $exe -ErrorAction Stop; return $true } catch { }
+            }
+            return $false
+        }
         $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
         if (-not $props -or -not ($props.PSObject.Properties.Name -contains $exe)) { return $false }
         $cur = "$($props.$exe)"
