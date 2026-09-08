@@ -209,6 +209,44 @@ function Sync-FixVersion {
 #
 #  Returns true when something had to be removed.
 # ---------------------------------------------------------------------
+# The panel's true size and what Windows is scaling it by. A DPI-unaware
+# process is handed the panel DIVIDED by that scaling, which is why the
+# same build behaves differently on two machines.
+function Get-DisplayLine {
+    try {
+        if (-not ('BobLnchDpi.Native' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+namespace BobLnchDpi {
+  public static class Native {
+    [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
+    [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
+    [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int i);
+    // 118 = DESKTOPHORZRES and 117 = DESKTOPVERTRES are the true panel;
+    // 8 = HORZRES is what this (unaware) process is shown.
+    public static int[] Info() {
+      IntPtr dc = GetDC(IntPtr.Zero);
+      int rw = GetDeviceCaps(dc, 118), rh = GetDeviceCaps(dc, 117), sw = GetDeviceCaps(dc, 8);
+      ReleaseDC(IntPtr.Zero, dc);
+      int pct = (sw > 0) ? (int)Math.Round(rw * 100.0 / sw) : 100;
+      return new int[] { rw, rh, pct };
+    }
+  }
+}
+'@
+        }
+        $i = [BobLnchDpi.Native]::Info()
+        $w = [int]$i[0]; $h = [int]$i[1]; $pct = [int]$i[2]
+        if ($w -le 0) { return 'Display unknown' }
+        if ($pct -le 100) { return "$($w)x$($h) at 100%" }
+        # name the size the GAME is given, because that is the number that
+        # explains the behaviour
+        $vw = [int][math]::Round($w * 100.0 / $pct)
+        $vh = [int][math]::Round($h * 100.0 / $pct)
+        "$($w)x$($h) at $pct%, game sees $($vw)x$($vh)"
+    }
+    catch { 'Display unknown' }
+}
 function Repair-DpiShim {
     $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
     $exe = Join-Path $GameDir 'Bob.exe'
@@ -913,6 +951,12 @@ $xaml = @'
           <TextBlock x:Name="LblFix"     Style="{StaticResource Pill}" Text="Fix"/>
           <TextBlock Style="{StaticResource PillSep}"/>
           <TextBlock x:Name="LblWrapper" Style="{StaticResource Pill}" Text="Wrapper"/>
+            <TextBlock Style="{StaticResource PillSep}"/>
+            <!-- Panel size and Windows scaling. Above 100% the game is handed
+                 a SMALLER virtual desktop, and every display fault this mod
+                 has chased behaves differently because of it. Nobody knew this
+                 machine was at 150% until hours into finding that out. -->
+            <TextBlock x:Name="LblDisplay" Style="{StaticResource Pill}" Text="Display"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal">
@@ -2232,6 +2276,8 @@ function Update-State {
     Sync-FixVersion
     (C 'LblGame').Text = "Game $script:GameVer"
 
+    if (-not $script:DisplayLine) { $script:DisplayLine = Get-DisplayLine }
+    (C 'LblDisplay').Text = $script:DisplayLine
     (C 'LblWrapper').Text = $w.Name
     (C 'LblWrapper').Foreground = $(if ($w.Ok) { Brush '#FF8E8880' } else { Brush '#FFC8102E' })
 
