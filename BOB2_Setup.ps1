@@ -2639,8 +2639,7 @@ function Step-VisualEnhancements {
     Set-IniValue $conf 'Antialiasing' '4x' 'DirectX'
     Set-IniValue $conf 'Filtering'    '16' 'DirectX'
     Write-OK 'Antialiasing 4x, filtering 16x.'
-    Write-Info '  If the in-game OPTIONS page misbehaves, set Antialiasing back to appdriven'
-    Write-Info '  in the dgVoodoo settings - forced AA has been known to upset it.'
+    Write-Info '  4x is the tested setting. If anything looks wrong, menu 13 again turns it all off.'
     [void](Step-InstallReShade -GameFolder $GameFolder)
     Write-Info '  In game: DEL opens the ReShade overlay, PgUp/PgDn change preset.'
     $true
@@ -3115,7 +3114,13 @@ function Do-Settings {
                     Set-IniValue $confPath "Antialiasing" $val "DirectX"
                     Write-OK "Antialiasing set to $val"
                     if ($val -ne "appdriven") {
-                        Write-Warn "Forced AA WILL break the options menu! Use at own risk."
+                        # Softened 2026-09-08. This said forced AA WILL break the
+                        # options menu; flown at 4x on a 2560x1600 panel with the
+                        # options page checked and it was fine. Keeping a note
+                        # rather than a threat, since 8x did show terrain seams.
+                        Write-Info "  Forced antialiasing has been reported to upset the in-game options page."
+                        Write-Info "  4x is the tested setting; 8x showed seams along the terrain tiles."
+                        Write-Info "  Set this back to appdriven if anything looks wrong."
                     }
                 }
             }
