@@ -15,6 +15,27 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.8.2-dev
+----------
+  - NEW: "Visual enhancements" in the setup, one key for the whole look:
+    4x antialiasing, 16x anisotropic filtering, and ReShade with the
+    Balanced preset. Pressing it again turns all three back off. The
+    pieces were already in the tool but buried in a submenu, and nothing
+    offered them together.
+
+    These three belong together because of what the DPI manifest fix
+    costs: the game now renders the VIRTUAL desktop (1707x1067 on a
+    2560x1600 panel at 150%) and Windows scales it up, so the picture is
+    softer than native. Antialiasing cleans the edges, anisotropic
+    filtering rescues ground texture at a shallow angle, and ReShade's
+    contrast-adaptive sharpening runs BEFORE the upscale and puts back
+    most of what was lost.
+
+    4x, not 8x: 8x produced visible seams along the terrain tile edges
+    and an occasional hitch. 4x has neither.
+
+    Still opt-in. Nothing enables it on its own.
+
 v1.8.1  (2026-09-08)
 --------------------
   THE MENUS DRAW CORRECTLY NOW, AND THE COCKPIT STAYS RIGHT
