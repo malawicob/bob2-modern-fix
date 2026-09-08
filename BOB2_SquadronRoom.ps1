@@ -2779,7 +2779,12 @@ function Show-SquadronSelect {
     if (Test-Path $script:RingPosPath) {
         try {
             $rp = Get-Content $script:RingPosPath -Raw | ConvertFrom-Json
-            foreach ($pp in $rp.PSObject.Properties) { $script:RingPos[$pp.Name] = $pp.Value }
+            foreach ($pp in $rp.PSObject.Properties) {
+                # an anchor outside the map would put the ring where nobody can
+                # click it, and there would be no way back. Drop it instead.
+                $vx = [double]$pp.Value.x; $vy = [double]$pp.Value.y
+                if ($vx -ge 0 -and $vx -le 1 -and $vy -ge 0 -and $vy -le 1) { $script:RingPos[$pp.Name] = $pp.Value }
+            }
         } catch { }
     }
 
@@ -2851,7 +2856,7 @@ function Show-SquadronSelect {
         $ring.Fill = B '#CC0B141B'
         $ring.Cursor = 'Hand'
         $qt.CX = $cx; $qt.CY = $cy; $qt.MapW = $W; $qt.MapH = $H
-        $qt.Drag = $false; $qt.Moved = $false; $qt.OX = 0.0; $qt.OY = 0.0
+        $qt.Drag = $false; $qt.Moved = $false; $qt.CanMove = $false; $qt.OX = 0.0; $qt.OY = 0.0
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 13); [Windows.Controls.Canvas]::SetTop($ring, $cy - 13)
         # the number inside the ring, the activity pips just under it
         $nl = New-TB -Text "$($q.Num)" -Family $CondFam -Size 10.5 -Colour $(if ($isSpit) { '#9FE0F0' } else { '#F8C87E' }) -Bold
@@ -2871,13 +2876,17 @@ function Show-SquadronSelect {
             $t = $sender.Tag
             $pt = $e.GetPosition($sender.Parent)
             $t.Drag = $true; $t.Moved = $false
+            # Moving an anchor is a deliberate act, held under Ctrl. Without
+            # that a shaky click nudged the ring instead of selecting the
+            # squadron, and the posting button never came alive.
+            $t.CanMove = ([Windows.Input.Keyboard]::Modifiers -band [Windows.Input.ModifierKeys]::Control) -ne 0
             $t.OX = $pt.X - $t.CX; $t.OY = $pt.Y - $t.CY
             [void]$sender.CaptureMouse(); $e.Handled = $true
         })
         $ring.Add_MouseMove({
             param($sender,$e)
             $t = $sender.Tag
-            if ($t.Drag) {
+            if ($t.Drag -and $t.CanMove) {
                 $pt = $e.GetPosition($sender.Parent)
                 $nx = $pt.X - $t.OX; $ny = $pt.Y - $t.OY
                 if ([math]::Abs($nx - $t.CX) -gt 3 -or [math]::Abs($ny - $t.CY) -gt 3) { $t.Moved = $true }
@@ -2896,7 +2905,9 @@ function Show-SquadronSelect {
             if ($t.Drag) {
                 $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
                 if ($t.Moved) {
-                    $script:RingPos["$($t.Base)|$($t.Num)"] = @{ x = [math]::Round($t.CX / $t.MapW, 4); y = [math]::Round($t.CY / $t.MapH, 4) }
+                    $fx = [math]::Max(0.0, [math]::Min(1.0, $t.CX / $t.MapW))
+                    $fy = [math]::Max(0.0, [math]::Min(1.0, $t.CY / $t.MapH))
+                    $script:RingPos["$($t.Base)|$($t.Num)"] = @{ x = [math]::Round($fx, 4); y = [math]::Round($fy, 4) }
                     try { $script:RingPos | ConvertTo-Json | Set-Content -Path $script:RingPosPath -Encoding UTF8 } catch { }
                 } else {
                     & $script:SelectSq $t
