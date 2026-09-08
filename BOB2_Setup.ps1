@@ -2612,6 +2612,38 @@ function Get-ReShadePreset {
 # altogether, which throws away the presets with it. This only moves the
 # hook DLL aside: everything else stays where it is, so switching it back
 # on is a rename.
+# The look Patrick signed off on 2026-09-08: 4x multisampling, 16x
+# anisotropic filtering, and ReShade's Balanced preset over the top.
+#
+# Why these three together. The DPI manifest fix has the game rendering
+# the VIRTUAL desktop (1707x1067 on a 2560x1600 panel at 150%) and
+# Windows scaling it up, so the picture is softer than native. Forced
+# antialiasing cleans the edges, anisotropic filtering rescues ground
+# texture at a shallow angle, and ReShade's contrast-adaptive sharpening
+# runs before the upscale and puts back most of what it costs.
+#
+# 8x multisampling was tried first and produced visible seams along the
+# terrain tile edges plus an occasional hitch; 4x has neither.
+function Step-VisualEnhancements {
+    param([string]$GameFolder, [switch]$Off)
+    Write-Step $(if ($Off) { 'Turn the visual enhancements off' } else { 'Visual enhancements (antialiasing, filtering, ReShade)' })
+    $conf = Join-Path $GameFolder 'dgVoodoo.conf'
+    if (-not (Test-Path $conf)) { Write-Warn 'dgVoodoo.conf not found. Install the graphics translator first.'; return $false }
+    if ($Off) {
+        Set-IniValue $conf 'Antialiasing' 'appdriven' 'DirectX'
+        Set-IniValue $conf 'Filtering'    'appdriven' 'DirectX'
+        Write-OK 'Antialiasing and filtering handed back to the game.'
+        if ((Get-ReShadeState $GameFolder) -eq 'on') { [void](Step-DisableReShade $GameFolder) }
+        return $true
+    }
+    Set-IniValue $conf 'Antialiasing' '4x' 'DirectX'
+    Set-IniValue $conf 'Filtering'    '16' 'DirectX'
+    Write-OK 'Antialiasing 4x, filtering 16x.'
+    Write-Info '  4x is the tested setting. If anything looks wrong, menu 13 again turns it all off.'
+    [void](Step-InstallReShade -GameFolder $GameFolder)
+    Write-Info '  In game: DEL opens the ReShade overlay, PgUp/PgDn change preset.'
+    $true
+}
 function Step-DisableReShade {
     param([string]$GameFolder)
     Write-Step "Switch ReShade off (keeping it installed)"
@@ -3082,7 +3114,13 @@ function Do-Settings {
                     Set-IniValue $confPath "Antialiasing" $val "DirectX"
                     Write-OK "Antialiasing set to $val"
                     if ($val -ne "appdriven") {
-                        Write-Warn "Forced AA WILL break the options menu! Use at own risk."
+                        # Softened 2026-09-08. This said forced AA WILL break the
+                        # options menu; flown at 4x on a 2560x1600 panel with the
+                        # options page checked and it was fine. Keeping a note
+                        # rather than a threat, since 8x did show terrain seams.
+                        Write-Info "  Forced antialiasing has been reported to upset the in-game options page."
+                        Write-Info "  4x is the tested setting; 8x showed seams along the terrain tiles."
+                        Write-Info "  Set this back to appdriven if anything looks wrong."
                     }
                 }
             }
@@ -3331,10 +3369,11 @@ function Do-IndividualSteps {
         }) -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
-        Write-Host " 13. Back to main menu" -ForegroundColor White
+        Write-Host " 13. Visual enhancements (4x AA, 16x filtering, ReShade)" -ForegroundColor White
+        Write-Host " 14. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-13): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-14): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -3355,7 +3394,15 @@ function Do-IndividualSteps {
             }
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
             "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
-            "13" { return }
+            "13" {
+                # one key for the whole look, and a way back off it
+                $conf = Join-Path $gameFolder 'dgVoodoo.conf'
+                $aaNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Antialiasing' } else { '' }
+                if ($aaNow -and $aaNow -ne 'appdriven') { Step-VisualEnhancements $gameFolder -Off }
+                else { Step-VisualEnhancements $gameFolder }
+                Pause-Continue
+            }
+            "14" { return }
             default { Write-Warn "Invalid option. Please enter 1-13." }
         }
     }
