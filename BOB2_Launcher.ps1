@@ -674,11 +674,15 @@ $xaml = @'
             <Button x:Name="BtnSquadron" Style="{StaticResource Nav}">
               <StackPanel>
               <StackPanel Orientation="Horizontal">
+                <!-- The Room is the RAF part of this launcher, so it gets
+                     the roundel rather than another grey outline. Solid
+                     discs, in the Room's own three colours: it is the one
+                     row a man is meant to find first. -->
                 <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
                   <Canvas Width="24" Height="24">
-                    <Path Data="{StaticResource IcoCompass}" Fill="{x:Null}" Stroke="#FF8E8880"
-                          StrokeThickness="1.6" StrokeStartLineCap="Round"
-                          StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                    <Ellipse Canvas.Left="1.5" Canvas.Top="1.5" Width="21" Height="21" Fill="#FF1C3F94"/>
+                    <Ellipse Canvas.Left="5"   Canvas.Top="5"   Width="14" Height="14" Fill="#FFF2EFE6"/>
+                    <Ellipse Canvas.Left="8.5" Canvas.Top="8.5" Width="7"  Height="7"  Fill="#FFC8102E"/>
                   </Canvas>
                 </Viewbox>
                 <StackPanel VerticalAlignment="Center">
