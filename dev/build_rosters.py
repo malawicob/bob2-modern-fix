@@ -115,11 +115,22 @@ def main():
     ap.add_argument('--out', required=True)
     ap.add_argument('--oob', default='squadronroom/oob.json')
     ap.add_argument('--skip', default='32,92', help='rosters researched by hand, left alone')
+    ap.add_argument('--claims', action='store_true',
+                    help='attach machine-read claims (about half of them are wrong)')
     a = ap.parse_args()
 
     index = json.load(open(os.path.join(a.bbm, 'index.json'), encoding='utf-8'))
     posts = json.load(open(os.path.join(a.bbm, 'postings.json'), encoding='utf-8'))
     holl = json.load(open(os.path.join(a.bbm, 'holloway.json'), encoding='utf-8'))
+    # Claims are NOT read in by default. dev/bbm_claims.py can read them
+    # out of the same biographies, but measured against the hand-researched
+    # No. 32 it gets about half of them right and misses about half, and
+    # a squadron board naming real men cannot carry that. Pass --claims to
+    # use it anyway, for experiments.
+    claims = {}
+    if a.claims:
+        cpath = os.path.join(a.bbm, 'claims.json')
+        claims = json.load(open(cpath, encoding='utf-8')) if os.path.exists(cpath) else {}
     want = {int(o['num']) for o in json.load(open(a.oob, encoding='utf-8'))}
     skip = {int(x) for x in a.skip.split(',') if x.strip()}
 
@@ -140,6 +151,7 @@ def main():
         else: unmatched += 1
         dated = {p['sqn']: p for p in (rec or {}).get('postings', [])}
         died = (rec or {}).get('died')
+        myclaims = claims.get(stem, []) if stem else []
         # a fate the Holloway list itself records, e.g. "KIA 6 September 1940"
         hfate = None
         mm = re.search(r'\b(KIA|KIFA|POW|MIA|WIA|DoW)\b[^,;.]{0,40}?'
@@ -170,6 +182,18 @@ def main():
                     later_death = end_date
             if joined and dd(joined) and dd(joined) > BATTLE_END: continue
             if left and dd(left) and dd(left) < BATTLE_START: continue
+            # A claim belongs to whichever squadron he was flying with that
+            # day. Without a joining date we cannot say, so his claims stay
+            # off the board rather than being credited to a guess.
+            vics = []
+            if joined:
+                lo, hi = dd(joined), (dd(left) or BATTLE_END)
+                for c in myclaims:
+                    cd = dd(c['date'])
+                    if cd and lo <= cd <= hi and BATTLE_START <= cd <= BATTLE_END:
+                        vics.append(c)
+                vics.sort(key=lambda c: (c['date'], c['type']))
+            scored = len([v for v in vics if v['kind'] in ('destroyed', 'shared')])
             fate = ({'status': reason, 'date': left, 'note': FATE_WORDS.get(reason, reason)}
                     if reason in ('KIA', 'MIA', 'POW', 'WIA', 'DoW')
                     else {'status': 'Posted', 'date': left, 'note': 'Posted to another squadron'} if left
@@ -180,7 +204,9 @@ def main():
                 'historical': True,
                 'joined': joined, 'left': left, 'left_reason': reason,
                 'fate': fate,
-                'victories': [], 'victories_total': None, 'vic_source': 'not researched',
+                'victories': vics,
+                'victories_total': (scored or None),
+                'vic_source': ('read from his biography' if vics else 'not researched'),
                 'awards': ([{'award': x.strip(), 'date': None}
                             for x in re.split(r'[,&]', man.get('awards', '')) if x.strip()]),
                 'codes': '', 'serials': '', 'portrait': None,
