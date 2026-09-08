@@ -71,7 +71,10 @@ def split_holloway(name):
         parts = name.split()
         if not parts: return '', ''
         sur, rest = parts[-1], ' '.join(parts[:-1])
-    ini = ''.join(w[0] for w in re.findall(r"[A-Za-z][A-Za-z'-]*", rest))
+    # Unicode-aware: an ASCII-only class split Frantisek at the s-caron
+    # into "Franti" and "ek" and made his initials "F.e.", and did the
+    # same to every Czech and Polish forename with a diacritic in it.
+    ini = ''.join(w[0] for w in re.findall(r"[^\W\d_][\w'\u2019-]*", rest, re.UNICODE))
     return sur.strip(), ini
 
 def split_bbm(label):

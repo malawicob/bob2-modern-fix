@@ -50,7 +50,7 @@ $MapProj = $null
 $MapProjPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.json'
 if (Test-Path $MapProjPath) {
     try {
-        $MapProj = Get-Content $MapProjPath -Raw | ConvertFrom-Json
+        $MapProj = Get-Content $MapProjPath -Raw -Encoding UTF8 | ConvertFrom-Json
         foreach ($pp in $MapProj.stations.PSObject.Properties) {
             $MapStations[$pp.Name] = @([double]$pp.Value[0], [double]$pp.Value[1])
         }
@@ -130,7 +130,7 @@ function Build-Squadrons {
     $out = @()
     if (-not (Test-Path $OobPath)) { return $out }
     try {
-        $all = @(Get-Content $OobPath -Raw | ConvertFrom-Json)
+        $all = @(Get-Content $OobPath -Raw -Encoding UTF8 | ConvertFrom-Json)
         while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
     } catch { return $out }
     foreach ($o in $all) {
@@ -176,7 +176,7 @@ function Get-SquadronDef { param([int]$Num)
 
 # --- data ---------------------------------------------------------------
 function Get-Portraits {
-    if (Test-Path $PortIndex) { try { return @(Get-Content $PortIndex -Raw | ConvertFrom-Json) } catch { } }
+    if (Test-Path $PortIndex) { try { return @(Get-Content $PortIndex -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { } }
     @(Get-ChildItem $PortraitDir -Filter '*.jpg' -ErrorAction SilentlyContinue | Sort-Object Name | ForEach-Object { $_.Name })
 }
 # The squadron's own men. Researched rosters live one file per unit in
@@ -192,7 +192,7 @@ function Get-Historical {
         # the whole roster rendered as a single airman whose name was every
         # name and whose source line was every credit (seen 2026-09-07).
         # Same loop as Get-Oob.
-        $men = @(Get-Content $path -Raw | ConvertFrom-Json)
+        $men = @(Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json)
         while ($men.Count -eq 1 -and ($men[0] -is [System.Array])) { $men = $men[0] }
         return @($men)
     } catch { return @() }
@@ -205,14 +205,14 @@ function Get-Oob {
     param([int]$Sqn)
     if (-not (Test-Path $OobPath)) { return $null }
     try {
-        $all = @(Get-Content $OobPath -Raw | ConvertFrom-Json)
+        $all = @(Get-Content $OobPath -Raw -Encoding UTF8 | ConvertFrom-Json)
         while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
         foreach ($o in $all) { if ([int]$o.num -eq $Sqn) { return $o } }
     } catch { }
     $null
 }
 function Get-Pilot {
-    if (Test-Path $PilotPath) { try { return (Get-Content $PilotPath -Raw | ConvertFrom-Json) } catch { } }
+    if (Test-Path $PilotPath) { try { return (Get-Content $PilotPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { } }
     $null
 }
 function Save-Pilot {
@@ -1104,7 +1104,7 @@ function Get-Sessions {
     $out = @()
     if (Test-Path $SessionsPath) {
         try {
-            $j = Get-Content $SessionsPath -Raw | ConvertFrom-Json
+            $j = Get-Content $SessionsPath -Raw -Encoding UTF8 | ConvertFrom-Json
             if ($j -and ($j.PSObject.Properties.Name -contains 'value')) { $j = $j.value }
             $out = @($j) | Where-Object { $_ -and ($_ -isnot [array]) -and ($_.PSObject.Properties.Name -contains 'end') }
         } catch { $out = @() }
@@ -1124,7 +1124,7 @@ function Finalize-Flight {
     if (-not (Test-Path $FlightOpen)) { return }
     if (Test-GameRunning) { return }
     $mk = $null
-    try { $mk = Get-Content $FlightOpen -Raw | ConvertFrom-Json } catch { }
+    try { $mk = Get-Content $FlightOpen -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
     if (-not $mk) { Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue; return }
     $start = $null; try { $start = [datetime]$mk.start } catch { }
     $end = $null
@@ -1547,7 +1547,7 @@ $KillBinsRAF = @('Bf 109E','Bf 110','Ju 87','Do 17','Ju 88','He 111','He 59')
 $KillBinsLW  = @('Spitfire','Hurricane','Defiant','Blenheim','Other','Other','Other')
 function Get-AutoClaim {
     if (Test-Path $AutoClaimPath) {
-        try { return (Get-Content $AutoClaimPath -Raw | ConvertFrom-Json) } catch { }
+        try { return (Get-Content $AutoClaimPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { }
     }
     $null
 }
@@ -3194,7 +3194,7 @@ function Get-Paper {
     # caller gets every entry, not a single wrapped object whose members
     # then enumerate into one mashed string.
     $out = @()
-    if (Test-Path $PaperPath) { try { $out = @(Get-Content $PaperPath -Raw | ConvertFrom-Json) } catch { $out = @() } }
+    if (Test-Path $PaperPath) { try { $out = @(Get-Content $PaperPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { $out = @() } }
     ,$out
 }
 function Format-ShortDate {
