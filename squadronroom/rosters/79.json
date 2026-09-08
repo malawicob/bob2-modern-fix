@@ -416,6 +416,33 @@
   "note": ""
  },
  {
+  "pilot": "Parker, T.C.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1940-02-16",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "OBE",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
   "pilot": "Parr, L.A.",
   "rank": "Sergeant",
   "historical": true,
@@ -581,7 +608,7 @@
  },
  {
   "pilot": "Zatonski, A.R.",
-  "rank": "Plt Off<!-- 43052 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": "1940-07-13",
   "left": null,

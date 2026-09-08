@@ -115,10 +115,10 @@
   "note": "Died 1941-02-11, after the Battle."
  },
  {
-  "pilot": "Batchelor, G.H.r.g.n.S.a.s.B.C.w.r.",
+  "pilot": "Batchelor, G.H.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-10-14",
   "left": null,
   "left_reason": null,
   "fate": {
@@ -366,6 +366,49 @@
   "note": ""
  },
  {
+  "pilot": "Deere, A.C.",
+  "rank": "Flight Lieutenant",
+  "historical": true,
+  "joined": "1938-08-20",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC*",
+    "date": null
+   },
+   {
+    "award": "DSO",
+    "date": null
+   },
+   {
+    "award": "CdeG",
+    "date": null
+   },
+   {
+    "award": "OBE",
+    "date": null
+   },
+   {
+    "award": "ADC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1995-09-21, after the Battle."
+ },
+ {
   "pilot": "Dexter, P.G.",
   "rank": "Squadron Leader",
   "historical": true,
@@ -575,6 +618,37 @@
   "victories_total": null,
   "vic_source": "not researched",
   "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
+  "pilot": "Gray, C.F.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1939-11-20",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DSO",
+    "date": null
+   },
+   {
+    "award": "DFC**",
+    "date": null
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,

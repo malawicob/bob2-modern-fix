@@ -257,6 +257,33 @@
   "note": "Died 2008-12-27, after the Battle."
  },
  {
+  "pilot": "Dutton, R.G.",
+  "rank": "Squadron Leader",
+  "historical": true,
+  "joined": "1940-04-03",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1988-09-14, after the Battle."
+ },
+ {
   "pilot": "Forde, D.N.",
   "rank": "Flying Officer",
   "historical": true,
@@ -934,7 +961,7 @@
  },
  {
   "pilot": "Urbanowicz, W.",
-  "rank": "Fg Off<!-- 76735 -->",
+  "rank": "Flying Officer",
   "historical": true,
   "joined": "1940-07-14",
   "left": "1940-08-21",
@@ -977,7 +1004,7 @@
  },
  {
   "pilot": "Wadham, J.V.",
-  "rank": "Sgt<!-- 741598 -->",
+  "rank": "Sergeant",
   "historical": true,
   "joined": "1940-07-01",
   "left": "1940-10-12",
@@ -1048,7 +1075,7 @@
  },
  {
   "pilot": "Yule, R.D.",
-  "rank": "Plt Off<!-- 33502 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": "1940-10-27",
   "left": null,

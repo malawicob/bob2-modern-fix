@@ -762,6 +762,33 @@
   "note": ""
  },
  {
+  "pilot": "Skinner, W.M.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFM",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 2003-06-26, after the Battle."
+ },
+ {
   "pilot": "Smith, A.J.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -967,7 +994,7 @@
  },
  {
   "pilot": "Young, J.H.R.",
-  "rank": "Plt Off<!-- 42670 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": "1940-07-28",

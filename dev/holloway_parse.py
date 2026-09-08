@@ -18,9 +18,16 @@ import re, os, json, glob, html, argparse
 ROW = re.compile(r'^\|(.+)$')
 
 def unlink(t):
+    # Unescape FIRST. The wikitext holds &lt;!-- 42175 --&gt;, so stripping
+    # tags before unescaping left the comment behind, and a man's rank read
+    # "Plt Off<!-- 42175 -->" on the board.
+    t = html.unescape(t)
     t = re.sub(r'\[\[[^|\]]*\|([^\]]*)\]\]', r'\1', t)
     t = re.sub(r'\[\[([^\]]*)\]\]', r'\1', t)
     t = re.sub(r'<ref[^>]*>.*?</ref>|<ref[^>]*/>', '', t, flags=re.S)
+    # HTML comments carry the editors' service numbers and were ending up
+    # inside a man's rank: "Plt Off<!-- 42175 -->"
+    t = re.sub(r'<!--.*?-->', '', t, flags=re.S)
     t = re.sub(r'<[^>]+>', '', t)
     # wikitext emphasis: the list bolds some names, and ''' was ending up
     # in front of a man's surname on the readiness board

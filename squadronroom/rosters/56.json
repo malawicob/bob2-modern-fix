@@ -1,32 +1,5 @@
 [
  {
-  "pilot": "<!-- 84328 -->Ingle-Finch, M.R.",
-  "rank": "Pilot Officer",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived the Battle with the squadron"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [
-   {
-    "award": "DFC AFC",
-    "date": null
-   }
-  ],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
-  "note": ""
- },
- {
   "pilot": "Bailey, G.G.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -565,6 +538,33 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": "Died 1940-11-11, after the Battle."
+ },
+ {
+  "pilot": "Ingle-Finch, M.R.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC AFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
  },
  {
   "pilot": "Joubert, C.C.O.",

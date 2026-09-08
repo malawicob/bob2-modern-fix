@@ -411,6 +411,33 @@
   "note": ""
  },
  {
+  "pilot": "Grassick, R.D.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1939-11-05",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1978-10-28, after the Battle."
+ },
+ {
   "pilot": "Homer, M.G.",
   "rank": "Flying Officer",
   "historical": true,

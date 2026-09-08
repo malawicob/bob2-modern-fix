@@ -1,32 +1,5 @@
 [
  {
-  "pilot": "<!-- 84328 -->Ingle-Finch, M.R.",
-  "rank": "Pilot Officer",
-  "historical": true,
-  "joined": "1940-09-18",
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived the Battle with the squadron"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [
-   {
-    "award": "DFC AFC",
-    "date": null
-   }
-  ],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
-  "note": ""
- },
- {
   "pilot": "Adair, H.H.P.",
   "rank": "Sergeant",
   "historical": true,
@@ -774,6 +747,33 @@
   "note": "Died 1940-11-16, after the Battle."
  },
  {
+  "pilot": "Ingle-Finch, M.R.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1940-09-18",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC AFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
   "pilot": "Johnston, J.T.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -1317,6 +1317,28 @@
    "status": "WIA",
    "date": "1940-10-26",
    "note": "Wounded"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
+  "pilot": "Staples, L.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
   },
   "victories": [],
   "victories_total": null,

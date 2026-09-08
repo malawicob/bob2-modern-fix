@@ -537,7 +537,7 @@
   "note": "Died 1942-06-04, after the Battle."
  },
  {
-  "pilot": "Edwards, R.L.r.H.b.r.O.g.h.n.a.R.L.E.T.C.o.R.o.D.s.h.n.R.L.E.r.",
+  "pilot": "Edwards, R.L.",
   "rank": "Flying Officer",
   "historical": true,
   "joined": null,
@@ -672,6 +672,37 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": "Died 1942-03-27, after the Battle."
+ },
+ {
+  "pilot": "Hancock, N.P.W.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1940-01-29",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "OBE",
+    "date": null
+   },
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 2003-02-23, after the Battle."
  },
  {
   "pilot": "Hillcoat, H.B.L.",
@@ -1620,7 +1651,7 @@
  },
  {
   "pilot": "Yuile, A.M.",
-  "rank": "Fg Off<!-- C1328 -->",
+  "rank": "Flying Officer",
   "historical": true,
   "joined": null,
   "left": null,
@@ -1642,7 +1673,7 @@
  },
  {
   "pilot": "Zavoral, A.n.",
-  "rank": "Sgt<!-- 787660 -->",
+  "rank": "Sergeant",
   "historical": true,
   "joined": null,
   "left": null,

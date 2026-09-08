@@ -88,6 +88,28 @@
   "note": "Died 1941-09-22, after the Battle."
  },
  {
+  "pilot": "Bowring, B.H.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1939-08-24",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1994-08-14, after the Battle."
+ },
+ {
   "pilot": "Brown, R.J.W.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -204,7 +226,7 @@
  },
  {
   "pilot": "Copeman, J.H.H.",
-  "rank": "Plt Off<!-- 41257 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": "1940-08-11",
@@ -522,7 +544,7 @@
  },
  {
   "pilot": "Hampshire, C.E.",
-  "rank": "Sgt<!-- 564722 -->",
+  "rank": "Sergeant",
   "historical": true,
   "joined": "1940-09-10",
   "left": null,
@@ -541,6 +563,28 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": "Died 2004-04-29, after the Battle."
+ },
+ {
+  "pilot": "Hardman, H.G.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
  },
  {
   "pilot": "Higgs, T.P.K.",
@@ -1015,6 +1059,28 @@
   "note": "Died 1944-07-31, after the Battle."
  },
  {
+  "pilot": "Powell, R.P.R.",
+  "rank": "Flight Lieutenant",
+  "historical": true,
+  "joined": "1936-08-01",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1970-01-28, after the Battle."
+ },
+ {
   "pilot": "Richards, D.H.",
   "rank": "Sub Lt (FAA)",
   "historical": true,
@@ -1272,16 +1338,16 @@
   "note": "Died 1985-02-04, after the Battle."
  },
  {
-  "pilot": "Vykoukal, K.J.A.l.a.V.",
+  "pilot": "Vykoukal, K.J.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-25",
+  "left": "1940-09-12",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived the Battle with the squadron"
+   "status": "Posted",
+   "date": "1940-09-12",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,

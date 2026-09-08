@@ -1,5 +1,36 @@
 [
  {
+  "pilot": "Allard, G.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1938-06-01",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   },
+   {
+    "award": "DFM*",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1941-03-13, after the Battle."
+ },
+ {
   "pilot": "Allgood, H.H.",
   "rank": "Sergeant",
   "historical": true,
@@ -457,7 +488,7 @@
  },
  {
   "pilot": "Hampshire, C.E.",
-  "rank": "Sgt<!-- 564722 -->",
+  "rank": "Sergeant",
   "historical": true,
   "joined": null,
   "left": null,
@@ -476,6 +507,33 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": "Died 2004-04-29, after the Battle."
+ },
+ {
+  "pilot": "Hemingway, J.A.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1940-05-15",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 2025-03-17, after the Battle."
  },
  {
   "pilot": "Hodgson, W.H.",

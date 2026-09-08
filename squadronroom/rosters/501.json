@@ -579,6 +579,33 @@
   "note": "Died 1993-06-28, after the Battle."
  },
  {
+  "pilot": "Holden, E.",
+  "rank": "Flight Lieutenant",
+  "historical": true,
+  "joined": "1937-04-10",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
   "pilot": "Holland, A.L.",
   "rank": "Squadron Leader",
   "historical": true,
@@ -1592,7 +1619,7 @@
  },
  {
   "pilot": "Zaoral, V.r.",
-  "rank": "Plt Off<!-- 81903 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": null,
@@ -1614,7 +1641,7 @@
  },
  {
   "pilot": "Zenker, P.",
-  "rank": "Plt Off<!-- 76714 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": null,

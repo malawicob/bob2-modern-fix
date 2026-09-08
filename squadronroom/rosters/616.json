@@ -1,5 +1,27 @@
 [
  {
+  "pilot": "Bell, J.S.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1939-08-24",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
   "pilot": "Brewster, J.",
   "rank": "Flying Officer",
   "historical": true,

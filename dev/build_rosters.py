@@ -180,8 +180,17 @@ def main():
                     if reason == 'KIFA': reason = 'KIA'
                 elif ed > BATTLE_END:
                     later_death = end_date
-            if joined and dd(joined) and dd(joined) > BATTLE_END: continue
-            if left and dd(left) and dd(left) < BATTLE_START: continue
+            # The Holloway list is the authority on WHO served here during
+            # the Battle. When a date read from the prose contradicts it,
+            # the date is wrong, not the membership: drop the date and keep
+            # the man. Deere and Allard were being thrown off their own
+            # squadrons this way, because a squadron mentioned later in the
+            # biography was read as the end of their service.
+            if joined and dd(joined) and dd(joined) > BATTLE_END:
+                joined = None
+            if left and dd(left) and dd(left) < BATTLE_START:
+                left = None
+                if reason == 'posted': reason = None
             # A claim belongs to whichever squadron he was flying with that
             # day. Without a joining date we cannot say, so his claims stay
             # off the board rather than being credited to a guess.
@@ -194,6 +203,7 @@ def main():
                         vics.append(c)
                 vics.sort(key=lambda c: (c['date'], c['type']))
             scored = len([v for v in vics if v['kind'] in ('destroyed', 'shared')])
+            if reason in ('KIA','MIA','POW','WIA','DoW') and not left: reason = None
             fate = ({'status': reason, 'date': left, 'note': FATE_WORDS.get(reason, reason)}
                     if reason in ('KIA', 'MIA', 'POW', 'WIA', 'DoW')
                     else {'status': 'Posted', 'date': left, 'note': 'Posted to another squadron'} if left

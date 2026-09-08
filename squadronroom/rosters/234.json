@@ -1,27 +1,5 @@
 [
  {
-  "pilot": "<!-- 39086 -->Igglesden, C.P.",
-  "rank": "Flying Officer",
-  "historical": true,
-  "joined": "1940-02-20",
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived the Battle with the squadron"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
-  "note": "Died 2002-12-19, after the Battle."
- },
- {
   "pilot": "Bailey, G.J.",
   "rank": "Sergeant",
   "historical": true,
@@ -278,6 +256,28 @@
   "note": ""
  },
  {
+  "pilot": "Gordon, W.H.G.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
   "pilot": "Gout, G.K.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -467,6 +467,28 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": ""
+ },
+ {
+  "pilot": "Igglesden, C.P.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1940-02-20",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 2002-12-19, after the Battle."
  },
  {
   "pilot": "Kane, T.M.",
@@ -936,7 +958,7 @@
  },
  {
   "pilot": "Young, J.H.",
-  "rank": "Plt Off<!-- 42175 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": null,
@@ -958,7 +980,7 @@
  },
  {
   "pilot": "Young, J.S.",
-  "rank": "Plt Off<!-- 39362 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": "1940-09-02",
   "left": null,
@@ -980,7 +1002,7 @@
  },
  {
   "pilot": "Zurakowski, J.J.",
-  "rank": "Plt Off<!-- 76715 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": null,

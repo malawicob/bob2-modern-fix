@@ -66,6 +66,33 @@
   "note": "Died 1942-08-10, after the Battle."
  },
  {
+  "pilot": "Badger, J.V.C.",
+  "rank": "Squadron Leader",
+  "historical": true,
+  "joined": "1911-05-15",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1941-06-30, after the Battle."
+ },
+ {
   "pilot": "Barrow, H.J.R.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -578,6 +605,33 @@
   "note": ""
  },
  {
+  "pilot": "Hull, C.B.",
+  "rank": "Squadron Leader",
+  "historical": true,
+  "joined": "1936-08-05",
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": null
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1942-01-01, after the Battle."
+ },
+ {
   "pilot": "Hurry, C.A.L.",
   "rank": "Sergeant",
   "historical": true,
@@ -735,28 +789,6 @@
     "date": null
    }
   ],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
-  "note": ""
- },
- {
-  "pilot": "Kredba, M.",
-  "rank": "Flight Lieutenant",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived the Battle with the squadron"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
@@ -1405,7 +1437,7 @@
  },
  {
   "pilot": "Upton, H.C.D.",
-  "rank": "Plt Off<!-- 42544 -->",
+  "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
   "left": null,

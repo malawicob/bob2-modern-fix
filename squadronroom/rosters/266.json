@@ -274,6 +274,28 @@
   "note": "Died 1941-06-11, after the Battle."
  },
  {
+  "pilot": "Cale, F.W.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": ""
+ },
+ {
   "pilot": "Chalder, H.H.",
   "rank": "Pilot Officer",
   "historical": true,
@@ -704,7 +726,7 @@
     "date": null
    },
    {
-    "award": "CdeLd'H<ref>He was also awarded the Soviet Distinguished Services Medal and the US Legion of Merit</ref>",
+    "award": "CdeLd'H",
     "date": null
    }
   ],
@@ -735,6 +757,28 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": "Died 1941-08-27, after the Battle."
+ },
+ {
+  "pilot": "Mitchell, P.H.G.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1975-09-06, after the Battle."
  },
  {
   "pilot": "Pattison, J.G.",
@@ -792,6 +836,28 @@
   "portrait": null,
   "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
   "note": "Died 1942-08-19, after the Battle."
+ },
+ {
+  "pilot": "Roach, R.J.B.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": {
+   "status": "Survived",
+   "date": null,
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not researched",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "Holloway list of the Few via Wikipedia (who served); bbm.org.uk airmen (dates)",
+  "note": "Died 1944-07-18, after the Battle."
  },
  {
   "pilot": "Soden, J.F.",
