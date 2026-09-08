@@ -316,6 +316,22 @@ $Xaml = @'
         </StackPanel>
       </StackPanel>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0">
+        <!-- the way back, and the one thing to press on whatever screen is
+             up: reporting to a squadron, or for duty. They live in the
+             header because the header does not scroll and the screens
+             below it do. -->
+        <Border x:Name="RoomBack" Background="#101B22" BorderBrush="#22303C" BorderThickness="1"
+                CornerRadius="3" Cursor="Hand" Padding="18,9" Margin="0,0,14,0" Visibility="Collapsed">
+          <TextBlock x:Name="RoomBackText" Text="&#x2190;  BACK"
+                     FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="15"
+                     FontWeight="Bold" Foreground="#9FB0B8" VerticalAlignment="Center"/>
+        </Border>
+        <Border x:Name="RoomAction" Background="#C8973F" CornerRadius="3" Cursor="Hand"
+                Padding="22,10" Visibility="Collapsed">
+          <TextBlock x:Name="RoomActionText" Text="REPORT TO THIS SQUADRON"
+                     FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="16"
+                     FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
+        </Border>
         <Border x:Name="RoomPlay" Background="#C8973F" CornerRadius="3" Cursor="Hand" Padding="26,10">
           <TextBlock Text="PLAY" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
                      FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
@@ -412,6 +428,18 @@ if ($rp) {
     })
     $rp.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') })
     $rp.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
+}
+$rb = C 'RoomBack'
+if ($rb) {
+    $rb.Add_MouseLeftButtonUp({ if ($script:ChromeBackDo) { & $script:ChromeBackDo } })
+    $rb.Add_MouseEnter({ param($se,$e) $se.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
+    $rb.Add_MouseLeave({ param($se,$e) $se.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom('#22303C') })
+}
+$ra = C 'RoomAction'
+if ($ra) {
+    $ra.Add_MouseLeftButtonUp({ if ($script:ChromeActionOn -and $script:ChromeActionDo) { & $script:ChromeActionDo } })
+    $ra.Add_MouseEnter({ param($se,$e) if ($script:ChromeActionOn) { $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') } })
+    $ra.Add_MouseLeave({ param($se,$e) if ($script:ChromeActionOn) { $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') } })
 }
 $rnc = C 'RoomNewCareer'
 if ($rnc) {
@@ -880,19 +908,45 @@ function Show-ChromeButtons {
         $el = C $n
         if ($el) { $el.Visibility = $(if ($Show) { 'Visible' } else { 'Collapsed' }) }
     }
+    if ($Show) { Set-ChromeAction -Text ''; Set-ChromeBack -Text '' }
 }
-# A way back out of the two career screens, so a man who changes his mind
-# is not trapped there.
-function New-BackButton {
+# the way out of a screen, in the header for the same reason
+$script:ChromeBackDo = $null
+function Set-ChromeBack {
     param([string]$Text, $OnClick)
-    $b = New-Object Windows.Controls.Border
-    $b.Padding = '14,8'; $b.CornerRadius = '3'; $b.Cursor = 'Hand'; $b.HorizontalAlignment = 'Left'
-    $b.Background = B '#101B22'; $b.BorderBrush = Res 'Rule'; $b.BorderThickness = '1'
-    $b.Child = (New-TB -Text ("$([char]0x2190)  " + $Text) -Family $CondFam -Size 12 -Colour '#9FB0B8' -Bold)
-    $b.Add_MouseLeftButtonUp($OnClick)
-    $b.Add_MouseEnter({ param($se,$e) $se.BorderBrush = (B '#C8973F') })
-    $b.Add_MouseLeave({ param($se,$e) $se.BorderBrush = (Res 'Rule') })
-    $b
+    $el = C 'RoomBack'; $tb = C 'RoomBackText'
+    if (-not $el) { return }
+    if (-not $Text) { $el.Visibility = 'Collapsed'; $script:ChromeBackDo = $null; return }
+    if ($tb) { $tb.Text = ([char]0x2190) + '  ' + $Text }
+    $script:ChromeBackDo = $OnClick
+    $el.Visibility = 'Visible'
+}
+# The screen's own action, sitting in the header where it cannot be
+# scrolled past. A man was missing REPORT TO THIS SQUADRON entirely
+# because it sat under a map seven hundred pixels tall.
+$script:ChromeActionOn = $false
+$script:ChromeActionDo = $null
+function Set-ChromeActionEnabled {
+    param([bool]$On)
+    $el = C 'RoomAction'; $tb = C 'RoomActionText'
+    if (-not $el) { return }
+    $script:ChromeActionOn = $On
+    $el.Background = B $(if ($On) { '#C8973F' } else { '#26313A' })
+    $el.Cursor = $(if ($On) { 'Hand' } else { 'Arrow' })
+    if ($tb) { $tb.Foreground = B $(if ($On) { '#171203' } else { '#6F828C' }) }
+}
+function Set-ChromeAction {
+    param([string]$Text, [bool]$Enabled = $false, $OnClick)
+    $el = C 'RoomAction'; $tb = C 'RoomActionText'
+    if (-not $el) { return }
+    if (-not $Text) {
+        $el.Visibility = 'Collapsed'; $script:ChromeActionDo = $null; $script:ChromeActionOn = $false
+        return
+    }
+    if ($tb) { $tb.Text = $Text }
+    $script:ChromeActionDo = $OnClick
+    $el.Visibility = 'Visible'
+    Set-ChromeActionEnabled $Enabled
 }
 function Set-Header {
     param($Pilot)
@@ -2316,6 +2370,7 @@ function Show-Roster {
 function Update-CreateValid {
     $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
     $script:SubmitBtn.IsEnabled = $ok
+    Set-ChromeActionEnabled $ok
 }
 function Invoke-Submit {
     Complete-NewCareer
@@ -3268,12 +3323,9 @@ function Show-SquadronSelect {
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  POSTINGS" }
     # a man who opened this board by accident, with a career already
     # running, can go back to it
-    $standing = Get-Pilot
-    if ($standing) {
-        $bk = New-BackButton 'BACK TO THE DISPERSAL' { $script:NewCareerPending = $false; Show-Roster -Pilot (Get-Pilot) }
-        $bk.Margin = '0,0,0,10'
-        [void]$script:Stage.Children.Add($bk)
-    }
+    if (Get-Pilot) { Set-ChromeBack 'BACK TO THE DISPERSAL' { $script:NewCareerPending = $false; Show-Roster -Pilot (Get-Pilot) } }
+    else { Set-ChromeBack -Text '' }
+    Set-ChromeAction -Text 'REPORT TO THIS SQUADRON' -Enabled $false -OnClick { if ($script:SelSq) { Show-Create } }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE PLOTTING TABLE' -Title 'Choose your campaign and squadron'))
 
     # campaign period: squadrons moved as the battle moved, so pick the
@@ -3316,11 +3368,13 @@ function Show-SquadronSelect {
     $script:SelSq = $null
     $script:MapTiles = @()
     $script:SqChips = @()
+    # what you have chosen, said above the table rather than under it: the
+    # button that acts on it is in the header now, and the two should not
+    # be seven hundred pixels apart
     $detail = New-TB -Text 'No squadron selected.' -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
-    $btn = New-Object Windows.Controls.Button
-    $btn.Content = 'REPORT TO THIS SQUADRON'; $btn.IsEnabled = $false; $btn.MinWidth = 240
+    $detail.Margin = '2,0,0,12'
     $script:SqDetail = $detail
-    $script:SqButton = $btn
+    [void]$script:Stage.Children.Add($detail)
 
     $script:SelectSq = {
         param($q2)
@@ -3342,7 +3396,7 @@ function Show-SquadronSelect {
         $actTxt = switch ("$($q2.Act)") { 'H' { 'in the thick of the fighting' } 'M' { 'steady action' } default { 'a quieter station' } }
         $codeTxt = if ("$($q2.Code)") { "   (codes $($q2.Code)-)" } else { '' }
         $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $(Get-GroupForBase $q2.Base) Group  $([char]0x2022)  $actTxt$codeTxt"
-        $script:SqButton.IsEnabled = $true
+        Set-ChromeActionEnabled $true
     }
 
     # the day's postings, gathered by field: the same layer the sector map
@@ -3393,12 +3447,6 @@ function Show-SquadronSelect {
         [void]$script:Stage.Children.Add($rl)
     }
 
-    $detail.Margin = '2,14,0,14'
-    [void]$script:Stage.Children.Add($detail)
-    $btn.Add_Click({ if ($script:SelSq) { Show-Create } })
-    $btnRow = New-Object Windows.Controls.StackPanel; $btnRow.Orientation='Horizontal'
-    [void]$btnRow.Children.Add($btn)
-    [void]$script:Stage.Children.Add($btnRow)
 }
 
 function Show-Create {
@@ -3414,9 +3462,8 @@ function Show-Create {
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $($script:SelSq.Num) Squadron" }
     $perDef2 = $Periods | Where-Object { $_.Id -eq "$($script:SelSq.Period)" } | Select-Object -First 1
     $m = C 'HdrMotto'; if ($m) { $m.Text = "ROYAL AIR FORCE  $([char]0x2022)  $($script:SelSq.Type.ToUpper())S AT $($script:SelSq.Base.ToUpper())$(if ($perDef2) { "  $([char]0x2022)  $($perDef2.Label)" })" }
-    $bk2 = New-BackButton 'BACK TO THE BOARD' { Show-SquadronSelect }
-    $bk2.Margin = '0,0,0,10'
-    [void]$script:Stage.Children.Add($bk2)
+    Set-ChromeBack 'BACK TO THE BOARD' { Show-SquadronSelect }
+    Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-Submit }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
     $lead = New-TB -Text 'Summer 1940. Give your name and pick your photograph. Your aircraft, code letter and rank are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
