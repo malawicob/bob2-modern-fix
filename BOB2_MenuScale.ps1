@@ -22,15 +22,16 @@
 #    written. That makes it impossible to apply a patch to the wrong
 #    build, or to apply one twice on top of itself.
 #
-#  WHAT IS DELIBERATELY LEFT ALONE
-#    Eleven of the 154 dialogs hold no controls at all. They are frames
-#    the game paints its own artwork into -- dialog 143 is 805 x 604
-#    pixels, exactly four by three. There is no text in them to enlarge,
-#    which is the whole point of this, and making the frame bigger only
-#    moves it away from a picture the game still draws at its own fixed
-#    size: the photograph ends up in a sea of white with torn edges.
-#    Those eleven are skipped. dev\menuscale_leave_backdrops.py is what
-#    took them out of the patch files.
+#  A NOTE ON THE ARTWORK FRAMES (2026-09-08)
+#    Eleven of the 154 dialogs hold no controls at all: they are frames
+#    the game paints its own artwork into, and dialog 143 is 805 x 604
+#    pixels, exactly four by three. Enlarging them looked like the reason
+#    the loading photograph sits in a sea of white, so the 35 edits that
+#    touch them were dropped from the patches. THE GAME THEN CRASHED --
+#    0xc0000005 at offset zero, a call through a null pointer. It was put
+#    back. Whatever those dialogs are, the game does not survive finding
+#    them at a size the rest of the menus no longer agree with, so do not
+#    take them out again without understanding why.
 #
 #    Patches are always applied to the pristine Bob.exe.unscaled, never
 #    to whatever Bob.exe currently is, so scales never compound.
