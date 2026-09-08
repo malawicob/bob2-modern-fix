@@ -1,12 +1,14 @@
 ﻿# =====================================================================
-#  THE SQUADRON ROOM - Phase 1  (No. 92 Squadron RAF)
-#  Fullscreen dispersal: the readiness board, framed photographs on the
-#  wall, and a joining form for a new pilot.
+#  THE SQUADRON ROOM
+#  Fullscreen dispersal: the readiness board, the framed photograph on the
+#  wall, your logbook, the sector map and the morning paper.
 #
-#  Standalone for now (run BOB2_SquadronRoom.vbs). Writes nothing to the
-#  game; the only state is your pilot in <GameDir>\SquadronRoom\pilot.json
-#  (or beside this script if the game folder is not found). Portraits and
-#  the historical roster ship read-only in .\squadronroom\.
+#  It READS the game's campaign save (the pilot, the date, and the Log
+#  Book of your own sorties and victories) and it can LAUNCH the game.
+#  It never writes to the game's own files. Its state lives in
+#  <GameDir>\SquadronRoom\: pilot.json, sessions.json, autoclaim.json,
+#  ringpos.json, flight.open, before.bsr and archive\. Portraits, rosters,
+#  the order of battle and the newspaper ship read-only in .\squadronroom\.
 # =====================================================================
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
@@ -285,6 +287,30 @@ $Win.Dispatcher.add_UnhandledException({
     $e.Handled = $true
 })
 $Win.Add_KeyDown({ param($s,$e) if ($e.Key -eq 'Escape') { $Win.Close() } })
+# Coming back from a flight started with PLAY: log the sortie, take the
+# claims and redraw whatever screen is showing. Without this the Room sat
+# on a stale logbook, stale claims and yesterday's campaign date until it
+# was closed and opened again.
+$script:CurrentTab = 'dispersal'
+function Show-Tab {
+    param([string]$Tab)
+    $script:CurrentTab = $Tab
+    $pl = Get-Pilot
+    if (-not $pl) { Show-SquadronSelect; return }
+    switch ($Tab) {
+        'logbook' { Show-Logbook -Pilot $pl }
+        'map'     { Show-Map -Pilot $pl }
+        'paper'   { Show-Paper -Pilot $pl }
+        default   { Show-Roster -Pilot $pl }
+    }
+}
+$Win.Add_Activated({
+    if ($script:Activating) { return }
+    if (Test-GameRunning) { return }
+    if (-not (Test-Path $FlightOpen)) { return }
+    $script:Activating = $true
+    try { Finalize-Flight; Show-Tab $script:CurrentTab } catch { } finally { $script:Activating = $false }
+})
 # PLAY from inside the Room: same flight-marker pipeline as the launcher,
 # so the sortie logs itself; then the game starts via the pinning bat.
 $rp = C 'RoomPlay'
@@ -419,10 +445,15 @@ function New-TB {
     if ($Wrap) { $t.TextWrapping = 'Wrap' }
     $t
 }
+$BattleStart = [datetime]'1940-07-10'
+$BattleEnd   = [datetime]'1940-10-31'
 $SerifFam = 'Rockwell, Georgia, Cambria, serif'
 $CondFam  = 'Bahnschrift SemiCondensed, Segoe UI'
 function Fate-Colour { param([string]$s)
-    if ($s -match 'KIA|Killed|Died|DoW') { return '#D66A5C' }
+    # Survival is checked FIRST: "Survived BoB (Later WIA/POW)" is a man
+    # who came through the Battle, and used to render as a casualty.
+    if ($s -match 'Survived|On strength') { return '#8FB56A' }
+    if ($s -match 'KIA|Killed|Died|DoW|MIA|Missing|Failed to return|Lost') { return '#D66A5C' }
     if ($s -match 'WIA|Wounded|Injured') { return '#D9A441' }
     if ($s -match 'POW|Captured|Prisoner') { return '#9FB0B8' }
     '#8FB56A'
@@ -454,21 +485,51 @@ function Get-CampaignDate {
         return $date
     } catch { return $null }
 }
-# Where No. 92 Squadron was based on a given date (1940).
-#   Croydon -> Hornchurch (Dunkirk, 23 May) -> Pembrey (Wales, mid-Jun)
-#   -> Biggin Hill (the battle proper, 8 Sep).
-function Get-Airfield {
-    param($Date)
-    if (-not $Date) { return $null }
-    $moves = @(
+# Where a squadron stood on a given date.
+#
+# Two sources, in order. First a researched move list for squadrons we
+# have one for (below). Then the game's own order of battle in oob.json,
+# which carries four campaign dates per squadron and is the truth for the
+# campaign the player is flying; its "13 Group" means withdrawn north to
+# rest, and is shown as such rather than as a station.
+#
+# This replaces three separate "if the squadron is 92" special cases in
+# the dispersal, the map and the newspaper, which left every other
+# squadron standing at its first posting for the whole Battle - No. 32
+# was still at Biggin Hill in October although the campaign had sent it
+# north on 7 September.
+$SquadronMoves = @{
+    92 = @(
         @{ d = [datetime]'1940-01-01'; f = 'RAF Croydon' },
         @{ d = [datetime]'1940-05-23'; f = 'RAF Hornchurch' },
         @{ d = [datetime]'1940-06-18'; f = 'RAF Pembrey' },
         @{ d = [datetime]'1940-09-08'; f = 'RAF Biggin Hill' }
     )
-    $cur = $moves[0].f
-    foreach ($m in $moves) { if ($Date -ge $m.d) { $cur = $m.f } }
-    $cur
+}
+function Get-SquadronBase {
+    param([int]$Sqn, $Date, $Pilot)
+    if ($Date -and $SquadronMoves.ContainsKey($Sqn)) {
+        $cur = $null
+        foreach ($m in $SquadronMoves[$Sqn]) { if ($Date -ge $m.d) { $cur = $m.f } }
+        if ($cur) { return $cur }
+    }
+    if ($Date) {
+        $oob = Get-Oob -Sqn $Sqn
+        if ($oob -and $oob.bases) {
+            $best = $null; $bestD = $null
+            foreach ($pr in $oob.bases.PSObject.Properties) {
+                try { $kd = [datetime]::ParseExact($pr.Name, 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture) } catch { continue }
+                if ($Date -ge $kd -and ((-not $bestD) -or ($kd -gt $bestD))) { $bestD = $kd; $best = "$($pr.Value)" }
+            }
+            if ($best) {
+                if ($best -match '^\s*\d+\s*Group\s*$') { return 'resting in the north' }
+                if ($best -notmatch '^RAF ') { return "RAF $best" }
+                return $best
+            }
+        }
+    }
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { return "$($Pilot.base)" }
+    $null
 }
 # The campaign pilot from the newest save. The .BSR carries the pilot
 # surname at file offset 100 and the aircraft name at 121 (char[21], NUL
@@ -513,7 +574,16 @@ function Resolve-Status {
     $raw = "$($P.status)"
     if ($Date) {
         $fate = Get-FateDate $P
-        if ($fate -and ($Date -lt $fate)) { return @{ Text = 'On strength'; Colour = '#8FB56A' } }
+        if ($fate) {
+            if ($Date -lt $fate) { return @{ Text = 'On strength'; Colour = '#8FB56A' } }
+        }
+        elseif ($Date -le $BattleEnd) {
+            # No date for this man's fate. While the Battle is still being
+            # fought nobody's ending is known yet, so he stands on strength:
+            # the board used to announce "Survived BoB" for every survivor
+            # on the first morning, which gave the whole war away.
+            return @{ Text = 'On strength'; Colour = '#8FB56A' }
+        }
     }
     @{ Text = $raw; Colour = (Fate-Colour $raw) }
 }
@@ -593,74 +663,14 @@ function Get-AircraftSpec { param([string]$Type)
     }
     @{ Img='spitfire.png'; Ratio=(324.0/1000.0); SqX=0.4194; SqY=0.3461; IndX=0.6727; IndY=0.3326; SerX=0.7443; SerTy=0.4487; CodeSize=84.0; SerSize=32.0 }
 }
-$AircraftImg  = Join-Path (Join-Path $ModDir 'aircraft') 'spitfire.png'
 $AcW          = 760.0            # on-screen width; height follows the image
-$AcRatio      = 324.0 / 1000.0   # staged spitfire.png aspect
 # historically-approximate: RAF 'Sky' grey block codes, black serial
 $CodeFont     = 'Bahnschrift SemiBold, Bahnschrift, Franklin Gothic Medium, Arial'
 $CodeColour   = '#C3C9B4'
 $SerialFont   = 'Bahnschrift Condensed, Arial Narrow, Arial'
 $SerialColour = '#171712'
-$CodeSize     = 84.0
-$SerialSize   = 32.0
-$SqX          = 0.415          # QJ left edge (fraction), forward of the roundel
-$IndX         = 0.685          # individual letter, aft of the roundel
-$SerX         = 0.775          # serial, toward the tail
-$FuseY        = 0.51           # fuselage centreline at the roundel (codes)
-$SerY         = 0.565          # serial sits lower than the codes, as on the real aircraft
-# saved marking position (fraction) or a default
-function Mk-Val {
-    param($Mk, [string]$Name, [double]$Default)
-    if ($Mk -and ($Mk.PSObject.Properties.Name -contains $Name) -and ($null -ne $Mk.$Name)) { return [double]$Mk.$Name }
-    $Default
-}
-# persist one marking's top-left fraction into pilot.json under 'markings'
-function Save-Marking {
-    param([string]$KeyX, [double]$Vx, [string]$KeyY, [double]$Vy)
-    $pilot = Get-Pilot; if (-not $pilot) { return }
-    $mk = @{}
-    if (($pilot.PSObject.Properties.Name -contains 'markings') -and $pilot.markings) {
-        foreach ($p in $pilot.markings.PSObject.Properties) { $mk[$p.Name] = $p.Value }
-    }
-    $mk[$KeyX] = [math]::Round($Vx, 4); $mk[$KeyY] = [math]::Round($Vy, 4)
-    $obj = [ordered]@{}
-    foreach ($p in $pilot.PSObject.Properties) { if ($p.Name -ne 'markings') { $obj[$p.Name] = $p.Value } }
-    $obj['markings'] = $mk
-    Save-Pilot $obj
-}
-# make a marking draggable on the aircraft canvas; saves where you drop it
-function Make-Draggable {
-    param($El, [string]$KeyX, [string]$KeyY)
-    $El.Cursor = 'SizeAll'
-    $El.Background = [Windows.Media.Brushes]::Transparent
-    $El.Tag = @{ kx = $KeyX; ky = $KeyY; drag = $false; ox = 0.0; oy = 0.0 }
-    $El.Add_MouseLeftButtonDown({
-        param($s,$e)
-        $t = $s.Tag; $p = $e.GetPosition($script:AcCanvas)
-        $t.ox = $p.X - [Windows.Controls.Canvas]::GetLeft($s)
-        $t.oy = $p.Y - [Windows.Controls.Canvas]::GetTop($s)
-        $t.drag = $true; [void]$s.CaptureMouse(); $e.Handled = $true
-    })
-    $El.Add_MouseMove({
-        param($s,$e)
-        $t = $s.Tag
-        if ($t.drag) {
-            $p = $e.GetPosition($script:AcCanvas)
-            [Windows.Controls.Canvas]::SetLeft($s, $p.X - $t.ox)
-            [Windows.Controls.Canvas]::SetTop($s, $p.Y - $t.oy)
-        }
-    })
-    $El.Add_MouseLeftButtonUp({
-        param($s,$e)
-        $t = $s.Tag
-        if ($t.drag) {
-            $t.drag = $false; [void]$s.ReleaseMouseCapture()
-            $lx = [Windows.Controls.Canvas]::GetLeft($s) / $script:AcW
-            $ty = [Windows.Controls.Canvas]::GetTop($s) / $script:AcHpx
-            Save-Marking $t.kx $lx $t.ky $ty
-        }
-    })
-}
+# The aircraft markings were once draggable, and saved where you dropped
+# them. The feature was removed; New-Aircraft paints them from the spec.
 function New-Serial {
     param([string]$Type = 'Spitfire I')
     if ($Type -match 'Hurricane') {
@@ -691,7 +701,11 @@ function Ensure-Squadron {
     if (($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { return $Pilot }
     $obj = [ordered]@{}
     foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
-    $obj['sqn'] = 92; $obj['sqcode'] = 'QJ'; $obj['actype'] = 'Spitfire I'; $obj['base'] = 'RAF Biggin Hill'
+    # A pilot made before squadrons existed is a 92 Squadron man. His
+    # station is NOT set here: Get-SquadronBase knows where 92 stood on
+    # any date, and a stored 'RAF Biggin Hill' used to override it and
+    # contradict the record of service on the same screen.
+    $obj['sqn'] = 92; $obj['sqcode'] = 'QJ'; $obj['actype'] = 'Spitfire I'
     Save-Pilot $obj
     Get-Pilot
 }
@@ -700,16 +714,26 @@ function Get-GroupForBase { param([string]$Base)
     if ($Base -match 'Duxford|Digby|Coltishall') { return 12 }
     11
 }
+# Squadron mottoes, for the ones we know. Anything else gets its group.
+$SquadronMottoes = @{
+    32 = 'ADESTE COMITES'
+    92 = 'AUT PUGNA AUT MORERE'
+}
 function Set-Header {
     param($Pilot)
-    $num = 92; $grp = 10
+    # No default squadron: an unposted pilot gets the service, not 92's
+    # number and 92's group, which is what this used to show.
+    $num = 0; $grp = 0
     if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $num = [int]$Pilot.sqn }
-    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { $grp = Get-GroupForBase "$($Pilot.base)" }
-    $h = C 'HdrSquadron'; if ($h) { $h.Text = "No. $num Squadron" }
+    $base = Get-SquadronBase -Sqn $num -Date $script:CampaignDate -Pilot $Pilot
+    if ($base) { $grp = Get-GroupForBase "$base" }
+    $h = C 'HdrSquadron'
+    if ($h) { $h.Text = if ($num -gt 0) { "No. $num Squadron" } else { 'Royal Air Force' } }
     $m = C 'HdrMotto'
     if ($m) {
-        $m.Text = if ($num -eq 92) { "ROYAL AIR FORCE  $([char]0x2022)  AUT PUGNA AUT MORERE" }
-                  else { "ROYAL AIR FORCE  $([char]0x2022)  NO. $grp GROUP, FIGHTER COMMAND" }
+        $m.Text = if ($num -gt 0 -and $SquadronMottoes.ContainsKey($num)) { "ROYAL AIR FORCE  $([char]0x2022)  $($SquadronMottoes[$num])" }
+                  elseif ($grp -gt 0) { "ROYAL AIR FORCE  $([char]0x2022)  NO. $grp GROUP, FIGHTER COMMAND" }
+                  else { "ROYAL AIR FORCE  $([char]0x2022)  FIGHTER COMMAND" }
     }
 }
 function New-Aircraft {
@@ -921,7 +945,17 @@ function Finalize-Flight {
     # or the campaign moved on. Everything else is dropped silently, which
     # is what used to fill the table with 0-minute duplicates.
     $flew = ($mins -gt 0) -or ($autoAdded -gt 0) -or ($outcome -eq 'Campaign day flown')
-    try { if ($ac2 = Get-AutoClaim) { if ([int]$ac2.rowsAfter -gt [int]$ac2.rowsBefore) { $flew = $true } } } catch { }
+    # A new row in the game's own Log Book is a flight - but only when
+    # there WAS a before-count to compare against. rowsBefore is -1 when no
+    # snapshot was taken, and "0 rows now is more than -1 rows then" used
+    # to make every non-flight look like a sortie.
+    try {
+        $ac2 = Get-AutoClaim
+        if ($ac2 -and ($ac2.PSObject.Properties.Name -contains 'rowsBefore')) {
+            $rb = [int]$ac2.rowsBefore; $ra = [int]$ac2.rowsAfter
+            if ($rb -ge 0 -and $ra -gt $rb) { $flew = $true }
+        }
+    } catch { }
     if ($flew) { Save-Sessions (@(Get-Sessions) + $sess) }
     Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue
 }
@@ -934,14 +968,52 @@ function Get-Career {
     if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) {
         return @{ sorties = $sorties; hours = $hours; rank = 'Squadron Leader'; next = $null; nextAt = 0 }
     }
-    $ladder = @('Sergeant','Pilot Officer','Flying Officer','Flight Lieutenant')
+    $ladder = $RankLadder
+    # The stored rank is a FLOOR, not a starting point: a man promoted at
+    # twelve sorties keeps his rank even if a new campaign resets the count.
     $idx = [array]::IndexOf($ladder, "$($Pilot.rank)"); if ($idx -lt 0) { $idx = 0 }
     $step = 12
     $promos = [math]::Floor($sorties / $step)
-    $curIdx = [math]::Min($ladder.Count - 1, $idx + $promos)
+    $curIdx = [math]::Min($ladder.Count - 1, [math]::Max($idx, $promos))
     $next = $null; $nextAt = 0
     if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($promos + 1) * $step }
     @{ sorties = $sorties; hours = $hours; rank = $ladder[$curIdx]; next = $next; nextAt = $nextAt }
+}
+# Rank and decorations are PERSISTED the first time they are earned, with
+# the date, and never taken away. Without this a pilot who starts a fresh
+# campaign in the game drops from Flight Lieutenant back to Sergeant, and
+# his DFC silently becomes a DFM, because both were recomputed from the
+# sortie count every time the screen was drawn.
+$RankLadder = @('Sergeant','Pilot Officer','Flying Officer','Flight Lieutenant')
+function Update-CareerRecord {
+    param($Pilot, $Career, $Honours)
+    if (-not $Pilot -or -not $Career) { return $Pilot }
+    $changed = $false
+    $obj = [ordered]@{}
+    foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+    $storedIdx = [array]::IndexOf($RankLadder, "$($Pilot.rank)")
+    $earnedIdx = [array]::IndexOf($RankLadder, "$($Career.rank)")
+    if ($earnedIdx -gt $storedIdx) {
+        $obj['rank'] = $RankLadder[$earnedIdx]
+        $obj['rank_date'] = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
+        $changed = $true
+    }
+    if ($Honours -and @($Honours).Count) {
+        $had = @(); if (($Pilot.PSObject.Properties.Name -contains 'honours') -and $Pilot.honours) { $had = @($Pilot.honours) }
+        $names = @($had | ForEach-Object { "$($_.award)" })
+        $add = @($Honours | Where-Object { $names -notcontains "$_" })
+        if ($add.Count) {
+            $when = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
+            foreach ($a in $add) { $had += [ordered]@{ award = "$a"; date = $when } }
+            $obj['honours'] = @($had)
+            $changed = $true
+        }
+    }
+    if (-not $changed) { return $Pilot }
+    Save-Pilot $obj
+    $np = Get-Pilot
+    if ($np) { return $np }
+    $Pilot
 }
 # The player's own decoration. Stored award wins; otherwise a DFC once he has
 # five victories (a plausible Battle of Britain threshold). "None yet" before.
@@ -955,10 +1027,17 @@ function Get-PlayerHonours {
     $isNCO = ("$($Career.rank)" -eq 'Sergeant')
     $cross = if ($isNCO) { 'DFM' } else { 'DFC' }
     $h = @()
-    if ($sorties -ge 10) { $h += 'MiD' }
-    if ($v -ge 5)  { $h += $cross }
-    if ($v -ge 10) { $h += "Bar to $cross" }
-    if ($v -ge 15) { $h += 'DSO' }
+    if (($Pilot.PSObject.Properties.Name -contains 'honours') -and $Pilot.honours) {
+        foreach ($a in @($Pilot.honours)) { $h += "$($a.award)" }
+    }
+    # A man decorated as a sergeant KEEPS his DFM when he is commissioned;
+    # he does not also collect the officers' DFC for the same victories.
+    # Whichever cross he already holds is the one his Bar belongs to.
+    foreach ($k in @('DFM','DFC')) { if ($h -contains $k) { $cross = $k } }
+    if ($sorties -ge 10 -and ($h -notcontains 'MiD')) { $h += 'MiD' }
+    if ($v -ge 5  -and ($h -notcontains $cross)) { $h += $cross }
+    if ($v -ge 10 -and ($h -notcontains "Bar to $cross")) { $h += "Bar to $cross" }
+    if ($v -ge 15 -and ($h -notcontains 'DSO')) { $h += 'DSO' }
     if (($Pilot.PSObject.Properties.Name -contains 'awards') -and $Pilot.awards -and ($h -notcontains "$($Pilot.awards)")) { $h = @("$($Pilot.awards)") + $h }
     # no comma return: every caller collects with @(...), and comma + @()
     # double-wraps into the System.Object[] display bug
@@ -987,7 +1066,7 @@ function Get-PlayerHonours {
 $AutoClaimPath   = Join-Path $StateDir 'autoclaim.json'
 $DiaryRowSize    = 25
 $DiaryTableGuess = 99047
-$DiaryMaxRows    = 64
+$DiaryMaxRows    = 200
 # STATISTICS_TYPE bins for what an RAF pilot shoots down, and for a
 # Luftwaffe pilot (the last three of those are dummies in the game).
 $KillBinsRAF = @('Bf 109E','Bf 110','Ju 87','Do 17','Ju 88','He 111','He 59')
@@ -1038,11 +1117,14 @@ function Test-DiaryTableAt {
 function Find-DiaryTable {
     param([byte[]]$B)
     if (Test-DiaryTableAt $B $DiaryTableGuess) { return $DiaryTableGuess }
-    $hi = [Math]::Min($B.Length - 200, 130000)
+    # The guess is where the table sat in every save seen so far; this scan
+    # is the fallback and covers the WHOLE file, since a shorter campaign
+    # or a different slot can put the block outside any fixed window.
+    $hi = $B.Length - 200
     # Row 0's string index is two zero bytes at +12: skip everything else
-    # before paying for the full check (50,000 positions otherwise cost
-    # several seconds in PowerShell).
-    for ($p = 80000; $p -lt $hi; $p++) {
+    # before paying for the full check (a quarter of a million positions
+    # otherwise cost several seconds in PowerShell).
+    for ($p = 0; $p -lt $hi; $p++) {
         if ($B[$p + 12] -ne 0 -or $B[$p + 13] -ne 0) { continue }
         # ...and row 1's index is 512 (bytes 00 02) or the empty marker FF FF
         if (-not (($B[$p + 37] -eq 0 -and $B[$p + 38] -eq 2) -or ($B[$p + 37] -eq 0xFF -and $B[$p + 38] -eq 0xFF))) { continue }
@@ -1058,25 +1140,39 @@ function Get-SaveDiary {
         if (-not (Test-Path $Path)) { return $null }
         $b = [System.IO.File]::ReadAllBytes($Path)
         $p = Find-DiaryTable $b
-        if ($p -lt 0) { return $null }
+        if ($p -lt 0) {
+            # A campaign that has not been flown yet has no used rows, so
+            # no table can be recognised. That is an EMPTY Log Book, not an
+            # unreadable save, and the screen should say so.
+            if ($b.Length -gt 160 -and ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -match '^Rowan Savegame: V 0')) {
+                return [pscustomobject]@{ table = -1; rows = @(); kills = (New-Object int[] 7); total = 0 }
+            }
+            return $null
+        }
         $rows = @(); $bins = New-Object int[] 7
         for ($i = 0; $i -lt $DiaryMaxRows; $i++) {
             $r = Read-DiaryRow $b ($p + $i * $DiaryRowSize)
             if (-not $r) { break }
             if ($r.sq -eq 0xFFFF -and $r.str -eq 0xFFFF) { continue }     # empty slot
             if ($r.str -ne 512 * $i -or $r.ended -gt 9) { break }          # past the table
+            # keep the game's own slot number: skipping empties used to
+            # renumber every sortie after a gap
+            $r | Add-Member -NotePropertyName 'slot' -NotePropertyValue ($i + 1) -Force
             $rows += $r
             for ($k = 0; $k -lt 7; $k++) { $bins[$k] += $r.kills[$k] }
         }
         return [pscustomobject]@{ table = $p; rows = $rows; kills = $bins; total = ($bins | Measure-Object -Sum).Sum }
     } catch { return $null }
 }
-# The victory total the save's Log Book carries, or $null.
-function Get-SaveVictories {
-    param([string]$Path)
-    $d = Get-SaveDiary -Path $Path
-    if ($d) { return [int]$d.total }
-    $null
+# How many sorties this pilot has flown, and where the number came from.
+# The campaign's own Log Book is the record; the launcher's timed sessions
+# are only a fallback for a pilot whose save cannot be read, and they used
+# to be the source on the dispersal while the logbook used the save - so
+# the two screens could show different ranks for the same man.
+function Get-SortieCount {
+    param($Diary, $Sessions)
+    if ($Diary) { return @($Diary.rows).Count }
+    @($Sessions).Count
 }
 # The newest campaign save's Log Book, for the logbook screen.
 function Get-LatestSaveDiary {
@@ -1122,8 +1218,11 @@ function Sync-CampaignClaims {
         }
     }
     if ($newTypes.Count -gt 0) { Add-AutoClaims -Types $newTypes }
-    # record the baseline (re-read: Add-AutoClaims saved the pilot)
+    # record the baseline (re-read: Add-AutoClaims saved the pilot). If the
+    # record cannot be read back - locked, mid-write, corrupt - write
+    # NOTHING: a stub containing only campaignKills would destroy a career.
     $p2 = Get-Pilot
+    if (-not $p2) { return $ld }
     $obj = [ordered]@{}
     foreach ($pp in $p2.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
     $obj['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld.kills[$_] })
@@ -1187,14 +1286,7 @@ function New-Nav {
         $tb.BorderBrush = if ($active) { Res 'Brass' } else { B '#101B22' }
         $col = if ($active) { '#E9E3D4' } else { '#6F828C' }
         $tb.Child = (New-TB -Text $t.l -Family $CondFam -Size 12.5 -Colour $col -Bold)
-        $tb.Add_MouseLeftButtonUp({
-            param($s,$e)
-            $pl = Get-Pilot
-            if ($s.Tag -eq 'logbook') { Show-Logbook -Pilot $pl }
-            elseif ($s.Tag -eq 'map') { Show-Map -Pilot $pl }
-            elseif ($s.Tag -eq 'paper') { Show-Paper -Pilot $pl }
-            else { Show-Roster -Pilot $pl }
-        })
+        $tb.Add_MouseLeftButtonUp({ param($s,$e) Show-Tab ("$($s.Tag)") })
         [void]$nav.Children.Add($tb)
     }
     $nav
@@ -1206,6 +1298,18 @@ function Start-NewCareer {
         "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
         'New career', 'YesNo', 'Question')
     if ($ans -ne 'Yes') { return }
+    # Nothing is archived YET. This used to move the pilot away here and
+    # then show the postings map, so pressing Escape at that map left you
+    # with no pilot at all and a manual copy out of archive\ to recover.
+    # The old man is put away by Complete-NewCareer, when the new one is
+    # actually posted.
+    $script:NewCareerPending = $true
+    Show-SquadronSelect
+}
+# Put the previous pilot away. Called at the moment a new man is posted.
+function Complete-NewCareer {
+    if (-not $script:NewCareerPending) { return }
+    $script:NewCareerPending = $false
     try {
         $arch = Join-Path $StateDir ('archive\' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
         New-Item -ItemType Directory -Path $arch -Force | Out-Null
@@ -1214,11 +1318,10 @@ function Start-NewCareer {
         }
         # a flight marker or save snapshot from the OLD career must not
         # become the new pilot's phantom first sortie
-        foreach ($f in @($FlightOpen, (Join-Path $StateDir 'before.bsr'))) {
+        foreach ($f in @($FlightOpen, (Join-Path $StateDir 'before.bsr'), $AutoClaimPath)) {
             if (Test-Path $f) { Remove-Item $f -Force -ErrorAction SilentlyContinue }
         }
     } catch { }
-    Show-SquadronSelect
 }
 function New-LogRow {
     param($S, [switch]$Header, [int]$Index = 0)
@@ -1306,9 +1409,8 @@ function Show-Logbook {
     # Level the record with it first, so victories scored in a game started
     # any way at all are in before the tiles are drawn.
     $ld = Sync-CampaignClaims
-    $Pilot = Get-Pilot
-    $career = Get-Career $Pilot $sessions
-    if ($ld) { $career = Get-Career $Pilot $sessions -Sorties (@($ld.rows).Count) }
+    $p2 = Get-Pilot; if ($p2) { $Pilot = $p2 }
+    $career = Get-Career $Pilot $sessions -Sorties (Get-SortieCount -Diary $ld -Sessions $sessions)
     $vics = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $vics = [int]$Pilot.victories }
 
     $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,-6,0,12'
@@ -1316,6 +1418,7 @@ function Show-Logbook {
     [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
     [void]$tiles.Children.Add((New-Stat 'VICTORIES' "$vics"))
     $honours = @(Get-PlayerHonours $Pilot $career)
+    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours $honours
     $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
     [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile -Chip (New-RibbonRow $honours -Height 13)))
     [void]$tiles.Children.Add((New-Stat 'RANK' "$($career.rank)" -Chip $(
@@ -1334,13 +1437,17 @@ function Show-Logbook {
     [void]$script:Stage.Children.Add($pnt)
 
     # ---- automatic claims: one statement, the campaign's own figure ----
+    $binsL = $KillBinsRAF
+    if (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -match '^(lw|luftwaffe|german)')) { $binsL = $KillBinsLW }
     if ($ld) {
         $byType = @()
-        for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($KillBinsRAF[$k])" } }
+        for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($binsL[$k])" } }
         $acTxt = "Automatic claims are on: the campaign's Log Book credits you with " +
                  $(if ([int]$ld.total -eq 1) { 'one victory' } elseif ([int]$ld.total -eq 0) { 'no victories yet' } else { "$([int]$ld.total) victories" }) +
                  $(if ($byType.Count) { ', ' + ($byType -join ', ') } else { '' }) +
                  ". Every victory the campaign credits you with is entered here by itself, whichever way the game was started."
+    } elseif ($ld) {
+        $acTxt = "Automatic claims are on. The campaign's Log Book has no sorties in it yet; fly one and it appears here by itself."
     } else {
         $acTxt = 'Automatic claims are on, but no campaign save could be read yet. Victories the campaign credits you with are entered here by themselves once there is one.'
     }
@@ -1355,7 +1462,10 @@ function Show-Logbook {
         $ls = New-Object Windows.Controls.StackPanel
         [void]$ls.Children.Add((New-DiaryRow -Header))
         $arr = @($ld.rows); $i = 0
-        for ($k = $arr.Count - 1; $k -ge 0; $k--) { [void]$ls.Children.Add((New-DiaryRow -R $arr[$k] -Number ($k + 1) -Index $i -Bins $KillBinsRAF)); $i++ }
+        for ($k = $arr.Count - 1; $k -ge 0; $k--) {
+            $num = if ($arr[$k].PSObject.Properties.Name -contains 'slot') { [int]$arr[$k].slot } else { $k + 1 }
+            [void]$ls.Children.Add((New-DiaryRow -R $arr[$k] -Number $num -Index $i -Bins $binsL)); $i++
+        }
         $lw.Child = $ls
         [void]$script:Stage.Children.Add($lw)
         $timed = @($sessions | Where-Object { [int]$_.minutes -gt 0 })
@@ -1388,9 +1498,17 @@ function Show-Roster {
     $Pilot = Ensure-Squadron -Pilot $Pilot
     Set-Header $Pilot
     $sqnum = 92; if (($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
-    $baseTxt = if ($sqnum -eq 92 -and $script:CampaignDate) { (Get-Airfield $script:CampaignDate).ToUpper() }
-               elseif (($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { "$($Pilot.base)".ToUpper() }
-               else { 'THE DISPERSAL' }
+    # Every screen counts sorties from the same place: the campaign's own
+    # Log Book. The dispersal used to count the launcher's timed sessions,
+    # so the hero card and the roster row could disagree about your rank.
+    $ld0 = Get-LatestSaveDiary
+    $sessions0 = Get-Sessions
+    $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0
+    $career0 = Get-Career $Pilot $sessions0 -Sorties $flownCount
+    $ph0 = @(Get-PlayerHonours $Pilot $career0)
+    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career0 -Honours $ph0
+    $bs = Get-SquadronBase -Sqn $sqnum -Date $script:CampaignDate -Pilot $Pilot
+    $baseTxt = if ($bs) { $bs.ToUpper() } else { 'THE DISPERSAL' }
     $eyebrow = if ($script:CampaignDate) { "$baseTxt  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $baseTxt }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at readiness"))
 
@@ -1399,7 +1517,7 @@ function Show-Roster {
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
     [void]$d.Children.Add((New-TB -Text ("$($Pilot.pilot)") -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
-    $line = if (@(Get-Sessions).Count -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
+    $line = if ($flownCount -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
     [void]$d.Children.Add($lt)
     # worn on the tunic: rank cuff and wings, the ribbons beneath them
@@ -1426,7 +1544,7 @@ function Show-Roster {
     [void]$script:Stage.Children.Add($hero)
 
     # first-timer's orders: until a sortie is in the book, say what comes next
-    if (@(Get-Sessions).Count -eq 0) {
+    if ($flownCount -eq 0) {
         $ord = New-Object Windows.Controls.Border
         $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
@@ -1439,7 +1557,7 @@ function Show-Roster {
         [void]$script:Stage.Children.Add($ord)
     }
     $Pilot = Ensure-Serial -Pilot $Pilot
-    $flown = (@(Get-Sessions).Count -gt 0)
+    $flown = ($flownCount -gt 0)
     $ac = if ($flown) { New-Aircraft -Pilot $Pilot } else { $null }
     if ($ac) {
         [void]$script:Stage.Children.Add($ac)
@@ -1447,10 +1565,18 @@ function Show-Roster {
 
     # the squadron as a records book: names, victories, fate
     [void]$script:Stage.Children.Add((New-TB -Text 'THE SQUADRON' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
+    $men = @(Get-Historical -Sqn $sqnum)
+    # Say what this squadron's roster actually holds. Promising victories
+    # "documented for the aces" in front of 62 blank columns was a straight
+    # contradiction on any squadron whose scores are not researched yet.
+    $anyVics = $false
+    foreach ($h in $men) { if (($h.PSObject.Properties.Name -contains 'victories') -and ([int]$h.victories -gt 0)) { $anyVics = $true; break } }
+    $scoreNote = if ($anyVics) { ' Victories and decorations are documented for the aces and estimated for the others.' }
+                 else { ' Victories and decorations for this squadron are not researched yet, and are left blank rather than invented.' }
     $subText = if ($script:CampaignDate) {
-        "The squadron as it stood on $($script:CampaignDate.ToString('d MMMM yyyy')). Men on strength show as such; losses, victories and awards appear as their day is reached. Victories and decorations are documented for the aces and estimated for the others."
+        "The squadron as it stood on $($script:CampaignDate.ToString('d MMMM yyyy')). Men on strength show as such; losses and awards appear as their day is reached." + $scoreNote
     } else {
-        'No campaign in progress, so this shows the final Battle of Britain record. Victories and decorations are documented for the aces and estimated for the others. Start a campaign and the board tracks the squadron day by day.'
+        'No campaign in progress, so this shows the final Battle of Britain record. Start a campaign and the board tracks the squadron day by day.' + $scoreNote
     }
     $sub = New-TB -Text $subText -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap
     $sub.Margin = '0,4,0,14'; $sub.MaxWidth = 720; $sub.HorizontalAlignment = 'Left'
@@ -1461,10 +1587,8 @@ function Show-Roster {
     $ls = New-Object Windows.Controls.StackPanel
     [void]$ls.Children.Add((New-RosterRow -Header))
     # you, first on the board, with your LIVE record
-    $sessions0 = Get-Sessions
-    $career0 = Get-Career $Pilot $sessions0
     $pv = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $pv = [int]$Pilot.victories }
-    $ph = @(Get-PlayerHonours $Pilot $career0)
+    $ph = $ph0
     $me = [pscustomobject]@{
         pilot = "$($Pilot.pilot)"
         rank = "$($career0.rank)"
@@ -1475,7 +1599,6 @@ function Show-Roster {
     }
     [void]$ls.Children.Add((New-RosterRow -P $me -Index 0 -IsPlayer))
     $i = 1
-    $men = @(Get-Historical -Sqn $sqnum)
     foreach ($h in $men) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
@@ -1538,6 +1661,7 @@ function Update-CreateValid {
     $script:SubmitBtn.IsEnabled = $ok
 }
 function Invoke-Submit {
+    Complete-NewCareer
     $isCmdr = $false
     $rank = 'Sergeant'
     $letter = ('A','B','D','E','F','G','H','J','K','L','N','P','R','S','T','U','V','W','X','Y','Z' | Get-Random)
@@ -1574,11 +1698,9 @@ function Show-Map {
     $Pilot = Ensure-Squadron -Pilot $Pilot
     Set-Header $Pilot
     $sqnum = 92; if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
-    # the same base rule as the dispersal: 92 moves with the campaign
-    # date, everyone else stands where their posting put them
-    $base = if ($sqnum -eq 92 -and $script:CampaignDate) { Get-Airfield $script:CampaignDate }
-            elseif ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { "$($Pilot.base)" }
-            else { 'RAF Biggin Hill' }
+    # the same base rule as the dispersal, for every squadron
+    $base = Get-SquadronBase -Sqn $sqnum -Date $script:CampaignDate -Pilot $Pilot
+    if (-not $base) { $base = 'Fighter Command' }
     $eyebrow = if ($script:CampaignDate) { "FIGHTER COMMAND  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { 'FIGHTER COMMAND' }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at $base"))
 
@@ -1705,9 +1827,7 @@ function Show-Paper {
     [void]$col.Children.Add($mh)
     [void]$col.Children.Add((New-Rule '#1A1712' 1))
 
-    $base = if ($sqnum -eq 92 -and $script:CampaignDate) { Get-Airfield $script:CampaignDate }
-            elseif ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'base') -and $Pilot.base) { "$($Pilot.base)" }
-            else { $null }
+    $base = Get-SquadronBase -Sqn $sqnum -Date $script:CampaignDate -Pilot $Pilot
     $centTxt = if ($base) { $base.ToUpper() } else { 'FIGHTER COMMAND' }
     $dstr = if ($script:CampaignDate) { $script:CampaignDate.ToString('dddd, d MMMM yyyy').ToUpper() } else { 'THE BATTLE OF BRITAIN, 1940' }
     $dl = New-Object Windows.Controls.Grid; $dl.Margin = '0,5,0,5'
@@ -1787,9 +1907,6 @@ function Show-Paper {
 # =====================================================================
 #  Postings: choose your squadron on the plotting map
 # =====================================================================
-function Map-XY { param([double]$Lon,[double]$Lat,[double]$W,[double]$H)
-    ,@((($Lon + 5.6) / 7.7 * $W), ((53.8 - $Lat) / 4.3 * $H))
-}
 function Show-SquadronSelect {
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
