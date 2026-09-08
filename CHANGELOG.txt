@@ -97,6 +97,23 @@ v1.8.0  (2026-09-08)
     the shaders off meant throwing away the presets with them. Off
     remains the default; nothing installs or enables it on its own.
   - CHANGED: the Squadron Room row in the launcher carries the roundel.
+  - FIXED: MENU SIZE undid its own work. The menus live in two files -
+    Bob.exe and English\TEXT\boblang.dll - and MFC loads the language
+    DLL's copy first, so sixty screens (every mission briefing and
+    training page) are drawn from boblang.dll and Bob.exe's rescale never
+    reached them. A block left over from v1.6.29 restored stock
+    boblang.dll on every run, so asking for a scale silently reverted the
+    briefing pages a moment later. Both files are scaled together now,
+    and "Original size" puts both back.
+  - NEW: -LangScale sets the briefing and training pages separately from
+    the menus, because they do not draw on the same surface. Worth
+    knowing: a scale patch changes the coordinates AND the font, and a
+    dialog unit is a fraction of the font's character width, so 8pt to
+    11pt widens a dialog a second time. On a 1024-wide briefing surface
+    1.10x fits at 997px where 1.40x needs 1504px.
+  - FIXED: BOB2_MenuScale_Restore.bat copied Bob.exe.unscaled over the
+    top, which also removed the DebugBreak->GetVersion crash fix and left
+    the language DLL rescaled. It goes through the tool now.
 
 v1.7.8  (2026-09-07)
 --------------------
