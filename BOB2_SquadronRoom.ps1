@@ -1718,7 +1718,10 @@ function Show-Roster {
     # "documented for the aces" in front of 62 blank columns was a straight
     # contradiction on any squadron whose scores are not researched yet.
     $anyVics = $false
-    foreach ($h in $men) { if (($h.PSObject.Properties.Name -contains 'victories') -and ([int]$h.victories -gt 0)) { $anyVics = $true; break } }
+    foreach ($h in $men) {
+        if ((Get-DatedVictories $h).Count -gt 0) { $anyVics = $true; break }
+        if (($h.PSObject.Properties.Name -contains 'victories_total') -and ($null -ne $h.victories_total) -and ([int]$h.victories_total -gt 0)) { $anyVics = $true; break }
+    }
     $scoreNote = if ($anyVics) { ' Victories and decorations are documented for the aces and estimated for the others.' }
                  else { ' Victories and decorations for this squadron are not researched yet, and are left blank rather than invented.' }
     $subText = if ($script:CampaignDate) {
