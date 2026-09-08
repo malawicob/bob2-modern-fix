@@ -15,8 +15,25 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
-v1.8.2-dev
-----------
+v1.8.2  (2026-09-08)
+--------------------
+  - FIXED: switching graphics translator restored a stale dgVoodoo.conf.
+    BOB2_SetWrapper.bat copied the file back out of
+    wrapper_backup_dgvoodoo, and that backup is the untouched template -
+    empty DesktopResolution, Resolution = max - so one wrapper switch
+    would have wiped the black-bars fix and the DPI render size together,
+    silently. It generates a fresh config through the setup now, computed
+    for the machine, and only falls back to the backup if that fails.
+  - FIXED: with Bob.exe.manifest in place the launcher now REMOVES the
+    compatibility layer entry rather than rewriting it. Rewriting one is
+    how a truncated ' HIGHDPIAWA' reached the registry and the game
+    changed size again after the fix was already working. The manifest is
+    the authority; any layer entry only argues with it.
+  - CHANGED: the forced-antialiasing warning said it WILL break the
+    in-game options page. Flown at 4x with that page checked and it was
+    fine, so it now reads as a note rather than a threat. The old wording
+    was strong enough that nobody would have tried it.
+
   - NEW: "Visual enhancements" in the setup, one key for the whole look:
     4x antialiasing, 16x anisotropic filtering, and ReShade with the
     Balanced preset. Pressing it again turns all three back off. The
