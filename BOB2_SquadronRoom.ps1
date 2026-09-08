@@ -2033,6 +2033,16 @@ function Show-Map {
         }
         $ocx = [double]$o.St[0] * $W + $ox; $ocy = [double]$o.St[1] * $H + $oy
         $isSpit = ("$($o.Type)" -match 'Spitfire')
+        # a hair line back to the field, so a ring fanned out from a
+        # crowded station cannot be read as belonging to its neighbour
+        if ($ox -ne 0.0 -or $oy -ne 0.0) {
+            $ln = New-Object Windows.Shapes.Line
+            $ln.X1 = [double]$o.St[0] * $W; $ln.Y1 = [double]$o.St[1] * $H
+            $ln.X2 = $ocx; $ln.Y2 = $ocy
+            $ln.Stroke = if ($isSpit) { B '#4C5FD0E8' } else { B '#4CF5A83C' }
+            $ln.StrokeThickness = 1.0; $ln.IsHitTestVisible = $false
+            [void]$cv.Children.Add($ln)
+        }
         $dot = New-Object Windows.Shapes.Ellipse
         $dot.Width = 15; $dot.Height = 15; $dot.StrokeThickness = 2
         $dot.Stroke = if ($isSpit) { B '#5FD0E8' } else { B '#F5A83C' }
@@ -2090,6 +2100,29 @@ function Show-Map {
         [void]$cv.Children.Add($ring)
         # no caption: the station's name is already printed on the map,
         # and the rings' open centres leave it readable
+    }
+    # an invisible patch over every station, so hovering a field tells you
+    # its name, its group and which squadrons are standing on it today
+    $atField = @{}
+    foreach ($o in $others) { $atField[$o.Base] = @($atField[$o.Base]) + @($o.Num) }
+    if ($onTable) { $atField[$base] = @($atField[$base]) + @($sqnum) }
+    foreach ($pp in $MapStations.GetEnumerator()) {
+        $nm = "$($pp.Key)"
+        if ($nm -notmatch '^RAF ') { continue }           # each field is listed twice
+        $fx = [double]$pp.Value[0] * $W; $fy = [double]$pp.Value[1] * $H
+        if ($fx -lt 0 -or $fx -gt $W -or $fy -lt 0 -or $fy -gt $H) { continue }
+        $hit = New-Object Windows.Shapes.Ellipse
+        $hit.Width = 22; $hit.Height = 22; $hit.Fill = B '#01000000'
+        [Windows.Controls.Canvas]::SetLeft($hit, $fx - 11); [Windows.Controls.Canvas]::SetTop($hit, $fy - 11)
+        $here = @($atField[$nm] | Where-Object { $_ } | Sort-Object)
+        $who = if ($here.Count -eq 0) { 'no squadron here today' }
+               elseif ($here.Count -eq 1) { "No. $($here[0]) Squadron" }
+               else { 'Nos. ' + (($here | ForEach-Object { "$_" }) -join ', ') + ' Squadrons' }
+        $hit.Tag = "$nm  $([char]0x2022)  No. $(Get-GroupForBase $nm) Group  $([char]0x2022)  $who"
+        $hit.ToolTip = $hit.Tag
+        $hit.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo -and $script:MapInfo.Text.Trim() -eq '') { $script:MapInfo.Text = "$($sender.Tag)" } })
+        $hit.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
+        [void]$cv.Children.Insert(0, $hit)
     }
     Enable-MapZoom -Frame $mapWrap -Content $grid
     [void]$script:Stage.Children.Add($mapWrap)
