@@ -49,7 +49,9 @@ def check(path):
             errs.append(f'{who}: fate date {f["date"]} and leaving date {l} disagree')
         # victories must fall inside his time on strength
         start = j or BATTLE_START
-        end = l or BATTLE_END
+        # A man whose leaving is not recorded was still there as far as we
+        # know: his later claims are not evidence of an error.
+        end = l or datetime.date(1945, 1, 1)
         for v in (m.get('victories') or []):
             vd = d(v.get('date'))
             if not vd:
@@ -59,15 +61,19 @@ def check(path):
         for a in (m.get('awards') or []):
             if not a.get('award'):
                 errs.append(f'{who}: an award with no name')
+        # victories_total counts what counted as a VICTORY: destroyed and
+        # shared. The list holds every claim, probables and damaged as
+        # well, so it is normally the longer of the two.
         tot = m.get('victories_total')
-        dated = len(m.get('victories') or [])
-        if tot is not None and dated > tot:
-            errs.append(f'{who}: {dated} dated victories but a total of {tot}')
+        scored = len([v for v in (m.get('victories') or [])
+                      if str(v.get('kind', 'destroyed')) in ('destroyed', 'shared')])
+        if tot is not None and scored > tot:
+            errs.append(f'{who}: {scored} destroyed or shared claims but a total of {tot}')
         if m.get('historical') and not m.get('src'):
             warns.append(f'{who}: a real man with no source')
         if not m.get('joined'):
             warns.append(f'{who}: joining date not researched')
-        if tot is None and not dated:
+        if tot is None and not (m.get('victories') or []):
             warns.append(f'{who}: victories not researched')
 
     for name, n in seen.items():

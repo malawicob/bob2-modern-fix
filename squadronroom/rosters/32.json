@@ -1,249 +1,326 @@
 [
  {
-  "pilot": "Aldridge, Keith R.",
-  "rank": "Pilot Officer",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 501 Squadron."
- },
- {
   "pilot": "Andrews, Sydney E.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-05",
+  "left": "1940-09-22",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-22",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFM",
+    "date": "1940-11-05"
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Posted to No. 257 Squadron. His DFM was earned with No. 150 Squadron."
+ },
+ {
+  "pilot": "Ashton, Dennis K.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": null,
+  "left": "1940-07-23",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-07-23",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 257 Squadron. Decorated DFM over his service. Killed in a flying accident later in the war, 9 August 1942."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined early in July, the exact day not recorded, and left within a fortnight for 418 Flight and Malta, sailing in Argus on 23 July."
  },
  {
   "pilot": "Aslin, Donald J.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-07-29",
+  "left": "1940-09-22",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-22",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
+  "victories": [
+   {
+    "date": "1940-08-22",
+    "type": "Do 17",
+    "kind": "damaged"
+   }
+  ],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "N2524",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 257 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Posted to No. 257 Squadron."
  },
  {
   "pilot": "Banks, William H.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-19",
+  "left": "1940-09-24",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-24",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 245, No. 504 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Attached for five days, then posted to No. 504 Squadron."
  },
  {
   "pilot": "Barton, Anthony R.H.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-05",
+  "left": "1940-09-10",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-10",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-08-11",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-24",
+    "type": "Bf 109",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-25",
+    "type": "Hs 126",
+    "kind": "damaged"
+   }
+  ],
+  "victories_total": 4,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1942-04-10"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "N2596, V6566",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 253 Squadron. Killed in a flying accident later in the war, 4 April 1943."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Shot down near Hawkinge on 12 August and unhurt. Posted to No. 253 Squadron. The DFC came later in the war."
  },
  {
   "pilot": "Bayley, Edward A.",
   "rank": "Sergeant",
   "historical": true,
   "joined": null,
-  "left": "1940-10-10",
-  "left_reason": "KIA",
+  "left": "1940-09-17",
+  "left_reason": "posted",
   "fate": {
-   "status": "KIA",
-   "date": "1940-10-10",
-   "note": "KIA 10 Oct 1940"
+   "status": "Posted",
+   "date": "1940-09-17",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
+  "victories": [
+   {
+    "date": "1940-08-18",
+    "type": "Do 215",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 1,
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 249 Squadron. Hurricane V7537 crashed on Cooling Marsh during a routine patrol, thought to be due to oxygen failure."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Called up at the outbreak of war and sent to the squadron; the day is not recorded. Posted to No. 249 Squadron, and killed with it on 10 October 1940."
  },
  {
   "pilot": "Black, Herbert E.B.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": "1940-10-29",
-  "left_reason": "DoW",
+  "joined": "1940-09-03",
+  "left": "1940-09-17",
+  "left_reason": "posted",
   "fate": {
-   "status": "DoW",
-   "date": "1940-10-29",
-   "note": "Died of wounds 9 Nov 1940"
+   "status": "Posted",
+   "date": "1940-09-17",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 46, No. 257 Squadron. Shot down in combat with Bf 109s on 29 October and crashed near Ashford; badly burned, he died of his wounds on 9 November 1940."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington and posted to No. 257 Squadron, with which he was shot down on 29 October and died of his wounds on 9 November 1940."
  },
  {
   "pilot": "Brothers, Peter M.",
   "rank": "Flight Lieutenant",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-09-09",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-09",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
+  "victories": [
+   {
+    "date": "1940-07-19",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-07-29",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-22",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-24",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 8,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-09-13"
+   }
+  ],
+  "codes": "GZ-L",
+  "serials": "P2921, P3522",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 257 Squadron. Decorated DSO, DFC* over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "With the squadron since 1936, so long before the Battle. Posted to No. 257 Squadron as a flight commander."
  },
  {
-  "pilot": "Bulmer, Geoffrey G.R.",
+  "pilot": "Bulmer, George G.R.",
   "rank": "Sub-Lieutenant RN",
   "historical": true,
-  "joined": null,
+  "joined": "1940-07-01",
   "left": "1940-07-20",
   "left_reason": "MIA",
   "fate": {
    "status": "MIA",
    "date": "1940-07-20",
-   "note": "MIA 20 Jul 1940"
+   "note": "Missing"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "N2670",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "A Fleet Air Arm pilot lent to the squadron; failed to return on 20 July 1940."
- },
- {
-  "pilot": "Clerke, Rupert F.H.",
-  "rank": "Flight Lieutenant",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 79 Squadron. Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Fleet Air Arm. Shot down off Dover on 20 July, baled out and drowned."
  },
  {
   "pilot": "Connell, William C.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-06",
+  "left": "1940-12-01",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-12-01",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Canadian pilot."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Canadian. Joined at Acklington, posted to No. 1 Squadron RCAF."
  },
  {
   "pilot": "Crossley, Michael N.",
-  "rank": "Flight Lieutenant",
+  "rank": "Squadron Leader",
   "historical": true,
   "joined": null,
   "left": null,
@@ -251,61 +328,156 @@
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
+  },
+  "victories": [
+   {
+    "date": "1940-07-20",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Bf 110",
+    "kind": "shared"
+   },
+   {
+    "date": "1940-07-25",
+    "type": "Bf 109",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Do 17",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Do 17",
+    "kind": "shared"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-25",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-25",
+    "type": "Do 17",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 15,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-06-21"
+   },
+   {
+    "award": "DSO",
+    "date": "1940-08-30"
+   }
+  ],
+  "codes": "",
+  "serials": "N2461, P3481",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "With the squadron since 1936. Took command on 16 August 1940 and held it until April 1941. Baled out on 18 August. The DSO is gazetted 20 August by one source and 30 August by another."
+ },
+ {
+  "pilot": "Crossman, John D.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1940-07-14",
+  "left": "1940-09-12",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-09-12",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Commanded the squadron. An official ace. Decorated DSO, OBE, DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Australian. Away at an operational training unit through most of August, back on the 26th. Posted to No. 46 Squadron and killed with it on 30 September 1940."
  },
  {
   "pilot": "Czternastek, Stanislaw",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-12",
+  "left": "1940-12-31",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-12-31",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Killed later in the war, 5 February 1941."
- },
- {
-  "pilot": "Davey, Brian",
-  "rank": "Pilot Officer",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 504, No. 254 Squadron. Killed later in the war, 12 June 1941."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Joined at Acklington, posted to No. 615 Squadron in December."
  },
  {
   "pilot": "Daw, Victor G.",
@@ -317,966 +489,1509 @@
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-06-26"
+   },
+   {
+    "award": "AFC",
+    "date": "1945-01-01"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "P3677",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
- },
- {
-  "pilot": "De Grunne, Compte R.G.C.H.",
-  "rank": "Pilot Officer",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Belgian pilot. Killed later in the war, 25 May 1942."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "On strength through the summer; neither his joining nor his leaving is recorded. Forced landing near Dover on 25 July, injured. With No. 145 Squadron later in 1940."
  },
  {
   "pilot": "Eckford, Alan F.",
-  "rank": "Pilot Officer",
+  "rank": "Flying Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-07-24",
+  "left": "1940-09-09",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-09",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-08-18",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-26",
+    "type": "He 111",
+    "kind": "damaged"
+   }
+  ],
+  "victories_total": 2,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-12-24"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "P3936",
   "portrait": null,
-  "src": "IWM photograph caption",
-  "note": "Photographed with B Flight at Hawkinge on 29 July 1940. An official ace; other records place his battle service with Nos. 23, 253 and 242 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Rejoined from No. 242 Squadron and left for No. 253. The Holloway list omits his service with this squadron."
  },
  {
   "pilot": "Falkowski, Jan P.",
   "rank": "Flying Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-12",
+  "left": "1941-07-29",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1941-07-29",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "Virtuti Militari",
+    "date": "1942-02-19"
+   },
+   {
+    "award": "Krzyz Walecznych",
+    "date": "1941-09-10"
+   },
+   {
+    "award": "DFC",
+    "date": "1942-11-15"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Decorated VM, KW***, DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Joined at Acklington, posted to No. 315 Squadron."
  },
  {
   "pilot": "Flinders, John L.",
   "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1941-03-03",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1941-03-03",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
+  "victories": [
+   {
+    "date": "1940-08-15",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 3,
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "P3481",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Commissioned into the squadron on 1 April 1940. Posted to an operational training unit as an instructor."
  },
  {
   "pilot": "Fumerton, Robert C.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-06",
+  "left": "1940-12-01",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-12-01",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1942-03-27"
+   },
+   {
+    "award": "Bar to DFC",
+    "date": "1942-07-21"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Canadian pilot. Decorated DFC*, AFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Canadian. Joined at Acklington, posted to No. 1 Squadron RCAF. Both awards came later."
  },
  {
   "pilot": "Gardner, Peter M.",
   "rank": "Pilot Officer",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1941-06-30",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1941-06-30",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-08-11",
+    "type": "Bf 109",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Do 17",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 4,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-08-30"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "With the squadron since September 1938. Posted to No. 54 Squadron as a flight commander."
  },
  {
-  "pilot": "Gear, Alan W.",
+  "pilot": "Gear, Arthur W.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-03",
+  "left": "1941-10-18",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1941-10-18",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1943-07-27"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington. The DFC came later in the war."
  },
  {
-  "pilot": "Gent, Raymond J.K.",
+  "pilot": "Gent, Reginald J.K.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-07-27",
+  "left": "1940-08-27",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-08-27",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 501 Squadron. Killed in a flying accident later in the war, 2 January 1941."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Away at an operational training unit through most of August, back on the 25th, then posted to No. 501 Squadron. Sources give his posting as 27 or 28 August."
  },
  {
-  "pilot": "Gillman, Kenneth R.",
+  "pilot": "Gillman, Keith R.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-05-10",
   "left": "1940-08-25",
   "left_reason": "MIA",
   "fate": {
    "status": "MIA",
    "date": "1940-08-25",
-   "note": "MIA 25 Aug 1940"
+   "note": "Missing"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
+  "victories": [
+   {
+    "date": "1940-07-19",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 1,
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "N2433, V6565",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Failed to return from combat near Dover in Hurricane N2433. His face became one of the best known images of the Few."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Failed to return from combat over the Channel off Dover on 25 August. His photograph became one of the best known of the Battle."
  },
  {
-  "pilot": "Gould, Derrick L.",
+  "pilot": "Gould, Donald L.",
   "rank": "Flying Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-09-03",
   "left": null,
-  "left_reason": null,
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
+   "status": "Posted",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1942-09-18"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 607, No. 601 Squadron. Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington. With No. 213 Squadron by 6 November 1940, but the posting is not dated."
  },
  {
   "pilot": "Grice, Douglas H.",
   "rank": "Flying Officer",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-10-14",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-14",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
+  "victories": [
+   {
+    "date": "1940-08-12",
+    "type": "Do 17",
+    "kind": "damaged"
+   }
+  ],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-06-25"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "N2459",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "With the squadron since September 1938. Shot down in flames into the sea off Harwich on 15 August and badly burned; off flying afterwards and made a controller."
  },
  {
-  "pilot": "Griffiths, C",
+  "pilot": "Griffith, Cedric G.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-03",
+  "left": "1940-11-05",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-11-05",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 73 Squadron. The Holloway list records him only as \"Griffiths, C\"."
  },
  {
   "pilot": "Henson, Bernard",
   "rank": "Sergeant",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-09-15",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-15",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
+  "victories": [
+   {
+    "date": "1940-07-19",
+    "type": "Bf 109",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Do 17",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 1,
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "V6536, N2409",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 257 Squadron. Killed later in the war, 17 November 1940."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined late in June, the exact day not recorded. Force landed near Linton-on-Ouse on 28 August on the flight north to Acklington. Posted to No. 257 Squadron."
  },
  {
   "pilot": "Heywood, Norman B.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": "1940-10-22",
-  "left_reason": "KIA",
+  "joined": "1940-09-09",
+  "left": "1940-09-22",
+  "left_reason": "posted",
   "fate": {
-   "status": "KIA",
-   "date": "1940-10-22",
-   "note": "KIA 22 Oct 1940"
+   "status": "Posted",
+   "date": "1940-09-22",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 607, No. 257 Squadron. Killed on 22 October 1940."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 607 Squadron and killed with it on 22 October 1940."
  },
  {
-  "pilot": "Hick, David T.",
+  "pilot": "Hick, Denis T.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-21",
+  "left": "1940-10-31",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-31",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington; the date is inferred from three weeks at an operational training unit. Posted to No. 145 Squadron."
  },
  {
   "pilot": "Higgins, William B.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": "1940-09-14",
-  "left_reason": "KIA",
+  "joined": "1940-06-18",
+  "left": "1940-09-09",
+  "left_reason": "posted",
   "fate": {
-   "status": "KIA",
-   "date": "1940-09-14",
-   "note": "KIA 14 Sep 1940"
+   "status": "Posted",
+   "date": "1940-09-09",
+   "note": "Posted to another squadron"
+  },
+  "victories": [
+   {
+    "date": "1940-07-20",
+    "type": "Bf 110",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-24",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 1,
+  "vic_source": "documented",
+  "awards": [],
+  "codes": "",
+  "serials": "P3679, V6546",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Posted to No. 253 Squadron and killed with it on 14 September 1940."
+ },
+ {
+  "pilot": "Houghton, Oswald V.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": "1940-07-10",
+  "left": "1940-08-27",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-08-27",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 253 Squadron. Killed on 14 September 1940, by then flying with No. 253 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Came from No. 615 Squadron on the opening day of the Battle and went on to No. 501."
+ },
+ {
+  "pilot": "Hoyle, Harry N.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": "1940-09-03",
+  "left": "1940-09-16",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-09-16",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 257 Squadron."
  },
  {
   "pilot": "Humpherson, John B.W.",
   "rank": "Flight Lieutenant",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-08-23",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-08-23",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-07-10",
+    "type": "Do 17",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Ju 87",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Bf 109",
+    "kind": "probable"
+   }
+  ],
+  "victories_total": 3,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-08-30"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 602 Squadron. Decorated DFC over his service. Killed later in the war, 22 June 1941."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Rejoined at Wittering in the early summer, the day not recorded, and rejoined No. 607 Squadron on 23 August."
  },
  {
   "pilot": "Humphreys, Peter C.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-18",
+  "left": "1940-11-05",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-11-05",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 73 Squadron."
  },
  {
   "pilot": "Hutley, Richard R.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": "1940-10-29",
-  "left_reason": "KIA",
+  "joined": "1940-09-21",
+  "left": "1940-10-26",
+  "left_reason": "posted",
   "fate": {
-   "status": "KIA",
-   "date": "1940-10-29",
-   "note": "KIA 29 Oct 1940"
+   "status": "Posted",
+   "date": "1940-10-26",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 213 Squadron. Killed on 29 October 1940, by then flying with No. 213 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 213 Squadron and killed with it on 29 October 1940."
  },
  {
   "pilot": "Janicki, Zbigniew",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-10-12",
+  "left": "1940-11-29",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-11-29",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "Krzyz Walecznych",
+    "date": "1942-05-05"
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Joined at Acklington, posted to No. 46 Squadron."
+ },
+ {
+  "pilot": "Korber, Karel",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": "1940-10-09",
   "left": null,
   "left_reason": null,
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Decorated KW** over his service. Killed later in the war, 13 June 1944."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Czechoslovak. Joined at Acklington; his leaving is not recorded."
  },
  {
-  "pilot": "Kosinski, Kazimierz B.",
+  "pilot": "Kosinski, Bronislaw K.",
   "rank": "Flight Lieutenant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-22",
+  "left": "1940-12-22",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-12-22",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "Krzyz Walecznych",
+    "date": "1941-02-01"
+   },
+   {
+    "award": "Virtuti Militari",
+    "date": "1942-05-05"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Decorated VM, KW* over his service. Missing later in the war, 26 January 1942."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Joined at Acklington, posted to No. 308 Squadron."
  },
  {
-  "pilot": "Körber, Karel",
-  "rank": "Sergeant",
-  "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
-  "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
-  },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
-  "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Czech pilot. Missing later in the war, 3 May 1943."
- },
- {
-  "pilot": "Landels, Leslie N.",
+  "pilot": "Landels, Louis N.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-21",
+  "left": "1940-09-27",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-27",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 615 Squadron. Killed later in the war, 20 January 1942."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Six days with the squadron, then No. 3 Squadron."
  },
  {
-  "pilot": "Lucas, Sidney E.",
+  "pilot": "Lucas, Sydney E.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-21",
+  "left": "1940-10-15",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-15",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1944-08-08"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 257 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 257 Squadron."
  },
  {
-  "pilot": "Milnes, Ambrose H.",
-  "rank": "Sergeant",
+  "pilot": "Marsland, Gilbert",
+  "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-19",
+  "left": "1940-09-24",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-24",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Attached for five days, then No. 253 Squadron."
+ },
+ {
+  "pilot": "Martin, John C.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1940-09-03",
+  "left": "1941-03-07",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1941-03-07",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 485 Squadron."
+ },
+ {
+  "pilot": "Mayhew, Paul F.",
+  "rank": "Flying Officer",
+  "historical": true,
+  "joined": "1940-07-06",
+  "left": "1940-07-11",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-07-11",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Five days with the squadron at Biggin Hill, then No. 79 Squadron."
+ },
+ {
+  "pilot": "McConnell, William W.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1940-09-19",
+  "left": "1940-09-24",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-09-24",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1942-06-30"
+   }
+  ],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Attached at Acklington for five days, then No. 607 Squadron."
+ },
+ {
+  "pilot": "Milnes, Arthur H.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": "1940-10-02",
+  "left": "1940-11-11",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-11-11",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Posted on 28 September and joined on 2 October. Went on to No. 615 Squadron."
  },
  {
   "pilot": "Pain, John F.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-07-29",
+  "left": "1940-11-26",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-11-26",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
+  "victories": [
+   {
+    "date": "1940-08-15",
+    "type": "Bf 109",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Ju 88",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Ju 88",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Ju 88",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "probable"
+   }
+  ],
+  "victories_total": 2,
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "P3147",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Australian. Shot down in flames and wounded on 18 August, away until the end of October, then posted to No. 249 Squadron."
  },
  {
   "pilot": "Parrott, Reginald J.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-30",
+  "left": "1940-10-31",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-31",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Killed later in the war, 5 May 1941."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 46 Squadron."
  },
  {
   "pilot": "Pearce, Leonard H.B.",
   "rank": "Sergeant",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-09-17",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-17",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
+  "victories": [
+   {
+    "date": "1940-07-10",
+    "type": "Do 17",
+    "kind": "shared"
+   },
+   {
+    "date": "1940-07-30",
+    "type": "Bf 109",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-16",
+    "type": "Bf 109",
+    "kind": "probable"
+   }
+  ],
+  "victories_total": 2,
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "R4106, P3679",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 615 Squadron. Killed later in the war, 9 April 1941."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "A second tour with the squadron, rejoined in June, the day not recorded. Baled out slightly wounded on 19 August. Posted to No. 249 Squadron."
  },
  {
   "pilot": "Pfeiffer, Jan P.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-03",
+  "left": "1940-09-14",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-14",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
-  "serials": "",
+  "serials": "P2795",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Also served with No. 257 Squadron. Missing later in the war, 20 December 1943."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Two crashes at Hawkinge on 22 and 23 August. Posted to No. 257 Squadron."
  },
  {
-  "pilot": "Pickering, Tony G.",
+  "pilot": "Pickering, Thomas G.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-07-27",
+  "left": "1940-08-27",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-08-27",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "Mentioned in Despatches",
+    "date": null
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 501 Squadron. Decorated MID, AE over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Away at an operational training unit through most of August, back on the 25th, then posted to No. 501 Squadron."
  },
  {
   "pilot": "Pniak, Karol",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-03",
+  "left": "1940-09-14",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-14",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Do 17",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-22",
+    "type": "Do 17",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-24",
+    "type": "Bf 109",
+    "kind": "probable"
+   }
+  ],
+  "victories_total": 4,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "Krzyz Walecznych",
+    "date": "1941-01-01"
+   },
+   {
+    "award": "Virtuti Militari",
+    "date": "1941-02-01"
+   },
+   {
+    "award": "DFC",
+    "date": "1942-06-01"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "V6572",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Decorated VM, KW***, DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Baled out injured on 24 August. Posted to No. 257 Squadron."
  },
  {
   "pilot": "Proctor, John E.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-07-08",
   "left": null,
   "left_reason": null,
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-07-20",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Bf 110",
+    "kind": "shared"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-24",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 4,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1941-03-18"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "New Zealander pilot. Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Commissioned early in July and joined on the 8th. His leaving is not recorded."
  },
  {
   "pilot": "Rose, Jack",
-  "rank": "Flying Officer",
+  "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-08-22",
   "left": null,
   "left_reason": null,
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
   },
-  "victories": [],
+  "victories": [
+   {
+    "date": "1940-08-25",
+    "type": "Do 17",
+    "kind": "damaged"
+   }
+  ],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1942-10-09"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "V6547",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 3 Squadron. Decorated CMG, MBE, DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Rejoined on 22 August. Shot down into the Channel on 25 August and rescued. Still on strength at the end of November 1940."
  },
  {
   "pilot": "Rothwell, John H.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
+  "joined": "1940-09-21",
   "left": null,
   "left_reason": null,
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
   },
-  "victories": [],
+  "victories": [
+   {
+    "date": "1940-11-01",
+    "type": "Bf 109",
+    "kind": "probable"
+   }
+  ],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "documented",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 601, No. 605 Squadron. Killed later in the war, 22 February 1941."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington; his leaving is not recorded. Killed on 22 February 1941."
  },
  {
-  "pilot": "Russell, Humphrey",
+  "pilot": "Russell, Humphrey a'B.",
   "rank": "Flight Lieutenant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-14",
+  "left": "1940-08-18",
+  "left_reason": "WIA",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "WIA",
+   "date": "1940-08-18",
+   "note": "Wounded"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-08-18",
+    "type": "Bf 110",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 1,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1944-05-19"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "V7363",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Rejoined on 14 August and took A Flight on the 16th. Baled out seriously wounded in the leg on the 18th; came back in April 1941 to command the squadron."
  },
  {
-  "pilot": "Sasak, Wilhelm",
+  "pilot": "Sasak, Wladyslaw",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-21",
+  "left": "1940-11-05",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-11-05",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Killed later in the war, 30 November 1940."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Joined at Acklington, posted to No. 145 Squadron."
  },
  {
-  "pilot": "Seghers, Eugene G.A.",
+  "pilot": "Seghers, Edouard G.A.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-04",
+  "left": "1940-09-12",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-09-12",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "Croix de Guerre",
+    "date": "1941-07-01"
+   },
+   {
+    "award": "DFC",
+    "date": "1943-02-13"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "V6567",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Belgian pilot. Also served with No. 46 Squadron. Killed later in the war, 26 July 1944."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Belgian. Baled out into the sea on 24 August. Posted to No. 46 Squadron."
  },
  {
   "pilot": "Seredyn, Antoni",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-12",
+  "left": "1941-07-02",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1941-07-02",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "Krzyz Walecznych",
+    "date": "1945-08-17"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Decorated KW over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Joined at Acklington."
  },
  {
-  "pilot": "Shead, Harold F.W.",
+  "pilot": "Shead, Harry F.W.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-23",
+  "left": "1940-10-15",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-15",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1943-09-03"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 257 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 257 Squadron."
  },
  {
   "pilot": "Smythe, Rupert F.",
-  "rank": "Pilot Officer",
+  "rank": "Flying Officer",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-12-31",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-12-31",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
+  "victories": [
+   {
+    "date": "1940-07-19",
+    "type": "Bf 109",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-08-12",
+    "type": "Do 17",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-14",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-20",
+    "type": "Do 17",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-22",
+    "type": "Do 17",
+    "kind": "damaged"
+   }
+  ],
+  "victories_total": 2,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-08-30"
+   }
+  ],
+  "codes": "GZ-V",
+  "serials": "V6568, P3522",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined in February 1940 and rejoined on 24 May. Shot down and wounded on 24 August, back on 1 November, and posted to a flying school in December."
  },
  {
-  "pilot": "Stroud, George A.",
+  "pilot": "Stroud, Geoffrey A.",
   "rank": "Sergeant",
   "historical": true,
-  "joined": null,
+  "joined": "1940-09-16",
   "left": null,
-  "left_reason": null,
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
+   "status": "Posted",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 504, No. 249 Squadron."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington. With No. 249 Squadron by late October, but the posting is not dated."
  },
  {
   "pilot": "Thacker, David J.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-10-18",
+  "left": "1940-12-03",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-12-03",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "AFC",
+    "date": "1944-06-08"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 145 Squadron."
  },
  {
   "pilot": "Thompson, Peter D.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-21",
+  "left": "1940-10-11",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-11",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "vic_source": "none traced",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1942-01-30"
+   }
+  ],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Also served with No. 605 Squadron. Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 605 Squadron."
  },
  {
-  "pilot": "Turner, Guy",
+  "pilot": "Turner, George",
   "rank": "Flight Sergeant",
   "historical": true,
   "joined": null,
@@ -1285,82 +2000,220 @@
   "fate": {
    "status": "Survived",
    "date": null,
-   "note": "Survived BoB"
+   "note": "Survived the Battle with the squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
-  "codes": "",
-  "serials": "",
+  "codes": "GZ-B",
+  "serials": "P3144",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": ""
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "With the squadron from August 1939. Shot down over Dover on 19 July 1940 and baled out badly burned; one of the Guinea Pigs at East Grinstead. His posting away is not recorded."
  },
  {
   "pilot": "Ward, John L.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-09-21",
+  "left": "1940-10-31",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-10-31",
+   "note": "Posted to another squadron"
   },
   "victories": [],
   "victories_total": null,
-  "vic_source": "not researched",
+  "vic_source": "none traced",
   "awards": [],
   "codes": "",
   "serials": "",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Killed later in the war, 20 March 1942."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined at Acklington, posted to No. 145 Squadron."
+ },
+ {
+  "pilot": "White, John S.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": "1940-10-02",
+  "left": "1940-11-05",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-11-05",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [],
+  "codes": "",
+  "serials": "",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Posted on 28 September and joined on 2 October, then No. 73 Squadron."
+ },
+ {
+  "pilot": "Whitehouse, Sidney A.H.",
+  "rank": "Sergeant",
+  "historical": true,
+  "joined": "1940-07-27",
+  "left": "1940-08-27",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-08-27",
+   "note": "Posted to another squadron"
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "none traced",
+  "awards": [],
+  "codes": "",
+  "serials": "N2458, V6566",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Away at an operational training unit through most of August, back late in the month, then posted to No. 501 Squadron."
+ },
+ {
+  "pilot": "Wlasnowolski, Boleslaw A.",
+  "rank": "Pilot Officer",
+  "historical": true,
+  "joined": "1940-08-03",
+  "left": "1940-09-13",
+  "left_reason": "posted",
+  "fate": {
+   "status": "Posted",
+   "date": "1940-09-13",
+   "note": "Posted to another squadron"
+  },
+  "victories": [
+   {
+    "date": "1940-08-15",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "destroyed"
+   }
+  ],
+  "victories_total": 3,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "Virtuti Militari",
+    "date": "1941-02-01"
+   },
+   {
+    "award": "Krzyz Walecznych",
+    "date": "1947-10-31"
+   }
+  ],
+  "codes": "",
+  "serials": "V6547",
+  "portrait": null,
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Polish. Posted to No. 607 Squadron and killed on 1 November 1940 with No. 213."
  },
  {
   "pilot": "Worrall, John",
   "rank": "Squadron Leader",
   "historical": true,
   "joined": null,
-  "left": null,
-  "left_reason": null,
+  "left": "1940-08-16",
+  "left_reason": "posted",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "Posted",
+   "date": "1940-08-16",
+   "note": "Posted to another squadron"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
-  "codes": "",
-  "serials": "",
+  "victories": [
+   {
+    "date": "1940-07-19",
+    "type": "Bf 109",
+    "kind": "probable"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Ju 87",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Ju 87",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-07-20",
+    "type": "Ju 87",
+    "kind": "damaged"
+   },
+   {
+    "date": "1940-08-15",
+    "type": "Bf 110",
+    "kind": "shared"
+   }
+  ],
+  "victories_total": 1,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "DFC",
+    "date": "1940-08-06"
+   }
+  ],
+  "codes": "GZ-H",
+  "serials": "N2532",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Decorated DFC over his service."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Joined on 30 April 1940 and commanded the squadron until 16 August, when he became senior controller in the Biggin Hill operations room. One source credits him only a half share, on a date after he had left."
  },
  {
-  "pilot": "Własnowolski, Bolesław A.",
+  "pilot": "de Grunne, Rodolphe G.C.",
   "rank": "Pilot Officer",
   "historical": true,
-  "joined": null,
-  "left": null,
-  "left_reason": null,
+  "joined": "1940-08-09",
+  "left": "1940-08-18",
+  "left_reason": "WIA",
   "fate": {
-   "status": "Survived",
-   "date": null,
-   "note": "Survived BoB"
+   "status": "WIA",
+   "date": "1940-08-18",
+   "note": "Wounded"
   },
-  "victories": [],
-  "victories_total": null,
-  "vic_source": "not researched",
-  "awards": [],
+  "victories": [
+   {
+    "date": "1940-08-16",
+    "type": "Bf 109",
+    "kind": "destroyed"
+   },
+   {
+    "date": "1940-08-18",
+    "type": "Do 17",
+    "kind": "shared"
+   }
+  ],
+  "victories_total": 2,
+  "vic_source": "documented",
+  "awards": [
+   {
+    "award": "Croix de Guerre",
+    "date": "1941-07-01"
+   }
+  ],
   "codes": "",
-  "serials": "",
+  "serials": "V6535",
   "portrait": null,
-  "src": "Holloway list of the Few (Wikipedia)",
-  "note": "Polish pilot. Also served with No. 607, No. 213 Squadron. Decorated VM, KW over his service. Killed later in the war, 1 November 1940."
+  "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia",
+  "note": "Belgian. Shot down on 18 August and seriously burned; in hospital until February 1941."
  }
 ]

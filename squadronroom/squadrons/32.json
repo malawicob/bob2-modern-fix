@@ -1,0 +1,22 @@
+{
+ "num": 32,
+ "name": "No. 32 Squadron RAF",
+ "code": "GZ",
+ "callsign": "JACKO",
+ "aircraft": "Hurricane I",
+ "moves": [
+  {
+   "date": "1940-06-04",
+   "station": "Biggin Hill",
+   "note": "Hawkinge used daily as the forward airfield through July and August"
+  },
+  {
+   "date": "1940-08-27",
+   "station": "Acklington",
+   "note": "withdrawn north to No. 13 Group; the move ran over 26 to 28 August and the sources differ on the day"
+  }
+ ],
+ "establishment": 20,
+ "note": "On 24 August 1940 the squadron flew fourteen Hurricanes with thirteen pilots. Two of its pilots were killed on its strength during the Battle, Bulmer on 20 July and Gillman on 25 August. Rebuilt almost completely at Acklington from September.",
+ "src": "bbm.org.uk airmen; Holloway list of the Few via Wikipedia; rafweb; historyofwar; battle-of-britain-diary.org.uk reconstructions of AIR 27/360 and AIR 28/64"
+}
