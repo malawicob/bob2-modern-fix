@@ -52,36 +52,70 @@ $MapStations = @{
     'RAF Tangmere'      = @(0.426, 0.742)
     'RAF Middle Wallop' = @(0.258, 0.601)
     'RAF Warmwell'      = @(0.134, 0.737)
+    # The thirteen above were placed by hand on the map image. The rest are
+    # placed from their real latitude and longitude, through a straight-line
+    # fit of those thirteen (x = 0.1832*lon + 0.5501, y = -0.4813*lat +
+    # 25.2022; worst residual 0.06 of the image width). Six of the order of
+    # battle's stations fall outside the table altogether and are listed as
+    # off-table postings instead, which is what the map already does for a
+    # squadron resting in the north.
+    'RAF Colerne'       = @(0.132, 0.442)
+    'RAF Fowlmere'      = @(0.559, 0.133)
+    'RAF Hawkinge'      = @(0.762, 0.598)
+    'RAF Martlesham'    = @(0.785, 0.145)
+    'RAF Stapleford'    = @(0.579, 0.339)
+    'RAF West Malling'  = @(0.624, 0.522)
+    'RAF Westhampnett'  = @(0.411, 0.721)
 }
+# Squadron code letters as carried in 1940. A squadron with no confirmed
+# code is shown by its number alone rather than given an invented one.
+$SquadronCodes = @{
+    1='JX'; 17='YB'; 19='QV'; 32='GZ'; 43='FT'; 54='KL'; 56='US'; 64='SH'; 65='YT'
+    74='ZP'; 92='QJ'; 111='JU'; 151='DZ'; 213='AK'; 238='VK'; 242='LE'; 501='SD'
+    601='UF'; 609='PR'; 610='DW'; 611='FY'
+}
+# The campaign's four starting points, and the order of battle date each
+# one reads. These are the game's own dates, not ours.
 $Periods = @(
-    @{ Id='P1'; Label='10 JULY - THE CHANNEL';  Desc='convoy battles over the Channel' }
-    @{ Id='P2'; Label='13 AUGUST - EAGLE DAY';  Desc='the assault on the airfields' }
-    @{ Id='P3'; Label='7 SEPTEMBER - LONDON';   Desc='the great daylight raids on London' }
+    @{ Id='P1'; Key='1940-07-10'; Label='10 JULY - THE CHANNEL';    Desc='convoy battles over the Channel' }
+    @{ Id='P2'; Key='1940-08-12'; Label='12 AUGUST - EAGLE DAY';    Desc='the assault on the airfields' }
+    @{ Id='P3'; Key='1940-08-24'; Label='24 AUGUST - THE AIRFIELDS'; Desc='the attack on the sector stations' }
+    @{ Id='P4'; Key='1940-09-07'; Label='7 SEPTEMBER - LONDON';     Desc='the great daylight raids on London' }
 )
-$Squadrons = @(
-    @{ Num=19;  Code='QV'; Type='Spitfire I';  P1='RAF Duxford,L';       P2='RAF Duxford,M';       P3='RAF Duxford,H' }
-    @{ Num=54;  Code='KL'; Type='Spitfire I';  P1='RAF Rochford,H';      P2='RAF Hornchurch,H';    P3='-' }
-    @{ Num=64;  Code='SH'; Type='Spitfire I';  P1='RAF Kenley,H';        P2='RAF Kenley,H';        P3='-' }
-    @{ Num=65;  Code='YT'; Type='Spitfire I';  P1='RAF Hornchurch,H';    P2='RAF Hornchurch,H';    P3='-' }
-    @{ Num=74;  Code='ZP'; Type='Spitfire I';  P1='RAF Hornchurch,H';    P2='-';                   P3='-' }
-    @{ Num=92;  Code='QJ'; Type='Spitfire I';  P1='RAF Pembrey,L';       P2='RAF Pembrey,L';       P3='RAF Biggin Hill,H' }
-    @{ Num=152; Code='SN'; Type='Spitfire I';  P1='RAF Warmwell,M';      P2='RAF Warmwell,M';      P3='RAF Warmwell,M' }
-    @{ Num=609; Code='PR'; Type='Spitfire I';  P1='RAF Middle Wallop,M'; P2='RAF Middle Wallop,H'; P3='RAF Middle Wallop,H' }
-    @{ Num=610; Code='DW'; Type='Spitfire I';  P1='RAF Biggin Hill,H';   P2='RAF Biggin Hill,H';   P3='-' }
-    @{ Num=611; Code='FY'; Type='Spitfire I';  P1='RAF Digby,L';         P2='RAF Digby,L';         P3='RAF Digby,L' }
-    @{ Num=1;   Code='JX'; Type='Hurricane I'; P1='RAF Northolt,M';      P2='RAF Northolt,H';      P3='-' }
-    @{ Num=17;  Code='YB'; Type='Hurricane I'; P1='RAF Debden,M';        P2='RAF Debden,H';        P3='RAF Debden,M' }
-    @{ Num=32;  Code='GZ'; Type='Hurricane I'; P1='RAF Biggin Hill,H';   P2='RAF Biggin Hill,H';   P3='-' }
-    @{ Num=43;  Code='FT'; Type='Hurricane I'; P1='RAF Tangmere,H';      P2='RAF Tangmere,H';      P3='-' }
-    @{ Num=56;  Code='US'; Type='Hurricane I'; P1='RAF North Weald,M';   P2='RAF North Weald,H';   P3='-' }
-    @{ Num=111; Code='JU'; Type='Hurricane I'; P1='RAF Croydon,H';       P2='RAF Croydon,H';       P3='-' }
-    @{ Num=151; Code='DZ'; Type='Hurricane I'; P1='RAF North Weald,M';   P2='RAF North Weald,H';   P3='-' }
-    @{ Num=213; Code='AK'; Type='Hurricane I'; P1='RAF Exeter,M';        P2='RAF Exeter,M';        P3='RAF Tangmere,H' }
-    @{ Num=238; Code='VK'; Type='Hurricane I'; P1='RAF Middle Wallop,M'; P2='-';                   P3='RAF Middle Wallop,M' }
-    @{ Num=242; Code='LE'; Type='Hurricane I'; P1='RAF Coltishall,L';    P2='RAF Coltishall,L';    P3='RAF Duxford,H' }
-    @{ Num=501; Code='SD'; Type='Hurricane I'; P1='RAF Gravesend,H';     P2='RAF Gravesend,H';     P3='RAF Kenley,H' }
-    @{ Num=601; Code='UF'; Type='Hurricane I'; P1='RAF Tangmere,H';      P2='RAF Tangmere,H';      P3='RAF Exeter,M' }
-)
+# Every squadron in Fighter Command's order of battle, built from the
+# game's own oob.json rather than a hand-kept list of the two dozen we
+# happened to have codes for. Station and aircraft type per period come
+# straight out of that file; the code letters come from $SquadronCodes;
+# and how busy a station was is read from its group, since the order of
+# battle does not record it: 11 Group bore the weight of the fighting,
+# 10 and 12 Group saw steady action, and a squadron sent to 13 Group was
+# resting.
+function Build-Squadrons {
+    $out = @()
+    if (-not (Test-Path $OobPath)) { return $out }
+    try {
+        $all = @(Get-Content $OobPath -Raw | ConvertFrom-Json)
+        while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
+    } catch { return $out }
+    foreach ($o in $all) {
+        $q = @{ Num = [int]$o.num; Type = "$($o.type)"; Code = '' }
+        if ($SquadronCodes.ContainsKey([int]$o.num)) { $q.Code = $SquadronCodes[[int]$o.num] }
+        foreach ($per in $Periods) {
+            $v = ''
+            if ($o.bases -and ($o.bases.PSObject.Properties.Name -contains $per.Key)) { $v = "$($o.bases.$($per.Key))" }
+            if ((-not $v) -or ($v -match '^\s*13\s*Group\s*$')) { $q[$per.Id] = '-'; continue }
+            if ($v -match '^\s*\d+\s*Group\s*$') { $q[$per.Id] = '-'; continue }
+            $st = if ($v -match '^RAF ') { $v } else { "RAF $v" }
+            # the order of battle spells North Weald two ways
+            if ($st -eq 'RAF Northweald') { $st = 'RAF North Weald' }
+            $grp = Get-GroupForBase $st
+            $act = switch ($grp) { 11 { 'H' } 10 { 'M' } 12 { 'M' } default { 'L' } }
+            $q[$per.Id] = "$st,$act"
+        }
+        $out += $q
+    }
+    $out
+}
 # a squadron's posting in a period: @{Base;Act;Mx;My} or $null when resting
 function Get-Posting { param($Q, [string]$Period)
     $raw = "$($Q[$Period])"
@@ -93,8 +127,14 @@ function Get-Posting { param($Q, [string]$Period)
     if ($st) { $mx = [double]$st[0]; $my = [double]$st[1] }
     @{ Base = $base; Act = $act; Mx = $mx; My = $my }
 }
+# Built once, on first use: Build-Squadrons needs Get-GroupForBase, which
+# is defined further down the file, so it cannot run where it is written.
+function Get-Squadrons {
+    if (-not $script:SquadronList) { $script:SquadronList = @(Build-Squadrons) }
+    $script:SquadronList
+}
 function Get-SquadronDef { param([int]$Num)
-    foreach ($q in $Squadrons) { if ($q.Num -eq $Num) { return $q } }
+    foreach ($q in (Get-Squadrons)) { if ($q.Num -eq $Num) { return $q } }
     $null
 }
 
@@ -709,9 +749,13 @@ function Ensure-Squadron {
     Save-Pilot $obj
     Get-Pilot
 }
+# Which group a station belonged to in 1940. Every station named in the
+# order of battle is listed; anything unknown is taken for 11 Group, which
+# is where most of the fighting was.
 function Get-GroupForBase { param([string]$Base)
-    if ($Base -match 'Pembrey|Exeter|Warmwell|Middle Wallop|Boscombe') { return 10 }
-    if ($Base -match 'Duxford|Digby|Coltishall') { return 12 }
+    if ($Base -match 'Pembrey|Exeter|Warmwell|Middle Wallop|Boscombe|Colerne|Filton|St Eval') { return 10 }
+    if ($Base -match 'Duxford|Digby|Coltishall|Fowlmere|Kirton|Wittering') { return 12 }
+    if ($Base -match 'Acklington|Catterick|Church Fenton|Drem|Turnhouse|Usworth|Leconfield|Prestwick|Dyce|Grangemouth|Wick') { return 13 }
     11
 }
 # Squadron mottoes, for the ones we know. Anything else gets its group.
@@ -1313,7 +1357,8 @@ function New-Nav {
 # Called from the red header button.
 function Start-NewCareer {
     $ans = [System.Windows.MessageBox]::Show($Win,
-        "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man.",
+        "Start a new career? Your current pilot and logbook are archived (not deleted) and you choose a squadron for the new man." +
+        "`n`nStart a new campaign in the game as well. The Room reads your sorties and victories from the campaign save, so a new pilot left flying the old campaign inherits its date and its squadron. He will not inherit its victories: he is credited only with what he scores from the day he is posted.",
         'New career', 'YesNo', 'Question')
     if ($ans -ne 'Yes') { return }
     # Nothing is archived YET. This used to move the pilot away here and
@@ -1687,7 +1732,7 @@ function Invoke-Submit {
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
         rank    = $rank
-        codes   = "$($script:SelSq.Code)-$letter"
+        codes   = $(if ("$($script:SelSq.Code)") { "$($script:SelSq.Code)-$letter" } else { "$letter" })
         status  = 'On strength'
         serials = $serial
         note    = "Posted to No. $($script:SelSq.Num) Squadron at $($script:SelSq.Base)."
@@ -2017,30 +2062,40 @@ function Show-SquadronSelect {
             $cp.BorderBrush = if ($cp.Tag -and $cp.Tag.Num -eq $q2.Num) { B '#FFE28A' } else { Res 'Rule' }
         }
         $actTxt = switch ("$($q2.Act)") { 'H' { 'in the thick of the fighting' } 'M' { 'steady action' } default { 'a quieter station' } }
-        $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $(Get-GroupForBase $q2.Base) Group  $([char]0x2022)  $actTxt   (codes $($q2.Code)-)"
+        $codeTxt = if ("$($q2.Code)") { "   (codes $($q2.Code)-)" } else { '' }
+        $script:SqDetail.Text = "No. $($q2.Num) Squadron  $([char]0x2022)  $($q2.Type)  $([char]0x2022)  $($q2.Base)  $([char]0x2022)  No. $(Get-GroupForBase $q2.Base) Group  $([char]0x2022)  $actTxt$codeTxt"
         $script:SqButton.IsEnabled = $true
     }
 
     # shared-station fan-out: count squadrons per station this period
     $stationCount = @{}
-    foreach ($q in $Squadrons) {
+    foreach ($q in (Get-Squadrons)) {
         $po = Get-Posting $q $script:SelPeriod
         if ($po -and $po.Mx -ge 0) { $stationCount[$po.Base] = 1 + [int]$stationCount[$po.Base] }
     }
     $stationSeen = @{}
     $farActive = @(); $resting = @()
-    foreach ($q in $Squadrons) {
+    foreach ($q in (Get-Squadrons)) {
         $po = Get-Posting $q $script:SelPeriod
         if (-not $po) { $resting += $q; continue }
         $qt = @{ Num=$q.Num; Code=$q.Code; Type=$q.Type; Base=$po.Base; Act=$po.Act; Period=$script:SelPeriod }
         if ($po.Mx -lt 0) { $farActive += $qt; continue }
-        $split = 0.0
-        if ([int]$stationCount[$po.Base] -gt 1) {
+        # Several squadrons at one station are fanned out around it. This
+        # used to offset the first left and EVERY other one right, so a
+        # third squadron sat exactly on top of the second.
+        $offX = 0.0; $offY = 0.0
+        $nAt = [int]$stationCount[$po.Base]
+        if ($nAt -gt 1) {
             $ix = [int]$stationSeen[$po.Base]; $stationSeen[$po.Base] = $ix + 1
-            $split = if ($ix -eq 0) { -11.0 } else { 11.0 }
+            if ($nAt -eq 2) { $offX = $(if ($ix -eq 0) { -13.0 } else { 13.0 }) }
+            else {
+                $ang = (2.0 * [math]::PI * $ix / $nAt) - ([math]::PI / 2.0)
+                $rad = 15.0 + 3.0 * $nAt
+                $offX = $rad * [math]::Cos($ang); $offY = $rad * [math]::Sin($ang)
+            }
         }
-        $cx = $po.Mx * $W + $split
-        $cy = $po.My * $H
+        $cx = $po.Mx * $W + $offX
+        $cy = $po.My * $H + $offY
         $ov = $script:RingPos["$($po.Base)|$($q.Num)"]
         if ($ov) { $cx = [double]$ov.x * $W; $cy = [double]$ov.y * $H }
         $isSpit = ("$($q.Type)" -match 'Spitfire')
