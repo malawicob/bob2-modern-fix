@@ -1,0 +1,28 @@
+33lima, there are two new things on the graphics side you might want to
+try, and both are switched off unless you ask for them.
+
+The setup has a new entry, number 13, called visual enhancements. It
+turns on four times antialiasing, sixteen times anisotropic filtering
+and ReShade all in one go, and pressing it a second time takes the lot
+back off again. The antialiasing is the one that cleans up the jagged
+edges on wings and along the horizon. The filtering is what stops the
+ground going to mush when you are looking along it at a shallow angle,
+which from a cockpit is most of what you see.
+
+A word of warning given your 770. All three together are real work for
+that card, and ReShade adds five passes on top of every single frame. If
+the frame rate suffers I would put the antialiasing on by itself first,
+which is item 6 in the dgVoodoo settings, and leave ReShade alone until
+you know what the rest of it is costing you. Four times is the setting I
+would stay with. Eight was tried here and it put visible seams along the
+edges of the terrain tiles, as well as costing more for no real gain.
+
+If you do run ReShade, the DEL key opens its overlay while you are
+flying, and you can switch the individual effects on and off in there to
+see what each one is actually giving you rather than judging the whole
+lot at once. Page Up and Page Down move between the five presets that
+ship with it, from Subtle at one end to Showcase at the other, so you
+can compare them in the same scene instead of guessing.
+
+None of it turns itself on, and if you decide against ReShade later you
+can switch it off without losing your presets.
