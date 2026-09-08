@@ -46,6 +46,7 @@ $excludeFiles = @(
     'BOB2-Win11-Fix.tar.gz'         # stale build artifact, 45 bytes, empty
     'Build-Release.ps1'             # this script
     'DESIGN.md'                     # design notes, not user documentation
+    'SQUADRONROOM-PLAN.md'          # the living-squadrons plan, not user documentation
     'BOB2_UITest.bat'               # menu-rescale prototype, developer only
 )
 $excludeDirs = @(
