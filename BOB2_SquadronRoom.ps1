@@ -1223,7 +1223,11 @@ function Get-Career {
     $promos = [math]::Floor($sorties / $step)
     $curIdx = [math]::Min($ladder.Count - 1, [math]::Max($idx, $promos))
     $next = $null; $nextAt = 0
-    if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($promos + 1) * $step }
+    # counted off the rung he STANDS on, not off the promotions he has
+    # earned: a man commissioned on the day he joined starts one rung up,
+    # and his next step is at 24 sorties, not the 12 that would take a
+    # sergeant to where he already is
+    if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($curIdx + 1) * $step }
     @{ sorties = $sorties; hours = $hours; rank = $ladder[$curIdx]; next = $next; nextAt = $nextAt }
 }
 # Rank and decorations are PERSISTED the first time they are earned, with
@@ -2367,6 +2371,14 @@ function Show-Roster {
     }
 }
 
+function Update-RankSegs {
+    foreach ($seg in @($script:RankSegs)) {
+        $on = ("$($seg.Tag)" -eq "$($script:SelRank)")
+        $seg.Background = B $(if ($on) { '#213540' } else { '#101B22' })
+        $seg.BorderThickness = '0,0,0,2'
+        $seg.BorderBrush = B $(if ($on) { '#C8973F' } else { '#101B22' })
+    }
+}
 function Update-CreateValid {
     $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
     $script:SubmitBtn.IsEnabled = $ok
@@ -2375,7 +2387,7 @@ function Update-CreateValid {
 function Invoke-Submit {
     Complete-NewCareer
     $isCmdr = $false
-    $rank = 'Sergeant'
+    $rank = if ($script:SelRank) { "$($script:SelRank)" } else { 'Sergeant' }
     $letter = ('A','B','D','E','F','G','H','J','K','L','N','P','R','S','T','U','V','W','X','Y','Z' | Get-Random)
     $serial = New-Serial -Type ("$($script:SelSq.Type)")
     $pilot = [ordered]@{
@@ -3465,7 +3477,7 @@ function Show-Create {
     Set-ChromeBack 'BACK TO THE BOARD' { Show-SquadronSelect }
     Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-Submit }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
-    $lead = New-TB -Text 'Summer 1940. Give your name and pick your photograph. Your aircraft, code letter and rank are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
+    $lead = New-TB -Text 'Summer 1940. Give your name, say whether you come to the squadron as a sergeant pilot or with a commission, and pick your photograph. Your aircraft and code letter are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
     [void]$script:Stage.Children.Add($lead)
 
@@ -3481,6 +3493,42 @@ function Show-Create {
     if ($cp0 -and $cp0.Name) { $script:NameBox.Text = "$($cp0.Name)" }
     [void]$nameCol.Children.Add($script:NameBox)
     [void]$row.Children.Add($nameCol)
+
+    # Sergeant or officer. Fighter Command flew the Battle with both on the
+    # same squadron, in the same aeroplanes, and they were decorated
+    # differently for it: the DFM for a sergeant, the DFC for an officer.
+    if (-not $script:SelRank) { $script:SelRank = 'Sergeant' }
+    $rankCol = New-Object Windows.Controls.StackPanel
+    [void]$rankCol.Children.Add((New-TB -Text 'YOU JOIN AS' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $rankRow = New-Object Windows.Controls.StackPanel; $rankRow.Orientation = 'Horizontal'; $rankRow.Margin = '0,7,0,0'
+    $script:RankSegs = @()
+    foreach ($opt in @(
+        @{ R = 'Sergeant';      L = 'SERGEANT PILOT'; N = 'a non-commissioned pilot; his cross is the DFM' },
+        @{ R = 'Pilot Officer'; L = 'PILOT OFFICER';  N = 'commissioned; his cross is the DFC' })) {
+        $seg = New-Object Windows.Controls.Border
+        $seg.Padding = '14,9'; $seg.Margin = '0,0,10,0'; $seg.CornerRadius = '3'; $seg.Cursor = 'Hand'
+        $seg.Tag = $opt.R
+        $inner = New-Object Windows.Controls.StackPanel
+        [void]$inner.Children.Add((New-TB -Text $opt.L -Family $CondFam -Size 12.5 -Colour '#E9E3D4' -Bold))
+        [void]$inner.Children.Add((New-TB -Text $opt.N -Family 'Segoe UI' -Size 11 -Colour '#6F828C'))
+        # the cuff badge beside the words, and the panel parented ONCE:
+        # setting Child first and then re-parenting throws
+        $bf = Get-RankBadgeFile $opt.R
+        $bi = if ($bf) { New-BadgeImage -File $bf -Height 30 -Tip $opt.R } else { $null }
+        if ($bi) {
+            $wrapSeg = New-Object Windows.Controls.StackPanel; $wrapSeg.Orientation = 'Horizontal'
+            $bi.Margin = '0,0,10,0'; $bi.VerticalAlignment = 'Center'
+            [void]$wrapSeg.Children.Add($bi)
+            [void]$wrapSeg.Children.Add($inner)
+            $seg.Child = $wrapSeg
+        } else { $seg.Child = $inner }
+        $seg.Add_MouseLeftButtonUp({ param($sender, $e) $script:SelRank = "$($sender.Tag)"; Update-RankSegs })
+        $script:RankSegs += ,$seg
+        [void]$rankRow.Children.Add($seg)
+    }
+    [void]$rankCol.Children.Add($rankRow)
+    [void]$row.Children.Add($rankCol)
+    Update-RankSegs
 
     [void]$script:Stage.Children.Add($row)
 
