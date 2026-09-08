@@ -6,18 +6,33 @@
 # careers and lays the answers out, using the Room's own badge, ribbon
 # and rank drawing, so what you see here is what the dispersal will show.
 #
-#   powershell -NoProfile -ExecutionPolicy Bypass -STA -File dev\awards_preview.ps1 `
-#       -Room "D:\Battle of Britain II\BOB2-Win11-Fix\BOB2_SquadronRoom.ps1"
+# Easiest way to run it: double-click dev\Awards Preview.bat.
+#
+# From a prompt, the whole line, with powershell at the front:
+#   powershell -NoProfile -ExecutionPolicy Bypass -STA -File "dev\awards_preview.ps1"
 #
 # Add -Png <path> to write it to a file instead of opening a window.
+#
+# The Room is found NEXT DOOR by default rather than at a hard-coded D:,
+# so this works wherever the fix folder has been put.
 param(
-    [string]$Room = 'D:\Battle of Britain II\BOB2-Win11-Fix\BOB2_SquadronRoom.ps1',
+    [string]$Room,
     [string]$Png
 )
+if (-not $Room) {
+    $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $Room = Join-Path (Split-Path -Parent $here) 'BOB2_SquadronRoom.ps1'
+}
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 
-if (-not (Test-Path $Room)) { Write-Host "Cannot find $Room" -ForegroundColor Red; exit 1 }
+if (-not (Test-Path $Room)) {
+    Write-Host "Cannot find the Squadron Room script at:" -ForegroundColor Red
+    Write-Host "  $Room" -ForegroundColor Red
+    Write-Host "Pass its path with -Room, or run this from the fix folder's dev\ directory."
+    Read-Host 'Press Enter to close'
+    exit 1
+}
 # the same trick the smoke test uses: dot-source a copy with the lines
 # that SHOW the Room's own window taken out, so only its functions load
 $src = Get-Content $Room -Raw
