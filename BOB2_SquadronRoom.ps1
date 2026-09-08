@@ -951,7 +951,7 @@ function Add-Cell {
     [void]$Grid.Children.Add($t)
 }
 function New-RosterRow {
-    param($P,[switch]$Header,[int]$Index=0,[switch]$IsPlayer,[switch]$Invented)
+    param($P,[switch]$Header,[int]$Index=0,[switch]$IsPlayer,[switch]$Invented,[switch]$CampaignLost)
     $b = New-Object Windows.Controls.Border
     $b.Padding = '18,10,18,10'; $b.BorderThickness = '0,0,0,1'; $b.BorderBrush = Res 'Rule'
     if ($Header) { $b.Background = B '#101B22' }
@@ -961,6 +961,7 @@ function New-RosterRow {
     # An invented man is marked wherever he appears, and never dressed to
     # look like a record.
     if ($Invented) { $b.BorderBrush = B '#5A4A2A'; $b.BorderThickness = '2,0,0,1' }
+    elseif ($CampaignLost) { $b.BorderBrush = B '#6B3A2E'; $b.BorderThickness = '2,0,0,1' }
 
     $g = New-Object Windows.Controls.Grid
     foreach ($w in @('*','110','150','300')) {
@@ -990,6 +991,14 @@ function New-RosterRow {
         Add-Cell $g $aw 2 $CondFam 13.5 '#C8973F' -Bold
         if ($Invented) {
             Add-Cell $g 'Lost in this campaign' 3 $CondFam 13.5 '#D66A5C'
+        } elseif ($CampaignLost) {
+            # Your campaign, not the record. Both are shown, so the board
+            # never quietly rewrites a man's war.
+            $real = Get-FateText $P -Short
+            $txt = 'Lost in your campaign'
+            if ($real -and $real -ne 'Survived the Battle') { $txt += "  ($real in the record)" }
+            elseif ($real) { $txt += '  (survived, in the record)' }
+            Add-Cell $g $txt 3 $CondFam 13 '#C77A5C'
         } else {
             $stat = Resolve-Status $P $script:CampaignDate
             Add-Cell $g $stat.Text 3 $CondFam 13.5 $stat.Colour
@@ -1337,6 +1346,44 @@ $InventedSurnames = @(
 )
 $InventedInitials = @('A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T','W')
 $InventedRanks = @('Sergeant','Sergeant','Sergeant','Pilot Officer','Pilot Officer','Flying Officer')
+
+# A man history has already accounted for is never touched by the
+# campaign's arithmetic:
+#
+#   the player                      his own save says what happened to him
+#   a documented fate in the Battle killed, missing, taken prisoner or
+#                                   wounded on a recorded day
+#   an ace or a decorated man       his record is the reason he is known
+#
+# Everyone else is an ordinary pilot whose war the record does not follow,
+# and those are the men your campaign's losses fall on. It is a claim
+# about YOUR campaign, not about the man, and the board says so on his own
+# row and gives his real ending beside it.
+function Test-ProtectedPilot {
+    param($P)
+    if (("$($P.left_reason)" -in @('KIA','MIA','POW','WIA','DoW')) -and $P.left) { return $true }
+    if (($P.PSObject.Properties.Name -contains 'awards') -and @($P.awards).Count -gt 0) { return $true }
+    if (($P.PSObject.Properties.Name -contains 'victories_total') -and ($null -ne $P.victories_total) -and ([int]$P.victories_total -ge 5)) { return $true }
+    $false
+}
+# Which of the squadron's ordinary men your campaign has cost it. Same
+# squadron, same campaign, same men every time.
+function Get-CampaignCasualties {
+    param($Roster, [int]$Count, [int]$Sqn)
+    if ($Count -le 0) { return @{} }
+    $pool = @($Roster | Where-Object { -not (Test-ProtectedPilot $_) })
+    if ($pool.Count -eq 0) { return @{} }
+    $out = @{}
+    for ($i = 0; $i -lt $Count -and $i -lt $pool.Count; $i++) {
+        $pick = $pool[(($Sqn * 17 + $i * 29) % $pool.Count)]
+        $n = 0
+        while ($out.ContainsKey("$($pick.pilot)") -and $n -lt $pool.Count) {
+            $pick = $pool[((($Sqn * 17 + $i * 29) + ++$n) % $pool.Count)]
+        }
+        $out["$($pick.pilot)"] = $true
+    }
+    $out
+}
 
 # The same squadron always invents the same men, so a pilot does not
 # change his name between one visit and the next.
@@ -1970,8 +2017,15 @@ function Show-Roster {
     # invented wherever they appear.
     $unnamed = 0
     try { $unnamed = Get-UnnamedLosses -Roster $men -Record $sqrec -Date $script:CampaignDate } catch { }
-    $invented = @(Get-InventedPilots -Sqn $sqnum -Count $unnamed -Roster $men)
-    foreach ($h in $onStrength) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
+    # The squadron's own men carry the campaign's losses first. Only when
+    # there are not enough ordinary pilots to carry them does anyone have
+    # to be invented.
+    $script:CampaignLost = Get-CampaignCasualties -Roster $men -Count $unnamed -Sqn $sqnum
+    $stillUnnamed = [Math]::Max(0, $unnamed - $script:CampaignLost.Count)
+    $invented = @(Get-InventedPilots -Sqn $sqnum -Count $stillUnnamed -Roster $men)
+    foreach ($h in $onStrength) {
+        [void]$ls.Children.Add((New-RosterRow -P $h -Index $i -CampaignLost:($script:CampaignLost.ContainsKey("$($h.pilot)")))); $i++
+    }
     foreach ($h in $invented) {
         $row = [pscustomobject]@{
             pilot = "$($h.pilot)"; rank = "$($h.rank)"; codes = ''
@@ -2006,7 +2060,7 @@ function Show-Roster {
         [void]$script:Stage.Children.Add($lt3)
         $noteTxt = 'Read from the campaign save. The game keeps this tally for every squadron but names nobody.'
         if ($unnamed -gt 0) {
-            $noteTxt += "  $unnamed of those losses are not in the historical record, so $(if ($unnamed -eq 1) { 'a pilot has' } else { 'pilots have' }) been invented to carry $(if ($unnamed -eq 1) { 'it' } else { 'them' }); they are marked INVENTED on the board and are not a historical record."
+            $noteTxt += "  $unnamed of those losses are not in the historical record, so the board gives them to men of the squadron whose own war the record does not follow. They are marked as lost in YOUR campaign, with their real ending beside them. No ace, no decorated man and nobody with a recorded fate is touched."
         }
         $note2 = New-TB -Text $noteTxt -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
         $note2.Margin = '0,0,0,4'; $note2.MaxWidth = 900
