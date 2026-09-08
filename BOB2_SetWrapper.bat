@@ -65,7 +65,13 @@ copy /y "wrapper_backup_dgvoodoo\D3D9.dll"   . >nul
 copy /y "wrapper_backup_dgvoodoo\D3D8.dll"   . >nul 2>nul
 copy /y "wrapper_backup_dgvoodoo\D3DImm.dll" . >nul 2>nul
 copy /y "wrapper_backup_dgvoodoo\DDraw.dll"  . >nul 2>nul
-copy /y "wrapper_backup_dgvoodoo\dgVoodoo.conf" . >nul 2>nul
+REM  NOT the backed-up dgVoodoo.conf. That copy is the untouched
+REM  template - empty DesktopResolution, Resolution = max - and
+REM  restoring it wipes the black-bars fix AND the DPI render size
+REM  in one go. Generate a fresh one instead, so it is computed for
+REM  this machine. Falls back to the backup only if that fails.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { . '%~dp0BOB2_Setup.ps1' -AsLibrary; Set-Content -Path (Join-Path '%CD%' 'dgVoodoo.conf') -Value (New-DgVoodooConfText) -Encoding ASCII; exit 0 } catch { exit 1 }"
+if errorlevel 1 copy /y "wrapper_backup_dgvoodoo\dgVoodoo.conf" . >nul 2>nul
 echo Switched to dgVoodoo2 ^(D3D9 -^> D3D11^).
 goto :status
 
