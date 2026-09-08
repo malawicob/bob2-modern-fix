@@ -519,16 +519,23 @@ function Get-RankBadgeFile {
 # One chip per decoration in wearing order; a Bar becomes the rosette
 # variant of the same ribbon, never a second ribbon. MiD has no ribbon of
 # its own in 1940, so it stays a written honour.
+# The ribbons, left to right in the order they were worn: British
+# gallantry awards by precedence, then the awards of an allied government,
+# which came after all of them however high they stood at home.
 function New-RibbonRow {
     param($Honours, [double]$Height = 15)
     $set = @($Honours)
     $items = @()
     if ($set -contains 'VC')  { $items += @{ f='ribbon-vc.png';  t='Victoria Cross' } }
-    if ($set -contains 'DSO') { $items += @{ f='ribbon-dso.png'; t='Distinguished Service Order' } }
+    if ($set -contains 'Bar to DSO')     { $items += @{ f='ribbon-dso-bar.png'; t='Distinguished Service Order and Bar' } }
+    elseif ($set -contains 'DSO')        { $items += @{ f='ribbon-dso.png';     t='Distinguished Service Order' } }
     if ($set -contains 'Bar to DFC')     { $items += @{ f='ribbon-dfc-bar.png'; t='Distinguished Flying Cross and Bar' } }
     elseif ($set -contains 'DFC')        { $items += @{ f='ribbon-dfc.png';     t='Distinguished Flying Cross' } }
     if ($set -contains 'Bar to DFM')     { $items += @{ f='ribbon-dfm-bar.png'; t='Distinguished Flying Medal and Bar' } }
     elseif ($set -contains 'DFM')        { $items += @{ f='ribbon-dfm.png';     t='Distinguished Flying Medal' } }
+    if ($set -contains 'Virtuti Militari')          { $items += @{ f='ribbon-vm.png';   t='Virtuti Militari, 5th Class (Poland)' } }
+    if ($set -contains 'Cross of Valour')           { $items += @{ f='ribbon-kw.png';   t='Cross of Valour, Krzyz Walecznych (Poland)' } }
+    if ($set -contains 'Czechoslovak War Cross')    { $items += @{ f='ribbon-czwc.png'; t='Czechoslovak War Cross 1939' } }
     if ($items.Count -eq 0) { return $null }
     $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'
     foreach ($i in $items) {
@@ -1271,8 +1278,28 @@ function Update-CareerRecord {
 # Rank-aware honours ladder, computed from the record. Sergeants earn the
 # DFM, officers the DFC (as the RAF actually did); a second award of the
 # same decoration is a Bar. Mentioned in Despatches for sustained flying.
+# The squadrons whose men were decorated by their own governments in
+# exile as well as by the RAF. Poles and Czechs flew in British squadrons
+# too, but these four were their own units and their own award lists.
+$PolishSquadrons = @(302, 303)
+$CzechSquadrons  = @(310, 312)
+# Was there one sortie he should not have come back from? The Victoria
+# Cross went to one Fighter Command pilot in the whole war -- Flt Lt
+# James Nicolson of 249, on 16 August 1940, for pressing his attack home
+# while his Hurricane burned -- so it is not a score that earns it but a
+# single action fought past the point of sense. Three or more claims in
+# one sortie, from an aeroplane he did not bring back.
+function Test-VictoriaCrossAction {
+    param($Diary)
+    if (-not $Diary) { return $false }
+    foreach ($r in @($Diary.rows)) {
+        $k = 0; for ($i = 0; $i -lt 7; $i++) { $k += [int]$r.kills[$i] }
+        if ($k -ge 3 -and ([int]$r.ended -in 3, 4, 5, 6, 7, 8, 9)) { return $true }
+    }
+    $false
+}
 function Get-PlayerHonours {
-    param($Pilot, $Career)
+    param($Pilot, $Career, $Diary)
     $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
     $sorties = 0; if ($Career) { $sorties = [int]$Career.sorties }
     $isNCO = ("$($Career.rank)" -eq 'Sergeant')
@@ -1289,6 +1316,20 @@ function Get-PlayerHonours {
     if ($v -ge 5  -and ($h -notcontains $cross)) { $h += $cross }
     if ($v -ge 10 -and ($h -notcontains "Bar to $cross")) { $h += "Bar to $cross" }
     if ($v -ge 15 -and ($h -notcontains 'DSO')) { $h += 'DSO' }
+    if ($v -ge 25 -and ($h -contains 'DSO') -and ($h -notcontains 'Bar to DSO')) { $h += 'Bar to DSO' }
+    # An allied government's awards, for a man on one of its own squadrons.
+    # The Cross of Valour was given freely for good work in action; the
+    # Virtuti Militari was Poland's highest and was not.
+    $sqn = 0
+    if (($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqn = [int]$Pilot.sqn }
+    if ($PolishSquadrons -contains $sqn) {
+        if ($v -ge 3 -and ($h -notcontains 'Cross of Valour'))   { $h += 'Cross of Valour' }
+        if ($v -ge 8 -and ($h -notcontains 'Virtuti Militari'))  { $h += 'Virtuti Militari' }
+    }
+    if ($CzechSquadrons -contains $sqn) {
+        if ($v -ge 3 -and ($h -notcontains 'Czechoslovak War Cross')) { $h += 'Czechoslovak War Cross' }
+    }
+    if (($h -notcontains 'VC') -and (Test-VictoriaCrossAction $Diary)) { $h += 'VC' }
     if (($Pilot.PSObject.Properties.Name -contains 'awards') -and $Pilot.awards -and ($h -notcontains "$($Pilot.awards)")) { $h = @("$($Pilot.awards)") + $h }
     # no comma return: every caller collects with @(...), and comma + @()
     # double-wraps into the System.Object[] display bug
@@ -2012,7 +2053,7 @@ function Show-Logbook {
     [void]$tiles.Children.Add((New-Stat 'SORTIES' "$($career.sorties)"))
     [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
     [void]$tiles.Children.Add((New-Stat 'VICTORIES' "$vics"))
-    $honours = @(Get-PlayerHonours $Pilot $career)
+    $honours = @(Get-PlayerHonours $Pilot $career -Diary $ld)
     $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours $honours
     $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
     [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile -Chip (New-RibbonRow $honours -Height 13)))
@@ -2113,7 +2154,7 @@ function Show-Roster {
     $sessions0 = Get-Sessions
     $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0 -Pilot $Pilot
     $career0 = Get-Career $Pilot $sessions0 -Sorties $flownCount
-    $ph0 = @(Get-PlayerHonours $Pilot $career0)
+    $ph0 = @(Get-PlayerHonours $Pilot $career0 -Diary (Get-CareerDiary -Diary $ld0 -Pilot $Pilot))
     $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career0 -Honours $ph0
     $bs = Get-SquadronBase -Sqn $sqnum -Date $script:CampaignDate -Pilot $Pilot
     $baseTxt = if ($bs) { $bs.ToUpper() } else { 'THE DISPERSAL' }
