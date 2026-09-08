@@ -1170,8 +1170,21 @@ function Get-SaveDiary {
 # to be the source on the dispersal while the logbook used the save - so
 # the two screens could show different ranks for the same man.
 function Get-SortieCount {
-    param($Diary, $Sessions)
-    if ($Diary) { return @($Diary.rows).Count }
+    param($Diary, $Sessions, $Pilot)
+    if ($Diary) {
+        $rows = @($Diary.rows).Count
+        # A new man posted into a campaign that has already been flown
+        # starts at nought. campaignSorties is the Log Book's length on the
+        # day he joined; everything before it belongs to the man he
+        # replaced. Without this a new career opened with the previous
+        # pilot's sorties, rank and victories already on the board.
+        if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'campaignSorties') -and ($null -ne $Pilot.campaignSorties)) {
+            $base = [int]$Pilot.campaignSorties
+            if ($rows -lt $base) { return $rows }   # the game started a new campaign: it is all his
+            return ($rows - $base)
+        }
+        return $rows
+    }
     @($Sessions).Count
 }
 # The newest campaign save's Log Book, for the logbook screen.
@@ -1199,12 +1212,12 @@ function Sync-CampaignClaims {
         $arr = @($p.campaignKills)
         for ($k = 0; $k -lt 7 -and $k -lt $arr.Count; $k++) { $have[$k] = [int]$arr[$k] }
     } else {
-        # First sync of a record that already holds claims: those claims
-        # were entered by hand for the same victories the save now shows,
-        # so take the save as the baseline rather than crediting twice. A
-        # record with no claims at all inherits the Log Book in full.
-        $claims = @(); if (($p.PSObject.Properties.Name -contains 'claims') -and $p.claims) { $claims = @($p.claims) }
-        if ($claims.Count -gt 0) { for ($k = 0; $k -lt 7; $k++) { $have[$k] = [int]$ld.kills[$k] } }
+        # No baseline recorded. This is a pilot made before baselines
+        # existed, flying his own campaign, so the Log Book is his: take it
+        # as the baseline rather than crediting it all over again. (A pilot
+        # posted since then always carries a baseline, written at posting,
+        # so a new career can never inherit the previous man's victories.)
+        for ($k = 0; $k -lt 7; $k++) { $have[$k] = [int]$ld.kills[$k] }
     }
     $lower = $false
     for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -lt $have[$k]) { $lower = $true } }
@@ -1226,6 +1239,11 @@ function Sync-CampaignClaims {
     $obj = [ordered]@{}
     foreach ($pp in $p2.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
     $obj['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld.kills[$_] })
+    # A shorter Log Book than his baseline means the game started a fresh
+    # campaign: his sortie baseline goes back to nought with it.
+    if (($p2.PSObject.Properties.Name -contains 'campaignSorties') -and ($null -ne $p2.campaignSorties)) {
+        if (@($ld.rows).Count -lt [int]$p2.campaignSorties) { $obj['campaignSorties'] = 0 }
+    }
     Save-Pilot $obj
     $ld
 }
@@ -1410,7 +1428,7 @@ function Show-Logbook {
     # any way at all are in before the tiles are drawn.
     $ld = Sync-CampaignClaims
     $p2 = Get-Pilot; if ($p2) { $Pilot = $p2 }
-    $career = Get-Career $Pilot $sessions -Sorties (Get-SortieCount -Diary $ld -Sessions $sessions)
+    $career = Get-Career $Pilot $sessions -Sorties (Get-SortieCount -Diary $ld -Sessions $sessions -Pilot $Pilot)
     $vics = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $vics = [int]$Pilot.victories }
 
     $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,-6,0,12'
@@ -1503,7 +1521,7 @@ function Show-Roster {
     # so the hero card and the roster row could disagree about your rank.
     $ld0 = Get-LatestSaveDiary
     $sessions0 = Get-Sessions
-    $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0
+    $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0 -Pilot $Pilot
     $career0 = Get-Career $Pilot $sessions0 -Sorties $flownCount
     $ph0 = @(Get-PlayerHonours $Pilot $career0)
     $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career0 -Honours $ph0
@@ -1682,6 +1700,17 @@ function Invoke-Submit {
         historical = $false
         portrait = $script:SelPortrait
         created = (Get-Date).ToString('yyyy-MM-dd')
+    }
+    # Where the campaign stood the day he was posted. Everything already in
+    # the Log Book belongs to the man before him; this pilot's own record
+    # is what happens from here.
+    $ld0 = Get-LatestSaveDiary
+    if ($ld0) {
+        $pilot['campaignSorties'] = @($ld0.rows).Count
+        $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
+    } else {
+        $pilot['campaignSorties'] = 0
+        $pilot['campaignKills'] = @(0,0,0,0,0,0,0)
     }
     Save-Pilot -Pilot $pilot
     Show-Roster -Pilot (Get-Pilot)
