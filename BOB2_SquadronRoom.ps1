@@ -951,13 +951,16 @@ function Add-Cell {
     [void]$Grid.Children.Add($t)
 }
 function New-RosterRow {
-    param($P,[switch]$Header,[int]$Index=0,[switch]$IsPlayer)
+    param($P,[switch]$Header,[int]$Index=0,[switch]$IsPlayer,[switch]$Invented)
     $b = New-Object Windows.Controls.Border
     $b.Padding = '18,10,18,10'; $b.BorderThickness = '0,0,0,1'; $b.BorderBrush = Res 'Rule'
     if ($Header) { $b.Background = B '#101B22' }
     elseif ($IsPlayer) { $b.Background = B '#26313B'; $b.BorderBrush = Res 'BrassDk' }
     elseif ($Index % 2 -eq 1) { $b.Background = Res 'Panel' }
     else { $b.Background = Res 'PanelHi' }
+    # An invented man is marked wherever he appears, and never dressed to
+    # look like a record.
+    if ($Invented) { $b.BorderBrush = B '#5A4A2A'; $b.BorderThickness = '2,0,0,1' }
 
     $g = New-Object Windows.Controls.Grid
     foreach ($w in @('*','110','150','300')) {
@@ -974,8 +977,9 @@ function New-RosterRow {
         Add-Cell $g 'STATUS / FATE'  3 $CondFam 12 '#C8973F' -Bold
     } else {
         $ns = New-Object Windows.Controls.StackPanel
-        [void]$ns.Children.Add((New-TB -Text ("$($P.pilot)") -Family $SerifFam -Size 15.5 -Colour '#E9E3D4'))
+        [void]$ns.Children.Add((New-TB -Text ("$($P.pilot)") -Family $SerifFam -Size 15.5 -Colour $(if ($Invented) { '#B9AE93' } else { '#E9E3D4' })))
         $rc = "$($P.rank)"; if ($P.codes) { $rc = "$($P.rank)   $([char]0x2022)   $($P.codes)" }
+        if ($Invented) { $rc += "   $([char]0x2022)   INVENTED, NOT A HISTORICAL RECORD" }
         $rct = New-TB -Text $rc -Family $CondFam -Size 11.5 -Colour '#6F828C'; $rct.Margin = '0,2,0,0'
         [void]$ns.Children.Add($rct)
         [Windows.Controls.Grid]::SetColumn($ns,0); [void]$g.Children.Add($ns)
@@ -984,8 +988,12 @@ function New-RosterRow {
         Add-Cell $g $vic 1 $CondFam 16 '#D9B45A' -Center -Bold
         $aw = if ($IsPlayer) { "$($P.awards)" } else { Get-Awards $P $script:CampaignDate }
         Add-Cell $g $aw 2 $CondFam 13.5 '#C8973F' -Bold
-        $stat = Resolve-Status $P $script:CampaignDate
-        Add-Cell $g $stat.Text 3 $CondFam 13.5 $stat.Colour
+        if ($Invented) {
+            Add-Cell $g 'Lost in this campaign' 3 $CondFam 13.5 '#D66A5C'
+        } else {
+            $stat = Resolve-Status $P $script:CampaignDate
+            Add-Cell $g $stat.Text 3 $CondFam 13.5 $stat.Colour
+        }
     }
     $b.Child = $g
     $b
@@ -1298,6 +1306,80 @@ function Get-SquadronRecord {
         Kills      = $k
         Total      = ($k | Measure-Object -Sum).Sum
     }
+}
+
+# =====================================================================
+#  The men the game lost but did not name
+#
+#  The campaign save says a squadron lost nine pilots. The roster names
+#  the ones history recorded. The rest are real losses with no name
+#  attached, and this gives them one.
+#
+#  Two rules, and they are the whole of it. A man who really flew is NEVER
+#  killed by arithmetic: if history says he came through the Battle, he
+#  comes through it here. And a pilot invented to carry an unattributed
+#  loss is marked as invented wherever he appears, in the data and on the
+#  board, because a made-up name on a memorial roll is the one mistake
+#  this room must not make.
+#
+#  The names are period-plausible and deliberately NOT drawn from the list
+#  of the Few: borrowing a real airman's surname for an invented man would
+#  be worse than inventing one outright.
+# =====================================================================
+$InventedSurnames = @(
+    'Ashworth','Ballantyne','Bickerton','Blythe','Cadogan','Carmichael','Chadwick',
+    'Charteris','Coleridge','Cranfield','Darnley','Delamere','Ellerby','Fanshawe',
+    'Farquhar','Fenwick','Gallagher','Garforth','Haldane','Halliwell','Hartnell',
+    'Havelock','Inchbald','Kerrigan','Langdale','Lockhart','Marchant','Merriman',
+    'Netherton','Ockenden','Pemberton','Prendergast','Quayle','Ravenhill','Redmayne',
+    'Rowntree','Sandiford','Selwyn','Sheridan','Standish','Thackeray','Tremayne',
+    'Underhill','Vansittart','Wetherby','Whitcombe','Wolstenholme','Yardley'
+)
+$InventedInitials = @('A','B','C','D','E','F','G','H','J','K','L','M','N','P','R','S','T','W')
+$InventedRanks = @('Sergeant','Sergeant','Sergeant','Pilot Officer','Pilot Officer','Flying Officer')
+
+# The same squadron always invents the same men, so a pilot does not
+# change his name between one visit and the next.
+function Get-InventedPilots {
+    param([int]$Sqn, [int]$Count, $Roster)
+    if ($Count -le 0) { return @() }
+    $taken = @{}
+    foreach ($m in @($Roster)) {
+        $sur = ("$($m.pilot)" -split ',')[0].Trim()
+        if ($sur) { $taken[$sur.ToLower()] = $true }
+    }
+    $out = @()
+    $i = 0; $step = 0
+    while ($out.Count -lt $Count -and $step -lt 400) {
+        $step++
+        $idx = ($Sqn * 7 + $i * 13) % $InventedSurnames.Count
+        $sur = $InventedSurnames[$idx]
+        $i++
+        if ($taken.ContainsKey($sur.ToLower())) { continue }
+        $taken[$sur.ToLower()] = $true
+        $a = $InventedInitials[($Sqn * 3 + $out.Count * 5) % $InventedInitials.Count]
+        $b = $InventedInitials[($Sqn * 11 + $out.Count * 7) % $InventedInitials.Count]
+        $out += [pscustomobject]@{
+            pilot = "$sur, $a.$b."
+            rank  = $InventedRanks[($Sqn + $out.Count) % $InventedRanks.Count]
+            historical = $false
+        }
+    }
+    $out
+}
+
+# How many of the campaign's pilot losses history has already named, and
+# how many it has not.
+function Get-UnnamedLosses {
+    param($Roster, $Record, $Date)
+    if (-not $Record) { return 0 }
+    $named = 0
+    foreach ($m in @($Roster)) {
+        if ("$($m.left_reason)" -notin @('KIA','MIA','DoW')) { continue }
+        $l = Get-LeaveDate $m
+        if ($l -and $l -ge $BattleStart -and (-not $Date -or $l -le $Date)) { $named++ }
+    }
+    [Math]::Max(0, [int]$Record.PilotsLost - $named)
 }
 
 # =====================================================================
@@ -1842,6 +1924,8 @@ function Show-Roster {
     # the squadron as a records book: names, victories, fate
     [void]$script:Stage.Children.Add((New-TB -Text 'THE SQUADRON' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
     $men = @(Get-Historical -Sqn $sqnum)
+    $sqrec = $null
+    try { $sqrec = Get-SquadronRecord -Sqn $sqnum } catch { }
     # Say what this squadron's roster actually holds. Promising victories
     # "documented for the aces" in front of 62 blank columns was a straight
     # contradiction on any squadron whose scores are not researched yet.
@@ -1881,15 +1965,29 @@ function Show-Roster {
     # The board is the squadron AS IT STOOD: men who have not joined yet,
     # and men already lost, are not on it. The lost are named underneath.
     $onStrength = @($men | Where-Object { Test-OnStrength $_ $script:CampaignDate })
+    # Pilots the campaign has lost that history does not name. They stand
+    # on the board like anyone else until their day, and are marked as
+    # invented wherever they appear.
+    $unnamed = 0
+    try { $unnamed = Get-UnnamedLosses -Roster $men -Record $sqrec -Date $script:CampaignDate } catch { }
+    $invented = @(Get-InventedPilots -Sqn $sqnum -Count $unnamed -Roster $men)
     foreach ($h in $onStrength) { [void]$ls.Children.Add((New-RosterRow -P $h -Index $i)); $i++ }
+    foreach ($h in $invented) {
+        $row = [pscustomobject]@{
+            pilot = "$($h.pilot)"; rank = "$($h.rank)"; codes = ''
+            historical = $false
+            fate = [pscustomobject]@{ status = 'Lost'; date = $null; note = 'Lost in this campaign' }
+            joined = $null; left = $null; left_reason = $null
+            victories = @(); victories_total = $null; awards = @()
+        }
+        [void]$ls.Children.Add((New-RosterRow -P $row -Index $i -Invented)); $i++
+    }
     $listWrap.Child = $ls
     [void]$script:Stage.Children.Add($listWrap)
 
     # What the squadron itself has done in this campaign, out of the game's
     # own diary. The game counts; history names. Neither alone is a
     # squadron.
-    $sqrec = $null
-    try { $sqrec = Get-SquadronRecord -Sqn $sqnum } catch { }
     if ($sqrec) {
         $h2 = New-TB -Text 'THE SQUADRON IN THIS CAMPAIGN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold
         $h2.Margin = '0,26,0,0'
@@ -1906,7 +2004,11 @@ function Show-Roster {
         $lt3 = New-TB -Text $line -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $lt3.Margin = '0,8,0,4'; $lt3.MaxWidth = 900
         [void]$script:Stage.Children.Add($lt3)
-        $note2 = New-TB -Text 'Read from the campaign save. The game keeps this tally for every squadron but names nobody: it knows a pilot did not come back, not which of the men above he was.' -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
+        $noteTxt = 'Read from the campaign save. The game keeps this tally for every squadron but names nobody.'
+        if ($unnamed -gt 0) {
+            $noteTxt += "  $unnamed of those losses are not in the historical record, so $(if ($unnamed -eq 1) { 'a pilot has' } else { 'pilots have' }) been invented to carry $(if ($unnamed -eq 1) { 'it' } else { 'them' }); they are marked INVENTED on the board and are not a historical record."
+        }
+        $note2 = New-TB -Text $noteTxt -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap
         $note2.Margin = '0,0,0,4'; $note2.MaxWidth = 900
         [void]$script:Stage.Children.Add($note2)
     }
