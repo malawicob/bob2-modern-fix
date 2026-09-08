@@ -92,6 +92,57 @@ TOWNS = [
     ('OSTEND', 51.2247, 2.9075),
 ]
 
+# Which sector each field belonged to, July to October 1940, and what it
+# was: the sector station holding the operations room, or a satellite or
+# forward field working under it.
+#
+# The letters were confirmed one by one against sources that are not
+# Wikipedia where possible - Historic England's listings for the sector
+# operations buildings at Northolt, Debden and Kirton in Lindsey among
+# them. Northolt was Z, not Y; W and Y were Filton and Middle Wallop,
+# and both were No. 11 Group sectors until 10 Group took them over in
+# July and August 1940. An old map showing A, B, C, D, F, W, Y and Z
+# together is therefore an 11 Group map from before 8 July.
+#
+# Where a source conflicts with another the entry says so rather than
+# picking a side, and a field whose sector is not documented has none.
+#   (letter, sector station, role, note)
+SECTORS = {
+    'Tangmere':          ('A', 'Tangmere', 'sector station', ''),
+    'Westhampnett':      ('A', 'Tangmere', 'satellite', ''),
+    'Kenley':            ('B', 'Kenley', 'sector station', ''),
+    'Croydon':           ('B', 'Kenley', 'satellite', ''),
+    'Biggin Hill':       ('C', 'Biggin Hill', 'sector station', ''),
+    'Gravesend':         ('C', 'Biggin Hill', 'satellite', 'listed under Hornchurch as well in September'),
+    'West Malling':      ('C', 'Biggin Hill', 'advanced airfield', 'bombed repeatedly and barely usable through the Battle'),
+    'Hornchurch':        ('D', 'Hornchurch', 'sector station', ''),
+    'Rochford':          ('D', 'Hornchurch', 'satellite', ''),
+    'Manston':           ('D', 'Hornchurch', 'forward airfield', ''),
+    'Hawkinge':          ('D', 'Hornchurch', 'forward airfield', ''),
+    'North Weald':       ('E', 'North Weald', 'sector station', ''),
+    'Stapleford Tawney': ('E', 'North Weald', 'satellite', ''),
+    'Debden':            ('F', 'Debden', 'sector station', ''),
+    'Castle Camps':      ('F', 'Debden', 'satellite', 'opened June 1940'),
+    'Martlesham Heath':  ('',  '', 'satellite', 'served both Debden and North Weald sectors; sources differ'),
+    'Northolt':          ('Z', 'Northolt', 'sector station', ''),
+    'Hendon':            ('Z', 'Northolt', 'satellite', ''),
+    'Lympne':            ('',  '', 'forward airfield', 'No. 11 Group; no sector named in any source found'),
+    'Detling':           ('',  '', 'not Fighter Command', 'Coastal Command, No. 16 Group'),
+    'Filton':            ('W', 'Filton', 'sector station', 'a No. 11 Group sector until 10 Group took it over on 8 July 1940'),
+    'Colerne':           ('',  '', 'satellite', 'Filton sector or Middle Wallop, sources differ; meant to become a sector station but not until 1941'),
+    'Exeter':            ('W', 'Filton', 'satellite', 'the 15 September order of battle puts it under Middle Wallop instead'),
+    'Pembrey':           ('',  '', 'sector station', 'No. 10 Group; no letter found in any source'),
+    'Middle Wallop':     ('Y', 'Middle Wallop', 'sector station', 'a No. 11 Group sector until 10 Group took it over in the summer of 1940'),
+    'Warmwell':          ('Y', 'Middle Wallop', 'forward airfield', ''),
+    'Boscombe Down':     ('Y', 'Middle Wallop', 'satellite', ''),
+    'Duxford':           ('G', 'Duxford', 'sector station', ''),
+    'Fowlmere':          ('G', 'Duxford', 'satellite', "the sector's own designation for it was G1"),
+    'Wittering':         ('K', 'Wittering', 'sector station', ''),
+    'Coltishall':        ('K', 'Wittering', 'satellite', 'worked as a parent station in practice; when it became a sector of its own is not established'),
+    'Digby':             ('L', 'Digby', 'sector station', ''),
+    'Kirton in Lindsey': ('M', 'Kirton in Lindsey', 'sector station', ''),
+}
+
 # Group boundaries. Only the two that a single line can honestly carry are
 # drawn. The 10/11 boundary ran north from the Dorset coast, leaving Middle
 # Wallop and Boscombe Down in 10 Group and Tangmere and Northolt in 11; the
@@ -325,19 +376,41 @@ def main():
 
     # airfields first: they are what the Room plots against, so they get
     # the room. A small open square marks each one.
+    f_sect = font(12, True)
+    marker_r = {}
     for name, la, lo in AIRFIELDS:
         if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
         x, y = px(lo, la)
-        r = 4.0 * SS
+        sec = SECTORS.get(name)
+        is_station = bool(sec and sec[2] == 'sector station')
+        r = (5.5 if is_station else 4.0) * SS
         d.ellipse([x - r, y - r, x + r, y + r], fill=INK['label'])
         d.ellipse([x - r - SS, y - r - SS, x + r + SS, y + r + SS],
                   outline=(20, 32, 40), width=int(1.2 * SS))
+        if is_station:
+            # a sector station held the operations room that fought the
+            # sector, so it is drawn ringed
+            rr = r + 4.5 * SS
+            d.ellipse([x - rr, y - rr, x + rr, y + rr], outline=INK['title'], width=int(1.6 * SS))
+            r = rr
+        marker_r[name] = r
         taken.append((x - r - 2 * SS, y - r - 2 * SS, x + r + 2 * SS, y + r + 2 * SS))
+    # A sector station carries its letter in its own name rather than in a
+    # badge beside it. The badge reserved space that pushed the name off
+    # the map, and a ringed dot with no name is no use to anybody.
     missed = 0
     for name, la, lo in AIRFIELDS:
         if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
         x, y = px(lo, la)
-        if not place(x, y, name, f_af, INK['label']): missed += 1
+        sec = SECTORS.get(name)
+        txt = name
+        if sec and sec[2] == 'sector station' and sec[0]:
+            txt = f'{name} ({sec[0]})'
+        # clear of the marker, whatever size it is: a sector station's ring
+        # is wider than a plain field's dot, and a fixed offset put every
+        # one of their names inside their own ring, where nothing fits
+        if not place(x, y, txt, f_af, INK['label'], marker_r.get(name, 4.0 * SS) + 4 * SS):
+            missed += 1
 
     # then the towns, which give way to them
     for name, la, lo in TOWNS:
@@ -356,6 +429,8 @@ def main():
     d.text((30 * SS, 24 * SS), 'FIGHTER COMMAND', font=f_title, fill=INK['title'])
     d.text((30 * SS, 55 * SS), 'SECTOR AND FIGHTER AIRFIELDS, 1940', font=f_grp, fill=INK['title'])
     d.line([(30 * SS, 80 * SS), (352 * SS, 80 * SS)], fill=INK['title'], width=int(1.5 * SS))
+    d.text((30 * SS, 90 * SS), 'A RINGED FIELD IS A SECTOR STATION, LETTERED AS FIGHTER COMMAND LETTERED IT',
+           font=f_tick, fill=INK['tick'])
 
     img = img.resize((W, H), Image.LANCZOS)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
@@ -369,6 +444,11 @@ def main():
     ALIASES = {'Kirton in Lindsey': ['Kirton'], 'Martlesham Heath': ['Martlesham'],
                'Stapleford Tawney': ['Stapleford'], 'North Weald': ['Northweald']}
     stations = {}
+    sectors_out = {}
+    for name, sec in SECTORS.items():
+        entry = {'letter': sec[0], 'station': sec[1], 'role': sec[2], 'note': sec[3]}
+        for n in [name] + ALIASES.get(name, []):
+            sectors_out[n] = entry
     for name, la, lo in AIRFIELDS:
         fx = (lo - WEST) / (EAST - WEST)
         fy = (NORTH - la) / (NORTH - SOUTH)
@@ -380,7 +460,8 @@ def main():
         json.dump({'west': WEST, 'east': EAST, 'south': SOUTH, 'north': NORTH,
                    'width': W, 'height': H,
                    'note': 'x = (lon - west) / (east - west); y = (north - lat) / (north - south)',
-                   'stations': dict(sorted(stations.items()))},
+                   'stations': dict(sorted(stations.items())),
+                   'sectors': dict(sorted(sectors_out.items()))},
                   f, indent=1)
         f.write('\n')
     print(f'{a.out}: {W}x{H}, {drawn} land shapes, {len(AIRFIELDS)} airfields, {len(TOWNS)} towns, {missed} label(s) could not be placed clear')

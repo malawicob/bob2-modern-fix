@@ -303,5 +303,229 @@
    0.53374,
    0.3125
   ]
+ },
+ "sectors": {
+  "Biggin Hill": {
+   "letter": "C",
+   "station": "Biggin Hill",
+   "role": "sector station",
+   "note": ""
+  },
+  "Boscombe Down": {
+   "letter": "Y",
+   "station": "Middle Wallop",
+   "role": "satellite",
+   "note": ""
+  },
+  "Castle Camps": {
+   "letter": "F",
+   "station": "Debden",
+   "role": "satellite",
+   "note": "opened June 1940"
+  },
+  "Colerne": {
+   "letter": "",
+   "station": "",
+   "role": "satellite",
+   "note": "Filton sector or Middle Wallop, sources differ; meant to become a sector station but not until 1941"
+  },
+  "Coltishall": {
+   "letter": "K",
+   "station": "Wittering",
+   "role": "satellite",
+   "note": "worked as a parent station in practice; when it became a sector of its own is not established"
+  },
+  "Croydon": {
+   "letter": "B",
+   "station": "Kenley",
+   "role": "satellite",
+   "note": ""
+  },
+  "Debden": {
+   "letter": "F",
+   "station": "Debden",
+   "role": "sector station",
+   "note": ""
+  },
+  "Detling": {
+   "letter": "",
+   "station": "",
+   "role": "not Fighter Command",
+   "note": "Coastal Command, No. 16 Group"
+  },
+  "Digby": {
+   "letter": "L",
+   "station": "Digby",
+   "role": "sector station",
+   "note": ""
+  },
+  "Duxford": {
+   "letter": "G",
+   "station": "Duxford",
+   "role": "sector station",
+   "note": ""
+  },
+  "Exeter": {
+   "letter": "W",
+   "station": "Filton",
+   "role": "satellite",
+   "note": "the 15 September order of battle puts it under Middle Wallop instead"
+  },
+  "Filton": {
+   "letter": "W",
+   "station": "Filton",
+   "role": "sector station",
+   "note": "a No. 11 Group sector until 10 Group took it over on 8 July 1940"
+  },
+  "Fowlmere": {
+   "letter": "G",
+   "station": "Duxford",
+   "role": "satellite",
+   "note": "the sector's own designation for it was G1"
+  },
+  "Gravesend": {
+   "letter": "C",
+   "station": "Biggin Hill",
+   "role": "satellite",
+   "note": "listed under Hornchurch as well in September"
+  },
+  "Hawkinge": {
+   "letter": "D",
+   "station": "Hornchurch",
+   "role": "forward airfield",
+   "note": ""
+  },
+  "Hendon": {
+   "letter": "Z",
+   "station": "Northolt",
+   "role": "satellite",
+   "note": ""
+  },
+  "Hornchurch": {
+   "letter": "D",
+   "station": "Hornchurch",
+   "role": "sector station",
+   "note": ""
+  },
+  "Kenley": {
+   "letter": "B",
+   "station": "Kenley",
+   "role": "sector station",
+   "note": ""
+  },
+  "Kirton": {
+   "letter": "M",
+   "station": "Kirton in Lindsey",
+   "role": "sector station",
+   "note": ""
+  },
+  "Kirton in Lindsey": {
+   "letter": "M",
+   "station": "Kirton in Lindsey",
+   "role": "sector station",
+   "note": ""
+  },
+  "Lympne": {
+   "letter": "",
+   "station": "",
+   "role": "forward airfield",
+   "note": "No. 11 Group; no sector named in any source found"
+  },
+  "Manston": {
+   "letter": "D",
+   "station": "Hornchurch",
+   "role": "forward airfield",
+   "note": ""
+  },
+  "Martlesham": {
+   "letter": "",
+   "station": "",
+   "role": "satellite",
+   "note": "served both Debden and North Weald sectors; sources differ"
+  },
+  "Martlesham Heath": {
+   "letter": "",
+   "station": "",
+   "role": "satellite",
+   "note": "served both Debden and North Weald sectors; sources differ"
+  },
+  "Middle Wallop": {
+   "letter": "Y",
+   "station": "Middle Wallop",
+   "role": "sector station",
+   "note": "a No. 11 Group sector until 10 Group took it over in the summer of 1940"
+  },
+  "North Weald": {
+   "letter": "E",
+   "station": "North Weald",
+   "role": "sector station",
+   "note": ""
+  },
+  "Northolt": {
+   "letter": "Z",
+   "station": "Northolt",
+   "role": "sector station",
+   "note": ""
+  },
+  "Northweald": {
+   "letter": "E",
+   "station": "North Weald",
+   "role": "sector station",
+   "note": ""
+  },
+  "Pembrey": {
+   "letter": "",
+   "station": "",
+   "role": "sector station",
+   "note": "No. 10 Group; no letter found in any source"
+  },
+  "Rochford": {
+   "letter": "D",
+   "station": "Hornchurch",
+   "role": "satellite",
+   "note": ""
+  },
+  "Stapleford": {
+   "letter": "E",
+   "station": "North Weald",
+   "role": "satellite",
+   "note": ""
+  },
+  "Stapleford Tawney": {
+   "letter": "E",
+   "station": "North Weald",
+   "role": "satellite",
+   "note": ""
+  },
+  "Tangmere": {
+   "letter": "A",
+   "station": "Tangmere",
+   "role": "sector station",
+   "note": ""
+  },
+  "Warmwell": {
+   "letter": "Y",
+   "station": "Middle Wallop",
+   "role": "forward airfield",
+   "note": ""
+  },
+  "West Malling": {
+   "letter": "C",
+   "station": "Biggin Hill",
+   "role": "advanced airfield",
+   "note": "bombed repeatedly and barely usable through the Battle"
+  },
+  "Westhampnett": {
+   "letter": "A",
+   "station": "Tangmere",
+   "role": "satellite",
+   "note": ""
+  },
+  "Wittering": {
+   "letter": "K",
+   "station": "Wittering",
+   "role": "sector station",
+   "note": ""
+  }
  }
 }

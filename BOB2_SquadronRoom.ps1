@@ -44,6 +44,7 @@ $FlightOpen   = Join-Path $StateDir 'flight.open'
 # it belongs to. The old table was thirteen anchors placed by eye, and
 # every station beyond them had to be fitted to those.
 $MapStations = @{}
+$MapSectors  = @{}
 $MapProj = $null
 $MapProjPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.json'
 if (Test-Path $MapProjPath) {
@@ -52,7 +53,34 @@ if (Test-Path $MapProjPath) {
         foreach ($pp in $MapProj.stations.PSObject.Properties) {
             $MapStations[$pp.Name] = @([double]$pp.Value[0], [double]$pp.Value[1])
         }
+        # which sector each field belonged to, and what it was in it
+        if ($MapProj.PSObject.Properties.Name -contains 'sectors') {
+            foreach ($pp in $MapProj.sectors.PSObject.Properties) {
+                $MapSectors[$pp.Name] = $pp.Value
+                $MapSectors['RAF ' + $pp.Name] = $pp.Value
+            }
+        }
     } catch { }
+}
+# A field's sector, in words. Fighter Command fought the Battle by sector:
+# each had an operations room at its sector station that controlled the
+# satellite and forward fields under it.
+function Get-SectorText {
+    param([string]$Base)
+    $sec = $MapSectors[$Base]
+    if (-not $sec) { return '' }
+    $letter = "$($sec.letter)"; $station = "$($sec.station)"; $role = "$($sec.role)"
+    $t = ''
+    if ($role -eq 'sector station') {
+        $t = if ($letter) { "$letter Sector station" } else { 'sector station' }
+    }
+    elseif ($station) {
+        $whose = if ($letter) { "$letter Sector" } else { "$station's sector" }
+        $t = "$role, $whose"
+    }
+    elseif ($role) { $t = $role }
+    if ("$($sec.note)") { $t += " ($($sec.note))" }
+    $t
 }
 
 # Squadron code letters as carried during the Battle, 10 July to 31
@@ -1994,7 +2022,9 @@ function Show-Map {
     }
     $leadTxt = if ($onTable) { "No. $(Get-GroupForBase $base) Group, Fighter Command. Your station is ringed in gold; the other squadrons in the line are plotted beside theirs, blue for Spitfires and amber for Hurricanes." }
                else { "No. $(Get-GroupForBase $base) Group, Fighter Command. $base lies beyond the western edge of this table, so your squadron is named below it. The squadrons plotted here are the rest of the line, blue for Spitfires and amber for Hurricanes." }
-    $leadTxt += '  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
+    $secNow = Get-SectorText $base
+    if ($secNow) { $leadTxt += "  Your station is the $secNow." }
+    $leadTxt += '  A ringed field on the table is a sector station, the one holding the operations room that fought that sector.  Roll the wheel to zoom, drag to move the sheet, double-click to set it back.'
     $lead = New-TB -Text $leadTxt -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Wrap
     $lead.Margin = '0,0,0,12'; $lead.MaxWidth = 1180
     [void]$script:Stage.Children.Add($lead)
@@ -2055,7 +2085,9 @@ function Show-Map {
         }
         $code = ''
         if ($SquadronCodes.ContainsKey([int]$o.Num)) { $code = "  $([char]0x2022)  codes $($SquadronCodes[[int]$o.Num])-" }
-        $dot.Tag = "No. $($o.Num) Squadron  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)  $([char]0x2022)  No. $(Get-GroupForBase $o.Base) Group$code$extra"
+        $secTxt = Get-SectorText "$($o.Base)"
+        $dot.Tag = "No. $($o.Num) Squadron  $([char]0x2022)  $($o.Type)  $([char]0x2022)  $($o.Base)  $([char]0x2022)  No. $(Get-GroupForBase $o.Base) Group" +
+                   $(if ($secTxt) { "  $([char]0x2022)  $secTxt" } else { '' }) + "$code$extra"
         $dot.ToolTip = $dot.Tag
         $dot.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
         $dot.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
@@ -2093,7 +2125,9 @@ function Show-Map {
         $ring.Width = 30; $ring.Height = 30; $ring.StrokeThickness = 3.5
         $ring.Stroke = B '#FFE28A'; $ring.Fill = B '#01000000'
         [Windows.Controls.Canvas]::SetLeft($ring, $cx - 15); [Windows.Controls.Canvas]::SetTop($ring, $cy - 15)
-        $ring.Tag = "No. $sqnum Squadron  $([char]0x2022)  YOUR SQUADRON  $([char]0x2022)  $base  $([char]0x2022)  No. $(Get-GroupForBase $base) Group"
+        $mySec = Get-SectorText $base
+        $ring.Tag = "No. $sqnum Squadron  $([char]0x2022)  YOUR SQUADRON  $([char]0x2022)  $base  $([char]0x2022)  No. $(Get-GroupForBase $base) Group" +
+                    $(if ($mySec) { "  $([char]0x2022)  $mySec" } else { '' })
         $ring.ToolTip = $ring.Tag
         $ring.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = "$($sender.Tag)" } })
         $ring.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
@@ -2118,7 +2152,10 @@ function Show-Map {
         $who = if ($here.Count -eq 0) { 'no squadron here today' }
                elseif ($here.Count -eq 1) { "No. $($here[0]) Squadron" }
                else { 'Nos. ' + (($here | ForEach-Object { "$_" }) -join ', ') + ' Squadrons' }
-        $hit.Tag = "$nm  $([char]0x2022)  No. $(Get-GroupForBase $nm) Group  $([char]0x2022)  $who"
+        $secTxt = Get-SectorText $nm
+        $hit.Tag = "$nm  $([char]0x2022)  No. $(Get-GroupForBase $nm) Group" +
+                   $(if ($secTxt) { "  $([char]0x2022)  $secTxt" } else { '' }) +
+                   "  $([char]0x2022)  $who"
         $hit.ToolTip = $hit.Tag
         $hit.Add_MouseEnter({ param($sender,$e) if ($script:MapInfo -and $script:MapInfo.Text.Trim() -eq '') { $script:MapInfo.Text = "$($sender.Tag)" } })
         $hit.Add_MouseLeave({ param($sender,$e) if ($script:MapInfo) { $script:MapInfo.Text = ' ' } })
