@@ -15,6 +15,23 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.8.3  (2026-09-08)
+--------------------
+  - FIXED: MENU SIZE broke the briefing pages again. With Bob.exe.manifest
+    in place the game is DPI-unaware, so its 2D dialogs lay out at 96 DPI
+    and the sixty screens boblang.dll owns fit at their ORIGINAL size.
+    Scaling them then overflows - the tab row lands on the briefing text.
+    v1.8.0's "scale both files together" was right before the manifest
+    existed and wrong after it.
+
+    MENU SIZE now leaves boblang.dll alone whenever the manifest is
+    present, and restores it to stock if it finds it scaled, so no choice
+    of scale can reintroduce this. Bob.exe's own menus are a different
+    surface and still take the full 1.40x.
+
+    The configuration that renders correctly, and is now what the tool
+    keeps: Bob.exe at 1.40x, boblang.dll at stock.
+
 v1.8.2  (2026-09-08)
 --------------------
   - FIXED: switching graphics translator restored a stale dgVoodoo.conf.

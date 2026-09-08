@@ -129,6 +129,31 @@ $langOrig = "$langPath.unscaled"
 $script:LangDone = $false
 function Apply-LangScale {
     param([string]$Scale)
+    # With Bob.exe.manifest in place the game is DPI-UNAWARE, so its 2D
+    # dialogs are laid out at 96 DPI on a 1024-wide briefing surface, and
+    # the sixty screens boblang.dll owns fit at their ORIGINAL size.
+    # Scaling them then overflows: the tab row lands on the briefing text
+    # or the long lines clip. Proved 2026-09-08 - the install that renders
+    # correctly has Bob.exe at 1.40x and boblang.dll at stock.
+    #
+    # Bob.exe's own menus are a different surface and still take the scale.
+    if (Test-Path (Join-Path $GameDir 'Bob.exe.manifest')) {
+        if ((Test-Path $langOrig) -and (Test-Path $langPath)) {
+            $cur = [System.IO.File]::ReadAllBytes($langPath)
+            $orig0 = [System.IO.File]::ReadAllBytes($langOrig)
+            if ((Get-Md5 $cur) -ne (Get-Md5 $orig0)) {
+                [System.IO.File]::WriteAllBytes($langPath, $orig0)
+                Write-OK 'Briefing pages left at their original size (the DPI manifest handles them).'
+                try {
+                    . (Join-Path $PSScriptRoot 'BOB2_Setup.ps1') -AsLibrary
+                    if ((Get-DunkirkPackState $GameDir) -ne 'none' -and -not (Test-DunkerqueName $GameDir)) {
+                        if (Add-DunkerqueName $GameDir) { Write-OK 'Re-added the Dunkerque name.' }
+                    }
+                } catch { }
+            }
+        }
+        return
+    }
     if (-not (Test-Path $langOrig)) {
         if (Test-Path $langPath) { Copy-Item $langPath $langOrig; Write-OK 'Backed up boblang.dll as boblang.dll.unscaled' }
         else { return }
