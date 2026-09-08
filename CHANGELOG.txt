@@ -79,14 +79,19 @@ v1.8.0  (2026-09-08)
   THE LAUNCHER AND THE GAME
 
   - FIXED: "Windows had put a compatibility flag back on Bob.exe" on
-    every single launch, with the menus still small. It was removing
-    nothing. The Program Compatibility Assistant appends a NUL and its
-    own binary blob INSIDE the layer string, so the last token was not
-    equal to HIGHDPIAWARE and the filter walked past it while the match
-    test still found the word. The value is truncated at the NUL now, the
-    Assistant's standing decision in its Store is cleared - that is what
-    put the flag back after every run - and DPIUNAWARE is stated outright
-    rather than leaving the setting absent.
+    every launch, when nothing was being removed. The Program
+    Compatibility Assistant appends a NUL and its own binary blob INSIDE
+    the layer string, so the last token was not equal to the flag name
+    and the filter walked past it while the match test still found the
+    word in the string. The value is truncated at the NUL before it is
+    read, so DWM8And16BitMitigation - the flag that virtualises the
+    display-mode switch and puts black bars in the cockpit - is now
+    genuinely removed when Windows adds it back.
+    HIGHDPIAWARE is deliberately LEFT ALONE. Because the old filter never
+    worked, the game has run with that flag for as long as the message
+    has existed, and that is the state everyone has tested against.
+    Taking it off, and stating DPIUNAWARE in its place, made the game
+    come up enormous on a display running above 100% scaling. It stays.
   - NEW: ReShade can be switched OFF again, not only removed. There was
     an install step and a remove step and nothing in between, so turning
     the shaders off meant throwing away the presets with them. Off

@@ -177,77 +177,53 @@ function Sync-FixVersion {
 #  Compatibility flags Windows puts back on Bob.exe by itself, stripped at
 #  Play. Two of them:
 #
-#  HIGHDPIAWARE  - re-applied by the Program Compatibility Assistant. It
-#      stops Windows scaling the game, so the menus draw small and the
-#      menu rescale appears to do nothing. (An earlier comment here argued
-#      the flag was needed for the 3D view. It was not: the "3D in a
-#      corner" it described was the DesktopResolution fault in
-#      dgVoodoo.conf, cured in BOB2_Setup.ps1, and the game runs full
-#      screen without the flag.)
+#  HIGHDPIAWARE  - LEFT ALONE, and the reason is worth reading before
+#      anybody removes it again. The launcher claimed to strip it on
+#      every launch and never did: the Program Compatibility Assistant
+#      appends a NUL and its own binary blob INSIDE the layer string, so
+#      the last token was "HIGHDPIAWARE<NUL><junk>" and a token filter
+#      walked straight past it. The game has therefore run WITH the flag
+#      for as long as this message has existed, which is the state
+#      everyone has been testing against and is happy with.
+#
+#      On 8 September 2026 the filter was fixed, the flag genuinely came
+#      off, and DPIUNAWARE was stated in its place. DPIUNAWARE means
+#      "scaling performed by System": Windows renders the game at 96 DPI
+#      and then magnifies the result, and on a scaled display the game
+#      came up enormous. It was put back within the hour.
+#
+#      So: the flag stays. If it is ever taken off again, expect the
+#      whole game to change size, and test on a display running above
+#      100% scaling before believing otherwise.
 #
 #  DWM8And16BitMitigation - Windows applies this one to the game on its
 #      own. With it on, the game's display-mode switch before flight is
 #      virtualised and the driver refuses exclusive fullscreen: black
 #      bars top and bottom in the cockpit (2026-09-07). Windows also
 #      writes it at MACHINE level, which needs administrator rights to
-#      remove; that part is done by the Install and repair screen.
+#      remove; that part is done by the Install and repair screen. This
+#      is the ONLY flag stripped here.
 #
-#  Taking HIGHDPIAWARE off was not enough. The Assistant keeps a standing
-#  decision about the game in its own Store, and puts the flag straight
-#  back after every run, so the note appeared on every launch and the
-#  menus were small again by the next one. Two things are needed:
-#
-#    * clear that Store entry, which is the decision itself; and
-#    * say what we DO want rather than only what we don't. DPIUNAWARE is
-#      the "Scaling performed by: Application" setting, and an explicit
-#      choice is not second-guessed the way an absent one is. It is also
-#      what the game wants: unaware means Windows scales it, which is
-#      what draws the menus at the right size.
-#
-#  Returns true when something had to be changed.
+#  Returns true when something had to be removed.
 # ---------------------------------------------------------------------
-function Clear-PcaDecision {
-    # The Assistant's record that it has already decided about this game.
-    # While it stands, the flag comes back.
-    param([string]$Exe)
-    $store = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Compatibility Assistant\Store'
-    try {
-        if (-not (Test-Path $store)) { return $false }
-        $p = Get-ItemProperty $store -ErrorAction SilentlyContinue
-        if (-not $p -or -not ($p.PSObject.Properties.Name -contains $Exe)) { return $false }
-        Remove-ItemProperty -Path $store -Name $Exe -ErrorAction Stop
-        return $true
-    }
-    catch { return $false }
-}
 function Repair-DpiShim {
     $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
     $exe = Join-Path $GameDir 'Bob.exe'
     try {
-        $cur = ''
-        if (Test-Path $key) {
-            $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
-            if ($props -and ($props.PSObject.Properties.Name -contains $exe)) { $cur = "$($props.$exe)" }
-        }
-        # The Assistant does not append a word, it appends a NUL and its
-        # own binary blob inside the same string. The last layer is then
-        # "HIGHDPIAWARE<NUL><29 bytes of junk>", which is not equal to
-        # HIGHDPIAWARE, so a token filter walked straight past it while
-        # the -match test still saw the word: the launcher announced it
-        # had removed the flag on every launch and removed nothing.
+        if (-not (Test-Path $key)) { return $false }
+        $props = Get-ItemProperty $key -ErrorAction SilentlyContinue
+        if (-not $props -or -not ($props.PSObject.Properties.Name -contains $exe)) { return $false }
+        $cur = "$($props.$exe)"
+        # The Assistant hides a NUL and its own binary blob in this string.
+        # Everything past the NUL is its business, not a layer, and a token
+        # filter that does not cut it off will miss whatever it is glued to.
         $nul = $cur.IndexOf([char]0)
         if ($nul -ge 0) { $cur = $cur.Substring(0, $nul) }
         $cur = $cur.Trim()
-        # what the value should say: the game's own layers, the two Windows
-        # keeps adding taken out, and DPIUNAWARE stated outright
-        $drop = @('HIGHDPIAWARE', 'DWM8AND16BITMITIGATION', '~')
-        $keep = @($cur -split '\s+' | Where-Object { $_ -and ($drop -notcontains $_.ToUpper()) })
-        if ($keep -notcontains 'DPIUNAWARE') { $keep += 'DPIUNAWARE' }
-        if ($keep -notcontains 'DISABLEDXMAXIMIZEDWINDOWEDMODE') { $keep += 'DISABLEDXMAXIMIZEDWINDOWEDMODE' }
-        $new = '~ ' + (($keep | Sort-Object) -join ' ')
-        $pca = Clear-PcaDecision -Exe $exe
-        if ($new -eq $cur) { return $pca }
-        if (-not (Test-Path $key)) { New-Item -Path $key -Force | Out-Null }
+        if ($cur -notmatch 'DWM8And16BitMitigation') { return $false }
+        $keep = @($cur -split '\s+' | Where-Object { $_ -and $_.ToUpper() -ne 'DWM8AND16BITMITIGATION' -and $_ -ne '~' })
+        $new = '~ ' + ($keep -join ' ')
+        if ($new -eq $cur) { return $false }
         Set-ItemProperty $key -Name $exe -Value $new
         return $true          # we had to fix it
     }
@@ -1049,10 +1025,9 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Windows had put a compatibility flag back on Bob.exe (HIGHDPIAWARE makes the menus " +
-                   "draw small; DWM8And16BitMitigation puts black bars in the cockpit).`n`nRemoved it, and cleared the " +
-                   "Program Compatibility Assistant's standing decision about the game, which is what kept putting it " +
-                   "back. Starting the game now.")
+        Show-Note ("Windows had put DWM8And16BitMitigation back on Bob.exe. That flag virtualises the " +
+                   "game's display-mode switch, which shows up as black bars top and bottom in the cockpit." +
+                   "`n`nRemoved it. Starting the game now.")
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would
