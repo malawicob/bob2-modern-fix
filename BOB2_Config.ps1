@@ -3056,6 +3056,9 @@ function Build-GfxPage {
                 else { & $aaWrite $aaThis '16' }
                 $aaState.Text = (& $aaDescribe)
                 & $aaMarkActive $aaThis
+                # the ReShade section below tells the player when the two
+                # overlap; it is built after this one, hence the late binding
+                if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
             } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Antialiasing') | Out-Null }
         }.GetNewClosure()
         if ($aaRow.Children.Count -gt 0) { $b.Margin = [System.Windows.Thickness]::new(12,0,0,0) }
@@ -3114,6 +3117,7 @@ function Build-GfxPage {
             . $rsSetup -AsLibrary
             $null = Step-InstallReShade -GameFolder $rsGameDir *>&1
             $rsState.Text = (& $rsDescribe $rsGameDir)
+            if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
         } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
     }.GetNewClosure()
     $btnRsOff = New-Btn 'Disable' 'BtnGhost' $null {
@@ -3126,12 +3130,55 @@ function Build-GfxPage {
                 Rename-Item -LiteralPath $dll ($dll + '.disabled')
             }
             $rsState.Text = (& $rsDescribe $rsGameDir)
+            if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
         } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
     }.GetNewClosure()
     $btnRsOff.Margin = [System.Windows.Thickness]::new(12,0,0,0)
     [void]$rsRow.Children.Add($btnRsOn)
     [void]$rsRow.Children.Add($btnRsOff)
     [void]$list.Children.Add($rsRow)
+
+    # ------------------------------------------------------------------
+    #  The two of them together. Every preset but Subtle runs SMAA, and
+    #  nothing here switches the translator's antialiasing off, so a
+    #  player with both on is antialiasing twice: once properly at render
+    #  time and again as a post-process over the top. The second pass is
+    #  wasted, though the sharpening and colour work it comes with are
+    #  not, which is why this is a note and not a warning.
+    #
+    #  It appears only when the overlap is real, and it refreshes from
+    #  the files whenever either side changes, so it can never sit there
+    #  describing a state the player has already left.
+    # ------------------------------------------------------------------
+    $rsOverlap = New-TB '' -Size 12 -Brush 'Info' -Wrap -Margin ([System.Windows.Thickness]::new(0,12,0,0))
+    $rsOverlap.MaxWidth = 720; $rsOverlap.LineHeight = 17
+    $rsOverlap.Visibility = 'Collapsed'
+    [void]$list.Children.Add($rsOverlap)
+
+    $script:GfxOverlapRefresh = {
+        $aaOn = $false
+        $v = & $aaRead
+        if ($v -and $v -ne 'appdriven') { $aaOn = $true }
+        $desc = & $rsDescribe $rsGameDir
+        $on = ($desc -like 'Currently: ON*')
+        # Subtle is the one preset with no antialiasing of its own, so
+        # Subtle plus forced antialiasing is the pairing to aim for and
+        # there is nothing to tell the player about.
+        if ($on -and $desc -match 'preset Subtle') { $rsOverlap.Visibility = 'Collapsed'; return }
+        if (-not $aaOn) { $rsOverlap.Visibility = 'Collapsed'; return }
+        $rsOverlap.Text = $(if ($on) {
+            'Antialiasing is on above as well. ReShade is still worth having for the sharpening and the ' +
+            'colour work, which is most of what you see, but its own antialiasing is redundant on top of ' +
+            'yours and costs a little graphics card time for nothing. If the frame rate drops, either set ' +
+            'the antialiasing above to Off and let the preset do it, or use the Subtle preset, which has none.'
+        } else {
+            'Antialiasing is already on above. If you enable ReShade you still gain the sharpening and the ' +
+            'colour work, but every preset except Subtle does its own antialiasing, which would be doing ' +
+            'twice what is already done. Subtle is the one that pairs with it cleanly.'
+        })
+        $rsOverlap.Visibility = 'Visible'
+    }.GetNewClosure()
+    & $script:GfxOverlapRefresh
 
     # The active preset's button is highlighted (primary style). Styles and
     # the button table are captured as locals so the closures can reach them.
@@ -3169,6 +3216,7 @@ function Build-GfxPage {
                 Set-Content -LiteralPath $ini -Value $txt -Encoding ASCII -NoNewline
                 $rsState.Text = (& $rsDescribe $rsGameDir)
                 & $rsMarkActive $rsThis
+                if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
             } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
         }.GetNewClosure()
         if ($rsPresetRow.Children.Count -gt 0) { $b.Margin = [System.Windows.Thickness]::new(12,0,0,0) }

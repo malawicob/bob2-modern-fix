@@ -1,0 +1,17 @@
+That loop is my fault, not yours. The manifest step writes one setting
+that Windows guards, it was refused, and the window never asked you for
+permission. It just said try again. Next build asks properly. Until
+then, right click BOB2 Setup, Run as administrator, and do the Windows
+11 tweaks step once. That finishes it.
+
+You were right about the antialiasing too. There was no way to try it on
+its own. Next build gives it its own buttons in Settings, Graphics, with
+4x marked as the one to use.
+
+And to answer what you were really asking, you do not want both. Four of
+the five ReShade presets do their own antialiasing already, so running
+the translator's as well just pays twice. Subtle is the only one without
+it, so Subtle plus 4x is the pairing that makes sense. Otherwise pick
+one or the other.
+
+On your 770 I would try 4x on its own first.
