@@ -2995,12 +2995,13 @@ function Build-GfxPage {
     #  first because it is the one to try first: no extra DLL, and one
     #  setting to put back if it costs too much.
     # ------------------------------------------------------------------
-    [void]$list.Children.Add((New-SectionHeader 'Antialiasing and filtering' (
-        'The graphics translator can smooth the jagged edges and sharpen ground texture seen at a shallow ' +
-        'angle. It matters more than it used to, because the game now draws at the desktop scaling and ' +
-        'Windows enlarges the result. 4x is the tested setting: 8x showed seams along the terrain tiles. ' +
-        'Try this on its own before turning ReShade on, so you can see what each of them costs. Takes ' +
-        'effect the next time the game starts.')))
+    [void]$list.Children.Add((New-SectionHeader 'Antialiasing' (
+        'Smooths the jagged edges on wings and along the horizon. Each button also sets the ground texture ' +
+        'filtering to match, which is what stops the ground going to mush when you look along it. 4x is the ' +
+        'setting to use: 8x costs more and puts visible seams along the edges of the terrain tiles. This is ' +
+        'the graphics translator doing the work, so it costs frame rate on an older card. Turn it on, fly a ' +
+        'mission, and you will know what it costs before you add anything else. Takes effect next time the ' +
+        'game starts.')))
 
     $aaConf = Join-Path $script:GameFolder 'dgVoodoo.conf'
     $aaRead = {
@@ -3012,9 +3013,11 @@ function Build-GfxPage {
     }.GetNewClosure()
     $aaDescribe = {
         $v = & $aaRead
-        if (-not $v) { return 'Currently: unknown - dgVoodoo.conf was not found' }
-        if ($v -eq 'appdriven') { return 'Currently: off, the game decides' }
-        "Currently: $v antialiasing, 16x filtering"
+        # "appdriven" means the translator leaves it to the game, and a game
+        # of 2005 asks for none, so the honest word for the player is off.
+        if (-not $v) { return 'Currently: cannot tell - dgVoodoo.conf was not found' }
+        if ($v -eq 'appdriven') { return 'Currently: off' }
+        "Currently: $v, with 16x texture filtering"
     }.GetNewClosure()
     $aaState = New-TB (& $aaDescribe) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,14,0,0))
     [void]$list.Children.Add($aaState)
@@ -3038,10 +3041,13 @@ function Build-GfxPage {
         Set-Content -LiteralPath $aaConf -Value $txt -NoNewline
     }.GetNewClosure()
 
+    # Label and stored value are kept apart so the recommendation can sit on
+    # the button itself. Offering 8x and warning against it in prose only is
+    # how you get a player who picks 8x.
     $aaRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
-    foreach ($aaChoice in @('Off','2x','4x','8x')) {
-        $aaThis = $aaChoice
-        $b = New-Btn $(if ($aaThis -eq 'Off') { 'Off' } else { $aaThis + ' antialiasing' }) 'BtnGhost' $null {
+    foreach ($aaChoice in @(@('Off','Off'), @('2x','2x'), @('4x','4x  recommended'), @('8x','8x'))) {
+        $aaThis = $aaChoice[0]
+        $b = New-Btn $aaChoice[1] 'BtnGhost' $null {
             try {
                 if (-not (Test-Path -LiteralPath $aaConf)) {
                     [System.Windows.MessageBox]::Show('dgVoodoo.conf was not found. Install the graphics translator first.','Antialiasing') | Out-Null; return
@@ -3068,11 +3074,12 @@ function Build-GfxPage {
     #  PresetPath line of the game-root ReShade.ini.
     # ------------------------------------------------------------------
     [void]$list.Children.Add((New-SectionHeader 'ReShade visual enhancement' (
-        'An optional post-processing layer over the graphics translator: sharpening, anti-aliasing and ' +
-        'colour grading via five presets, from Subtle to Cinematic. Off by default, and separate from the ' +
-        'antialiasing above: turn that on first and fly with it, so you can tell what each of them is ' +
-        'costing you. In the game, DEL opens the ReShade overlay, PgUp and PgDn switch presets and PrtScn ' +
-        'saves a screenshot.')))
+        'An optional post-processing layer over the graphics translator: sharpening and colour grading ' +
+        'through five presets, from Subtle to Showcase. Off by default. You do not need the antialiasing ' +
+        'above as well: every preset except Subtle does its own, more cheaply, and running both just pays ' +
+        'twice. Subtle is the one exception, and it pairs well with 4x above. Add this after you have flown ' +
+        'with the antialiasing, so you know which of the two is costing you what. In the game, DEL opens the ' +
+        'ReShade overlay, PgUp and PgDn switch presets and PrtScn saves a screenshot.')))
 
     $rsGameDir = $script:GameFolder
     $rsSetup = Join-Path $script:ScriptDir 'BOB2_Setup.ps1'

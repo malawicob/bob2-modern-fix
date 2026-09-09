@@ -1090,9 +1090,9 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Windows had put DWM8And16BitMitigation back on Bob.exe. That flag virtualises the " +
-                   "game's display-mode switch, which shows up as black bars top and bottom in the cockpit." +
-                   "`n`nRemoved it. Starting the game now.")
+        Show-Note ("Windows had switched one of its own compatibility settings back on for the game. " +
+                   "Left alone it puts black bars across the top and bottom of the cockpit." +
+                   "`n`nTurned it off again. Starting the game now.")
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would

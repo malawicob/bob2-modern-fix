@@ -2666,7 +2666,9 @@ function Step-VisualEnhancements {
     Set-IniValue $conf 'Antialiasing' '4x' 'DirectX'
     Set-IniValue $conf 'Filtering'    '16' 'DirectX'
     Write-OK 'Antialiasing 4x, filtering 16x.'
-    Write-Info '  4x is the tested setting. If anything looks wrong, menu 13 again turns it all off.'
+    Write-Info '  4x is the tested setting. Menu 13 again turns the whole lot back off.'
+    Write-Info '  This switches all three on together. To try the antialiasing on its own,'
+    Write-Info '  and see what it costs before ReShade is involved, use Settings, Graphics.'
     [void](Step-InstallReShade -GameFolder $GameFolder)
     Write-Info '  In game: DEL opens the ReShade overlay, PgUp/PgDn change preset.'
     $true
@@ -3396,7 +3398,8 @@ function Do-IndividualSteps {
         }) -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
-        Write-Host " 13. Visual enhancements (4x AA, 16x filtering, ReShade)" -ForegroundColor White
+        Write-Host " 13. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
         Write-Host " 14. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
