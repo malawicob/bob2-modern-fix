@@ -124,10 +124,45 @@ def parse(lines):
     return out
 
 
+# Which record in the save is which Gruppe.
+#
+# reference/SRC/H/NODEBOB.H lists the units in a fixed order after
+# SQ_LW_START and the save's squadnum is 160 plus the position in that
+# list. Verified against real saves by dev/lw_diary_probe.py: 166 and 167
+# came out as I. and II./JG 51, both launching 36 aircraft as a fighter
+# Gruppe does, and slot 48 as a Stuka Gruppe launching 30.
+#
+# The list is BoB1's and holds 72 units where this order of battle holds
+# 66, so they are matched BY NAME and never by position. Four have no
+# entry at all - the Lehrgeschwader, I./LG 2 and II., IV. and V./LG 1,
+# which BOB2 added - and those get a null. A guess would put a Gruppe's
+# campaign record against the wrong unit, which is worse than showing
+# none.
+LW_BASE = 160
+ROMAN = {'1': 'I', '2': 'II', '3': 'III'}
+ARM = {'SG': 'StG', 'KGR': 'KGr'}
+
+
+def enum_order(path):
+    if not os.path.exists(path):
+        return []
+    with open(path, encoding='latin-1') as fh:
+        src = fh.read()
+    if 'SQ_LW_START' not in src:
+        return []
+    tail = src[src.index('SQ_LW_START'):][:6500]
+    out = []
+    for arm, num, g in re.findall(r'SQ_([A-Z]+)_(\d+)_(\d)', tail):
+        if g in ROMAN:
+            out.append('%s./%s %s' % (ROMAN[g], ARM.get(arm, arm), num))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', default='/mnt/d/Battle of Britain II/English/TEXT/LW_OOB.htm')
     ap.add_argument('--out', default='squadronroom/lw/oob.json')
+    ap.add_argument('--nodebob', default='/home/patrick_millin/bob2/modernization/reference/SRC/H/NODEBOB.H')
     a = ap.parse_args()
 
     if not os.path.exists(a.src):
@@ -143,6 +178,19 @@ def main():
     bad = [r for r in recs if not r['field'] or not r['activation'] or not r['luftflotte']]
     for r in bad:
         print('  ! incomplete: %s' % r['unit'], file=sys.stderr)
+
+    order = enum_order(a.nodebob)
+    slot = {u: i for i, u in enumerate(order)}
+    placed = 0
+    for r in recs:
+        i = slot.get(r['unit'])
+        r['sqidx'] = (LW_BASE + i) if i is not None else None
+        if i is not None:
+            placed += 1
+    if order:
+        missing = [r['unit'] for r in recs if r['sqidx'] is None]
+        print('%d of %d Gruppen have a save index; without one: %s'
+              % (placed, len(recs), ', '.join(missing) if missing else 'none'))
 
     os.makedirs(os.path.dirname(a.out), exist_ok=True)
     with open(a.out, 'w', encoding='utf-8') as fh:

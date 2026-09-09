@@ -17,9 +17,28 @@ It is shown at 62 pixels where the RAF wings are shown at 52, because
 this badge is taller than it is wide and the wings are the opposite, so
 at equal height it looks the smaller thing.
 
-The collar patches beside it are drawn by dev/make_lw_badges.py. See the
-note at the top of that script for what the references do and do not
-settle, and why nothing here is a copied image.
+The six collar patches are now proper embroidered ones supplied by
+Patrick, replacing the flat ones dev/make_lw_badges.py drew from the
+Moritz Ruhl plate. That script is kept: it records what the references do
+and do not settle, and the gull counts it worked out are the counts these
+were chosen by.
+
+Choosing them needed care. Sixteen images arrived with duplicates among
+them, and two of my first picks were wrong: one I read as two gulls has
+one, and one I read as three has two. Each was checked at full size
+against the verified counts before it was used.
+
+  unteroffizier   1 gull,  no wreath
+  feldwebel       3 gulls, no wreath
+  oberfeldwebel   4 gulls, no wreath
+  leutnant        1 gull + wreath and cord
+  oberleutnant    2 gulls + wreath and cord
+  hauptmann       3 gulls + wreath and cord
+
+Several of the images show a chequerboard behind the patch. That
+chequerboard is PAINTED ON, not transparency: the files are RGB. The ones
+used are the plain white versions, whose background could actually be
+removed.
 
 ek2.png, ek1.png, ritterkreuz.png and eichenlaub.png are the Iron Cross
 ladder. None carries a swastika. White backgrounds were flooded out from

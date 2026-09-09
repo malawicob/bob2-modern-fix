@@ -1859,6 +1859,9 @@ function Get-SquadronDiary {
             }
             $o++
         }
+        # kept so Get-GruppeDiary knows where to stop: the German table
+        # sits immediately below this one
+        $script:SqDiaryAt = $bestAt
         if ($bestN -ge 6) {
             for ($i = 0; $i -lt $bestN; $i++) {
                 $p = $bestAt + $i * $SquadronDiaryRow
@@ -1880,6 +1883,103 @@ function Get-SquadronDiary {
     $script:SqDiaryRows = $rows
     $rows
 }
+# The German squadron diary, which is a SEPARATE table from the RAF one.
+#
+# The game keeps two, side by side, and they are not the same shape. From
+# the disassembly notes in modernization/BSR_FORMAT.md and confirmed
+# against real saves by dev/lw_diary_probe.py:
+#
+#   RAF  Diary::Squadron  24-byte records  squadnum  64..116  7 bins at +17
+#   LW   Diary::Gruppen   17-byte records  squadnum 159..231  6 bins at +11
+#
+# In Patrick's save the German table held 122 rows at 89459 and the RAF
+# table began at 91533, and 89459 + 122 x 17 is 91533 exactly: they are
+# adjacent, which is what proves the record size.
+#
+# The German table is present in an RAF save too, because the campaign
+# tracks both air forces, so none of this needed a German career to work
+# out. What it did need was care about WHERE to look. Turned loose on the
+# whole file a 17-byte window finds two convincing frauds - a field of
+# zeros scoring thousands of empty rows, and a region whose squadnums
+# step by exactly two with every other value identical - and both beat
+# the real table on any score based on run length. So the search runs
+# immediately below the RAF table and scores on live squadrons.
+$LwDiaryRow = 17
+function Get-GruppeDiary {
+    if (-not $GameDir) { return @() }
+    $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue |
+           Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $sav) { return @() }
+    $stamp = "$($sav.FullName)|$($sav.LastWriteTime.Ticks)"
+    if ($script:LwDiaryStamp -eq $stamp) { return $script:LwDiaryRows }
+    $rows = @()
+    try {
+        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        # the RAF table's start is the ceiling of the search
+        $rafAt = -1
+        $raf = @(Get-SquadronDiary)
+        if ($raf.Count) { $rafAt = [int]$script:SqDiaryAt }
+        if ($rafAt -le 0) { $rafAt = $b.Length }
+        $from = [math]::Max(40, $rafAt - 4000)
+        $bestAt = -1; $bestReal = 0; $bestN = 0
+        for ($o = $from; $o -lt $rafAt; $o++) {
+            $n = 0; $real = 0
+            while ($true) {
+                $p = $o + $n * $LwDiaryRow
+                if (($p + $LwDiaryRow) -gt $b.Length -or $p -ge $rafAt) { break }
+                $sq = [int]$b[$p]
+                if ($sq -eq 0) { $n++; continue }
+                $launched = [int]$b[$p+8]; $lost = [int]$b[$p+1]
+                if ($sq -ge 159 -and $sq -le 231 -and $launched -gt 0 -and $launched -le 60 -and $lost -le $launched) {
+                    $real++; $n++
+                } else { break }
+            }
+            if ($real -gt $bestReal) { $bestReal = $real; $bestN = $n; $bestAt = $o }
+        }
+        if ($bestReal -gt 0) {
+            for ($i = 0; $i -lt $bestN; $i++) {
+                $p = $bestAt + $i * $LwDiaryRow
+                $sq = [int]$b[$p]
+                if ($sq -eq 0) { continue }
+                $k = New-Object int[] 6
+                for ($j = 0; $j -lt 6; $j++) { $k[$j] = [int]$b[$p+11+$j] }
+                $rows += [pscustomobject]@{
+                    Idx      = $sq
+                    Launched = [int]$b[$p+8]
+                    AcLost   = [int]$b[$p+1]
+                    AcDamaged= [int]$b[$p+2]
+                    PilotsLost = [int]$b[$p+3]
+                    Kills    = $k
+                }
+            }
+        }
+    } catch { }
+    $script:LwDiaryStamp = $stamp
+    $script:LwDiaryRows = $rows
+    $rows
+}
+# What one Gruppe has done in this campaign, summed. $Idx is the save's
+# own index for it, carried in lw/oob.json as sqidx; the four
+# Lehrgeschwader Gruppen BOB2 added have none and get nothing rather than
+# somebody else's figures.
+function Get-GruppeRecord {
+    param($Idx)
+    if ($null -eq $Idx) { return $null }
+    $rows = @(Get-GruppeDiary | Where-Object { $_.Idx -eq [int]$Idx })
+    if ($rows.Count -eq 0) { return $null }
+    $k = New-Object int[] 6
+    foreach ($r in $rows) { for ($i = 0; $i -lt 6; $i++) { $k[$i] += $r.Kills[$i] } }
+    [pscustomobject]@{
+        Actions    = $rows.Count
+        Launched   = ($rows | Measure-Object Launched -Sum).Sum
+        AcLost     = ($rows | Measure-Object AcLost -Sum).Sum
+        AcDamaged  = ($rows | Measure-Object AcDamaged -Sum).Sum
+        PilotsLost = ($rows | Measure-Object PilotsLost -Sum).Sum
+        Kills      = $k
+        Total      = ($k | Measure-Object -Sum).Sum
+    }
+}
+
 # What one squadron has done in this campaign, summed.
 function Get-SquadronRecord {
     param([int]$Sqn)
@@ -4477,17 +4577,29 @@ function Get-LwRoster {
     } catch { }
     @()
 }
+# One man on the board: rank, name, what he is doing, his score and how
+# his war ended. The last two are empty for the men of record, because
+# nothing beyond their unit and appointment is claimed for them.
 function New-LwRosterRow {
-    param($Man, [switch]$IsPlayer)
+    param($Man, [switch]$IsPlayer, [switch]$Header, [int]$Vics = -1)
     $bd = New-Object Windows.Controls.Border
     $bd.Padding = '14,9'; $bd.BorderBrush = Res 'Rule'; $bd.BorderThickness = '0,0,0,1'
+    if ($Header) { $bd.Background = B '#101B22' }
     $g = New-Object Windows.Controls.Grid
-    # 110 / rest / 240. The last column has to hold "Gruppenkommandeur",
-    # and at 170 the name ran straight into it with no gap at all.
-    foreach ($wd in @('110','*','240')) {
+    foreach ($wd in @('96','*','200','74','150')) {
         $c = New-Object Windows.Controls.ColumnDefinition
         $c.Width = [Windows.GridLength]$(if ($wd -eq '*') { [Windows.GridLength]::new(1,'Star') } else { [Windows.GridLength]::new([double]$wd) })
         [void]$g.ColumnDefinitions.Add($c)
+    }
+    if ($Header) {
+        $i = 0
+        foreach ($t in @('', 'PILOT', '', 'VICTORIES', 'STATUS')) {
+            $tb = New-TB -Text $t -Family $CondFam -Size 11 -Colour '#6F828C' -Bold
+            if ($i -ge 2) { $tb.Margin = '14,0,0,0' }
+            [Windows.Controls.Grid]::SetColumn($tb, $i); [void]$g.Children.Add($tb); $i++
+        }
+        $bd.Child = $g
+        return $bd
     }
     $col = if ($IsPlayer) { '#FFC24A' } elseif ($Man.historical) { '#E9E3D4' } else { '#9FB0B8' }
     $r0 = New-TB -Text (Short-Rank "$($Man.rank)") -Family $CondFam -Size 12.5 -Colour '#6F828C'
@@ -4500,6 +4612,26 @@ function New-LwRosterRow {
     $r2 = New-TB -Text $rt -Family 'Segoe UI' -Size 12 -Colour $(if ($Man.historical) { '#C8973F' } else { '#6F828C' }) -Wrap
     $r2.Margin = '14,0,0,0'
     [Windows.Controls.Grid]::SetColumn($r2, 2); [void]$g.Children.Add($r2)
+
+    $v = if ($IsPlayer) { $Vics } elseif ($null -ne $Man.victories_total) { [int]$Man.victories_total } else { -1 }
+    $vt = New-TB -Text $(if ($v -gt 0) { "$v" } else { '' }) -Family $CondFam -Size 13 -Colour $(if ($IsPlayer) { '#FFC24A' } else { '#C8973F' }) -Bold
+    $vt.Margin = '14,0,0,0'
+    [Windows.Controls.Grid]::SetColumn($vt, 3); [void]$g.Children.Add($vt)
+
+    $st = if ($IsPlayer) { 'On strength' }
+          elseif ($Man.fate -and "$($Man.fate.status)") { "$($Man.fate.status)" }
+          elseif ($Man.historical) { '' } else { 'On strength' }
+    $stc = switch ("$st") {
+        'Killed'   { '#E2685A' }
+        'Missing'  { '#E2685A' }
+        'Prisoner' { '#D9A441' }
+        'Wounded'  { '#D9A441' }
+        default    { '#8FB56A' }
+    }
+    $sd = if ($Man.fate -and "$($Man.fate.date)") { ' ' + (Format-ShortDate "$($Man.fate.date)") } else { '' }
+    $s4 = New-TB -Text "$st$sd" -Family 'Segoe UI' -Size 12 -Colour $(if ($st) { $stc } else { '#6F828C' })
+    $s4.Margin = '14,0,0,0'
+    [Windows.Controls.Grid]::SetColumn($s4, 4); [void]$g.Children.Add($s4)
     $bd.Child = $g
     $bd
 }
@@ -4693,6 +4825,29 @@ function Show-ReadyRoom {
         [void]$script:Stage.Children.Add($rec)
     }
 
+    # What the Gruppe has done in THIS campaign, out of the game's own
+    # German diary. Not history: this is the war the player is flying.
+    $gr = if ($g) { Get-GruppeRecord $g.sqidx } else { $null }
+    if ($gr) {
+        $card = New-Object Windows.Controls.Border
+        $card.Background = Res 'Panel'; $card.BorderBrush = Res 'Rule'; $card.BorderThickness = '1'
+        $card.CornerRadius = '3'; $card.Padding = '20,16'; $card.Margin = '0,0,0,22'
+        $card.HorizontalAlignment = 'Left'; $card.MaxWidth = 1080
+        $cs = New-Object Windows.Controls.StackPanel
+        [void]$cs.Children.Add((New-TB -Text 'THE GRUPPE IN THIS CAMPAIGN' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold))
+        $gb = Get-KillBins $Pilot
+        $byType = @()
+        for ($k = 0; $k -lt $gb.Count; $k++) { if ([int]$gr.Kills[$k] -gt 0) { $byType += "$([int]$gr.Kills[$k]) x $($gb[$k])" } }
+        $t1 = "$($gr.Actions) action$(if ($gr.Actions -ne 1) { 's' } else { '' }) flown, $($gr.Launched) sorties put up. " +
+              "$($gr.AcLost) aircraft lost and $($gr.AcDamaged) damaged, $($gr.PilotsLost) pilots gone. " +
+              $(if ($gr.Total -gt 0) { "Claims: $($gr.Total), $($byType -join ', ')." } else { 'No claims yet.' })
+        $tb1 = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text $t1
+        $tb1.Margin = '0,8,0,0'; $tb1.MaxWidth = 900
+        [void]$cs.Children.Add($tb1)
+        $card.Child = $cs
+        [void]$script:Stage.Children.Add($card)
+    }
+
     # the men he flies with
     $roster = @(Get-LwRoster -Unit $unit)
     if ($roster.Count) {
@@ -4700,13 +4855,15 @@ function Show-ReadyRoom {
         $nHist = @($roster | Where-Object { $_.historical }).Count
         $note = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text $(
             if ($nHist) {
-                "The $nHist name$(if ($nHist -ne 1) { 's' } else { '' }) in gold below flew with this unit and held the appointment shown; " +
-                'nothing else is claimed for them. The rest are period-correct names rather than men who lived, ' +
-                'unlike the RAF boards, where every man on the list is real. There is no German equivalent of ' +
-                'the Air Ministry list to build one from.'
+                "The $nHist name$(if ($nHist -ne 1) { 's' } else { '' }) in white below flew with this unit and held the appointment shown, " +
+                'and that is all that is claimed for them: no score and no ending, because those are matters of ' +
+                'record and the record is not mine to write. Everyone else is invented, scores and fates and all. ' +
+                'There is no German equivalent of the Air Ministry list of the Few, so unlike the RAF boards, ' +
+                'where every man is real, this is a Staffel rather than a roll.'
             } else {
-                'These are period-correct names rather than men who lived, unlike the RAF boards, where every ' +
-                'man is real. There is no German equivalent of the Air Ministry list to build one from.'
+                'These men are invented, scores and fates and all. There is no German equivalent of the Air ' +
+                'Ministry list of the Few, so unlike the RAF boards, where every man is real, this is a ' +
+                'Staffel rather than a roll.'
             })
         $note.Margin = '0,8,0,10'; $note.MaxWidth = 900; $note.HorizontalAlignment = 'Left'
         [void]$script:Stage.Children.Add($note)
@@ -4715,16 +4872,58 @@ function Show-ReadyRoom {
         $tbl.BorderBrush = Res 'Rule'; $tbl.BorderThickness = '1'; $tbl.CornerRadius = '3'
         # Width, not MaxWidth: aligned Left with only a maximum, the table
         # shrank to its widest row and the columns collapsed together.
-        $tbl.Margin = '0,0,0,20'; $tbl.HorizontalAlignment = 'Left'; $tbl.Width = 760
+        $tbl.Margin = '0,0,0,20'; $tbl.HorizontalAlignment = 'Left'; $tbl.Width = 1000
         $ts = New-Object Windows.Controls.StackPanel
+        [void]$ts.Children.Add((New-LwRosterRow -Header))
+        $myV = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $myV = [int]$Pilot.victories }
         [void]$ts.Children.Add((New-LwRosterRow -Man ([pscustomobject]@{
             pilot = "$($Pilot.pilot)"; rank = "$($Pilot.rank)"; historical = $false
-            appointment = $null; staffel = $Pilot.staffel }) -IsPlayer))
+            appointment = $null; staffel = $Pilot.staffel; victories_total = $null; fate = $null }) -IsPlayer -Vics $myV))
         foreach ($man in ($roster | Sort-Object @{ e = { -[int][bool]$_.historical } }, @{ e = { "$($_.pilot)" } })) {
             [void]$ts.Children.Add((New-LwRosterRow -Man $man))
         }
         $tbl.Child = $ts
         [void]$script:Stage.Children.Add($tbl)
+
+        # Losses. Not historical fates - there are none for these men -
+        # but the pilots the campaign has actually taken from this Gruppe,
+        # given names from the Staffel so the cost has faces on it. The
+        # RAF board does the same thing for the losses its own records do
+        # not name. Seeded on the unit, so the same men are lost each time
+        # rather than a fresh draw every time the screen is drawn.
+        $lost = if ($gr) { [int]$gr.PilotsLost } else { 0 }
+        if ($lost -gt 0) {
+            $pool = @($roster | Where-Object { -not $_.historical })
+            if ($pool.Count) {
+                $take = [math]::Min($lost, $pool.Count)
+                $rnd = New-Object System.Random ([int]([math]::Abs("$unit".GetHashCode()) % 100000))
+                $picked = @($pool | Sort-Object { $rnd.Next() } | Select-Object -First $take)
+                [void]$script:Stage.Children.Add((New-TB -Text 'LOSSES IN THIS CAMPAIGN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
+                $ln = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text $(
+                    "The campaign has taken $lost pilot$(if ($lost -ne 1) { 's' } else { '' }) from this Gruppe. " +
+                    'They are named from the Staffel so the cost is not just a number, and they are lost in ' +
+                    'YOUR campaign rather than in history.')
+                $ln.Margin = '0,8,0,10'; $ln.MaxWidth = 900; $ln.HorizontalAlignment = 'Left'
+                [void]$script:Stage.Children.Add($ln)
+                $lb = New-Object Windows.Controls.Border
+                $lb.BorderBrush = Res 'Rule'; $lb.BorderThickness = '1'; $lb.CornerRadius = '3'
+                $lb.Margin = '0,0,0,20'; $lb.HorizontalAlignment = 'Left'; $lb.Width = 760
+                $lst = New-Object Windows.Controls.StackPanel
+                foreach ($man in $picked) {
+                    $row = New-Object Windows.Controls.Border
+                    $row.Padding = '14,9'; $row.BorderBrush = Res 'Rule'; $row.BorderThickness = '0,0,0,1'
+                    $rg = New-Object Windows.Controls.StackPanel; $rg.Orientation = 'Horizontal'
+                    [void]$rg.Children.Add((New-TB -Text (Short-Rank "$($man.rank)") -Family $CondFam -Size 12.5 -Colour '#6F828C'))
+                    $nm2 = New-TB -Text "$($man.pilot)" -Family $CondFam -Size 14 -Colour '#E2685A' -Bold
+                    $nm2.Margin = '14,0,0,0'
+                    [void]$rg.Children.Add($nm2)
+                    $row.Child = $rg
+                    [void]$lst.Children.Add($row)
+                }
+                $lb.Child = $lst
+                [void]$script:Stage.Children.Add($lb)
+            }
+        }
     }
     # nothing is returned on purpose: an uncaptured $Pilot here goes down
     # the pipeline and the whole record prints itself into whatever called

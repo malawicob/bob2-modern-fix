@@ -21,10 +21,18 @@ different things and the Room must never present them as one:
   one thing to name a man who was there and quite another to write him a
   death he did not have.
 
-  THE REST OF THE STAFFEL. Period-correct German names, drawn from the
-  pools below and dealt out per unit from a seed made of the unit's own
-  name, so a Gruppe's men are the same every time the Room is opened.
-  They are marked historical:false and the Room says so on the screen.
+  THE REST OF THE STAFFEL. Period-correct German names, dealt out per
+  unit from a seed made of the unit's own name, so a Gruppe's men are the
+  same every time the Room is opened. These men DO get a score and a
+  fate: a handful of victories, and some of them killed, missing or
+  wounded, because a Staffel where nobody is ever hit is not a Staffel.
+  They are marked historical:false and the Room says on the screen that
+  they are not men who lived.
+
+That division is Patrick's, and it is the right one. A roster of names
+with nothing beside them is a phone book; the invention is what makes it
+a squadron. The line is drawn at real people: an ace gets only what the
+record says, and everyone else is openly fiction.
 
 The RAF side names its sources in every record and so does this: a
 generated man carries src 'generated' and there is no pretending.
@@ -90,6 +98,12 @@ RANKS = (['Unteroffizier'] * 5 + ['Feldwebel'] * 4 + ['Oberfeldwebel'] * 2 +
 
 ESTABLISHMENT = 12          # pilots a Gruppe carries on this board
 
+# How a Staffel's summer goes. Weighted so most men are alive with a few
+# victories, a good number have none at all, and a minority do not come
+# back - which is roughly the shape of a Jagdgruppe over the Channel.
+FATES = (['On strength'] * 13 + ['Killed'] * 3 + ['Missing'] * 2 +
+         ['Wounded'] * 2 + ['Prisoner'] * 1)
+
 
 def unit_file(unit):
     """I./JG 26 -> I_JG26.json, which is a filename on every filesystem."""
@@ -120,12 +134,26 @@ def build(unit, known):
             continue
         used.add(sur)
         gi = ['I', 'II', 'III', 'IV', 'V'].index(unit.split('.')[0]) if unit.split('.')[0] in ('I','II','III','IV','V') else 0
+        # A score, weighted so the Staffel has one or two men worth
+        # watching and a good many with nothing yet.
+        roll = rnd.random()
+        if roll > 0.94:   vics = rnd.randint(9, 17)
+        elif roll > 0.78: vics = rnd.randint(4, 8)
+        elif roll > 0.45: vics = rnd.randint(1, 3)
+        else:             vics = 0
+        fate = rnd.choice(FATES)
+        # a man is not shot down in July and still flying in October, so
+        # anyone who did not come back has a date on it
+        left = None
+        if fate != 'On strength':
+            left = '1940-%02d-%02d' % (rnd.choice([7,8,8,9,9,10]), rnd.randint(1, 28))
         out.append({
             'pilot': '%s, %s' % (sur, fore[0]), 'rank': rnd.choice(RANKS),
             'historical': False, 'appointment': None, 'unit': unit,
-            'joined': None, 'left': None, 'left_reason': None,
-            'fate': None, 'victories': [], 'victories_total': None,
-            'vic_source': 'none',
+            'joined': None, 'left': left, 'left_reason': (None if fate == 'On strength' else fate.lower()),
+            'fate': ({'status': fate, 'date': left, 'note': ''} if fate != 'On strength' else None),
+            'victories': [], 'victories_total': vics,
+            'vic_source': 'assumed',
             'awards': [], 'staffel': gi * 3 + rnd.randint(1, 3), 'portrait': None,
             'src': 'generated', 'note': '',
         })

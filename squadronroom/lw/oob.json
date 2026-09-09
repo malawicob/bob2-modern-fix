@@ -9,7 +9,8 @@
   "activation": "1940-08-05",
   "field": "Colombert",
   "skill": "Regular",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 160
  },
  {
   "unit": "II./JG 3",
@@ -21,7 +22,8 @@
   "activation": "1940-08-12",
   "field": "Samer",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 161
  },
  {
   "unit": "III./JG 3",
@@ -33,7 +35,8 @@
   "activation": "1940-07-12",
   "field": "Guines",
   "skill": "Poor",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 162
  },
  {
   "unit": "I./JG 26",
@@ -45,7 +48,8 @@
   "activation": "1940-07-24",
   "field": "Audembert",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 163
  },
  {
   "unit": "II./JG 26",
@@ -57,7 +61,8 @@
   "activation": "1940-07-24",
   "field": "Marquise",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 164
  },
  {
   "unit": "III./JG 26",
@@ -69,7 +74,8 @@
   "activation": "1940-07-24",
   "field": "Caffiers",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 165
  },
  {
   "unit": "I./JG 51",
@@ -81,7 +87,8 @@
   "activation": "1940-07-10",
   "field": "Caffiers",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 166
  },
  {
   "unit": "II./JG 51",
@@ -93,7 +100,8 @@
   "activation": "1940-07-10",
   "field": "Marquise",
   "skill": "Poor",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 167
  },
  {
   "unit": "III./JG 51",
@@ -105,7 +113,8 @@
   "activation": "1940-07-10",
   "field": "St. Omer",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 168
  },
  {
   "unit": "I./JG 52",
@@ -117,7 +126,8 @@
   "activation": "1940-08-11",
   "field": "Cocquelles",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 169
  },
  {
   "unit": "II./JG 52",
@@ -129,7 +139,8 @@
   "activation": "1940-08-12",
   "field": "Peuplingues",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 170
  },
  {
   "unit": "I./LG 2",
@@ -141,7 +152,8 @@
   "activation": "1940-08-13",
   "field": "Marck (Calais)",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": null
  },
  {
   "unit": "I./JG 54",
@@ -153,7 +165,8 @@
   "activation": "1940-08-01",
   "field": "Hermelinghen",
   "skill": "Regular",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 172
  },
  {
   "unit": "II./JG 54",
@@ -165,7 +178,8 @@
   "activation": "1940-08-15",
   "field": "Hermelinghen",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 173
  },
  {
   "unit": "III./JG 54",
@@ -177,7 +191,8 @@
   "activation": "1940-08-15",
   "field": "Guines",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 174
  },
  {
   "unit": "I./ZG 26",
@@ -189,7 +204,8 @@
   "activation": "1940-07-10",
   "field": "Yvrench",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 175
  },
  {
   "unit": "II./ZG 26",
@@ -201,7 +217,8 @@
   "activation": "1940-07-10",
   "field": "Barley",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 176
  },
  {
   "unit": "III./ZG 26",
@@ -213,7 +230,8 @@
   "activation": "1940-07-10",
   "field": "Barley",
   "skill": "Regular",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 177
  },
  {
   "unit": "II./ZG 76",
@@ -225,7 +243,8 @@
   "activation": "1940-08-15",
   "field": "Abbeville",
   "skill": "Regular",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 179
  },
  {
   "unit": "III./ZG 76",
@@ -237,7 +256,8 @@
   "activation": "1940-07-11",
   "field": "Laval",
   "skill": "Regular",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 180
  },
  {
   "unit": "I./KG 1",
@@ -249,7 +269,8 @@
   "activation": "1940-07-10",
   "field": "Montdidier",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 181
  },
  {
   "unit": "II./KG 1",
@@ -261,7 +282,8 @@
   "activation": "1940-07-10",
   "field": "Amiens",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 182
  },
  {
   "unit": "I./KG 2",
@@ -273,7 +295,8 @@
   "activation": "1940-07-10",
   "field": "Epinoy",
   "skill": "Regular",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 184
  },
  {
   "unit": "II./KG 2",
@@ -285,7 +308,8 @@
   "activation": "1940-07-10",
   "field": "Arras",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 185
  },
  {
   "unit": "III./KG 2",
@@ -297,7 +321,8 @@
   "activation": "1940-07-10",
   "field": "Cambrai",
   "skill": "Poor",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 186
  },
  {
   "unit": "I./KG 3",
@@ -309,7 +334,8 @@
   "activation": "1940-07-23",
   "field": "Rosieres-en-Santerre",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 187
  },
  {
   "unit": "II./KG 3",
@@ -321,7 +347,8 @@
   "activation": "1940-07-10",
   "field": "Antwerp",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 188
  },
  {
   "unit": "III./KG 3",
@@ -333,7 +360,8 @@
   "activation": "1940-08-06",
   "field": "St. Trond",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 189
  },
  {
   "unit": "I./KG 53",
@@ -345,7 +373,8 @@
   "activation": "1940-07-10",
   "field": "Arras",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 193
  },
  {
   "unit": "II./KG 53",
@@ -357,7 +386,8 @@
   "activation": "1940-07-12",
   "field": "Lille",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 194
  },
  {
   "unit": "III./KG 53",
@@ -369,7 +399,8 @@
   "activation": "1940-07-10",
   "field": "Lille",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 195
  },
  {
   "unit": "I./KG 76",
@@ -381,7 +412,8 @@
   "activation": "1940-07-26",
   "field": "Beauvais",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 196
  },
  {
   "unit": "II./KG 76",
@@ -393,7 +425,8 @@
   "activation": "1940-07-29",
   "field": "Creil",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 197
  },
  {
   "unit": "III./KG 76",
@@ -405,7 +438,8 @@
   "activation": "1940-07-25",
   "field": "Cormeilles-en-Vexin",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 198
  },
  {
   "unit": "I./JG 2",
@@ -417,7 +451,8 @@
   "activation": "1940-07-24",
   "field": "Beaumont-le-Roger",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 199
  },
  {
   "unit": "II./JG 2",
@@ -429,7 +464,8 @@
   "activation": "1940-07-24",
   "field": "Beaumont-le-Roger",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 200
  },
  {
   "unit": "III./JG 2",
@@ -441,7 +477,8 @@
   "activation": "1940-08-09",
   "field": "Le Havre",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 201
  },
  {
   "unit": "I./JG 27",
@@ -453,7 +490,8 @@
   "activation": "1940-07-11",
   "field": "Plumetot",
   "skill": "Poor",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 202
  },
  {
   "unit": "II./JG 27",
@@ -465,7 +503,8 @@
   "activation": "1940-08-05",
   "field": "Crepon",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 203
  },
  {
   "unit": "III./JG 27",
@@ -477,7 +516,8 @@
   "activation": "1940-07-11",
   "field": "Carquebut",
   "skill": "Regular",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 204
  },
  {
   "unit": "I./JG 53",
@@ -489,7 +529,8 @@
   "activation": "1940-08-31",
   "field": "Yvrench",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 205
  },
  {
   "unit": "II./JG 53",
@@ -501,7 +542,8 @@
   "activation": "1940-08-31",
   "field": "Yvrench",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 206
  },
  {
   "unit": "III./JG 53",
@@ -513,7 +555,8 @@
   "activation": "1940-08-25",
   "field": "Yvrench",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 207
  },
  {
   "unit": "I./StG 1",
@@ -525,7 +568,8 @@
   "activation": "1940-07-10",
   "field": "Plumetot",
   "skill": "Regular",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 208
  },
  {
   "unit": "II./StG 1",
@@ -537,7 +581,8 @@
   "activation": "1940-07-13",
   "field": "Desvres",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 209
  },
  {
   "unit": "III./StG 1",
@@ -549,7 +594,8 @@
   "activation": "1940-07-10",
   "field": "Carquebut",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 210
  },
  {
   "unit": "I./StG 2",
@@ -561,7 +607,8 @@
   "activation": "1940-07-11",
   "field": "Colombert",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 211
  },
  {
   "unit": "II./StG 2",
@@ -573,7 +620,8 @@
   "activation": "1940-08-13",
   "field": "Lannion",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 212
  },
  {
   "unit": "IV./LG 1",
@@ -585,7 +633,8 @@
   "activation": "1940-07-11",
   "field": "Tramecourt",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": null
  },
  {
   "unit": "I./StG 77",
@@ -597,7 +646,8 @@
   "activation": "1940-07-10",
   "field": "Caen",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 214
  },
  {
   "unit": "II./StG 77",
@@ -609,7 +659,8 @@
   "activation": "1940-07-13",
   "field": "Crepon",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 215
  },
  {
   "unit": "III./StG 77",
@@ -621,7 +672,8 @@
   "activation": "1940-08-18",
   "field": "Caen",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 216
  },
  {
   "unit": "I./ZG 2",
@@ -633,7 +685,8 @@
   "activation": "1940-08-11",
   "field": "Amiens",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 217
  },
  {
   "unit": "II./ZG 2",
@@ -645,7 +698,8 @@
   "activation": "1940-08-11",
   "field": "Le Havre",
   "skill": "Regular",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 218
  },
  {
   "unit": "V./LG 1",
@@ -657,7 +711,8 @@
   "activation": "1940-07-11",
   "field": "St. Malo",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": null
  },
  {
   "unit": "II./KG 27",
@@ -669,7 +724,8 @@
   "activation": "1940-07-30",
   "field": "Dinnard",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 221
  },
  {
   "unit": "III./KG 27",
@@ -681,7 +737,8 @@
   "activation": "1940-08-13",
   "field": "Rennes",
   "skill": "Veteran",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 222
  },
  {
   "unit": "I./KG 51",
@@ -693,7 +750,8 @@
   "activation": "1940-07-10",
   "field": "Orly",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 223
  },
  {
   "unit": "II./KG 51",
@@ -705,7 +763,8 @@
   "activation": "1940-08-02",
   "field": "Etampes",
   "skill": "Poor",
-  "fatigue": "Excellent"
+  "fatigue": "Excellent",
+  "sqidx": 224
  },
  {
   "unit": "III./KG 51",
@@ -717,7 +776,8 @@
   "activation": "1940-07-13",
   "field": "Etampes",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 225
  },
  {
   "unit": "I./KG 54",
@@ -729,7 +789,8 @@
   "activation": "1940-07-12",
   "field": "Orleans-Bricy",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 226
  },
  {
   "unit": "II./KG 54",
@@ -741,7 +802,8 @@
   "activation": "1940-07-16",
   "field": "Orleans-Bricy",
   "skill": "Veteran",
-  "fatigue": "Very Good"
+  "fatigue": "Very Good",
+  "sqidx": 227
  },
  {
   "unit": "II./LG 1",
@@ -753,7 +815,8 @@
   "activation": "1940-07-10",
   "field": "Chateaudun",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": null
  },
  {
   "unit": "I./KG 55",
@@ -765,7 +828,8 @@
   "activation": "1940-07-11",
   "field": "Dreux",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 229
  },
  {
   "unit": "II./KG 55",
@@ -777,7 +841,8 @@
   "activation": "1940-07-10",
   "field": "Chartres",
   "skill": "Veteran",
-  "fatigue": "Good"
+  "fatigue": "Good",
+  "sqidx": 230
  },
  {
   "unit": "III./KG 55",
@@ -789,6 +854,7 @@
   "activation": "1940-07-19",
   "field": "Villacoublay",
   "skill": "Poor",
-  "fatigue": "Very Good"
+  "fatigue": "Very Good",
+  "sqidx": 231
  }
 ]
