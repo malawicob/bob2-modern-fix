@@ -33,5 +33,13 @@ Anything reaching `Save-Pilot`, which today is `Set-BulletinRead`,
 posting flows. `Show-Paper` writes too, because opening the bulletin is
 what marks it read. When in doubt, redirect.
 
-`room_smoketest.ps1` builds screens and is safe to run against a real
-install. Anything you write yourself is not, until you have redirected.
+`room_smoketest.ps1` writes too, and the comment that used to sit here
+saying it was safe was wrong. Opening the Log Book runs
+`Sync-CampaignClaims`, which levels the pilot's `campaignKills` baseline
+against that install's own campaign save and saves the record. Against
+the install it belongs to that is correct and self-correcting. Against a
+record copied in from a DIFFERENT install it silently re-derives the
+baseline from the wrong campaign, which is how a restored pilot came back
+with an empty claims baseline. Redirect for that too, or accept it.
+
+The short version: assume every screen can save.
