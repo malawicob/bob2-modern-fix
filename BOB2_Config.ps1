@@ -2987,6 +2987,89 @@ function Build-GfxPage {
     [void]$list.Children.Add($sightRow)
 
     # ------------------------------------------------------------------
+    #  ANTIALIASING AND FILTERING - the graphics translator's own, and
+    #  nothing to do with ReShade. They had only ever been offered
+    #  together, as one line in the setup menu, and 33lima quite fairly
+    #  asked how he was meant to try the antialiasing on its own
+    #  (2026-09-09). Here they are separate, and this section comes
+    #  first because it is the one to try first: no extra DLL, and one
+    #  setting to put back if it costs too much.
+    # ------------------------------------------------------------------
+    [void]$list.Children.Add((New-SectionHeader 'Antialiasing' (
+        'Smooths the jagged edges on wings and along the horizon. Each button also sets the ground texture ' +
+        'filtering to match, which is what stops the ground going to mush when you look along it. 4x is the ' +
+        'setting to use: 8x costs more and puts visible seams along the edges of the terrain tiles. This is ' +
+        'the graphics translator doing the work, so it costs frame rate on an older card. Turn it on, fly a ' +
+        'mission, and you will know what it costs before you add anything else. Takes effect next time the ' +
+        'game starts.')))
+
+    $aaConf = Join-Path $script:GameFolder 'dgVoodoo.conf'
+    $aaRead = {
+        if (-not (Test-Path -LiteralPath $aaConf)) { return $null }
+        $txt = Get-Content -LiteralPath $aaConf -Raw
+        # scoped to [DirectX]: dgVoodoo.conf reuses key names between sections
+        if ($txt -match '(?ms)\[DirectX\][^\[]*?^[ \t]*Antialiasing[ \t]*=[ \t]*([^\r\n]+)') { return $Matches[1].Trim() }
+        return $null
+    }.GetNewClosure()
+    $aaDescribe = {
+        $v = & $aaRead
+        # "appdriven" means the translator leaves it to the game, and a game
+        # of 2005 asks for none, so the honest word for the player is off.
+        if (-not $v) { return 'Currently: cannot tell - dgVoodoo.conf was not found' }
+        if ($v -eq 'appdriven') { return 'Currently: off' }
+        "Currently: $v, with 16x texture filtering"
+    }.GetNewClosure()
+    $aaState = New-TB (& $aaDescribe) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,14,0,0))
+    [void]$list.Children.Add($aaState)
+
+    $aaStylePrimary = Res 'BtnPrimary'
+    $aaStyleGhost = Res 'BtnGhost'
+    $aaBtns = @{}
+    $aaMarkActive = {
+        param($name)
+        foreach ($k in $aaBtns.Keys) {
+            $aaBtns[$k].Style = $(if ($k -eq $name) { $aaStylePrimary } else { $aaStyleGhost })
+        }
+    }.GetNewClosure()
+    $aaWrite = {
+        param($aa, $filt)
+        $txt = Get-Content -LiteralPath $aaConf -Raw
+        foreach ($pair in @(@('Antialiasing', $aa), @('Filtering', $filt))) {
+            $pat = "(?ms)(\[DirectX\][^\[]*?^[ \t]*$($pair[0])[ \t]*=[ \t]*)[^\r\n]*"
+            if ($txt -match $pat) { $txt = $txt -replace $pat, "`${1}$($pair[1])" }
+        }
+        Set-Content -LiteralPath $aaConf -Value $txt -NoNewline
+    }.GetNewClosure()
+
+    # Label and stored value are kept apart so the recommendation can sit on
+    # the button itself. Offering 8x and warning against it in prose only is
+    # how you get a player who picks 8x.
+    $aaRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
+    foreach ($aaChoice in @(@('Off','Off'), @('2x','2x'), @('4x','4x  recommended'), @('8x','8x'))) {
+        $aaThis = $aaChoice[0]
+        $b = New-Btn $aaChoice[1] 'BtnGhost' $null {
+            try {
+                if (-not (Test-Path -LiteralPath $aaConf)) {
+                    [System.Windows.MessageBox]::Show('dgVoodoo.conf was not found. Install the graphics translator first.','Antialiasing') | Out-Null; return
+                }
+                if ($aaThis -eq 'Off') { & $aaWrite 'appdriven' 'appdriven' }
+                else { & $aaWrite $aaThis '16' }
+                $aaState.Text = (& $aaDescribe)
+                & $aaMarkActive $aaThis
+                # the ReShade section below tells the player when the two
+                # overlap; it is built after this one, hence the late binding
+                if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
+            } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Antialiasing') | Out-Null }
+        }.GetNewClosure()
+        if ($aaRow.Children.Count -gt 0) { $b.Margin = [System.Windows.Thickness]::new(12,0,0,0) }
+        $aaBtns[$aaThis] = $b
+        [void]$aaRow.Children.Add($b)
+    }
+    $aaNow = & $aaRead
+    & $aaMarkActive $(if ($aaNow -and $aaNow -ne 'appdriven') { $aaNow } else { 'Off' })
+    [void]$list.Children.Add($aaRow)
+
+    # ------------------------------------------------------------------
     #  RESHADE - optional visual enhancement layer. Ships as dxgi.dll
     #  hooking dgVoodoo2's D3D11 output; entirely additive, off by
     #  default. Disable keeps every file (dxgi.dll renamed .disabled) so
@@ -2994,9 +3077,12 @@ function Build-GfxPage {
     #  PresetPath line of the game-root ReShade.ini.
     # ------------------------------------------------------------------
     [void]$list.Children.Add((New-SectionHeader 'ReShade visual enhancement' (
-        'An optional post-processing layer over the graphics translator: sharpening, anti-aliasing and ' +
-        'colour grading via five presets, from Subtle to Cinematic. Off by default. In the game, DEL opens ' +
-        'the ReShade overlay, PgUp and PgDn switch presets and PrtScn saves a screenshot.')))
+        'An optional post-processing layer over the graphics translator: sharpening and colour grading ' +
+        'through five presets, from Subtle to Showcase. Off by default. You do not need the antialiasing ' +
+        'above as well: every preset except Subtle does its own, more cheaply, and running both just pays ' +
+        'twice. Subtle is the one exception, and it pairs well with 4x above. Add this after you have flown ' +
+        'with the antialiasing, so you know which of the two is costing you what. In the game, DEL opens the ' +
+        'ReShade overlay, PgUp and PgDn switch presets and PrtScn saves a screenshot.')))
 
     $rsGameDir = $script:GameFolder
     $rsSetup = Join-Path $script:ScriptDir 'BOB2_Setup.ps1'
@@ -3031,6 +3117,7 @@ function Build-GfxPage {
             . $rsSetup -AsLibrary
             $null = Step-InstallReShade -GameFolder $rsGameDir *>&1
             $rsState.Text = (& $rsDescribe $rsGameDir)
+            if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
         } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
     }.GetNewClosure()
     $btnRsOff = New-Btn 'Disable' 'BtnGhost' $null {
@@ -3043,12 +3130,55 @@ function Build-GfxPage {
                 Rename-Item -LiteralPath $dll ($dll + '.disabled')
             }
             $rsState.Text = (& $rsDescribe $rsGameDir)
+            if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
         } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
     }.GetNewClosure()
     $btnRsOff.Margin = [System.Windows.Thickness]::new(12,0,0,0)
     [void]$rsRow.Children.Add($btnRsOn)
     [void]$rsRow.Children.Add($btnRsOff)
     [void]$list.Children.Add($rsRow)
+
+    # ------------------------------------------------------------------
+    #  The two of them together. Every preset but Subtle runs SMAA, and
+    #  nothing here switches the translator's antialiasing off, so a
+    #  player with both on is antialiasing twice: once properly at render
+    #  time and again as a post-process over the top. The second pass is
+    #  wasted, though the sharpening and colour work it comes with are
+    #  not, which is why this is a note and not a warning.
+    #
+    #  It appears only when the overlap is real, and it refreshes from
+    #  the files whenever either side changes, so it can never sit there
+    #  describing a state the player has already left.
+    # ------------------------------------------------------------------
+    $rsOverlap = New-TB '' -Size 12 -Brush 'Info' -Wrap -Margin ([System.Windows.Thickness]::new(0,12,0,0))
+    $rsOverlap.MaxWidth = 720; $rsOverlap.LineHeight = 17
+    $rsOverlap.Visibility = 'Collapsed'
+    [void]$list.Children.Add($rsOverlap)
+
+    $script:GfxOverlapRefresh = {
+        $aaOn = $false
+        $v = & $aaRead
+        if ($v -and $v -ne 'appdriven') { $aaOn = $true }
+        $desc = & $rsDescribe $rsGameDir
+        $on = ($desc -like 'Currently: ON*')
+        # Subtle is the one preset with no antialiasing of its own, so
+        # Subtle plus forced antialiasing is the pairing to aim for and
+        # there is nothing to tell the player about.
+        if ($on -and $desc -match 'preset Subtle') { $rsOverlap.Visibility = 'Collapsed'; return }
+        if (-not $aaOn) { $rsOverlap.Visibility = 'Collapsed'; return }
+        $rsOverlap.Text = $(if ($on) {
+            'Antialiasing is on above as well. ReShade is still worth having for the sharpening and the ' +
+            'colour work, which is most of what you see, but its own antialiasing is redundant on top of ' +
+            'yours and costs a little graphics card time for nothing. If the frame rate drops, either set ' +
+            'the antialiasing above to Off and let the preset do it, or use the Subtle preset, which has none.'
+        } else {
+            'Antialiasing is already on above. If you enable ReShade you still gain the sharpening and the ' +
+            'colour work, but every preset except Subtle does its own antialiasing, which would be doing ' +
+            'twice what is already done. Subtle is the one that pairs with it cleanly.'
+        })
+        $rsOverlap.Visibility = 'Visible'
+    }.GetNewClosure()
+    & $script:GfxOverlapRefresh
 
     # The active preset's button is highlighted (primary style). Styles and
     # the button table are captured as locals so the closures can reach them.
@@ -3086,6 +3216,7 @@ function Build-GfxPage {
                 Set-Content -LiteralPath $ini -Value $txt -Encoding ASCII -NoNewline
                 $rsState.Text = (& $rsDescribe $rsGameDir)
                 & $rsMarkActive $rsThis
+                if ($script:GfxOverlapRefresh) { & $script:GfxOverlapRefresh }
             } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'ReShade') | Out-Null }
         }.GetNewClosure()
         if ($rsPresetRow.Children.Count -gt 0) { $b.Margin = [System.Windows.Thickness]::new(12,0,0,0) }

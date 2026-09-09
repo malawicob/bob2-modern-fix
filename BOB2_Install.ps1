@@ -446,19 +446,23 @@ function Get-Checks {
     # and preset choice live in Settings, GFX screen page.
     $rsState = Get-ReShadeState $GameDir
     $rsPreset = if ($rsState -eq 'on') { Get-ReShadePreset $GameDir } else { $null }
-        # The DPI manifest: without it Windows guesses HIGHDPIAWARE for a game
+    # The DPI manifest: without it Windows guesses HIGHDPIAWARE for a game
     # whose embedded manifest declares nothing, and the briefing tab row
     # prints on top of the text. Checked here so a missing one shows up as
     # something to fix rather than a mystery on the briefing screen.
+    #
+    # Named for what it DOES, not for the mechanism. "DPI manifest" told
+    # 33lima nothing about what was wrong or why he should care, and the
+    # word he actually needed was on the briefing screen in front of him.
     $manOk = Test-Path (Join-Path $GameDir 'Bob.exe.manifest')
     $pem = $null
     try { $pem = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide' -Name PreferExternalManifest -ErrorAction SilentlyContinue).PreferExternalManifest } catch { }
     $out.Add([pscustomobject]@{
-        Name='DPI manifest'
+        Name='Menu text fix'
         Ok=($manOk -and $pem -eq 1)
-        Detail=$(if ($manOk -and $pem -eq 1) { 'the game declares itself DPI-unaware; menus lay out correctly' }
-                 elseif (-not $manOk) { 'Bob.exe.manifest is missing - the menus will draw wrong' }
-                 else { 'external manifests are switched off - the file is there but Windows ignores it' })
+        Detail=$(if ($manOk -and $pem -eq 1) { 'on. The briefing and training pages lay out correctly' }
+                 elseif (-not $manOk) { 'off. Without it the briefing pages print their tabs on top of the text. Press Fix' }
+                 else { 'off. Windows needs your permission to finish this one. Press Fix, then Yes when Windows asks' })
         Fix='Step-Win11Tweaks' })
 
 $out.Add([pscustomobject]@{
@@ -661,7 +665,7 @@ function Set-Result {
         $t.Foreground = Res 'Good'
     } else {
         $names = ($bad | ForEach-Object { $_.Name }) -join ', '
-        $t.Text = "$Did $names still needs attention. Press Check again, or close this and re-open it - some steps only take effect once the file is released."
+        $t.Text = "$Did Still to do: $names."
         $t.Foreground = Res 'Warn'
     }
     $t.Visibility = 'Visible'

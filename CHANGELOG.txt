@@ -15,6 +15,48 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.8.4  (2026-09-09)
+--------------------
+  - FIXED: Install and repair could bring back the giant cockpit. Windows
+    reports the display scaling differently depending on whether the asking
+    program understands scaling, and the repair window does. It therefore
+    read 100% on a screen set to 150%, and its Graphics translator button
+    wrote the panel size into dgVoodoo.conf instead of the size the game is
+    actually given. Anyone above 100% scaling who pressed that button in
+    1.8.3 got the double-size cockpit back. Both readings now agree in
+    every kind of window.
+
+  - FIXED: the DPI manifest step could not finish, and said so forever.
+    It writes one machine-wide setting that needs administrator rights,
+    was refused, and reported the failure only in Details. Pressing Fix
+    did nothing, every time. It now asks Windows for permission properly:
+    press Fix, then Yes. Reported by 33lima.
+
+  - Antialiasing has its own controls in Settings, Graphics, separate from
+    ReShade, with 4x marked as the one to use. Before this the only button
+    turned antialiasing, filtering and ReShade on together, so there was no
+    way to find out what each of them cost. Also asked for by 33lima.
+
+  - The Graphics page now says when the antialiasing and ReShade are doing
+    the same job twice. Every preset except Subtle does its own, and
+    nothing switched the other off, so both were quietly running.
+
+  - The version line on the launcher offers the upgrade instead of just
+    announcing it: click it to open Install and repair.
+
+  - The launcher shows the display size and the Windows scaling, and what
+    size the game is handed when the two differ. Most display faults in
+    this game come down to that one number.
+
+  - The launcher no longer interrupts a launch to report a problem it has
+    already fixed. Windows puts its compatibility flag back on the game
+    most times it runs; that is now noted in BOB2_Launcher.log instead of
+    a dialog on the way to a sortie.
+
+  - Plainer words throughout the repair window. "DPI manifest" is now
+    "Menu text fix", and it no longer suggests closing and re-opening the
+    window when that cannot help.
+
 v1.8.3  (2026-09-08)
 --------------------
   - FIXED: MENU SIZE broke the briefing pages again. With Bob.exe.manifest

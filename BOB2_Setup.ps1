@@ -314,6 +314,32 @@ namespace BobDisplay {
 # Saying "unaware" outright leaves nothing to guess at. Proved on a
 # 2560x1600 panel at 150% on 2026-09-08, including across a flight, which
 # is what defeated every registry-side attempt.
+
+# Turning the switch on needs administrator rights, and the repair window
+# is not run elevated. Without a way to ask, the DPI manifest row simply
+# said "still needs attention" every time the Fix button was pressed and
+# there was nothing the player could do about it (33lima, 2026-09-09).
+# So: try it directly, and if that is refused, hand the one setting to an
+# elevated reg.exe, which is a single Yes at the Windows prompt. Read the
+# value back afterwards rather than trusting the exit code, because a
+# cancelled prompt and a successful write are both quiet.
+function Enable-ExternalManifests {
+    $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide'
+    $cur = $null
+    try { $cur = (Get-ItemProperty $key -Name PreferExternalManifest -ErrorAction SilentlyContinue).PreferExternalManifest } catch { }
+    if ($cur -eq 1) { return $true }
+    try {
+        New-ItemProperty -Path $key -Name PreferExternalManifest -PropertyType DWord -Value 1 -Force -ErrorAction Stop | Out-Null
+        return $true
+    } catch { }
+    try {
+        Start-Process reg.exe -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList @(
+            'add', '"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide"',
+            '/v', 'PreferExternalManifest', '/t', 'REG_DWORD', '/d', '1', '/f') | Out-Null
+    } catch { }
+    try { $cur = (Get-ItemProperty $key -Name PreferExternalManifest -ErrorAction SilentlyContinue).PreferExternalManifest } catch { }
+    return ($cur -eq 1)
+}
 function Install-BobManifest {
     param([string]$GameFolder)
     $src = $null
@@ -329,13 +355,14 @@ function Install-BobManifest {
     # embedded one is the empty stub, so this switch is what makes the file
     # count. It is machine-wide; only programs that ship a .manifest file
     # beside them are affected, which is rare.
-    try {
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide' `
-            -Name PreferExternalManifest -PropertyType DWord -Value 1 -Force -ErrorAction Stop | Out-Null
+    if (Enable-ExternalManifests) {
         Write-OK 'Enabled external manifests (PreferExternalManifest).'
     }
-    catch {
-        Write-Warn 'Could not set PreferExternalManifest - run the setup as administrator.'
+    else {
+        Write-Warn 'Could not enable external manifests. Windows asks permission before writing'
+        Write-Warn 'this one setting: press Yes at the prompt, or start the fix with Run as'
+        Write-Warn 'administrator. Until it is on, Windows ignores the manifest and the'
+        Write-Warn 'briefing pages will still draw wrong.'
         return $false
     }
     # With the app speaking for itself, the Assistant has nothing to guess:
@@ -358,6 +385,28 @@ function Get-DgVoodooRenderSize {
 }
 # What Windows is scaling the desktop by, as a percentage. A DPI-unaware
 # process sees the panel divided by this.
+# The scaling Windows is applying, whoever is asking.
+#
+# This is harder than it looks, and it was wrong. Windows tells a process
+# what that process is equipped to hear, so NEITHER of the obvious answers
+# is true on its own. Measured on a 2560x1600 panel at 150%:
+#
+#                        DPI-unaware caller   DPI-aware caller (WPF)
+#   DESKTOPHORZRES 118        2560                  2560
+#   HORZRES 8                 1707                  2560
+#   ratio of the two           150%                  100%   <- lies
+#   LOGPIXELSX 88               96                   144
+#   as a percentage            100%   <- lies        150%
+#
+# Loading WPF makes a process DPI-aware, so the same function returned 150
+# from the console and 100 from any window. That mattered: Install and
+# repair is a WPF window, its Graphics translator button calls this through
+# New-DgVoodooConfText, and a wrong 100 writes the PANEL size into
+# dgVoodoo.conf instead of the virtual desktop. That is the "cockpit is
+# double size" fault of 2026-09-08, waiting to be pressed.
+#
+# Each signal understates and neither overstates, so the larger of the two
+# is the true figure in both kinds of process. At 100% both say 100.
 function Get-DisplayScalePercent {
     try {
         if (-not ('BobDpi.Native' -as [type])) {
@@ -368,13 +417,15 @@ namespace BobDpi {
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
     [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int i);
-    // 118 = DESKTOPHORZRES (true pixels), 8 = HORZRES (what this process sees)
+    // 118 = DESKTOPHORZRES (true pixels), 8 = HORZRES (what this process is
+    // shown), 88 = LOGPIXELSX (this process's idea of the DPI)
     public static int Percent() {
       IntPtr dc = GetDC(IntPtr.Zero);
-      int real = GetDeviceCaps(dc, 118), seen = GetDeviceCaps(dc, 8);
+      int real = GetDeviceCaps(dc, 118), seen = GetDeviceCaps(dc, 8), dpi = GetDeviceCaps(dc, 88);
       ReleaseDC(IntPtr.Zero, dc);
-      if (seen <= 0) return 100;
-      return (int)Math.Round(real * 100.0 / seen);
+      int byRatio = (seen > 0) ? (int)Math.Round(real * 100.0 / seen) : 100;
+      int byDpi   = (dpi  > 0) ? (int)Math.Round(dpi * 100.0 / 96.0)  : 100;
+      return Math.Max(Math.Max(byRatio, byDpi), 100);
     }
   }
 }
@@ -2639,7 +2690,9 @@ function Step-VisualEnhancements {
     Set-IniValue $conf 'Antialiasing' '4x' 'DirectX'
     Set-IniValue $conf 'Filtering'    '16' 'DirectX'
     Write-OK 'Antialiasing 4x, filtering 16x.'
-    Write-Info '  4x is the tested setting. If anything looks wrong, menu 13 again turns it all off.'
+    Write-Info '  4x is the tested setting. Menu 13 again turns the whole lot back off.'
+    Write-Info '  This switches all three on together. To try the antialiasing on its own,'
+    Write-Info '  and see what it costs before ReShade is involved, use Settings, Graphics.'
     [void](Step-InstallReShade -GameFolder $GameFolder)
     Write-Info '  In game: DEL opens the ReShade overlay, PgUp/PgDn change preset.'
     $true
@@ -3369,7 +3422,8 @@ function Do-IndividualSteps {
         }) -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
-        Write-Host " 13. Visual enhancements (4x AA, 16x filtering, ReShade)" -ForegroundColor White
+        Write-Host " 13. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
         Write-Host " 14. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
@@ -3395,10 +3449,16 @@ function Do-IndividualSteps {
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
             "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
             "13" {
-                # one key for the whole look, and a way back off it
+                # One key for the whole look, and a way back off it. It turns
+                # OFF only when the whole look is already on. Judging that on
+                # the antialiasing alone was wrong once Settings could set the
+                # antialiasing by itself: a player who had turned on 4x there
+                # and then pressed this expecting to add ReShade had his
+                # antialiasing taken away instead.
                 $conf = Join-Path $gameFolder 'dgVoodoo.conf'
                 $aaNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Antialiasing' } else { '' }
-                if ($aaNow -and $aaNow -ne 'appdriven') { Step-VisualEnhancements $gameFolder -Off }
+                $allOn = ($aaNow -and $aaNow -ne 'appdriven') -and ((Get-ReShadeState $gameFolder) -eq 'on')
+                if ($allOn) { Step-VisualEnhancements $gameFolder -Off }
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
             }

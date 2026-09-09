@@ -11,8 +11,24 @@
 #       -Room "D:\Battle of Britain II\BOB2-Win11-Fix\BOB2_SquadronRoom.ps1"
 #
 # Exit code 0 means every screen built. It does not judge how they look.
+#
+# -Room is optional: with nothing given it looks NEXT DOOR, the way the
+# awards preview does, so this works wherever the fix folder has been put
+# and can simply be double-clicked. Without that default it died on
+# Get-Content with an empty path, which reads as a fault in the Room
+# rather than a missing argument.
 param([string]$Room)
+if (-not $Room) {
+    $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $Room = Join-Path (Split-Path -Parent $here) 'BOB2_SquadronRoom.ps1'
+}
 $ErrorActionPreference = 'Stop'
+if (-not (Test-Path $Room)) {
+    Write-Host "Cannot find the Squadron Room script at:" -ForegroundColor Red
+    Write-Host "  $Room" -ForegroundColor Red
+    Write-Host "Pass its path with -Room."
+    exit 2
+}
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $fails = @()
 # Copy the script beside the real one, with the lines that SHOW the window
@@ -26,6 +42,33 @@ $src = $src -replace '(?m)^if \(\$existing\) \{ Show-Roster -Pilot \$existing \}
 $tmp = Join-Path (Split-Path -Parent $Room) '_rendertest.ps1'
 Set-Content -Path $tmp -Value $src -Encoding UTF8
 try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+
+# ---------------------------------------------------------------------
+#  Draw against a COPY of the state, never the real thing.
+#
+#  Drawing is not read-only. Show-Roster runs Sync-CampaignClaims and
+#  Update-CareerRecord; Show-Paper marks the morning bulletin read. Run
+#  straight against an install, this test therefore edits the pilot it is
+#  supposed to be examining - and it did: it read Patrick's bulletin for
+#  him, so the dispersal had nothing to flag when he went looking for it.
+#
+#  Every path is reassigned, not just $StateDir: each one was computed
+#  from $StateDir when the script loaded, so moving the folder afterwards
+#  leaves them all pointing at the old place.
+# ---------------------------------------------------------------------
+$realState = $StateDir
+$StateDir  = Join-Path ([IO.Path]::GetTempPath()) ('roomtest-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
+$PilotPath     = Join-Path $StateDir 'pilot.json'
+$SessionsPath  = Join-Path $StateDir 'sessions.json'
+$FlightOpen    = Join-Path $StateDir 'flight.open'
+$AcPosPath     = Join-Path $StateDir 'acpos.json'
+$AutoClaimPath = Join-Path $StateDir 'autoclaim.json'
+if (Test-Path $realState) {
+    Get-ChildItem $realState -File -ErrorAction SilentlyContinue |
+        ForEach-Object { Copy-Item $_.FullName (Join-Path $StateDir $_.Name) -Force }
+}
+try {
 "loaded: pilot '$((Get-Pilot).pilot)', squadron $((Get-Pilot).sqn), campaign date $(Get-CampaignDate)"
 foreach ($tab in 'dispersal','logbook','map','paper') {
     try { Show-Tab $tab; "  $tab : drew $($script:Stage.Children.Count) blocks" }
@@ -46,4 +89,9 @@ foreach ($q in (Get-Squadrons)) {
 }
 Set-Content -Path $PilotPath -Value $saved -Encoding UTF8
 "  dispersal for all $((Get-Squadrons).Count) squadrons x 3 dates: $bad failure(s)"
+}
+finally {
+    # the throwaway copy goes, whatever happened above
+    if ($StateDir -ne $realState) { Remove-Item $StateDir -Recurse -Force -ErrorAction SilentlyContinue }
+}
 if ($fails.Count) { "FAILURES: $($fails.Count)"; exit 1 } else { 'ALL SCREENS BUILT'; exit 0 }

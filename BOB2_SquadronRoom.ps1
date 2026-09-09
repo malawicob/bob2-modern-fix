@@ -654,9 +654,16 @@ function Get-CampaignPilot {
         if ($b.Length -lt 160) { return $null }
         if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
         $name  = [System.Text.Encoding]::ASCII.GetString($b, 100, 21).TrimEnd([char]0)
-        $plane = [System.Text.Encoding]::ASCII.GetString($b, 121, 21).TrimEnd([char]0)
         if ($name -notmatch '^[ -~]{2,20}$') { return $null }
-        return @{ Name = $name; Plane = $plane }
+        # The save also carries an aircraft name at 121 - "Silver Eagle" by
+        # default - and it is not shown. RAF fighters in 1940 were known by
+        # their squadron code and individual letter, QJ-K, and their serial.
+        # Machines were pooled: a man flew whatever was serviceable that
+        # morning, so a personally named aeroplane is not a thing he had.
+        # The names that WERE painted on were presentation names, put there
+        # by the Spitfire Fund for the donor, and nothing to do with the
+        # pilot. This one is the game's invention, so it stays out.
+        return @{ Name = $name }
     } catch { return $null }
 }
 # Pull a date out of a fate string like "KIA 19 Oct 1940" / "24 Sept 1940"
@@ -2148,7 +2155,6 @@ function Show-Logbook {
     $cp = Get-CampaignPilot
     if ($cp) {
         $cpTxt = "Campaign pilot on record: $($cp.Name)"
-        if ($cp.Plane) { $cpTxt += ", flying '$($cp.Plane)'" }
         $cpl = New-TB -Text $cpTxt -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
         $cpl.Margin = '0,-12,0,14'
         [void]$script:Stage.Children.Add($cpl)
@@ -2277,6 +2283,39 @@ function Show-Roster {
     $baseTxt = if ($bs) { $bs.ToUpper() } else { 'THE DISPERSAL' }
     $eyebrow = if ($script:CampaignDate) { "$baseTxt  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $baseTxt }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at readiness"))
+
+    # The morning's paper, if he has not seen this one. It carries the
+    # actual headline rather than "you have unread news", because the
+    # headline is the reason to go and read it. Click takes him there,
+    # which is also what marks it read.
+    $unread = Get-UnreadBulletin -Pilot $Pilot
+    if ($unread) {
+        $nb = New-Object Windows.Controls.Border
+        $nb.Background = B '#1A1710'; $nb.BorderBrush = $script:BrassBrush
+        $nb.BorderThickness = '3,0,0,0'; $nb.CornerRadius = '0,3,3,0'
+        $nb.Padding = '16,12'; $nb.Margin = '0,0,0,20'
+        # the full width of the stage, as the tab row above it is: a strip
+        # that stops two thirds of the way across reads as a stray card
+        $nb.HorizontalAlignment = 'Stretch'; $nb.Cursor = 'Hand'
+        $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'
+        $ic = New-NewspaperIcon
+        $ic.Margin = '2,3,18,0'; $ic.VerticalAlignment = 'Top'
+        [void]$row.Children.Add($ic)
+        $ns = New-Object Windows.Controls.StackPanel
+        $eb = New-TB -Text ('THE MORNING BULLETIN  ' + [char]0x2022 + '  ' + (Format-ShortDate "$($unread.date)")) `
+                     -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold
+        [void]$ns.Children.Add($eb)
+        $hl = New-TB -Text "$($unread.headline)" -Family $SerifFam -Size 17 -Colour '#E9E3D4' -Wrap
+        $hl.Margin = '0,4,0,0'
+        [void]$ns.Children.Add($hl)
+        $go = New-TB -Text 'not yet read - click to open it' -Family $CondFam -Size 12 -Colour '#6F828C'
+        $go.Margin = '0,5,0,0'
+        [void]$ns.Children.Add($go)
+        [void]$row.Children.Add($ns)
+        $nb.Child = $row
+        $nb.Add_MouseLeftButtonUp({ param($s,$e) Show-Tab 'paper' })
+        [void]$script:Stage.Children.Add($nb)
+    }
 
     # the only photograph on the wall is yours
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,32'
@@ -3370,11 +3409,93 @@ function Format-ShortDate {
     param([string]$s)
     try { return ([datetime]::ParseExact($s,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)).ToString('d MMM') } catch { return $s }
 }
+# A folded newspaper, drawn from rectangles rather than shipped as a PNG:
+# it has to sit on the dispersal's dark ground at one size only, and four
+# rectangles beat another file to keep in step with the badge folder.
+# The page uses the same cream as the bulletin itself, so the strip and
+# the screen it leads to are obviously the same thing.
+function New-NewspaperIcon {
+    $c = New-Object Windows.Controls.Canvas
+    # sized against three lines of text beside it: at 30 wide it read as a
+    # bullet point rather than a masthead
+    $c.Width = 40; $c.Height = 35
+    function Add-Rect {
+        param($Canvas, [double]$X, [double]$Y, [double]$W, [double]$H, [string]$Fill)
+        $r = New-Object Windows.Shapes.Rectangle
+        $r.Width = $W; $r.Height = $H; $r.Fill = B $Fill
+        [Windows.Controls.Canvas]::SetLeft($r, $X); [Windows.Controls.Canvas]::SetTop($r, $Y)
+        [void]$Canvas.Children.Add($r)
+    }
+    # the sheet behind, so it reads as a folded paper rather than a card
+    Add-Rect $c 9.5 0 29.5 29.5 '#8A6D34'
+    Add-Rect $c 1 5.5 29.5 28 '#E9E0CA'
+    # masthead, photograph and three lines of column
+    Add-Rect $c 5 9.5 21.5 3.4 '#2A2418'
+    Add-Rect $c 5 16 9.4 10.7 '#8C8474'
+    Add-Rect $c 17.4 16 9.4 2.2 '#6B6250'
+    Add-Rect $c 17.4 20.3 9.4 2.2 '#6B6250'
+    Add-Rect $c 17.4 24.6 9.4 2.2 '#6B6250'
+    $c
+}
 function New-Rule {
     param([string]$Colour = '#221E15', [double]$H = 1.5)
     $r = New-Object Windows.Controls.Border
     $r.Height = $H; $r.Background = B $Colour; $r.Margin = '0,10,0,10'
     $r
+}
+# Which front page belongs to the campaign's current date, as an index into
+# the entries. Lifted out of Show-Paper so the dispersal can ask the same
+# question without drawing anything: two answers to "what is today's paper"
+# would eventually disagree, and the unread flag would then be lying.
+function Get-LeadBulletinIndex {
+    param($Entries, $Date)
+    $leadIdx = -1
+    if ($Date) {
+        for ($k = 0; $k -lt $Entries.Count; $k++) {
+            $ed = $null
+            try { $ed = [datetime]::ParseExact($Entries[$k].date,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
+            if ($ed -and ($ed -le $Date)) { $leadIdx = $k }
+        }
+    }
+    # a campaign day before the first paper reads the first paper; no
+    # campaign at all shows the latest front page
+    if (($leadIdx -lt 0) -and $Entries.Count) { $leadIdx = if ($Date) { 0 } else { $Entries.Count - 1 } }
+    $leadIdx
+}
+# The entries as Show-Paper uses them, unwrapped the same way.
+function Get-PaperEntries {
+    $entries = @(Get-Paper)
+    while ($entries.Count -eq 1 -and ($entries[0] -is [System.Array])) { $entries = $entries[0] }
+    ,$entries
+}
+# Today's front page, or $null. Used by the dispersal to say there is
+# something new to read.
+function Get-UnreadBulletin {
+    param($Pilot)
+    try {
+        $entries = Get-PaperEntries
+        if (-not $entries.Count) { return $null }
+        $i = Get-LeadBulletinIndex -Entries $entries -Date $script:CampaignDate
+        if ($i -lt 0) { return $null }
+        $lead = $entries[$i]
+        $seen = $null
+        if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'paperRead')) { $seen = "$($Pilot.paperRead)" }
+        if ($seen -and ($seen -eq "$($lead.date)")) { return $null }
+        return $lead
+    } catch { }
+    $null
+}
+# Remember the front page he has actually been shown. Written when the
+# bulletin is opened, not when it is generated, so the flag tracks reading
+# rather than the passing of campaign days.
+function Set-BulletinRead {
+    param($Pilot, [string]$Date)
+    if (-not $Pilot -or -not $Date) { return }
+    try {
+        if ($Pilot.PSObject.Properties.Name -contains 'paperRead') { $Pilot.paperRead = $Date }
+        else { $Pilot | Add-Member -NotePropertyName paperRead -NotePropertyValue $Date -Force }
+        Save-Pilot $Pilot
+    } catch { }
 }
 function Show-Paper {
     param($Pilot)
@@ -3384,23 +3505,13 @@ function Show-Paper {
     $Pilot = Ensure-Squadron -Pilot $Pilot
     $sqnum = 92; if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
 
-    $entries = @(Get-Paper)
     # ConvertFrom-Json plus the pipeline can nest the entry array several
-    # layers deep (a single flatten once shipped broken); peel until the
-    # real entries appear
-    while ($entries.Count -eq 1 -and ($entries[0] -is [System.Array])) { $entries = $entries[0] }
-
-    $leadIdx = -1
-    if ($script:CampaignDate) {
-        for ($k = 0; $k -lt $entries.Count; $k++) {
-            $ed = $null
-            try { $ed = [datetime]::ParseExact($entries[$k].date,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
-            if ($ed -and ($ed -le $script:CampaignDate)) { $leadIdx = $k }
-        }
-    }
-    # a campaign day before the first paper reads the first paper; no
-    # campaign at all shows the latest front page
-    if (($leadIdx -lt 0) -and $entries.Count) { $leadIdx = if ($script:CampaignDate) { 0 } else { $entries.Count - 1 } }
+    # layers deep (a single flatten once shipped broken); Get-PaperEntries
+    # peels it, and the dispersal reads it through the same door.
+    $entries = Get-PaperEntries
+    $leadIdx = Get-LeadBulletinIndex -Entries $entries -Date $script:CampaignDate
+    # opening it counts as reading it, so the dispersal stops flagging it
+    if ($leadIdx -ge 0) { Set-BulletinRead -Pilot $Pilot -Date "$($entries[$leadIdx].date)" }
 
     $paper = New-Object Windows.Controls.Border
     $paper.Background = B '#E9E0CA'; $paper.CornerRadius = '2'; $paper.Padding = '40,26,40,34'

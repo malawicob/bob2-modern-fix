@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.8.3'
+$FixVersion = '1.8.4'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -209,6 +209,53 @@ function Sync-FixVersion {
 #
 #  Returns true when something had to be removed.
 # ---------------------------------------------------------------------
+# The panel's true size and what Windows is scaling it by. A DPI-unaware
+# process is handed the panel DIVIDED by that scaling, which is why the
+# same build behaves differently on two machines.
+function Get-DisplayLine {
+    try {
+        if (-not ('BobLnchDpi.Native' -as [type])) {
+            Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+namespace BobLnchDpi {
+  public static class Native {
+    [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
+    [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
+    [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int i);
+    // 118 = DESKTOPHORZRES and 117 = DESKTOPVERTRES are the true panel and
+    // are honest to everyone. The scaling is not: Windows answers according
+    // to what the ASKING process is equipped to hear. An unaware process is
+    // shown a smaller HORZRES (8) and a flat 96 for LOGPIXELSX (88); an
+    // aware one, which is what loading WPF makes this launcher, is shown
+    // the full HORZRES and the real DPI. Each understates and neither
+    // overstates, so the larger of the two is right in both. See the note
+    // on Get-DisplayScalePercent in BOB2_Setup.ps1.
+    public static int[] Info() {
+      IntPtr dc = GetDC(IntPtr.Zero);
+      int rw = GetDeviceCaps(dc, 118), rh = GetDeviceCaps(dc, 117);
+      int sw = GetDeviceCaps(dc, 8), dpi = GetDeviceCaps(dc, 88);
+      ReleaseDC(IntPtr.Zero, dc);
+      int byRatio = (sw  > 0) ? (int)Math.Round(rw * 100.0 / sw)   : 100;
+      int byDpi   = (dpi > 0) ? (int)Math.Round(dpi * 100.0 / 96.0) : 100;
+      int pct = Math.Max(Math.Max(byRatio, byDpi), 100);
+      return new int[] { rw, rh, pct };
+    }
+  }
+}
+'@
+        }
+        $i = [BobLnchDpi.Native]::Info()
+        $w = [int]$i[0]; $h = [int]$i[1]; $pct = [int]$i[2]
+        if ($w -le 0) { return 'Display unknown' }
+        if ($pct -le 100) { return "$($w)x$($h) at 100%" }
+        # name the size the GAME is given, because that is the number that
+        # explains the behaviour
+        $vw = [int][math]::Round($w * 100.0 / $pct)
+        $vh = [int][math]::Round($h * 100.0 / $pct)
+        "$($w)x$($h) at $pct%, game sees $($vw)x$($vh)"
+    }
+    catch { 'Display unknown' }
+}
 function Repair-DpiShim {
     $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers'
     $exe = Join-Path $GameDir 'Bob.exe'
@@ -718,12 +765,17 @@ $xaml = @'
                 <!-- The Room is the RAF part of this launcher, so it gets
                      the roundel rather than another grey outline. Solid
                      discs, in the Room's own three colours: it is the one
-                     row a man is meant to find first. -->
-                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
-                  <Canvas Width="24" Height="24">
-                    <Ellipse Canvas.Left="1.5" Canvas.Top="1.5" Width="21" Height="21" Fill="#FF1C3F94"/>
-                    <Ellipse Canvas.Left="5"   Canvas.Top="5"   Width="14" Height="14" Fill="#FFF2EFE6"/>
-                    <Ellipse Canvas.Left="8.5" Canvas.Top="8.5" Width="7"  Height="7"  Fill="#FFC8102E"/>
+                     row a man is meant to find first.
+
+                     Bigger than the other icons on purpose, and the margin
+                     is trimmed by exactly what the box gains (32 + 8 as
+                     against 24 + 16) so the column of titles beside it
+                     does not step out of line. -->
+                <Viewbox Width="32" Height="32" Margin="0,1,8,0" VerticalAlignment="Center">
+                  <Canvas Width="32" Height="32">
+                    <Ellipse Canvas.Left="0"     Canvas.Top="0"     Width="32"    Height="32"    Fill="#FF1C3F94"/>
+                    <Ellipse Canvas.Left="5.33"  Canvas.Top="5.33"  Width="21.33" Height="21.33" Fill="#FFF2EFE6"/>
+                    <Ellipse Canvas.Left="10.67" Canvas.Top="10.67" Width="10.67" Height="10.67" Fill="#FFC8102E"/>
                   </Canvas>
                 </Viewbox>
                 <StackPanel VerticalAlignment="Center">
@@ -910,9 +962,15 @@ $xaml = @'
           <TextBlock Style="{StaticResource PillSep}"/>
           <TextBlock x:Name="LblGame"    Style="{StaticResource Pill}" Text="Game"/>
           <TextBlock Style="{StaticResource PillSep}"/>
-          <TextBlock x:Name="LblFix"     Style="{StaticResource Pill}" Text="Fix"/>
+          <TextBlock x:Name="LblFix"     Style="{StaticResource Pill}" Text="Fix" Background="Transparent"/>
           <TextBlock Style="{StaticResource PillSep}"/>
           <TextBlock x:Name="LblWrapper" Style="{StaticResource Pill}" Text="Wrapper"/>
+            <TextBlock Style="{StaticResource PillSep}"/>
+            <!-- Panel size and Windows scaling. Above 100% the game is handed
+                 a SMALLER virtual desktop, and every display fault this mod
+                 has chased behaves differently because of it. Nobody knew this
+                 machine was at 150% until hours into finding that out. -->
+            <TextBlock x:Name="LblDisplay" Style="{StaticResource Pill}" Text="Display"/>
         </StackPanel>
 
         <StackPanel Grid.Row="1" Orientation="Horizontal">
@@ -1003,6 +1061,25 @@ function Show-Note {
     [void][System.Windows.MessageBox]::Show($win, $Text, $Title, 'OK', $Icon)
 }
 
+# Somewhere to put things the player does not need to be stopped for.
+# A dialog that reports an action already taken is an interruption
+# pretending to be information, and the launcher had one firing on every
+# single launch. This keeps the evidence without the OK button.
+#
+# Trimmed to the last 200 lines on the way out: it is a diary, not a
+# record, and nobody is going to prune it by hand.
+function Write-LauncherLog {
+    param([string]$Text)
+    try {
+        $log = Join-Path $ScriptDir 'BOB2_Launcher.log'
+        Add-Content -LiteralPath $log -Value ("{0}  {1}" -f (Get-Date -Format 's'), $Text) -Encoding UTF8
+        $lines = @(Get-Content -LiteralPath $log -ErrorAction Stop)
+        if ($lines.Count -gt 200) {
+            Set-Content -LiteralPath $log -Value $lines[-200..-1] -Encoding UTF8
+        }
+    } catch { }
+}
+
 function Show-Ask {
     param([string]$Text, [string]$Title = 'BOB2 Launcher', [string]$Icon = 'Warning')
     return ([System.Windows.MessageBox]::Show($win, $Text, $Title, 'YesNo', $Icon) -eq 'Yes')
@@ -1046,9 +1123,10 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Windows had put DWM8And16BitMitigation back on Bob.exe. That flag virtualises the " +
-                   "game's display-mode switch, which shows up as black bars top and bottom in the cockpit." +
-                   "`n`nRemoved it. Starting the game now.")
+        # Fixed before the game sees it, so there is nothing for the player
+        # to decide and no reason to make them press OK on the way to a
+        # sortie. It goes in the log in case a black bar ever does appear.
+        Write-LauncherLog 'Windows had put its compatibility flag back on Bob.exe (black bars in the cockpit). Removed it before starting the game.'
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would
@@ -1242,6 +1320,19 @@ function Start-Wizard {
     $ev = New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
     (C 'BtnSetup').RaiseEvent($ev)
 })
+# The version pill said a newer version was available and left the player to
+# work out where to go with that. It now says click here and means it. The
+# guard matters: the same pill reads "Mod 1.8.3" when there is nothing to do,
+# and a line of status text that silently opens a window when poked is worse
+# than one that does nothing.
+$script:UpgradeOffered = $false
+(C 'LblFix').Add_MouseLeftButtonUp({
+    if (-not $script:UpgradeOffered) { return }
+    (C 'SettingsGroup').Visibility = 'Visible'
+    $ev = New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+    (C 'BtnSetup').RaiseEvent($ev)
+})
+
 # One startup health check for the alert (the Play guard re-checks anyway)
 $script:CfgHealthyCache = $true
 try {
@@ -2232,26 +2323,34 @@ function Update-State {
     Sync-FixVersion
     (C 'LblGame').Text = "Game $script:GameVer"
 
+    if (-not $script:DisplayLine) { $script:DisplayLine = Get-DisplayLine }
+    (C 'LblDisplay').Text = $script:DisplayLine
     (C 'LblWrapper').Text = $w.Name
     (C 'LblWrapper').Foreground = $(if ($w.Ok) { Brush '#FF8E8880' } else { Brush '#FFC8102E' })
 
     # Reset the colour every tick - a warning that is set but never cleared
     # keeps shouting after the thing it warned about has been fixed.
     if (-not $script:FixVer) {
-        (C 'LblFix').Text = 'Mod not installed'
+        (C 'LblFix').Text = 'Mod not installed - click here to install it'
         (C 'LblFix').Foreground = Brush '#FFC8102E'
+        (C 'LblFix').Cursor = 'Hand'
+        $script:UpgradeOffered = $true
     }
     elseif ($script:FixVer -ne $FixVersion) {
         # "Fix 1.5.0 (package is 1.6.8)" meant nothing unless you already knew
         # how this thing is built. Two versions exist: the one recorded in the
         # game folder as installed, and the one in the files you are running.
         # Say which is which, and say what to do about it.
-        (C 'LblFix').Text = "Mod $script:FixVer installed - $FixVersion available"
+        (C 'LblFix').Text = "Mod $script:FixVer installed - $FixVersion available - click here to upgrade"
         (C 'LblFix').Foreground = Brush '#FFD08A2E'
+        (C 'LblFix').Cursor = 'Hand'
+        $script:UpgradeOffered = $true
     }
     else {
         (C 'LblFix').Text = "Mod $script:FixVer"
         (C 'LblFix').Foreground = Brush '#FF8E8880'
+        (C 'LblFix').Cursor = 'Arrow'
+        $script:UpgradeOffered = $false
     }
 }
 
