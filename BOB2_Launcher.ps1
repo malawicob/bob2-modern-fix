@@ -222,13 +222,22 @@ namespace BobLnchDpi {
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
     [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int i);
-    // 118 = DESKTOPHORZRES and 117 = DESKTOPVERTRES are the true panel;
-    // 8 = HORZRES is what this (unaware) process is shown.
+    // 118 = DESKTOPHORZRES and 117 = DESKTOPVERTRES are the true panel and
+    // are honest to everyone. The scaling is not: Windows answers according
+    // to what the ASKING process is equipped to hear. An unaware process is
+    // shown a smaller HORZRES (8) and a flat 96 for LOGPIXELSX (88); an
+    // aware one, which is what loading WPF makes this launcher, is shown
+    // the full HORZRES and the real DPI. Each understates and neither
+    // overstates, so the larger of the two is right in both. See the note
+    // on Get-DisplayScalePercent in BOB2_Setup.ps1.
     public static int[] Info() {
       IntPtr dc = GetDC(IntPtr.Zero);
-      int rw = GetDeviceCaps(dc, 118), rh = GetDeviceCaps(dc, 117), sw = GetDeviceCaps(dc, 8);
+      int rw = GetDeviceCaps(dc, 118), rh = GetDeviceCaps(dc, 117);
+      int sw = GetDeviceCaps(dc, 8), dpi = GetDeviceCaps(dc, 88);
       ReleaseDC(IntPtr.Zero, dc);
-      int pct = (sw > 0) ? (int)Math.Round(rw * 100.0 / sw) : 100;
+      int byRatio = (sw  > 0) ? (int)Math.Round(rw * 100.0 / sw)   : 100;
+      int byDpi   = (dpi > 0) ? (int)Math.Round(dpi * 100.0 / 96.0) : 100;
+      int pct = Math.Max(Math.Max(byRatio, byDpi), 100);
       return new int[] { rw, rh, pct };
     }
   }

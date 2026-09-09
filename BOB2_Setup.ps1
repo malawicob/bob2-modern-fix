@@ -385,6 +385,28 @@ function Get-DgVoodooRenderSize {
 }
 # What Windows is scaling the desktop by, as a percentage. A DPI-unaware
 # process sees the panel divided by this.
+# The scaling Windows is applying, whoever is asking.
+#
+# This is harder than it looks, and it was wrong. Windows tells a process
+# what that process is equipped to hear, so NEITHER of the obvious answers
+# is true on its own. Measured on a 2560x1600 panel at 150%:
+#
+#                        DPI-unaware caller   DPI-aware caller (WPF)
+#   DESKTOPHORZRES 118        2560                  2560
+#   HORZRES 8                 1707                  2560
+#   ratio of the two           150%                  100%   <- lies
+#   LOGPIXELSX 88               96                   144
+#   as a percentage            100%   <- lies        150%
+#
+# Loading WPF makes a process DPI-aware, so the same function returned 150
+# from the console and 100 from any window. That mattered: Install and
+# repair is a WPF window, its Graphics translator button calls this through
+# New-DgVoodooConfText, and a wrong 100 writes the PANEL size into
+# dgVoodoo.conf instead of the virtual desktop. That is the "cockpit is
+# double size" fault of 2026-09-08, waiting to be pressed.
+#
+# Each signal understates and neither overstates, so the larger of the two
+# is the true figure in both kinds of process. At 100% both say 100.
 function Get-DisplayScalePercent {
     try {
         if (-not ('BobDpi.Native' -as [type])) {
@@ -395,13 +417,15 @@ namespace BobDpi {
     [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
     [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
     [DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr dc, int i);
-    // 118 = DESKTOPHORZRES (true pixels), 8 = HORZRES (what this process sees)
+    // 118 = DESKTOPHORZRES (true pixels), 8 = HORZRES (what this process is
+    // shown), 88 = LOGPIXELSX (this process's idea of the DPI)
     public static int Percent() {
       IntPtr dc = GetDC(IntPtr.Zero);
-      int real = GetDeviceCaps(dc, 118), seen = GetDeviceCaps(dc, 8);
+      int real = GetDeviceCaps(dc, 118), seen = GetDeviceCaps(dc, 8), dpi = GetDeviceCaps(dc, 88);
       ReleaseDC(IntPtr.Zero, dc);
-      if (seen <= 0) return 100;
-      return (int)Math.Round(real * 100.0 / seen);
+      int byRatio = (seen > 0) ? (int)Math.Round(real * 100.0 / seen) : 100;
+      int byDpi   = (dpi  > 0) ? (int)Math.Round(dpi * 100.0 / 96.0)  : 100;
+      return Math.Max(Math.Max(byRatio, byDpi), 100);
     }
   }
 }
