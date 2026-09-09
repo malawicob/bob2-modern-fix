@@ -21,14 +21,28 @@ The collar patches beside it are drawn by dev/make_lw_badges.py. See the
 note at the top of that script for what the references do and do not
 settle, and why nothing here is a copied image.
 
-ek2.png, ek1.png and ritterkreuz.png are the Iron Cross ladder, all 1957
-patterns like the pilot badge, so none of them carries a swastika. Their
-white backgrounds were flooded out from the edges rather than cleared by
-colour: the crosses have pale silver beading and the EK II ribbon has
-white stripes, and a colour-based clear would have eaten through both.
+ek2.png, ek1.png, ritterkreuz.png and eichenlaub.png are the Iron Cross
+ladder. None carries a swastika. White backgrounds were flooded out from
+the edges rather than cleared by colour: the crosses have pale silver
+beading and the ribbons have white stripes, and a colour-based clear
+would have eaten through both.
 
-A fourth image was supplied and is NOT used. It is the Winterschlacht im
-Osten medal, the Eastern Front winter medal of 1941/42, instituted 26 May
-1942. A man flying the Channel in 1940 could not have had it. It is left
-out for the same reason the RAF ladder leaves out the CGM (Flying), which
-was not instituted until November 1942.
+WHAT IS DELIBERATELY NOT HERE, and why
+
+Of fourteen images supplied across two batches, four are used. The rest
+are out, and the reasons are worth keeping because every one of them is
+a plausible-looking German medal that would have been easy to add:
+
+  Ritterkreuz mit Schwertern      swords instituted 21 June 1941
+  ... mit Brillanten / in Gold    later grades again
+  Winterschlacht im Osten         instituted 26 May 1942, and for the East
+  Kriegsverdienstkreuz            for merit not in direct combat, which is
+                                  why the RAF ladder leaves out the AFC
+  two ribbon bars with devices    not identifiable as documented awards,
+                                  so not used at all
+
+The oak leaves ARE period-correct and are in: instituted 3 June 1940,
+and both Moelders and Galland had them by September that year, which is
+inside this campaign. In the Room they REPLACE the plain Knight's Cross
+rather than sitting beside it, because the leaves clasp onto the cross a
+man already wears; drawing both would show him with two of them.

@@ -4186,17 +4186,23 @@ function Show-GruppeSelect {
 #  raised to forty in 1941, which is the figure most often quoted and the
 #  wrong one for this campaign.
 #
-#  The Eichenlaub, at about forty, is not here: it wants its own art, and
-#  no career in this Room is going to reach it before the rest of the
-#  German side is finished.
+#  The Eichenlaub is in, at forty victories. It was instituted on 3 June
+#  1940 and Moelders and Galland both had it that September, which is
+#  inside this campaign, so it belongs. It REPLACES the plain Ritterkreuz
+#  in the row rather than sitting beside it: the oak leaves clasp onto the
+#  cross a man already wears, and drawing two would be showing him with
+#  two Knight's Crosses.
+#
+#  Three further grades were to hand and are all out on date. The swords
+#  came on 21 June 1941 and the diamonds later still.
 $LwHonourSpec = @(
     # Heights are set by how each one READS, not by how big the thing is.
-    # The Ritterkreuz is a tall narrow picture, cross and neck ribbon, so
-    # at the same height as the others it comes out much the smallest on
-    # screen. These three sit about level.
+    # The neck orders are tall narrow pictures, cross and ribbon, so at the
+    # same height as the others they come out much the smallest on screen.
+    @{ Award = 'Eichenlaub'; File = 'eichenlaub.png';  Height = 70; Tip = 'Ritterkreuz des Eisernen Kreuzes mit Eichenlaub' }
     @{ Award = 'Ritterkreuz'; File = 'ritterkreuz.png'; Height = 66; Tip = 'Ritterkreuz des Eisernen Kreuzes' }
-    @{ Award = 'EK I';        File = 'ek1.png';         Height = 42; Tip = 'Eisernes Kreuz I. Klasse' }
-    @{ Award = 'EK II';       File = 'ek2.png';         Height = 56; Tip = 'Eisernes Kreuz II. Klasse' }
+    @{ Award = 'EK I';        File = 'ek1.png';         Height = 44; Tip = 'Eisernes Kreuz I. Klasse' }
+    @{ Award = 'EK II';       File = 'ek2.png';         Height = 58; Tip = 'Eisernes Kreuz II. Klasse' }
 )
 function Get-LwHonours {
     param($Pilot, $Career)
@@ -4211,6 +4217,7 @@ function Get-LwHonours {
     if ((($v -ge 1) -or ($sorties -ge 3))  -and ($h -notcontains 'EK II'))       { $h += 'EK II' }
     if ((($v -ge 5) -or ($sorties -ge 20)) -and ($h -notcontains 'EK I'))        { $h += 'EK I' }
     if (($v -ge 20)                        -and ($h -notcontains 'Ritterkreuz')) { $h += 'Ritterkreuz' }
+    if (($v -ge 40)                        -and ($h -notcontains 'Eichenlaub'))  { $h += 'Eichenlaub' }
     $h
 }
 # Worn, rather than laid out as ribbon chips.
@@ -4230,6 +4237,8 @@ function New-LwHonourRow {
     $row.Orientation = 'Horizontal'; $row.VerticalAlignment = 'Center'
     foreach ($spec in $LwHonourSpec) {
         if ($set -notcontains $spec.Award) { continue }
+        # a man with the oak leaves wears one Knight's Cross, not two
+        if ($spec.Award -eq 'Ritterkreuz' -and ($set -contains 'Eichenlaub')) { continue }
         $bmp = Load-Image -Path (Join-Path $script:BadgeDir $spec.File)
         if (-not $bmp) { continue }
         $img = New-Object Windows.Controls.Image

@@ -106,6 +106,7 @@ $LW_CASES = @(
     @{ Rank = 'Oberleutnant';  Name = 'Falkenberg'; Vics = 14; Sorties = 34 ; Unit = 'I./JG 2' }
     @{ Rank = 'Oberleutnant';  Name = 'Reinhardt'; Vics = 20; Sorties = 41 ; Unit = 'I./JG 2' }
     @{ Rank = 'Hauptmann';     Name = 'von Below'; Vics = 27; Sorties = 55 ; Unit = 'Stab/JG 26'; Cmdr = $true }
+    @{ Rank = 'Hauptmann';     Name = 'Moelders';  Vics = 41; Sorties = 68 ; Unit = 'Stab/JG 51'; Cmdr = $true }
 )
 function New-LwAwardCard {
     param([string]$Rank, [string]$Name, [int]$Vics, [int]$Sorties, [string]$Unit, [switch]$Cmdr)
@@ -182,7 +183,11 @@ $LW_BLURB = (
     'because only the Iron Cross II is worn on a ribbon: the Iron Cross I is pinned flat to the ' +
     'breast and the Ritterkreuz hangs at the throat. Three awards a man of 1940 could not have are ' +
     'deliberately absent, all of them instituted later: the Deutsches Kreuz in Gold, the ' +
-    'Frontflugspange, and the Winterschlacht im Osten medal. Non-commissioned and commissioned ' +
+    'Frontflugspange, and the Winterschlacht im Osten medal, and so are the swords and the ' +
+    'diamonds, which came in 1941. The oak leaves ARE here, at forty victories: they were ' +
+    'instituted in June 1940 and Moelders and Galland both had them that September. They replace ' +
+    'the plain Knight\u0027s Cross in the row rather than joining it, because the leaves clasp onto ' +
+    'the cross a man already wears. Non-commissioned and commissioned ' +
     'pilots are separate careers in the Luftwaffe, not two ends of one ladder, so an Unteroffizier ' +
     'rises to Oberfeldwebel and a Leutnant to Oberleutnant. Hauptmann is a command.')
 $sub = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text (
