@@ -2278,6 +2278,32 @@ function Show-Roster {
     $eyebrow = if ($script:CampaignDate) { "$baseTxt  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $baseTxt }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "No. $sqnum Squadron at readiness"))
 
+    # The morning's paper, if he has not seen this one. It carries the
+    # actual headline rather than "you have unread news", because the
+    # headline is the reason to go and read it. Click takes him there,
+    # which is also what marks it read.
+    $unread = Get-UnreadBulletin -Pilot $Pilot
+    if ($unread) {
+        $nb = New-Object Windows.Controls.Border
+        $nb.Background = B '#1A1710'; $nb.BorderBrush = $script:BrassBrush
+        $nb.BorderThickness = '3,0,0,0'; $nb.CornerRadius = '0,3,3,0'
+        $nb.Padding = '16,11'; $nb.Margin = '0,0,0,20'
+        $nb.HorizontalAlignment = 'Left'; $nb.MaxWidth = 940; $nb.Cursor = 'Hand'
+        $ns = New-Object Windows.Controls.StackPanel
+        $eb = New-TB -Text ('THE MORNING BULLETIN  ' + [char]0x2022 + '  ' + (Format-ShortDate "$($unread.date)")) `
+                     -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold
+        [void]$ns.Children.Add($eb)
+        $hl = New-TB -Text "$($unread.headline)" -Family $SerifFam -Size 17 -Colour '#E9E3D4' -Wrap
+        $hl.Margin = '0,4,0,0'
+        [void]$ns.Children.Add($hl)
+        $go = New-TB -Text 'not yet read - click to open it' -Family $CondFam -Size 12 -Colour '#6F828C'
+        $go.Margin = '0,5,0,0'
+        [void]$ns.Children.Add($go)
+        $nb.Child = $ns
+        $nb.Add_MouseLeftButtonUp({ param($s,$e) Show-Tab 'paper' })
+        [void]$script:Stage.Children.Add($nb)
+    }
+
     # the only photograph on the wall is yours
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,32'
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
@@ -3376,6 +3402,60 @@ function New-Rule {
     $r.Height = $H; $r.Background = B $Colour; $r.Margin = '0,10,0,10'
     $r
 }
+# Which front page belongs to the campaign's current date, as an index into
+# the entries. Lifted out of Show-Paper so the dispersal can ask the same
+# question without drawing anything: two answers to "what is today's paper"
+# would eventually disagree, and the unread flag would then be lying.
+function Get-LeadBulletinIndex {
+    param($Entries, $Date)
+    $leadIdx = -1
+    if ($Date) {
+        for ($k = 0; $k -lt $Entries.Count; $k++) {
+            $ed = $null
+            try { $ed = [datetime]::ParseExact($Entries[$k].date,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
+            if ($ed -and ($ed -le $Date)) { $leadIdx = $k }
+        }
+    }
+    # a campaign day before the first paper reads the first paper; no
+    # campaign at all shows the latest front page
+    if (($leadIdx -lt 0) -and $Entries.Count) { $leadIdx = if ($Date) { 0 } else { $Entries.Count - 1 } }
+    $leadIdx
+}
+# The entries as Show-Paper uses them, unwrapped the same way.
+function Get-PaperEntries {
+    $entries = @(Get-Paper)
+    while ($entries.Count -eq 1 -and ($entries[0] -is [System.Array])) { $entries = $entries[0] }
+    ,$entries
+}
+# Today's front page, or $null. Used by the dispersal to say there is
+# something new to read.
+function Get-UnreadBulletin {
+    param($Pilot)
+    try {
+        $entries = Get-PaperEntries
+        if (-not $entries.Count) { return $null }
+        $i = Get-LeadBulletinIndex -Entries $entries -Date $script:CampaignDate
+        if ($i -lt 0) { return $null }
+        $lead = $entries[$i]
+        $seen = $null
+        if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'paperRead')) { $seen = "$($Pilot.paperRead)" }
+        if ($seen -and ($seen -eq "$($lead.date)")) { return $null }
+        return $lead
+    } catch { }
+    $null
+}
+# Remember the front page he has actually been shown. Written when the
+# bulletin is opened, not when it is generated, so the flag tracks reading
+# rather than the passing of campaign days.
+function Set-BulletinRead {
+    param($Pilot, [string]$Date)
+    if (-not $Pilot -or -not $Date) { return }
+    try {
+        if ($Pilot.PSObject.Properties.Name -contains 'paperRead') { $Pilot.paperRead = $Date }
+        else { $Pilot | Add-Member -NotePropertyName paperRead -NotePropertyValue $Date -Force }
+        Save-Pilot $Pilot
+    } catch { }
+}
 function Show-Paper {
     param($Pilot)
     $script:Stage.Children.Clear()
@@ -3384,23 +3464,13 @@ function Show-Paper {
     $Pilot = Ensure-Squadron -Pilot $Pilot
     $sqnum = 92; if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'sqn') -and $Pilot.sqn) { $sqnum = [int]$Pilot.sqn }
 
-    $entries = @(Get-Paper)
     # ConvertFrom-Json plus the pipeline can nest the entry array several
-    # layers deep (a single flatten once shipped broken); peel until the
-    # real entries appear
-    while ($entries.Count -eq 1 -and ($entries[0] -is [System.Array])) { $entries = $entries[0] }
-
-    $leadIdx = -1
-    if ($script:CampaignDate) {
-        for ($k = 0; $k -lt $entries.Count; $k++) {
-            $ed = $null
-            try { $ed = [datetime]::ParseExact($entries[$k].date,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
-            if ($ed -and ($ed -le $script:CampaignDate)) { $leadIdx = $k }
-        }
-    }
-    # a campaign day before the first paper reads the first paper; no
-    # campaign at all shows the latest front page
-    if (($leadIdx -lt 0) -and $entries.Count) { $leadIdx = if ($script:CampaignDate) { 0 } else { $entries.Count - 1 } }
+    # layers deep (a single flatten once shipped broken); Get-PaperEntries
+    # peels it, and the dispersal reads it through the same door.
+    $entries = Get-PaperEntries
+    $leadIdx = Get-LeadBulletinIndex -Entries $entries -Date $script:CampaignDate
+    # opening it counts as reading it, so the dispersal stops flagging it
+    if ($leadIdx -ge 0) { Set-BulletinRead -Pilot $Pilot -Date "$($entries[$leadIdx].date)" }
 
     $paper = New-Object Windows.Controls.Border
     $paper.Background = B '#E9E0CA'; $paper.CornerRadius = '2'; $paper.Padding = '40,26,40,34'

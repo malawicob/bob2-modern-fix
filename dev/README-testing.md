@@ -1,0 +1,37 @@
+# Testing the Squadron Room without eating a pilot
+
+The Room keeps its state in a real folder:
+
+    $StateDir = <GameDir>\SquadronRoom     (or squadronroom\state with no game)
+
+`Save-Pilot`, and anything that calls it, writes `pilot.json` there for
+real. On 9 September 2026 a throwaway test harness called
+`Set-BulletinRead`, which calls `Save-Pilot`, and overwrote the dev
+install's pilot record with a stub named "Test". Nothing warned, because
+nothing was wrong: the function did exactly what it says.
+
+## The rule
+
+A harness that dot-sources the Room and then calls anything that might
+save must point `$StateDir` somewhere disposable FIRST:
+
+```powershell
+. $tmp                       # dot-source the Room's functions
+$StateDir  = Join-Path $env:TEMP ('roomtest-' + [guid]::NewGuid())
+$PilotPath = Join-Path $StateDir 'pilot.json'
+New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
+```
+
+Both variables, not just the first: `$PilotPath` is computed from
+`$StateDir` when the script loads, so moving `$StateDir` afterwards does
+not move the file with it.
+
+## Which functions write
+
+Anything reaching `Save-Pilot`, which today is `Set-BulletinRead`,
+`Update-CareerRecord`, `Save-AcMark`, `Save-AcPos` and the career and
+posting flows. `Show-Paper` writes too, because opening the bulletin is
+what marks it read. When in doubt, redirect.
+
+`room_smoketest.ps1` builds screens and is safe to run against a real
+install. Anything you write yourself is not, until you have redirected.
