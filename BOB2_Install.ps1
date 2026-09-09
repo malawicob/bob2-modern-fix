@@ -458,7 +458,7 @@ function Get-Checks {
         Ok=($manOk -and $pem -eq 1)
         Detail=$(if ($manOk -and $pem -eq 1) { 'the game declares itself DPI-unaware; menus lay out correctly' }
                  elseif (-not $manOk) { 'Bob.exe.manifest is missing - the menus will draw wrong' }
-                 else { 'external manifests are switched off - the file is there but Windows ignores it' })
+                 else { 'external manifests are switched off, so Windows ignores the file that is already there. Press Fix and say Yes to the Windows permission prompt' })
         Fix='Step-Win11Tweaks' })
 
 $out.Add([pscustomobject]@{

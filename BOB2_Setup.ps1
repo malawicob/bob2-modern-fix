@@ -314,6 +314,32 @@ namespace BobDisplay {
 # Saying "unaware" outright leaves nothing to guess at. Proved on a
 # 2560x1600 panel at 150% on 2026-09-08, including across a flight, which
 # is what defeated every registry-side attempt.
+
+# Turning the switch on needs administrator rights, and the repair window
+# is not run elevated. Without a way to ask, the DPI manifest row simply
+# said "still needs attention" every time the Fix button was pressed and
+# there was nothing the player could do about it (33lima, 2026-09-09).
+# So: try it directly, and if that is refused, hand the one setting to an
+# elevated reg.exe, which is a single Yes at the Windows prompt. Read the
+# value back afterwards rather than trusting the exit code, because a
+# cancelled prompt and a successful write are both quiet.
+function Enable-ExternalManifests {
+    $key = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide'
+    $cur = $null
+    try { $cur = (Get-ItemProperty $key -Name PreferExternalManifest -ErrorAction SilentlyContinue).PreferExternalManifest } catch { }
+    if ($cur -eq 1) { return $true }
+    try {
+        New-ItemProperty -Path $key -Name PreferExternalManifest -PropertyType DWord -Value 1 -Force -ErrorAction Stop | Out-Null
+        return $true
+    } catch { }
+    try {
+        Start-Process reg.exe -Verb RunAs -Wait -WindowStyle Hidden -ArgumentList @(
+            'add', '"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide"',
+            '/v', 'PreferExternalManifest', '/t', 'REG_DWORD', '/d', '1', '/f') | Out-Null
+    } catch { }
+    try { $cur = (Get-ItemProperty $key -Name PreferExternalManifest -ErrorAction SilentlyContinue).PreferExternalManifest } catch { }
+    return ($cur -eq 1)
+}
 function Install-BobManifest {
     param([string]$GameFolder)
     $src = $null
@@ -329,13 +355,14 @@ function Install-BobManifest {
     # embedded one is the empty stub, so this switch is what makes the file
     # count. It is machine-wide; only programs that ship a .manifest file
     # beside them are affected, which is rare.
-    try {
-        New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\SideBySide' `
-            -Name PreferExternalManifest -PropertyType DWord -Value 1 -Force -ErrorAction Stop | Out-Null
+    if (Enable-ExternalManifests) {
         Write-OK 'Enabled external manifests (PreferExternalManifest).'
     }
-    catch {
-        Write-Warn 'Could not set PreferExternalManifest - run the setup as administrator.'
+    else {
+        Write-Warn 'Could not enable external manifests. Windows asks permission before writing'
+        Write-Warn 'this one setting: press Yes at the prompt, or start the fix with Run as'
+        Write-Warn 'administrator. Until it is on, Windows ignores the manifest and the'
+        Write-Warn 'briefing pages will still draw wrong.'
         return $false
     }
     # With the app speaking for itself, the Assistant has nothing to guess:

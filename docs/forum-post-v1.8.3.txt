@@ -1,0 +1,59 @@
+Version 1.8.3 is up.
+
+The main thing this time is the menus. If you have ever had the briefing
+text sitting on top of the tab row, or the view coming up far too big
+once you are flying, it turns out those were the same problem wearing
+two hats. Bob.exe carries a manifest inside it that says nothing at all
+about how the game wants to be scaled, so Windows makes its own mind up,
+and on a high resolution screen it decides wrongly. It also writes that
+decision back in the moment the game starts, which is why taking the
+setting off by hand never stuck for more than one launch.
+
+The fix puts a small manifest file next to Bob.exe that states plainly
+the game does not do its own scaling, and it tells dgVoodoo to render
+the desktop the game is actually handed rather than the full size of
+your panel. Both halves are needed. With only the first you get correct
+menus and a cockpit half again too large. Menus and cockpit now come out
+right together, and it holds across a flight, which is where every
+earlier attempt came apart.
+
+The other half of the release is the Squadron Room. The sector map has
+been redrawn so that forty one squadrons no longer sit on top of each
+other in the London approaches. Each airfield now carries one plaque
+with its squadrons on it, and the crowded ones are docked out over the
+North Sea and the Channel with a line back to the field. Point at a
+squadron number and you get its card, meaning the aeroplane it flew, its
+station and sector, what the order of battle made of it, and the three
+highest scorers on its strength that morning.
+
+You can also now join a squadron as a sergeant pilot or with a
+commission, which is not just flavour because it decides whether you are
+put up for the DFM or the DFC, exactly as the RAF did it. The Victoria
+Cross is in, along with a Bar to the DSO, and the Polish and Czech
+squadrons are decorated by their own governments as well. A new career
+starts empty now instead of inheriting the previous pilot's war, and the
+Polish and Czech names in the rosters come out properly rather than as
+mangled characters.
+
+There is a new option in the setup, number 13, that turns on
+antialiasing, anisotropic filtering and ReShade together. It is off
+unless you ask for it, and pressing it again takes it back off. If you
+are on older hardware I would try the antialiasing on its own first and
+leave ReShade until you know what the rest is costing you.
+
+One thing I should be straight about. The fix sets a Windows setting
+called PreferExternalManifest, which is machine wide rather than just
+for this game. It makes Windows read a manifest file sitting next to a
+program in preference to the one built into it. Almost nothing else on a
+normal machine ships a loose manifest file, so in practice it affects
+BOB2 and nothing else, but it is the most invasive thing this mod has
+ever done to a system and you should know it is there. It comes straight
+back out if you remove it.
+
+Download is here.
+
+https://github.com/malawicob/bob2-modern-fix/releases/latest/download/BOB2-2.13-Modern-Fix-v1.8.3.zip
+
+Extract it into your Battle of Britain II folder so that the
+BOB2 Win11 Fix folder ends up beside Bob.exe, then run the file called
+CLICK HERE TO START.

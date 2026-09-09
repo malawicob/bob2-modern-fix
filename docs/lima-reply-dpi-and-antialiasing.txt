@@ -1,0 +1,41 @@
+33lima, thank you for both posts. The first one is my fault and there is
+a fix for it.
+
+The DPI manifest step writes one setting that lives in the machine part
+of the registry, and Windows will not let an ordinary program write
+there without asking your permission first. The repair window never
+asked. It tried, was refused, wrote a line about it into Details where
+almost nobody would look, and then told you the job still needed doing.
+Press the button again and the same thing happens again, which is
+exactly the loop you found. Your Details pane has the sentence that
+gives it away: could not set PreferExternalManifest, run the setup as
+administrator.
+
+The next build asks properly. When it cannot write the setting itself it
+hands that one line to Windows, you get the usual permission prompt, and
+one Yes finishes it. If you would rather not wait, right click BOB2
+Setup and choose Run as administrator, then let it do the Windows 11
+tweaks step. Either way it is a single setting and it only affects
+programs that ship a manifest file next to them, which is a very short
+list.
+
+On the antialiasing, you were quite right and I was describing something
+you could not reach. The only place the two were offered separately was
+item 6 inside the dgVoodoo settings in the text setup, and the button
+you found in Settings turns the whole lot on together. That was a poor
+arrangement. The next build gives antialiasing and filtering their own
+section in Settings, on the same page and just above ReShade, with Off,
+2x, 4x and 8x to choose from. Turn 4x on there, fly a mission, and you
+will know what the antialiasing alone costs you before ReShade is in the
+picture at all.
+
+I would still stay at 4x. Eight was tried here and it laid visible seams
+along the edges of the terrain tiles, so it costs more and looks worse.
+
+One more thing worth knowing. The picture is softer than it used to be
+because of the manifest fix itself. The game now draws at the size
+Windows hands a program that does not do scaling, and Windows enlarges
+the result. That is why the antialiasing and the filtering matter more
+on this version than they did before, and why ReShade's sharpening
+flatters it so much. If your card would rather not do the work, the
+sharpening on its own gets you most of the way.

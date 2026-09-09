@@ -2987,6 +2987,80 @@ function Build-GfxPage {
     [void]$list.Children.Add($sightRow)
 
     # ------------------------------------------------------------------
+    #  ANTIALIASING AND FILTERING - the graphics translator's own, and
+    #  nothing to do with ReShade. They had only ever been offered
+    #  together, as one line in the setup menu, and 33lima quite fairly
+    #  asked how he was meant to try the antialiasing on its own
+    #  (2026-09-09). Here they are separate, and this section comes
+    #  first because it is the one to try first: no extra DLL, and one
+    #  setting to put back if it costs too much.
+    # ------------------------------------------------------------------
+    [void]$list.Children.Add((New-SectionHeader 'Antialiasing and filtering' (
+        'The graphics translator can smooth the jagged edges and sharpen ground texture seen at a shallow ' +
+        'angle. It matters more than it used to, because the game now draws at the desktop scaling and ' +
+        'Windows enlarges the result. 4x is the tested setting: 8x showed seams along the terrain tiles. ' +
+        'Try this on its own before turning ReShade on, so you can see what each of them costs. Takes ' +
+        'effect the next time the game starts.')))
+
+    $aaConf = Join-Path $script:GameFolder 'dgVoodoo.conf'
+    $aaRead = {
+        if (-not (Test-Path -LiteralPath $aaConf)) { return $null }
+        $txt = Get-Content -LiteralPath $aaConf -Raw
+        # scoped to [DirectX]: dgVoodoo.conf reuses key names between sections
+        if ($txt -match '(?ms)\[DirectX\][^\[]*?^[ \t]*Antialiasing[ \t]*=[ \t]*([^\r\n]+)') { return $Matches[1].Trim() }
+        return $null
+    }.GetNewClosure()
+    $aaDescribe = {
+        $v = & $aaRead
+        if (-not $v) { return 'Currently: unknown - dgVoodoo.conf was not found' }
+        if ($v -eq 'appdriven') { return 'Currently: off, the game decides' }
+        "Currently: $v antialiasing, 16x filtering"
+    }.GetNewClosure()
+    $aaState = New-TB (& $aaDescribe) -Style 'Eyebrow' -Margin ([System.Windows.Thickness]::new(0,14,0,0))
+    [void]$list.Children.Add($aaState)
+
+    $aaStylePrimary = Res 'BtnPrimary'
+    $aaStyleGhost = Res 'BtnGhost'
+    $aaBtns = @{}
+    $aaMarkActive = {
+        param($name)
+        foreach ($k in $aaBtns.Keys) {
+            $aaBtns[$k].Style = $(if ($k -eq $name) { $aaStylePrimary } else { $aaStyleGhost })
+        }
+    }.GetNewClosure()
+    $aaWrite = {
+        param($aa, $filt)
+        $txt = Get-Content -LiteralPath $aaConf -Raw
+        foreach ($pair in @(@('Antialiasing', $aa), @('Filtering', $filt))) {
+            $pat = "(?ms)(\[DirectX\][^\[]*?^[ \t]*$($pair[0])[ \t]*=[ \t]*)[^\r\n]*"
+            if ($txt -match $pat) { $txt = $txt -replace $pat, "`${1}$($pair[1])" }
+        }
+        Set-Content -LiteralPath $aaConf -Value $txt -NoNewline
+    }.GetNewClosure()
+
+    $aaRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
+    foreach ($aaChoice in @('Off','2x','4x','8x')) {
+        $aaThis = $aaChoice
+        $b = New-Btn $(if ($aaThis -eq 'Off') { 'Off' } else { $aaThis + ' antialiasing' }) 'BtnGhost' $null {
+            try {
+                if (-not (Test-Path -LiteralPath $aaConf)) {
+                    [System.Windows.MessageBox]::Show('dgVoodoo.conf was not found. Install the graphics translator first.','Antialiasing') | Out-Null; return
+                }
+                if ($aaThis -eq 'Off') { & $aaWrite 'appdriven' 'appdriven' }
+                else { & $aaWrite $aaThis '16' }
+                $aaState.Text = (& $aaDescribe)
+                & $aaMarkActive $aaThis
+            } catch { [System.Windows.MessageBox]::Show($_.Exception.Message,'Antialiasing') | Out-Null }
+        }.GetNewClosure()
+        if ($aaRow.Children.Count -gt 0) { $b.Margin = [System.Windows.Thickness]::new(12,0,0,0) }
+        $aaBtns[$aaThis] = $b
+        [void]$aaRow.Children.Add($b)
+    }
+    $aaNow = & $aaRead
+    & $aaMarkActive $(if ($aaNow -and $aaNow -ne 'appdriven') { $aaNow } else { 'Off' })
+    [void]$list.Children.Add($aaRow)
+
+    # ------------------------------------------------------------------
     #  RESHADE - optional visual enhancement layer. Ships as dxgi.dll
     #  hooking dgVoodoo2's D3D11 output; entirely additive, off by
     #  default. Disable keeps every file (dxgi.dll renamed .disabled) so
@@ -2995,8 +3069,10 @@ function Build-GfxPage {
     # ------------------------------------------------------------------
     [void]$list.Children.Add((New-SectionHeader 'ReShade visual enhancement' (
         'An optional post-processing layer over the graphics translator: sharpening, anti-aliasing and ' +
-        'colour grading via five presets, from Subtle to Cinematic. Off by default. In the game, DEL opens ' +
-        'the ReShade overlay, PgUp and PgDn switch presets and PrtScn saves a screenshot.')))
+        'colour grading via five presets, from Subtle to Cinematic. Off by default, and separate from the ' +
+        'antialiasing above: turn that on first and fly with it, so you can tell what each of them is ' +
+        'costing you. In the game, DEL opens the ReShade overlay, PgUp and PgDn switch presets and PrtScn ' +
+        'saves a screenshot.')))
 
     $rsGameDir = $script:GameFolder
     $rsSetup = Join-Path $script:ScriptDir 'BOB2_Setup.ps1'
