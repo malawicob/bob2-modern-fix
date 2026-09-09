@@ -16,9 +16,22 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition }
 $ModDir      = Join-Path $ScriptDir 'squadronroom'
+# The RAF keeps its art at the top of squadronroom\ and the Luftwaffe in
+# lw\ beneath it. Set by Set-AssetSide, which Set-StateSide calls, so the
+# art and the state can never end up describing different air forces.
 $PortraitDir = Join-Path $ModDir 'portraits'
 $PortIndex   = Join-Path $ModDir 'portraits.json'
 $BadgeDir    = Join-Path $ModDir 'badges'
+$AircraftDir = Join-Path $ModDir 'aircraft'
+function Set-AssetSide {
+    param([string]$Side)
+    $base = if ($Side -eq 'lw') { Join-Path $ModDir 'lw' } else { $ModDir }
+    $script:SideModDir  = $base
+    $script:PortraitDir = Join-Path $base 'portraits'
+    $script:PortIndex   = Join-Path $base 'portraits.json'
+    $script:BadgeDir    = Join-Path $base 'badges'
+    $script:AircraftDir = Join-Path $base 'aircraft'
+}
 
 function Find-GameDir {
     foreach ($d in @($ScriptDir, (Split-Path $ScriptDir -Parent))) {
@@ -60,6 +73,7 @@ function Set-StateSide {
     $script:FlightOpen   = Join-Path $script:StateDir 'flight.open'
     $script:AcPosPath    = Join-Path $script:StateDir 'acpos.json'
     $script:AutoClaimPath = Join-Path $script:StateDir 'autoclaim.json'
+    Set-AssetSide $Side
 }
 Set-StateSide 'raf'
 
