@@ -4307,11 +4307,17 @@ function Show-GruppeSelect {
     Enable-MapZoom -Frame $mapWrap -Content $grid
 
     $script:MapTiles = @()
-    $detail = New-TB -Text $(if ($script:SelSq) { "$($script:SelSq.Unit), $($script:SelSq.Type), at $($script:SelSq.Base)." } else { 'No Gruppe selected.' }) `
+    $script:GruppeDetail = New-TB -Text $(if ($script:SelSq) { "$($script:SelSq.Unit), $($script:SelSq.Type), at $($script:SelSq.Base)." } else { 'No Gruppe selected.' }) `
                      -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
-    $detail.Margin = '2,0,0,12'; $detail.MaxWidth = 1100; $detail.HorizontalAlignment = 'Left'
-    [void]$script:Stage.Children.Add($detail)
+    $script:GruppeDetail.Margin = '2,0,0,12'; $script:GruppeDetail.MaxWidth = 1100; $script:GruppeDetail.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($script:GruppeDetail)
 
+    # No .GetNewClosure() and the detail line kept in a script variable,
+    # which is how the RAF board does it. A closure gets its own module
+    # scope, so "$script:SelSq = ..." inside one writes to the CLOSURE and
+    # never reaches the Room: clicking a Gruppe lit the REPORT button and
+    # left the selection empty, so nothing could be joined. Same trap that
+    # silently ignored -Side lw in the awards preview.
     $script:SelectSq = {
         param($q2)
         $script:SelSq = @{
@@ -4328,9 +4334,11 @@ function Show-GruppeSelect {
         foreach ($a in $script:MapAssemblies) { $a.Sel = $false }
         foreach ($t in $script:MapTiles) { if ($t.Tag.Sel) { $t.Tag.Asm.Sel = $true } }
         Set-MapFocus $null
-        $detail.Text = "$($q2.Label), $($q2.Type), at $($q2.Base). Luftflotte $($q2.Luftflotte), rated $("$($q2.Skill)".ToLower())."
+        if ($script:GruppeDetail) {
+            $script:GruppeDetail.Text = "$($q2.Label), $($q2.Type), at $($q2.Base). Luftflotte $($q2.Luftflotte), rated $("$($q2.Skill)".ToLower())."
+        }
         Set-ChromeActionEnabled $true
-    }.GetNewClosure()
+    }
 
     # gather the Gruppen by field, the way the RAF board gathers squadrons
     $byField = @{}
