@@ -215,9 +215,63 @@ function Get-Pilot {
     if (Test-Path $PilotPath) { try { return (Get-Content $PilotPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { } }
     $null
 }
+# Every write in the program comes through here: Set-BulletinRead,
+# Update-CareerRecord, Add-AutoClaims, Sync-CampaignClaims, Ensure-Serial,
+# Ensure-Squadron and Invoke-Submit. That makes it the one place worth
+# guarding, and on 9 September 2026 it needed guarding: a test harness
+# built a stub pilot called "Test" and saved it over a real career. The
+# function did exactly what it was told. Nothing warned, and nothing had
+# kept a copy.
+#
+# Three rules, cheap enough to run on every write:
+#
+#   A record with no name is not a pilot. Refuse it.
+#   A record with FEWER fields than the one on disk is a stub overwriting
+#   a career. Refuse it unless the caller says -Shrink and means it.
+#   Keep the last twenty versions, so a bad write is an inconvenience
+#   rather than a loss.
+#
+# Sync-CampaignClaims already reasons about the second hazard in a comment
+# of its own ("a stub containing only campaignKills would destroy a
+# career"). This makes it a rule instead of a comment.
 function Save-Pilot {
-    param($Pilot)
+    param($Pilot, [switch]$Shrink)
+    if (-not $Pilot) { throw 'Save-Pilot was given nothing to save.' }
+    $name = "$($Pilot.pilot)".Trim()
+    if (-not $name) { throw 'Save-Pilot refused a record with no pilot name.' }
+
     if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
+
+    if (Test-Path $PilotPath) {
+        $old = $null
+        try { $old = Get-Content $PilotPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+        if ($old) {
+            if (-not $Shrink) {
+                $wasN = @($old.PSObject.Properties).Count
+                $nowN = @($Pilot.PSObject.Properties).Count
+                if ($nowN -lt $wasN) {
+                    throw ("Save-Pilot refused to replace a $wasN field record for " +
+                           "'$($old.pilot)' with a $nowN field one for '$name'. " +
+                           'Pass -Shrink if that is really meant.')
+                }
+            }
+            # Keep the version being replaced, newest twenty only. Written
+            # before the new one, so the copy on disk is always the last
+            # good state rather than the one just written.
+            try {
+                $bak = Join-Path $StateDir 'archive\autobackup'
+                if (-not (Test-Path $bak)) { New-Item -ItemType Directory -Path $bak -Force | Out-Null }
+                # Milliseconds, not seconds. Drawing one screen can save
+                # twice through Sync-CampaignClaims and Update-CareerRecord,
+                # and at second resolution the second write overwrote the
+                # first backup: thirty saves kept two copies, not twenty.
+                Copy-Item $PilotPath (Join-Path $bak ('pilot-' + (Get-Date).ToString('yyyyMMdd-HHmmss-fff') + '.json')) -Force
+                Get-ChildItem $bak -Filter 'pilot-*.json' -ErrorAction SilentlyContinue |
+                    Sort-Object Name -Descending | Select-Object -Skip 20 |
+                    Remove-Item -Force -ErrorAction SilentlyContinue
+            } catch { }
+        }
+    }
     $Pilot | ConvertTo-Json -Depth 6 | Set-Content -Path $PilotPath -Encoding UTF8
 }
 
@@ -2626,7 +2680,11 @@ function Invoke-Submit {
         $pilot['campaignSorties'] = 0
         $pilot['campaignKills'] = @(0,0,0,0,0,0,0)
     }
-    Save-Pilot -Pilot $pilot
+    # The one write that is MEANT to replace a career with a smaller
+    # record: a new man starts with nothing but what he was posted with.
+    # Complete-NewCareer has already put the previous pilot away, so there
+    # should be nothing here to lose, but say so rather than relying on it.
+    Save-Pilot -Pilot $pilot -Shrink
     Show-Roster -Pilot (Get-Pilot)
 }
 
