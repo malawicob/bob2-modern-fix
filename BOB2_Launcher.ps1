@@ -1047,6 +1047,25 @@ function Show-Note {
     [void][System.Windows.MessageBox]::Show($win, $Text, $Title, 'OK', $Icon)
 }
 
+# Somewhere to put things the player does not need to be stopped for.
+# A dialog that reports an action already taken is an interruption
+# pretending to be information, and the launcher had one firing on every
+# single launch. This keeps the evidence without the OK button.
+#
+# Trimmed to the last 200 lines on the way out: it is a diary, not a
+# record, and nobody is going to prune it by hand.
+function Write-LauncherLog {
+    param([string]$Text)
+    try {
+        $log = Join-Path $ScriptDir 'BOB2_Launcher.log'
+        Add-Content -LiteralPath $log -Value ("{0}  {1}" -f (Get-Date -Format 's'), $Text) -Encoding UTF8
+        $lines = @(Get-Content -LiteralPath $log -ErrorAction Stop)
+        if ($lines.Count -gt 200) {
+            Set-Content -LiteralPath $log -Value $lines[-200..-1] -Encoding UTF8
+        }
+    } catch { }
+}
+
 function Show-Ask {
     param([string]$Text, [string]$Title = 'BOB2 Launcher', [string]$Icon = 'Warning')
     return ([System.Windows.MessageBox]::Show($win, $Text, $Title, 'YesNo', $Icon) -eq 'Yes')
@@ -1090,9 +1109,10 @@ function Invoke-DriftCheck {
     # Last chance before the game starts - Windows may have put the shim
     # back since the launcher opened.
     if (Repair-DpiShim) {
-        Show-Note ("Windows had switched one of its own compatibility settings back on for the game. " +
-                   "Left alone it puts black bars across the top and bottom of the cockpit." +
-                   "`n`nTurned it off again. Starting the game now.")
+        # Fixed before the game sees it, so there is nothing for the player
+        # to decide and no reason to make them press OK on the way to a
+        # sortie. It goes in the log in case a black bar ever does appear.
+        Write-LauncherLog 'Windows had put its compatibility flag back on Bob.exe (black bars in the cockpit). Removed it before starting the game.'
     }
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would
