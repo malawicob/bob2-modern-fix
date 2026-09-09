@@ -948,7 +948,7 @@ $xaml = @'
           <TextBlock Style="{StaticResource PillSep}"/>
           <TextBlock x:Name="LblGame"    Style="{StaticResource Pill}" Text="Game"/>
           <TextBlock Style="{StaticResource PillSep}"/>
-          <TextBlock x:Name="LblFix"     Style="{StaticResource Pill}" Text="Fix"/>
+          <TextBlock x:Name="LblFix"     Style="{StaticResource Pill}" Text="Fix" Background="Transparent"/>
           <TextBlock Style="{StaticResource PillSep}"/>
           <TextBlock x:Name="LblWrapper" Style="{StaticResource Pill}" Text="Wrapper"/>
             <TextBlock Style="{StaticResource PillSep}"/>
@@ -1306,6 +1306,19 @@ function Start-Wizard {
     $ev = New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
     (C 'BtnSetup').RaiseEvent($ev)
 })
+# The version pill said a newer version was available and left the player to
+# work out where to go with that. It now says click here and means it. The
+# guard matters: the same pill reads "Mod 1.8.3" when there is nothing to do,
+# and a line of status text that silently opens a window when poked is worse
+# than one that does nothing.
+$script:UpgradeOffered = $false
+(C 'LblFix').Add_MouseLeftButtonUp({
+    if (-not $script:UpgradeOffered) { return }
+    (C 'SettingsGroup').Visibility = 'Visible'
+    $ev = New-Object System.Windows.RoutedEventArgs([System.Windows.Controls.Primitives.ButtonBase]::ClickEvent)
+    (C 'BtnSetup').RaiseEvent($ev)
+})
+
 # One startup health check for the alert (the Play guard re-checks anyway)
 $script:CfgHealthyCache = $true
 try {
@@ -2304,20 +2317,26 @@ function Update-State {
     # Reset the colour every tick - a warning that is set but never cleared
     # keeps shouting after the thing it warned about has been fixed.
     if (-not $script:FixVer) {
-        (C 'LblFix').Text = 'Mod not installed'
+        (C 'LblFix').Text = 'Mod not installed - click here to install it'
         (C 'LblFix').Foreground = Brush '#FFC8102E'
+        (C 'LblFix').Cursor = 'Hand'
+        $script:UpgradeOffered = $true
     }
     elseif ($script:FixVer -ne $FixVersion) {
         # "Fix 1.5.0 (package is 1.6.8)" meant nothing unless you already knew
         # how this thing is built. Two versions exist: the one recorded in the
         # game folder as installed, and the one in the files you are running.
         # Say which is which, and say what to do about it.
-        (C 'LblFix').Text = "Mod $script:FixVer installed - $FixVersion available"
+        (C 'LblFix').Text = "Mod $script:FixVer installed - $FixVersion available - click here to upgrade"
         (C 'LblFix').Foreground = Brush '#FFD08A2E'
+        (C 'LblFix').Cursor = 'Hand'
+        $script:UpgradeOffered = $true
     }
     else {
         (C 'LblFix').Text = "Mod $script:FixVer"
         (C 'LblFix').Foreground = Brush '#FF8E8880'
+        (C 'LblFix').Cursor = 'Arrow'
+        $script:UpgradeOffered = $false
     }
 }
 
