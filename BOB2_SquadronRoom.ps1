@@ -1550,9 +1550,12 @@ function Get-Career {
     $mins = 0; foreach ($s in $Sessions) { $mins += [int]$s.minutes }
     $hours = [math]::Round($mins / 60.0, 1)
     if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) {
-        return @{ sorties = $sorties; hours = $hours; rank = 'Squadron Leader'; next = $null; nextAt = 0 }
+        # a Gruppenkommandeur was a Hauptmann; a Major would be a
+        # Kommodore, and a Geschwader is not on offer here
+        $cmd = if ($script:Side -eq 'lw') { 'Hauptmann' } else { 'Squadron Leader' }
+        return @{ sorties = $sorties; hours = $hours; rank = $cmd; next = $null; nextAt = 0 }
     }
-    $ladder = $RankLadder
+    $ladder = Get-RankLadder -Rank "$($Pilot.rank)"
     # The stored rank is a FLOOR, not a starting point: a man promoted at
     # twelve sorties keeps his rank even if a new campaign resets the count.
     $idx = [array]::IndexOf($ladder, "$($Pilot.rank)"); if ($idx -lt 0) { $idx = 0 }
@@ -1573,16 +1576,46 @@ function Get-Career {
 # his DFC silently becomes a DFM, because both were recomputed from the
 # sortie count every time the screen was drawn.
 $RankLadder = @('Sergeant','Pilot Officer','Flying Officer','Flight Lieutenant')
+# The German ladder is TWO ladders, which is the real difference from the
+# RAF and not a simplification.
+#
+# Fighter Command commissioned its sergeant pilots freely, and a man who
+# came up that way went on climbing the one ladder, which is why the RAF
+# side has a single list with Sergeant at the bottom. The Luftwaffe kept
+# its non-commissioned and commissioned pilots on separate tracks and
+# moved men between them rarely. So an Unteroffizier rises to
+# Oberfeldwebel and stops; a Leutnant rises to Hauptmann.
+#
+# Stacking them into one six-rung list, which is what I tried first, is
+# wrong twice over: it commissions an Unteroffizier automatically at
+# thirty-six sorties, and it makes a man who joins as a Leutnant wait
+# FORTY-EIGHT for his first step, because Get-Career counts from the rung
+# he stands on and he starts at index three. On his own ladder he starts
+# at index nought and is promoted at twelve, like everybody else.
+# Hauptmann is left off the ladder on purpose, exactly as Squadron Leader
+# is on the RAF side: it is a command, reached through cmode, not a rung
+# a man climbs to by flying. Left in, an officer made Hauptmann at
+# twenty-four sorties, where an RAF pilot reaches Flight Lieutenant at
+# thirty-six.
+$LwRankNCO     = @('Unteroffizier','Feldwebel','Oberfeldwebel')
+$LwRankOfficer = @('Leutnant','Oberleutnant')
+function Get-RankLadder {
+    param([string]$Rank)
+    if ($script:Side -ne 'lw') { return $RankLadder }
+    if (($LwRankOfficer -contains "$Rank") -or ("$Rank" -eq 'Hauptmann')) { return $LwRankOfficer }
+    return $LwRankNCO
+}
 function Update-CareerRecord {
     param($Pilot, $Career, $Honours)
     if (-not $Pilot -or -not $Career) { return $Pilot }
     $changed = $false
     $obj = [ordered]@{}
     foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
-    $storedIdx = [array]::IndexOf($RankLadder, "$($Pilot.rank)")
-    $earnedIdx = [array]::IndexOf($RankLadder, "$($Career.rank)")
+    $lad = Get-RankLadder -Rank "$($Pilot.rank)"
+    $storedIdx = [array]::IndexOf($lad, "$($Pilot.rank)")
+    $earnedIdx = [array]::IndexOf($lad, "$($Career.rank)")
     if ($earnedIdx -gt $storedIdx) {
-        $obj['rank'] = $RankLadder[$earnedIdx]
+        $obj['rank'] = $lad[$earnedIdx]
         $obj['rank_date'] = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
         $changed = $true
     }
@@ -3099,6 +3132,12 @@ function Short-Rank {
         'Pilot Officer'     { 'P/O'   ; break }
         'Sergeant'          { 'Sgt'   ; break }
         'Wing Commander'    { 'W/Cdr' ; break }
+        'Oberfeldwebel'     { 'Ofw.'  ; break }
+        'Oberleutnant'      { 'Oblt.' ; break }
+        'Unteroffizier'     { 'Uffz.' ; break }
+        'Feldwebel'         { 'Fw.'   ; break }
+        'Leutnant'          { 'Lt.'   ; break }
+        'Hauptmann'         { 'Hptm.' ; break }
         default             { "$R" }
     }
 }
