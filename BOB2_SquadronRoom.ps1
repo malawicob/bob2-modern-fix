@@ -726,6 +726,18 @@ function New-BadgeImage {
 }
 function Get-RankBadgeFile {
     param([string]$Rank)
+    # The German collar patches. Oberfeldwebel before Feldwebel, and there
+    # is deliberately nothing for Leutnant or Oberleutnant: the officer
+    # patches have not been drawn, and New-BadgeImage returning $null
+    # leaves the rank in words, which is better than the wrong badge.
+    if ($script:Side -eq 'lw') {
+        switch -Regex ($Rank) {
+            '^Oberfeldwebel' { return 'oberfeldwebel.png' }
+            '^Feldwebel'     { return 'feldwebel.png' }
+            '^Unteroffizier' { return 'unteroffizier.png' }
+        }
+        return $null
+    }
     switch -Regex ($Rank) {
         '^Sergeant'          { return 'sergeant.png' }
         '^Pilot Officer'     { return 'pilot-officer.png' }
