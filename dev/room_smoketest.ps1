@@ -42,6 +42,33 @@ $src = $src -replace '(?m)^if \(\$existing\) \{ Show-Roster -Pilot \$existing \}
 $tmp = Join-Path (Split-Path -Parent $Room) '_rendertest.ps1'
 Set-Content -Path $tmp -Value $src -Encoding UTF8
 try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+
+# ---------------------------------------------------------------------
+#  Draw against a COPY of the state, never the real thing.
+#
+#  Drawing is not read-only. Show-Roster runs Sync-CampaignClaims and
+#  Update-CareerRecord; Show-Paper marks the morning bulletin read. Run
+#  straight against an install, this test therefore edits the pilot it is
+#  supposed to be examining - and it did: it read Patrick's bulletin for
+#  him, so the dispersal had nothing to flag when he went looking for it.
+#
+#  Every path is reassigned, not just $StateDir: each one was computed
+#  from $StateDir when the script loaded, so moving the folder afterwards
+#  leaves them all pointing at the old place.
+# ---------------------------------------------------------------------
+$realState = $StateDir
+$StateDir  = Join-Path ([IO.Path]::GetTempPath()) ('roomtest-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
+$PilotPath     = Join-Path $StateDir 'pilot.json'
+$SessionsPath  = Join-Path $StateDir 'sessions.json'
+$FlightOpen    = Join-Path $StateDir 'flight.open'
+$AcPosPath     = Join-Path $StateDir 'acpos.json'
+$AutoClaimPath = Join-Path $StateDir 'autoclaim.json'
+if (Test-Path $realState) {
+    Get-ChildItem $realState -File -ErrorAction SilentlyContinue |
+        ForEach-Object { Copy-Item $_.FullName (Join-Path $StateDir $_.Name) -Force }
+}
+try {
 "loaded: pilot '$((Get-Pilot).pilot)', squadron $((Get-Pilot).sqn), campaign date $(Get-CampaignDate)"
 foreach ($tab in 'dispersal','logbook','map','paper') {
     try { Show-Tab $tab; "  $tab : drew $($script:Stage.Children.Count) blocks" }
@@ -62,4 +89,9 @@ foreach ($q in (Get-Squadrons)) {
 }
 Set-Content -Path $PilotPath -Value $saved -Encoding UTF8
 "  dispersal for all $((Get-Squadrons).Count) squadrons x 3 dates: $bad failure(s)"
+}
+finally {
+    # the throwaway copy goes, whatever happened above
+    if ($StateDir -ne $realState) { Remove-Item $StateDir -Recurse -Force -ErrorAction SilentlyContinue }
+}
 if ($fails.Count) { "FAILURES: $($fails.Count)"; exit 1 } else { 'ALL SCREENS BUILT'; exit 0 }

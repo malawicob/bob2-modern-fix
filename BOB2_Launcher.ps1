@@ -765,12 +765,17 @@ $xaml = @'
                 <!-- The Room is the RAF part of this launcher, so it gets
                      the roundel rather than another grey outline. Solid
                      discs, in the Room's own three colours: it is the one
-                     row a man is meant to find first. -->
-                <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
-                  <Canvas Width="24" Height="24">
-                    <Ellipse Canvas.Left="1.5" Canvas.Top="1.5" Width="21" Height="21" Fill="#FF1C3F94"/>
-                    <Ellipse Canvas.Left="5"   Canvas.Top="5"   Width="14" Height="14" Fill="#FFF2EFE6"/>
-                    <Ellipse Canvas.Left="8.5" Canvas.Top="8.5" Width="7"  Height="7"  Fill="#FFC8102E"/>
+                     row a man is meant to find first.
+
+                     Bigger than the other icons on purpose, and the margin
+                     is trimmed by exactly what the box gains (32 + 8 as
+                     against 24 + 16) so the column of titles beside it
+                     does not step out of line. -->
+                <Viewbox Width="32" Height="32" Margin="0,1,8,0" VerticalAlignment="Center">
+                  <Canvas Width="32" Height="32">
+                    <Ellipse Canvas.Left="0"     Canvas.Top="0"     Width="32"    Height="32"    Fill="#FF1C3F94"/>
+                    <Ellipse Canvas.Left="5.33"  Canvas.Top="5.33"  Width="21.33" Height="21.33" Fill="#FFF2EFE6"/>
+                    <Ellipse Canvas.Left="10.67" Canvas.Top="10.67" Width="10.67" Height="10.67" Fill="#FFC8102E"/>
                   </Canvas>
                 </Viewbox>
                 <StackPanel VerticalAlignment="Center">

@@ -2287,8 +2287,14 @@ function Show-Roster {
         $nb = New-Object Windows.Controls.Border
         $nb.Background = B '#1A1710'; $nb.BorderBrush = $script:BrassBrush
         $nb.BorderThickness = '3,0,0,0'; $nb.CornerRadius = '0,3,3,0'
-        $nb.Padding = '16,11'; $nb.Margin = '0,0,0,20'
-        $nb.HorizontalAlignment = 'Left'; $nb.MaxWidth = 940; $nb.Cursor = 'Hand'
+        $nb.Padding = '16,12'; $nb.Margin = '0,0,0,20'
+        # the full width of the stage, as the tab row above it is: a strip
+        # that stops two thirds of the way across reads as a stray card
+        $nb.HorizontalAlignment = 'Stretch'; $nb.Cursor = 'Hand'
+        $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'
+        $ic = New-NewspaperIcon
+        $ic.Margin = '2,3,18,0'; $ic.VerticalAlignment = 'Top'
+        [void]$row.Children.Add($ic)
         $ns = New-Object Windows.Controls.StackPanel
         $eb = New-TB -Text ('THE MORNING BULLETIN  ' + [char]0x2022 + '  ' + (Format-ShortDate "$($unread.date)")) `
                      -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold
@@ -2299,7 +2305,8 @@ function Show-Roster {
         $go = New-TB -Text 'not yet read - click to open it' -Family $CondFam -Size 12 -Colour '#6F828C'
         $go.Margin = '0,5,0,0'
         [void]$ns.Children.Add($go)
-        $nb.Child = $ns
+        [void]$row.Children.Add($ns)
+        $nb.Child = $row
         $nb.Add_MouseLeftButtonUp({ param($s,$e) Show-Tab 'paper' })
         [void]$script:Stage.Children.Add($nb)
     }
@@ -3395,6 +3402,34 @@ function Get-Paper {
 function Format-ShortDate {
     param([string]$s)
     try { return ([datetime]::ParseExact($s,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)).ToString('d MMM') } catch { return $s }
+}
+# A folded newspaper, drawn from rectangles rather than shipped as a PNG:
+# it has to sit on the dispersal's dark ground at one size only, and four
+# rectangles beat another file to keep in step with the badge folder.
+# The page uses the same cream as the bulletin itself, so the strip and
+# the screen it leads to are obviously the same thing.
+function New-NewspaperIcon {
+    $c = New-Object Windows.Controls.Canvas
+    # sized against three lines of text beside it: at 30 wide it read as a
+    # bullet point rather than a masthead
+    $c.Width = 40; $c.Height = 35
+    function Add-Rect {
+        param($Canvas, [double]$X, [double]$Y, [double]$W, [double]$H, [string]$Fill)
+        $r = New-Object Windows.Shapes.Rectangle
+        $r.Width = $W; $r.Height = $H; $r.Fill = B $Fill
+        [Windows.Controls.Canvas]::SetLeft($r, $X); [Windows.Controls.Canvas]::SetTop($r, $Y)
+        [void]$Canvas.Children.Add($r)
+    }
+    # the sheet behind, so it reads as a folded paper rather than a card
+    Add-Rect $c 9.5 0 29.5 29.5 '#8A6D34'
+    Add-Rect $c 1 5.5 29.5 28 '#E9E0CA'
+    # masthead, photograph and three lines of column
+    Add-Rect $c 5 9.5 21.5 3.4 '#2A2418'
+    Add-Rect $c 5 16 9.4 10.7 '#8C8474'
+    Add-Rect $c 17.4 16 9.4 2.2 '#6B6250'
+    Add-Rect $c 17.4 20.3 9.4 2.2 '#6B6250'
+    Add-Rect $c 17.4 24.6 9.4 2.2 '#6B6250'
+    $c
 }
 function New-Rule {
     param([string]$Colour = '#221E15', [double]$H = 1.5)
