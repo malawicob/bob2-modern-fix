@@ -74,6 +74,7 @@ function Set-StateSide {
     $script:AcPosPath    = Join-Path $script:StateDir 'acpos.json'
     $script:AutoClaimPath = Join-Path $script:StateDir 'autoclaim.json'
     Set-AssetSide $Side
+    if (Get-Command Load-MapProjection -ErrorAction SilentlyContinue) { Load-MapProjection $Side }
 }
 Set-StateSide 'raf'
 
@@ -155,6 +156,39 @@ $MapSectors  = @{}
 $MapUnnamed  = @{}
 $MapProj = $null
 $MapProjPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.json'
+# Each air force has its own sheet and its own projection, so this is
+# reloaded when the side changes rather than read once at startup. Drawn
+# from the RAF projection, a German field would be plotted with England's
+# arithmetic and land in the sea.
+function Load-MapProjection {
+    param([string]$Side = $script:Side)
+    $script:MapStations = @{}
+    $script:MapSectors  = @{}
+    $script:MapUnnamed  = @{}
+    $script:MapProj = $null
+    $dir = if ($Side -eq 'lw') { Join-Path (Join-Path $ModDir 'lw') 'map' } else { Join-Path $ModDir 'map' }
+    $file = if ($Side -eq 'lw') { 'kanalfront-map.json' } else { 'sector-map.json' }
+    $script:MapProjPath = Join-Path $dir $file
+    $script:MapImagePath = Join-Path $dir ($file -replace '\.json$', '.jpg')
+    if (-not (Test-Path $script:MapProjPath)) { return }
+    try {
+        $script:MapProj = Get-Content $script:MapProjPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($pp in $script:MapProj.stations.PSObject.Properties) {
+            $script:MapStations[$pp.Name] = @([double]$pp.Value[0], [double]$pp.Value[1])
+        }
+        if ($script:MapProj.PSObject.Properties.Name -contains 'unnamed') {
+            foreach ($nm in @($script:MapProj.unnamed)) {
+                $script:MapUnnamed["$nm"] = $true; $script:MapUnnamed['RAF ' + $nm] = $true
+            }
+        }
+        if ($script:MapProj.PSObject.Properties.Name -contains 'sectors') {
+            foreach ($pp in $script:MapProj.sectors.PSObject.Properties) {
+                $script:MapSectors[$pp.Name] = $pp.Value
+                $script:MapSectors['RAF ' + $pp.Name] = $pp.Value
+            }
+        }
+    } catch { }
+}
 if (Test-Path $MapProjPath) {
     try {
         $MapProj = Get-Content $MapProjPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -3035,6 +3069,19 @@ function Set-MapReadout {
 #  fields, so their plaque carries the name instead.
 # =====================================================================
 $PlaqueTileW = 29.0     # 28px tile plus its hairline
+# One place decides how wide a tile is, because the layout measures the
+# plaque BEFORE the tiles exist and the tiles are then drawn into it. Two
+# answers here and the label is clipped by the plaque it sits in, which is
+# exactly what a German Gruppe did: "III./JG 26" in a box sized for "266".
+function Get-TileWidth {
+    param($Sq)
+    $lab = ''
+    if ($Sq -is [System.Collections.IDictionary]) { if ($Sq.Contains('Label')) { $lab = "$($Sq.Label)" } }
+    elseif ($Sq.PSObject.Properties.Name -contains 'Label') { $lab = "$($Sq.Label)" }
+    if (-not $lab) { return 28.0 }
+    # Bahnschrift SemiCondensed at 11.5 runs about 5.6px a character
+    [math]::Max(28.0, [math]::Ceiling($lab.Length * 5.6) + 12.0)
+}
 $PlaqueH     = 24.0
 $PlaqueNameH = 13.0
 $PlaqueBundle = 22.0    # dots closer than this are one drawable anchor
@@ -3257,7 +3304,9 @@ function Add-SquadronPlaques {
     foreach ($g in $groups) {
         $g.Members = @($g.Members | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
         foreach ($m in $g.Members) {
-            $m.PW = $PlaqueTileW * $m.Sqns.Count + 1.0
+            $w0 = 0.0
+            foreach ($sq0 in @($m.Sqns)) { $w0 += (Get-TileWidth $sq0) + 1.0 }
+            $m.PW = $w0 + 1.0
             $m.Full = Format-FieldName "$($m.Base)"
             $m.Short = ''
             if ($Activity) {
@@ -3495,14 +3544,21 @@ function Add-SquadronPlaques {
                 $mineTile = ([int]$q2.Num -eq $Mine)
                 $tcol = if ($mineTile) { '#FFC24A' } elseif ($isSpit) { '#8FBEDA' } else { '#E0952F' }
                 $tile = New-Object Windows.Controls.Border
-                $tile.Width = 28; $tile.Height = 22; $tile.Cursor = 'Hand'
+                $tile.Width = (Get-TileWidth $q2); $tile.Height = 22; $tile.Cursor = 'Hand'
                 $tile.Background = B '#00000000'
                 $tile.BorderBrush = B $tcol; $tile.BorderThickness = '0,0,0,3'
-                $tb = New-TB -Text "$($q2.Num)" -Family $CondFam -Size 11.5 -Colour $tcol -Bold
+                # A German Gruppe has no number to show, so an entry may
+                # carry a Label. Num is still there and still unique, which
+                # is what the sorting, the bundling and the "is this mine"
+                # test all key on; only the words change.
+                $lab = if ($q2.PSObject.Properties.Name -contains 'Label' -and "$($q2.Label)") { "$($q2.Label)" }
+                       elseif ($q2 -is [System.Collections.IDictionary] -and $q2.Contains('Label')) { "$($q2.Label)" }
+                       else { "$($q2.Num)" }
+                $tb = New-TB -Text $lab -Family $CondFam -Size 11.5 -Colour $tcol -Bold
                 $tb.IsHitTestVisible = $false; $tb.TextAlignment = 'Center'
                 $tb.VerticalAlignment = 'Center'; $tb.HorizontalAlignment = 'Stretch'
                 $tile.Child = $tb
-                $tile.Tag = @{ Asm = $asm; Text = $tb; Colour = $tcol; Num = [int]$q2.Num
+                $tile.Tag = @{ Asm = $asm; Text = $tb; Colour = $tcol; Num = [int]$q2.Num; Label = $lab
                                Type = "$($q2.Type)"; Base = "$($m.Base)"; Mine = $mineTile; Date = $Date
                                Sqn = $q2; Sel = $false }
                 if ($OnSelect) {
@@ -3513,7 +3569,12 @@ function Add-SquadronPlaques {
                     param($sender, $e)
                     $t = $sender.Tag
                     if (-not $sender.ToolTip) {
-                        $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date)
+                        # the squadron card is built from the RAF order of
+                        # battle and its roster, and there is neither for a
+                        # Gruppe yet; the readout below says who it is
+                        if ($script:Side -ne 'lw') {
+                            $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date)
+                        }
                         [Windows.Controls.ToolTipService]::SetInitialShowDelay($sender, 90)
                         [Windows.Controls.ToolTipService]::SetShowDuration($sender, 90000)
                         [Windows.Controls.ToolTipService]::SetBetweenShowDelay($sender, 0)
@@ -3525,7 +3586,7 @@ function Add-SquadronPlaques {
                     Set-MapFocus $a
                     $a.Lead.Stroke = $hot; $a.Lead.StrokeThickness = 2
                     Set-DotSize $a 12; $a.Dot.Fill = $hot
-                    Set-MapReadout @{ Title = "No. $($t.Num) Squadron"
+                    Set-MapReadout @{ Title = $(if ($script:Side -eq 'lw') { "$($t.Label)" } else { "No. $($t.Num) Squadron" })
                                       Where = "$($t.Base)   $([char]0x2022)   $($t.Type)"
                                       Note  = 'Hold the pointer still for the squadron card.'
                                       Mine  = $t.Mine }
@@ -3979,60 +4040,94 @@ function Show-GruppeSelect {
         "$($inLine.Count) of the $($all.Count) fighter Gruppen are on the Kanalfront by this date; " +
         'the rest have not been moved up yet. Luftflotte 2 flew from the Pas de Calais against London ' +
         'and the south east, Luftflotte 3 from Normandy and Brittany against the west. ' +
-        'Click a Gruppe to choose it, then report to it.')
+        'Click a Gruppe on the table to choose it, then report to it. The wheel zooms, a drag moves ' +
+        'the sheet and a double-click puts it back.')
     $lead.Margin = '0,0,0,16'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lead)
 
-    foreach ($lf in @(2, 3)) {
-        $mine = @($inLine | Where-Object { [int]$_.luftflotte -eq $lf })
-        if (-not $mine.Count) { continue }
-        $hdr = New-TB -Text ("LUFTFLOTTE $lf") -Family $CondFam -Size 13 -Colour '#C8973F' -Bold
-        $hdr.Margin = '0,10,0,10'
-        [void]$script:Stage.Children.Add($hdr)
+    # The plotting table. Same sheet, same plaque machinery and same zoom
+    # as Fighter Command's board: only the projection and the labels
+    # differ, and both of those come out of the map's own json.
+    $W = 1180.0; $H = [math]::Round($W * 1600.0 / 2560.0)
+    $mapWrap = New-Object Windows.Controls.Border
+    $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
+    $mapWrap.Background = B '#0B141B'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
+    $grid = New-Object Windows.Controls.Grid
+    $bg = New-Object Windows.Controls.Image
+    $bmp = Load-Image -Path $script:MapImagePath -DecodeWidth 2560
+    if ($bmp) { $bg.Source = $bmp }
+    $bg.Stretch = 'Uniform'; $bg.Width = $W; $bg.Height = $H
+    [void]$grid.Children.Add($bg)
+    $cv = New-Object Windows.Controls.Canvas; $cv.Width = $W; $cv.Height = $H; $cv.ClipToBounds = $true
+    [void]$grid.Children.Add($cv)
+    $mapWrap.Child = $grid
+    Enable-MapZoom -Frame $mapWrap -Content $grid
 
-        $wrap = New-Object Windows.Controls.WrapPanel; $wrap.Margin = '0,0,0,10'; $wrap.HorizontalAlignment = 'Left'
-        foreach ($gsn in ($mine | ForEach-Object { "$($_.geschwader)" } | Select-Object -Unique | Sort-Object)) {
-            $units = @($mine | Where-Object { "$($_.geschwader)" -eq $gsn })
-            $card = New-Object Windows.Controls.Border
-            $card.Background = Res 'Panel'; $card.BorderBrush = Res 'Rule'; $card.BorderThickness = '1'
-            $card.CornerRadius = '3'; $card.Padding = '16,13'; $card.Margin = '0,0,12,12'; $card.Width = 282
-            $sp = New-Object Windows.Controls.StackPanel
-            [void]$sp.Children.Add((New-TB -Text $gsn -Family $SerifFam -Size 20 -Colour '#E9E3D4' -Bold))
-            $act = Get-LwActivity $units[0]
-            $sub = ([string][char]0x25B2) * $act
-            [void]$sp.Children.Add((New-TB -Text ("$($units[0].type)   $sub") -Family $CondFam -Size 12 -Colour '#C8973F'))
-            foreach ($g in ($units | Sort-Object { @('I','II','III','IV','V').IndexOf("$($_.gruppe)") })) {
-                $sel = ($script:SelSq -and "$($script:SelSq.Unit)" -eq "$($g.unit)")
-                $row = New-Object Windows.Controls.Border
-                $row.Margin = '0,8,0,0'; $row.Padding = '8,6'; $row.CornerRadius = '2'; $row.Cursor = 'Hand'
-                $row.Background = if ($sel) { Res 'PanelHi' } else { [Windows.Media.Brushes]::Transparent }
-                $row.BorderThickness = '2,0,0,0'
-                $row.BorderBrush = if ($sel) { $script:BrassBrush } else { [Windows.Media.Brushes]::Transparent }
-                $rs = New-Object Windows.Controls.StackPanel
-                [void]$rs.Children.Add((New-TB -Text "$($g.unit)" -Family $CondFam -Size 14 -Colour $(if ($sel) { '#FFE28A' } else { '#E9E3D4' }) -Bold))
-                $t = "$($g.field)   $([char]0x2022)   $($g.skill)   $([char]0x2022)   in the line $(Format-LwDate "$($g.activation)")"
-                [void]$rs.Children.Add((New-TB -Text $t -Family 'Segoe UI' -Size 11.5 -Colour '#9FB0B8' -Wrap))
-                $row.Child = $rs
-                # the record itself on the Tag, so the handler needs nothing
-                # from the loop variable, which by the time it fires has
-                # moved on to the last Gruppe on the board
-                $row.Tag = $g
-                $row.Add_MouseLeftButtonUp({
-                    param($sender, $e)
-                    $g2 = $sender.Tag
-                    $script:SelSq = @{
-                        Unit = "$($g2.unit)"; Gesch = "$($g2.geschwader)"; Gruppe = "$($g2.gruppe)"
-                        Type = "$($g2.type)"; Base = "$($g2.field)"; Skill = "$($g2.skill)"
-                        Luftflotte = [int]$g2.luftflotte; Period = "$($script:SelPeriod)"
-                    }
-                    Show-GruppeSelect
-                })
-                [void]$sp.Children.Add($row)
-            }
-            $card.Child = $sp
-            [void]$wrap.Children.Add($card)
+    $script:MapTiles = @()
+    $detail = New-TB -Text $(if ($script:SelSq) { "$($script:SelSq.Unit), $($script:SelSq.Type), at $($script:SelSq.Base)." } else { 'No Gruppe selected.' }) `
+                     -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
+    $detail.Margin = '2,0,0,12'; $detail.MaxWidth = 1100; $detail.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($detail)
+
+    $script:SelectSq = {
+        param($q2)
+        $script:SelSq = @{
+            Unit = "$($q2.Label)"; Gesch = "$($q2.Gesch)"; Gruppe = "$($q2.Gruppe)"
+            Type = "$($q2.Type)"; Base = "$($q2.Base)"; Skill = "$($q2.Skill)"
+            Luftflotte = [int]$q2.Luftflotte; Period = "$($script:SelPeriod)"
         }
-        [void]$script:Stage.Children.Add($wrap)
+        foreach ($t in $script:MapTiles) {
+            $tg = $t.Tag
+            $tg.Sel = ([int]$tg.Num -eq [int]$q2.Num)
+            $t.Background = if ($tg.Sel) { B '#33FFC24A' } else { B '#00000000' }
+            $tg.Text.Foreground = if ($tg.Sel) { B '#FFE28A' } else { B $tg.Colour }
+        }
+        foreach ($a in $script:MapAssemblies) { $a.Sel = $false }
+        foreach ($t in $script:MapTiles) { if ($t.Tag.Sel) { $t.Tag.Asm.Sel = $true } }
+        Set-MapFocus $null
+        $detail.Text = "$($q2.Label), $($q2.Type), at $($q2.Base). Luftflotte $($q2.Luftflotte), rated $("$($q2.Skill)".ToLower())."
+        Set-ChromeActionEnabled $true
+    }.GetNewClosure()
+
+    # gather the Gruppen by field, the way the RAF board gathers squadrons
+    $byField = @{}
+    $offTable = @()
+    $num = 0
+    foreach ($g in ($inLine | Sort-Object { "$($_.geschwader)" }, { @('I','II','III','IV','V').IndexOf("$($_.gruppe)") })) {
+        $num++
+        # Num is a unique integer the plaque machinery sorts and compares
+        # on; Label is what it prints. A Gruppe has no number of its own.
+        $qt = @{ Num = $num; Label = "$($g.unit)"; Type = "$($g.type)"; Base = "$($g.field)"
+                 Gesch = "$($g.geschwader)"; Gruppe = "$($g.gruppe)"; Skill = "$($g.skill)"
+                 Luftflotte = [int]$g.luftflotte; Act = $(if ([int]$g.luftflotte -eq 2) { 'H' } else { 'M' }) }
+        $st = $MapStations["$($g.field)"]
+        if (-not $st) { $offTable += $qt; continue }
+        $k = "$($g.field)"
+        if (-not $byField.ContainsKey($k)) {
+            $byField[$k] = @{ Base = $k; X = [double]$st[0] * $W; Y = [double]$st[1] * $H; Sqns = @() }
+        }
+        $byField[$k].Sqns = @($byField[$k].Sqns) + @($qt)
+    }
+    $fields = @($byField.Values | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
+    Add-SquadronPlaques -Canvas $cv -Fields $fields -W $W -H $H -Mine 0 -Date $pd `
+                        -OnSelect $true -AlwaysName
+    [void]$script:Stage.Children.Add($mapWrap)
+
+    if ($offTable.Count) {
+        $fl = New-TB -Text 'FIELDS NOT ON THIS SHEET' -Family $CondFam -Size 11.5 -Colour '#8A9689' -Bold
+        $fl.Margin = '2,12,0,6'
+        [void]$script:Stage.Children.Add($fl)
+        $chips = New-Object Windows.Controls.WrapPanel; $chips.HorizontalAlignment = 'Left'
+        foreach ($qt in $offTable) {
+            $chip = New-Object Windows.Controls.Border
+            $chip.Padding = '12,7'; $chip.Margin = '0,0,10,10'; $chip.CornerRadius = '3'; $chip.Cursor = 'Hand'
+            $chip.Background = B '#101B22'; $chip.BorderBrush = Res 'Rule'; $chip.BorderThickness = '1.5'
+            $chip.Child = (New-TB -Text "$($qt.Label)  $([char]0x2022)  $($qt.Base)" -Family $CondFam -Size 12 -Colour '#F8C87E' -Bold)
+            $chip.Tag = $qt
+            $chip.Add_MouseLeftButtonUp({ param($sender,$e) & $script:SelectSq $sender.Tag })
+            [void]$chips.Children.Add($chip)
+        }
+        [void]$script:Stage.Children.Add($chips)
     }
 
     # Say plainly what is not built yet, rather than offering a button that
@@ -4044,9 +4139,9 @@ function Show-GruppeSelect {
     $ns = New-Object Windows.Controls.StackPanel
     [void]$ns.Children.Add((New-TB -Text 'NOT FINISHED' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
     $nt = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
-        'The Gruppen and the ready room are in. The Flugbuch, the Iron Cross ladder and the men of ' +
-        'the Staffel are not: a German career keeps its own record, so nothing here touches your ' +
-        'RAF pilot. The switch by the name at the top takes you back to him.')
+        'The board, the ready room and the Iron Cross are in. The Flugbuch and the men of the ' +
+        'Staffel are not: a German career keeps its own record, so nothing here touches your RAF ' +
+        'pilot. The switch by the name at the top takes you back to him.')
     $nt.Margin = '0,5,0,0'
     [void]$ns.Children.Add($nt)
     $note.Child = $ns
