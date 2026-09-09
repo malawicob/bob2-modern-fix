@@ -572,12 +572,19 @@ function Show-Tab {
     param([string]$Tab)
     $script:CurrentTab = $Tab
     $pl = Get-Pilot
-    if (-not $pl) { Show-SquadronSelect; return }
+    # No career on this side yet: send him to the right board, not the
+    # RAF's. A German pilot arriving at the Fighter Command plotting table
+    # would be able to report to No. 32 Squadron from it.
+    if (-not $pl) {
+        if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
+        return
+    }
     switch ($Tab) {
         'logbook' { Show-Logbook -Pilot $pl }
         'map'     { Show-Map -Pilot $pl }
         'paper'   { Show-Paper -Pilot $pl }
-        default   { Show-Roster -Pilot $pl }
+        'gruppen' { Show-GruppeSelect }
+        default   { if ($script:Side -eq 'lw') { Show-ReadyRoom -Pilot $pl } else { Show-Roster -Pilot $pl } }
     }
 }
 $Win.Add_Activated({
@@ -653,9 +660,11 @@ function Set-Side {
     $script:SquadronList = $null
     $script:SelSq = $null
     Update-SideSwitch
-    if ($Side -eq 'lw') { Show-GruppeSelect }
+    $p = Get-Pilot
+    if ($Side -eq 'lw') {
+        if ($p) { Show-ReadyRoom -Pilot $p } else { Show-GruppeSelect }
+    }
     else {
-        $p = Get-Pilot
         if ($p) { Show-Roster -Pilot $p } else { Show-SquadronSelect }
     }
 }
@@ -2243,7 +2252,17 @@ function New-Stat {
 function New-Nav {
     param([string]$Current)
     $nav = New-Object Windows.Controls.StackPanel; $nav.Orientation = 'Horizontal'; $nav.Margin = '0,0,0,22'
-    foreach ($t in @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'}, @{k='paper';l='MORNING BULLETIN'})) {
+    # The German side gets only the two screens that exist. Offering the
+    # RAF's Log Book, plotting table and morning paper would run three
+    # screens full of Fighter Command against a Luftwaffe pilot: the paper
+    # is a hundred Allied front pages, the map is southern England, and
+    # the Log Book counts victories in German aircraft types.
+    $tabs = if ($script:Side -eq 'lw') {
+        @(@{k='dispersal';l='THE READY ROOM'}, @{k='gruppen';l='THE GRUPPEN'})
+    } else {
+        @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'}, @{k='paper';l='MORNING BULLETIN'})
+    }
+    foreach ($t in $tabs) {
         $active = ($t.k -eq $Current)
         $tb = New-Object Windows.Controls.Border
         $tb.Padding = '15,9'; $tb.Margin = '0,0,10,0'; $tb.CornerRadius = '3'; $tb.Cursor = 'Hand'; $tb.Tag = $t.k
@@ -3929,7 +3948,7 @@ function Show-GruppeSelect {
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
     Show-ChromeButtons $false
-    Set-ChromeAction -Text '' -Enabled $false
+    Set-ChromeAction -Text 'REPORT TO THIS GRUPPE' -Enabled ([bool]$script:SelSq) -OnClick { if ($script:SelSq) { Show-GruppeCreate } }
     $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Jagdwaffe' }
     $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTEN 2 UND 3" }
     if (Get-Pilot) { Set-ChromeBack 'BACK TO THE READY ROOM' { Show-Tab 'dispersal' } }
@@ -3959,7 +3978,8 @@ function Show-GruppeSelect {
         "The order of battle for $($perDef.Desc), taken from the game's own. " +
         "$($inLine.Count) of the $($all.Count) fighter Gruppen are on the Kanalfront by this date; " +
         'the rest have not been moved up yet. Luftflotte 2 flew from the Pas de Calais against London ' +
-        'and the south east, Luftflotte 3 from Normandy and Brittany against the west.')
+        'and the south east, Luftflotte 3 from Normandy and Brittany against the west. ' +
+        'Click a Gruppe to choose it, then report to it.')
     $lead.Margin = '0,0,0,16'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lead)
 
@@ -3982,10 +4002,31 @@ function Show-GruppeSelect {
             $sub = ([string][char]0x25B2) * $act
             [void]$sp.Children.Add((New-TB -Text ("$($units[0].type)   $sub") -Family $CondFam -Size 12 -Colour '#C8973F'))
             foreach ($g in ($units | Sort-Object { @('I','II','III','IV','V').IndexOf("$($_.gruppe)") })) {
-                $row = New-Object Windows.Controls.StackPanel; $row.Margin = '0,9,0,0'
-                [void]$row.Children.Add((New-TB -Text "$($g.unit)" -Family $CondFam -Size 14 -Colour '#E9E3D4' -Bold))
+                $sel = ($script:SelSq -and "$($script:SelSq.Unit)" -eq "$($g.unit)")
+                $row = New-Object Windows.Controls.Border
+                $row.Margin = '0,8,0,0'; $row.Padding = '8,6'; $row.CornerRadius = '2'; $row.Cursor = 'Hand'
+                $row.Background = if ($sel) { Res 'PanelHi' } else { [Windows.Media.Brushes]::Transparent }
+                $row.BorderThickness = '2,0,0,0'
+                $row.BorderBrush = if ($sel) { $script:BrassBrush } else { [Windows.Media.Brushes]::Transparent }
+                $rs = New-Object Windows.Controls.StackPanel
+                [void]$rs.Children.Add((New-TB -Text "$($g.unit)" -Family $CondFam -Size 14 -Colour $(if ($sel) { '#FFE28A' } else { '#E9E3D4' }) -Bold))
                 $t = "$($g.field)   $([char]0x2022)   $($g.skill)   $([char]0x2022)   in the line $(Format-LwDate "$($g.activation)")"
-                [void]$row.Children.Add((New-TB -Text $t -Family 'Segoe UI' -Size 11.5 -Colour '#9FB0B8' -Wrap))
+                [void]$rs.Children.Add((New-TB -Text $t -Family 'Segoe UI' -Size 11.5 -Colour '#9FB0B8' -Wrap))
+                $row.Child = $rs
+                # the record itself on the Tag, so the handler needs nothing
+                # from the loop variable, which by the time it fires has
+                # moved on to the last Gruppe on the board
+                $row.Tag = $g
+                $row.Add_MouseLeftButtonUp({
+                    param($sender, $e)
+                    $g2 = $sender.Tag
+                    $script:SelSq = @{
+                        Unit = "$($g2.unit)"; Gesch = "$($g2.geschwader)"; Gruppe = "$($g2.gruppe)"
+                        Type = "$($g2.type)"; Base = "$($g2.field)"; Skill = "$($g2.skill)"
+                        Luftflotte = [int]$g2.luftflotte; Period = "$($script:SelPeriod)"
+                    }
+                    Show-GruppeSelect
+                })
                 [void]$sp.Children.Add($row)
             }
             $card.Child = $sp
@@ -4003,13 +4044,276 @@ function Show-GruppeSelect {
     $ns = New-Object Windows.Controls.StackPanel
     [void]$ns.Children.Add((New-TB -Text 'NOT FINISHED' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
     $nt = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
-        'This is the board only. Reporting to a Gruppe, the ready room, the Flugbuch and the ' +
-        'Iron Cross ladder come next, and they wait on rank insignia, a pilot badge and a Bf 109E ' +
-        'profile being drawn. The switch by the name at the top takes you back to the RAF.')
+        'The Gruppen and the ready room are in. The Flugbuch, the Iron Cross ladder and the men of ' +
+        'the Staffel are not: a German career keeps its own record, so nothing here touches your ' +
+        'RAF pilot. The switch by the name at the top takes you back to him.')
     $nt.Margin = '0,5,0,0'
     [void]$ns.Children.Add($nt)
     $note.Child = $ns
     [void]$script:Stage.Children.Add($note)
+}
+
+# ---------------------------------------------------------------------
+#  Reporting to a Gruppe, and the ready room he reports to.
+#
+#  Written as their own screens rather than as branches inside
+#  Show-Create and Show-Roster. Those two are three hundred lines of RAF
+#  furniture apiece - the roster of real men, the losses board, the record
+#  of service - and none of it has a German equivalent yet. Threading a
+#  side test through all of it would leave two screens that are mostly
+#  dead code on either side. The parts that ARE shared, New-Heading,
+#  New-Frame, New-Stat, New-BadgeImage and the chrome, are called from
+#  here exactly as the RAF screens call them.
+# ---------------------------------------------------------------------
+function Show-GruppeCreate {
+    $script:Stage.Children.Clear()
+    $script:SelPortrait = $null; $script:SelBorder = $null
+    if (-not $script:SelSq) { Show-GruppeSelect; return }
+    Show-ChromeButtons $false
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($script:SelSq.Unit)" }
+    $m = C 'HdrMotto'
+    if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  $($script:SelSq.Type.ToUpper()) AT $($script:SelSq.Base.ToUpper())" }
+    Set-ChromeBack 'BACK TO THE BOARD' { Show-GruppeSelect }
+    Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-GruppeSubmit }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE GRUPPE' -Title "A new pilot for $($script:SelSq.Unit)"))
+    $lead = New-TB -Wrap -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Text (
+        'Summer 1940, on the Channel coast. Give your name, say whether you come to the Gruppe as a ' +
+        'non-commissioned pilot or with a commission, and pick your photograph.')
+    $lead.Margin = '0,-14,0,22'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($lead)
+
+    $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,26'
+    $nameCol = New-Object Windows.Controls.StackPanel; $nameCol.Margin = '0,0,36,0'
+    [void]$nameCol.Children.Add((New-TB -Text 'NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $script:NameBox = New-Object Windows.Controls.TextBox
+    $script:NameBox.Width = 320; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 40
+    # The campaign save's pilot name is offered on the RAF side. It is NOT
+    # offered here: that name belongs to whichever campaign is loaded, and
+    # a German career started while an RAF campaign is open would take an
+    # English name by default, which is worse than an empty box.
+    [void]$nameCol.Children.Add($script:NameBox)
+    $script:NameBox.Add_TextChanged({ Update-GruppeCreateValid })
+    [void]$row.Children.Add($nameCol)
+
+    # Unteroffizier or Leutnant. The two are separate careers in the
+    # Luftwaffe rather than two ends of one ladder, so this choice decides
+    # how far a man can rise, not merely where he starts.
+    $rkCol = New-Object Windows.Controls.StackPanel
+    [void]$rkCol.Children.Add((New-TB -Text 'YOU JOIN AS' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $rkRow = New-Object Windows.Controls.StackPanel; $rkRow.Orientation = 'Horizontal'; $rkRow.Margin = '0,7,0,0'
+    $script:LwRankBtns = @{}
+    foreach ($r in @('Unteroffizier','Leutnant')) {
+        $b = New-Object Windows.Controls.Border
+        $b.Padding = '14,9'; $b.Margin = '0,0,10,0'; $b.CornerRadius = '3'; $b.Cursor = 'Hand'; $b.Tag = $r
+        $b.BorderThickness = '1'
+        $inner = New-Object Windows.Controls.StackPanel; $inner.Orientation = 'Horizontal'
+        $bf = Get-RankBadgeFile $r
+        if ($bf) {
+            $bi = New-BadgeImage -File $bf -Height 30 -Tip $r
+            if ($bi) { $bi.Margin = '0,0,9,0'; [void]$inner.Children.Add($bi) }
+        }
+        [void]$inner.Children.Add((New-TB -Text $r -Family $CondFam -Size 14 -Colour '#E9E3D4'))
+        $b.Child = $inner
+        $b.Add_MouseLeftButtonUp({ param($sender,$e) $script:SelRank = "$($sender.Tag)"; Update-LwRankButtons; Update-GruppeCreateValid })
+        $script:LwRankBtns[$r] = $b
+        [void]$rkRow.Children.Add($b)
+    }
+    [void]$rkCol.Children.Add($rkRow)
+    [void]$row.Children.Add($rkCol)
+    [void]$script:Stage.Children.Add($row)
+    if (-not $script:SelRank -or ($script:SelRank -notin @('Unteroffizier','Leutnant'))) { $script:SelRank = 'Unteroffizier' }
+    Update-LwRankButtons
+
+    [void]$script:Stage.Children.Add((New-TB -Text 'YOUR PHOTOGRAPH' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $wrap = New-Object Windows.Controls.WrapPanel; $wrap.Margin = '0,10,0,0'; $wrap.HorizontalAlignment = 'Left'
+    foreach ($pf in (Get-Portraits)) {
+        $pb = New-Object Windows.Controls.Border
+        $pb.Width = 96; $pb.Height = 120; $pb.Margin = '0,0,12,12'
+        $pb.CornerRadius = '2'; $pb.BorderThickness = 3; $pb.BorderBrush = $script:FrameBrush
+        $pb.Background = B '#0B1116'; $pb.Cursor = 'Hand'; $pb.Tag = $pf; $pb.ClipToBounds = $true
+        $bmp = Load-Portrait -File $pf -DecodeHeight 150
+        if ($bmp) {
+            $img = New-Object Windows.Controls.Image; $img.Source = $bmp; $img.Stretch = 'UniformToFill'
+            $pb.Child = $img
+        }
+        $pb.Add_MouseLeftButtonUp({
+            param($sender,$e)
+            if ($script:SelBorder) { $script:SelBorder.BorderBrush = $script:FrameBrush }
+            $script:SelBorder = $sender; $sender.BorderBrush = $script:BrassBrush
+            $script:SelPortrait = "$($sender.Tag)"
+            Update-GruppeCreateValid
+        })
+        [void]$wrap.Children.Add($pb)
+    }
+    [void]$script:Stage.Children.Add($wrap)
+    Update-GruppeCreateValid
+}
+function Update-LwRankButtons {
+    if (-not $script:LwRankBtns) { return }
+    foreach ($k in $script:LwRankBtns.Keys) {
+        $on = ($k -eq $script:SelRank)
+        $script:LwRankBtns[$k].Background = if ($on) { Res 'PanelHi' } else { B '#101B22' }
+        $script:LwRankBtns[$k].BorderBrush = if ($on) { $script:BrassBrush } else { B '#22303C' }
+    }
+}
+function Update-GruppeCreateValid {
+    $ok = ($script:NameBox -and $script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
+    Set-ChromeActionEnabled $ok
+}
+function Invoke-GruppeSubmit {
+    Complete-NewCareer
+    $q = $script:SelSq
+    $rank = if ($script:SelRank) { "$($script:SelRank)" } else { 'Unteroffizier' }
+    # A Staffel number, because a man belongs to one and the Gruppe is
+    # three of them: I. Gruppe holds 1., 2. and 3. Staffel, II. holds 4.
+    # to 6., III. holds 7. to 9.
+    $gi = @('I','II','III','IV','V').IndexOf("$($q.Gruppe)"); if ($gi -lt 0) { $gi = 0 }
+    $staffel = ($gi * 3) + (Get-Random -Minimum 1 -Maximum 4)
+    $pilot = [ordered]@{
+        pilot   = $script:NameBox.Text.Trim()
+        rank    = $rank
+        side    = 'lw'
+        status  = 'On strength'
+        note    = "Posted to $($q.Unit) at $($q.Base)."
+        cmode   = 'pilot'
+        unit    = "$($q.Unit)"
+        gesch   = "$($q.Gesch)"
+        gruppe  = "$($q.Gruppe)"
+        staffel = $staffel
+        sqn     = 0
+        actype  = "$($q.Type)"
+        base    = "$($q.Base)"
+        luftflotte = [int]$q.Luftflotte
+        period  = "$($q.Period)"
+        historical = $false
+        portrait = $script:SelPortrait
+        created = (Get-Date).ToString('yyyy-MM-dd')
+    }
+    $ld0 = Get-LatestSaveDiary
+    if ($ld0) {
+        $pilot['campaignSorties'] = @($ld0.rows).Count
+        $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
+    } else {
+        $pilot['campaignSorties'] = 0
+        $pilot['campaignKills'] = @(0,0,0,0,0,0,0)
+    }
+    Save-Pilot -Pilot $pilot -Shrink
+    Show-ReadyRoom -Pilot (Get-Pilot)
+}
+
+function Show-ReadyRoom {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'dispersal'))
+    Show-ChromeButtons $true
+    $unit = "$($Pilot.unit)"
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = $unit }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTE $($Pilot.luftflotte)" }
+
+    $sessions = Get-Sessions
+    $career = Get-Career $Pilot $sessions
+    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours @()
+
+    $base = "$($Pilot.base)".ToUpper()
+    $eyebrow = if ($script:CampaignDate) { "$base  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $base }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "$unit at readiness"))
+
+    # the man himself
+    # -22 at the foot: New-Frame carries a 26px bottom margin of its own,
+    # for the roster grid it was built for, and left alone it opens a hole
+    # between the photograph and the counters
+    $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,-22'
+    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
+    $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
+    [void]$d.Children.Add((New-TB -Text "$($Pilot.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    $appt = Get-Appointment -Pilot $Pilot -Career $career
+    $line = "$($Pilot.rank)   $([char]0x2022)   $appt   $([char]0x2022)   $($Pilot.staffel). Staffel"
+    $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
+    [void]$d.Children.Add($lt)
+    $chipRow = New-Object Windows.Controls.StackPanel; $chipRow.Orientation = 'Horizontal'; $chipRow.Margin = '0,14,0,0'
+    $rbf = Get-RankBadgeFile "$($Pilot.rank)"
+    if ($rbf) {
+        $cuff = New-BadgeImage -File $rbf -Height 52 -Tip "$($Pilot.rank)"
+        if ($cuff) { $cuff.Margin = '0,0,10,0'; [void]$chipRow.Children.Add($cuff) }
+    }
+    # There is no Flugzeugfuehrerabzeichen drawn yet, so nothing stands in
+    # for the RAF's wings. New-BadgeImage would return $null anyway; this
+    # says so out loud rather than leaving a silent gap.
+    if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
+    [void]$hero.Children.Add($d)
+    [void]$script:Stage.Children.Add($hero)
+
+    # the counters
+    $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,0,0,26'
+    [void]$tiles.Children.Add((New-Stat 'SORTIES' "$($career.sorties)"))
+    [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
+    [void]$tiles.Children.Add((New-Stat 'RANK' (Short-Rank "$($Pilot.rank)")))
+    [void]$script:Stage.Children.Add($tiles)
+    if ($career.next) {
+        $nx = New-TB -Text "Next promotion: $($career.next) at $($career.nextAt) sorties." -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
+        $nx.Margin = '0,-16,0,22'
+        [void]$script:Stage.Children.Add($nx)
+    }
+
+    # his aircraft
+    $acFile = Join-Path $script:AircraftDir 'bf109.png'
+    if (Test-Path $acFile) {
+        $card = New-Object Windows.Controls.Border
+        $card.Background = Res 'Panel'; $card.BorderBrush = Res 'Rule'; $card.BorderThickness = '1'
+        $card.CornerRadius = '3'; $card.Padding = '20,16'; $card.Margin = '0,0,0,22'
+        $card.HorizontalAlignment = 'Left'; $card.MaxWidth = 1080
+        $cs = New-Object Windows.Controls.StackPanel
+        [void]$cs.Children.Add((New-TB -Text "$($Pilot.actype)".ToUpper() -Family $CondFam -Size 13 -Colour '#C8973F' -Bold))
+        $bmp = Load-Image -Path $acFile
+        if ($bmp) {
+            $img = New-Object Windows.Controls.Image
+            $img.Source = $bmp; $img.Stretch = 'Uniform'; $img.Height = 250
+            $img.HorizontalAlignment = 'Left'; $img.Margin = '0,10,0,0'
+            [void]$cs.Children.Add($img)
+        }
+        $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+            'A placeholder, and it already carries its markings, so nothing is painted on it. ' +
+            'The Staffel number and the Gruppe symbol go on once there is a bare one to paint.')
+        $note.Margin = '0,10,0,0'; $note.MaxWidth = 900
+        [void]$cs.Children.Add($note)
+        $card.Child = $cs
+        [void]$script:Stage.Children.Add($card)
+    }
+
+    # where the Gruppe stands
+    $g = @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq $unit } | Select-Object -First 1
+    if ($g) {
+        $rec = New-Object Windows.Controls.Border
+        $rec.Background = Res 'Panel'; $rec.BorderBrush = Res 'Rule'; $rec.BorderThickness = '1'
+        $rec.CornerRadius = '3'; $rec.Padding = '20,16'; $rec.Margin = '0,0,0,22'
+        $rec.HorizontalAlignment = 'Left'; $rec.MaxWidth = 1080
+        $rs = New-Object Windows.Controls.StackPanel
+        [void]$rs.Children.Add((New-TB -Text 'THE GRUPPE' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold))
+        $txt = "$($g.unit), $($g.type), of $($g.geschwader) in Luftflotte $($g.luftflotte). " +
+               "At $($g.field) since $(Format-LwDate "$($g.activation)"). " +
+               "The campaign rates it $($g.skill.ToLower()) with $($g.fatigue.ToLower()) fatigue."
+        $t = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text $txt
+        $t.Margin = '0,8,0,0'; $t.MaxWidth = 900
+        [void]$rs.Children.Add($t)
+        $rec.Child = $rs
+        [void]$script:Stage.Children.Add($rec)
+    }
+    # nothing is returned on purpose: an uncaptured $Pilot here goes down
+    # the pipeline and the whole record prints itself into whatever called
+    # this, which is how it turned up in the middle of a test run
+}
+# What a man is doing in the Staffel, as against what he is called. The
+# two are different things in the Luftwaffe and the RAF alike, and the
+# rank alone reads oddly without it.
+function Get-Appointment {
+    param($Pilot, $Career)
+    if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) { return 'Gruppenkommandeur' }
+    $n = 0; if ($Career) { $n = [int]$Career.sorties }
+    if ($n -ge 24) { return 'Staffelkapitaen' }
+    if ($n -ge 12) { return 'Schwarmfuehrer' }
+    if ($n -ge 6)  { return 'Rottenfuehrer' }
+    'Rottenflieger'
 }
 
 function Show-SquadronSelect {

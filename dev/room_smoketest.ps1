@@ -101,6 +101,24 @@ try {
         Show-GruppeSelect
         "    $($per.Id) : drew $($script:Stage.Children.Count) blocks"
     }
+    # A career, so the ready room is actually built. Without one the board
+    # is all this test ever saw, and the ready room shipped unexercised.
+    $unit = @($g)[0]
+    $script:SelSq = @{
+        Unit = "$($unit.unit)"; Gesch = "$($unit.geschwader)"; Gruppe = "$($unit.gruppe)"
+        Type = "$($unit.type)"; Base = "$($unit.field)"; Skill = "$($unit.skill)"
+        Luftflotte = [int]$unit.luftflotte; Period = 'P2'
+    }
+    Show-GruppeCreate
+    "    adjutant : drew $($script:Stage.Children.Count) blocks"
+    $script:NameBox.Text = 'Testflieger'
+    $script:SelPortrait = 'pilot01.jpg'
+    foreach ($rk in @('Unteroffizier','Leutnant')) {
+        $script:SelRank = $rk
+        Invoke-GruppeSubmit
+        $lp = Get-Pilot
+        "    $rk : $($lp.rank) of $($lp.unit), $($lp.staffel). Staffel, ready room drew $($script:Stage.Children.Count) blocks"
+    }
     Set-Side 'raf'
 }
 catch { $fails += "luftwaffe : $($_.Exception.Message)"; "  luftwaffe : FAILED - $($_.Exception.Message)" }
