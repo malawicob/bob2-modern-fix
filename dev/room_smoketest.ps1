@@ -11,8 +11,24 @@
 #       -Room "D:\Battle of Britain II\BOB2-Win11-Fix\BOB2_SquadronRoom.ps1"
 #
 # Exit code 0 means every screen built. It does not judge how they look.
+#
+# -Room is optional: with nothing given it looks NEXT DOOR, the way the
+# awards preview does, so this works wherever the fix folder has been put
+# and can simply be double-clicked. Without that default it died on
+# Get-Content with an empty path, which reads as a fault in the Room
+# rather than a missing argument.
 param([string]$Room)
+if (-not $Room) {
+    $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+    $Room = Join-Path (Split-Path -Parent $here) 'BOB2_SquadronRoom.ps1'
+}
 $ErrorActionPreference = 'Stop'
+if (-not (Test-Path $Room)) {
+    Write-Host "Cannot find the Squadron Room script at:" -ForegroundColor Red
+    Write-Host "  $Room" -ForegroundColor Red
+    Write-Host "Pass its path with -Room."
+    exit 2
+}
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $fails = @()
 # Copy the script beside the real one, with the lines that SHOW the window
