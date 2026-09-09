@@ -514,9 +514,25 @@ $Xaml = @'
     <Grid Grid.Row="0" Background="#101B22">
       <StackPanel Orientation="Horizontal" Margin="40,20,0,20" VerticalAlignment="Center">
         <Grid Width="52" Height="52" VerticalAlignment="Center">
-          <Ellipse Fill="#1C3F94"/>
-          <Ellipse Fill="#F2EFE6" Margin="8"/>
-          <Ellipse x:Name="HdrEmblemCentre" Fill="#C8102E" Margin="17"/>
+          <!-- Fighter Command's roundel. -->
+          <Grid x:Name="HdrRoundel">
+            <Ellipse Fill="#1C3F94"/>
+            <Ellipse Fill="#F2EFE6" Margin="8"/>
+            <Ellipse Fill="#C8102E" Margin="17"/>
+          </Grid>
+          <!-- The Balkenkreuz: white bars with the black cross inside
+               them, which is what the marking is on an aeroplane.
+
+               The black is DARKER than the header rather than equal to
+               it. At the header's own tone the cross vanished into the
+               background and the emblem read as four white corner
+               pieces instead of a cross. -->
+          <Grid x:Name="HdrBalkenkreuz" Visibility="Collapsed">
+            <Rectangle Fill="#F2EFE6" Width="52" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Rectangle Fill="#F2EFE6" Width="22" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Rectangle Fill="#07090B" Width="52" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Rectangle Fill="#07090B" Width="11" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Grid>
         </Grid>
         <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
           <TextBlock Style="{StaticResource Serif}" FontSize="27" FontWeight="Bold"
@@ -682,11 +698,12 @@ if ($sw) {
 function Update-SideSwitch {
     $t = C 'SideSwitchText'
     if ($t) { $t.Text = $(if ($script:Side -eq 'lw') { 'LUFTWAFFE' } else { 'RAF' }) }
-    # The emblem is the quickest way to see which air force is up, so the
-    # roundel's red centre goes dark for the German side rather than the
+    # The emblem is the quickest way to see which air force is up. The RAF
+    # gets its roundel and the Luftwaffe its Balkenkreuz, rather than the
     # header quietly changing a word nobody reads.
-    $c = C 'HdrEmblemCentre'
-    if ($c) { $c.Fill = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($script:Side -eq 'lw') { '#1B2B34' } else { '#C8102E' })) }
+    $lw = ($script:Side -eq 'lw')
+    $r = C 'HdrRoundel';      if ($r) { $r.Visibility = $(if ($lw) { 'Collapsed' } else { 'Visible' }) }
+    $b = C 'HdrBalkenkreuz';  if ($b) { $b.Visibility = $(if ($lw) { 'Visible' } else { 'Collapsed' }) }
 }
 function Set-Side {
     param([string]$Side)
@@ -3332,11 +3349,24 @@ function Add-SquadronPlaques {
 
     # ---- 3. what the placement has to keep clear of --------------------
     $obs = @()
+    # Every field on the sheet is ground a plaque may not sit on, and so is
+    # the name printed beside it.
+    #
+    # This used to skip anything whose key did not begin "RAF ", which was
+    # a way of ignoring the RAF table's duplicate aliases - each of its
+    # fields is stored under both "Biggin Hill" and "RAF Biggin Hill". The
+    # German table has no such keys, so the obstacle list came out EMPTY
+    # and the Gruppen plaques were laid straight over Cambrai, Epinoy and
+    # Arras. Duplicates are skipped by position now, which works for both
+    # sheets and depends on nothing being called anything in particular.
+    $seenPos = @{}
     foreach ($pp in $MapStations.GetEnumerator()) {
         $nm = "$($pp.Key)"
-        if ($nm -notmatch '^RAF ') { continue }
         $fx = [double]$pp.Value[0] * $W; $fy = [double]$pp.Value[1] * $H
         if ($fx -lt 0 -or $fx -gt $W -or $fy -lt 0 -or $fy -gt $H) { continue }
+        $key = '{0:0.0},{1:0.0}' -f $fx, $fy
+        if ($seenPos.ContainsKey($key)) { continue }
+        $seenPos[$key] = $true
         $obs += ,@(($fx - 11.0), ($fy - 11.0), ($fx + 11.0), ($fy + 11.0))
         # where the sheet still prints the field's name, that box is taken
         if (-not $MapUnnamed[$nm]) { $obs += ,@(($fx - 4.0), ($fy - 17.0), ($fx + 106.0), ($fy + 17.0)) }
