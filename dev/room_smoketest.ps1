@@ -52,22 +52,20 @@ try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
 #  supposed to be examining - and it did: it read Patrick's bulletin for
 #  him, so the dispersal had nothing to flag when he went looking for it.
 #
-#  Every path is reassigned, not just $StateDir: each one was computed
-#  from $StateDir when the script loaded, so moving the folder afterwards
-#  leaves them all pointing at the old place.
+#  Point $script:StateRootOverride at the copy and let Set-StateSide work
+#  out the paths. Assigning them here by hand looks equivalent and is not:
+#  the Room now has two sides, and the next Set-StateSide - which every
+#  side change and the bootstrap performs - would recompute all six back
+#  onto the real install and the harness would eat a pilot again.
 # ---------------------------------------------------------------------
-$realState = $StateDir
-$StateDir  = Join-Path ([IO.Path]::GetTempPath()) ('roomtest-' + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
-$PilotPath     = Join-Path $StateDir 'pilot.json'
-$SessionsPath  = Join-Path $StateDir 'sessions.json'
-$FlightOpen    = Join-Path $StateDir 'flight.open'
-$AcPosPath     = Join-Path $StateDir 'acpos.json'
-$AutoClaimPath = Join-Path $StateDir 'autoclaim.json'
-if (Test-Path $realState) {
-    Get-ChildItem $realState -File -ErrorAction SilentlyContinue |
-        ForEach-Object { Copy-Item $_.FullName (Join-Path $StateDir $_.Name) -Force }
+$realRoot = Split-Path -Parent $StateDir      # <GameDir>\SquadronRoom
+$script:StateRootOverride = Join-Path ([IO.Path]::GetTempPath()) ('roomtest-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $script:StateRootOverride -Force | Out-Null
+if (Test-Path $realRoot) {
+    Copy-Item (Join-Path $realRoot '*') $script:StateRootOverride -Recurse -Force -ErrorAction SilentlyContinue
 }
+Set-StateSide $script:Side
+if (-not (Test-Path $script:StateDir)) { New-Item -ItemType Directory -Path $script:StateDir -Force | Out-Null }
 try {
 "loaded: pilot '$((Get-Pilot).pilot)', squadron $((Get-Pilot).sqn), campaign date $(Get-CampaignDate)"
 foreach ($tab in 'dispersal','logbook','map','paper') {
@@ -92,6 +90,6 @@ Set-Content -Path $PilotPath -Value $saved -Encoding UTF8
 }
 finally {
     # the throwaway copy goes, whatever happened above
-    if ($StateDir -ne $realState) { Remove-Item $StateDir -Recurse -Force -ErrorAction SilentlyContinue }
+    if ($script:StateRootOverride) { Remove-Item $script:StateRootOverride -Recurse -Force -ErrorAction SilentlyContinue }
 }
 if ($fails.Count) { "FAILURES: $($fails.Count)"; exit 1 } else { 'ALL SCREENS BUILT'; exit 0 }

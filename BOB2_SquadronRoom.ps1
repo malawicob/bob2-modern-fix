@@ -27,10 +27,103 @@ function Find-GameDir {
     return $null
 }
 $GameDir   = Find-GameDir
-$StateDir     = if ($GameDir) { Join-Path $GameDir 'SquadronRoom' } else { Join-Path $ModDir 'state' }
-$PilotPath    = Join-Path $StateDir 'pilot.json'
-$SessionsPath = Join-Path $StateDir 'sessions.json'
-$FlightOpen   = Join-Path $StateDir 'flight.open'
+
+# =====================================================================
+#  WHICH AIR FORCE
+#
+#  BOB2 is flown from either side, and a man can keep a British and a
+#  German career at once. Each side gets its own folder under the state
+#  root, so the two never see each other's pilot, log book or claims:
+#
+#      <GameDir>\SquadronRoom\raf\pilot.json
+#      <GameDir>\SquadronRoom\lw\pilot.json
+#
+#  The six state paths are DERIVED from $StateDir, and were derived once
+#  at load. Change $StateDir on its own and every one of them still points
+#  at the old folder, which is the trap dev\README-testing.md was written
+#  about. Set-StateSide is now the only place any of them is assigned, and
+#  they are always assigned together.
+# =====================================================================
+$StateRoot = if ($GameDir) { Join-Path $GameDir 'SquadronRoom' } else { Join-Path $ModDir 'state' }
+# A test harness sets this to draw against a copy. Honoured by Set-StateSide,
+# so it survives a side change instead of being quietly overwritten.
+$script:StateRootOverride = $null
+$script:Side = 'raf'
+
+function Set-StateSide {
+    param([string]$Side = $script:Side)
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $script:Side       = $Side
+    $script:StateDir   = Join-Path $root $Side
+    $script:PilotPath    = Join-Path $script:StateDir 'pilot.json'
+    $script:SessionsPath = Join-Path $script:StateDir 'sessions.json'
+    $script:FlightOpen   = Join-Path $script:StateDir 'flight.open'
+    $script:AcPosPath    = Join-Path $script:StateDir 'acpos.json'
+    $script:AutoClaimPath = Join-Path $script:StateDir 'autoclaim.json'
+}
+Set-StateSide 'raf'
+
+# Careers made before there were two sides sit loose in the state root.
+# Move them under raf\ so the German side can have its own.
+#
+# The rules here are all about not repeating 9 September 2026, when a
+# career was lost to a careless write:
+#
+#   Copy, never move. The loose files stay exactly where they are. They
+#   cost three kilobytes and they are a free way back.
+#   Read the copy back and check it is a pilot BEFORE declaring success.
+#   On any doubt at all, change nothing and carry on in the old shape. A
+#   Room that works in the old layout beats one that half-moved.
+function Initialize-StateLayout {
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $flat = Join-Path $root 'pilot.json'
+    $done = Join-Path $root 'layout.json'
+    if ((Test-Path $done) -or -not (Test-Path $flat)) { return }
+    $dst = Join-Path $root 'raf'
+    if (Test-Path (Join-Path $dst 'pilot.json')) { return }   # someone got here first
+    $log = Join-Path $root 'migrate.log'
+    try {
+        if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+        $moved = @()
+        foreach ($f in @('pilot.json','sessions.json','autoclaim.json','acpos.json','flight.open','before.bsr')) {
+            $src = Join-Path $root $f
+            if (Test-Path $src) { Copy-Item $src (Join-Path $dst $f) -Force; $moved += $f }
+        }
+        $arch = Join-Path $root 'archive'
+        if (Test-Path $arch) { Copy-Item $arch (Join-Path $dst 'archive') -Recurse -Force; $moved += 'archive\' }
+
+        # Prove it before committing to it. A pilot.json that will not read
+        # back as a pilot means the copy failed, whatever the file system
+        # said, and the old layout is still good.
+        $check = Get-Content (Join-Path $dst 'pilot.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $check -or -not "$($check.pilot)".Trim()) { throw 'the copied record does not read back as a pilot' }
+        $srcN = @((Get-Content $flat -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties).Count
+        $dstN = @($check.PSObject.Properties).Count
+        if ($dstN -ne $srcN) { throw "the copy has $dstN fields where the original has $srcN" }
+
+        @{ version = 2; migrated = (Get-Date).ToString('s'); from = 'flat'; files = $moved } |
+            ConvertTo-Json -Depth 3 | Set-Content -Path $done -Encoding UTF8
+        Add-Content -LiteralPath $log -Value ("{0}  moved to raf\: {1}" -f (Get-Date -Format 's'), ($moved -join ', ')) -ErrorAction SilentlyContinue
+    }
+    catch {
+        # No layout.json is written, so this is retried next time rather
+        # than being left half done, and the loose files are untouched.
+        $script:StateLegacy = $true
+        try { Add-Content -LiteralPath $log -Value ("{0}  FAILED, left in the old layout: {1}" -f (Get-Date -Format 's'), $_.Exception.Message) -ErrorAction SilentlyContinue } catch { }
+        Set-StateSideLegacy
+    }
+}
+# The old shape: everything loose in the state root, no side folder.
+function Set-StateSideLegacy {
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $script:StateDir      = $root
+    $script:PilotPath     = Join-Path $root 'pilot.json'
+    $script:SessionsPath  = Join-Path $root 'sessions.json'
+    $script:FlightOpen    = Join-Path $root 'flight.open'
+    $script:AcPosPath     = Join-Path $root 'acpos.json'
+    $script:AutoClaimPath = Join-Path $root 'autoclaim.json'
+}
+Initialize-StateLayout
 
 # --- squadrons a new pilot may join --------------------------------------
 # Postings are PER CAMPAIGN PERIOD: P1 = the Channel battles (10 Jul),
@@ -234,6 +327,21 @@ function Get-Pilot {
 # Sync-CampaignClaims already reasons about the second hazard in a comment
 # of its own ("a stub containing only campaignKills would destroy a
 # career"). This makes it a rule instead of a comment.
+# How many fields a record has, whichever shape it arrives in.
+#
+# Half the callers build an [ordered]@{} and half pass the PSCustomObject
+# that came back from ConvertFrom-Json, and .PSObject.Properties on a
+# dictionary does NOT list what is in it: it lists the dictionary's own
+# members, Count, Keys, Values and the rest. Always seven, whatever the
+# record holds. Counting that way made the guard below refuse every
+# legitimate write through Sync-CampaignClaims the moment a career grew
+# past seven fields, which is to say immediately.
+function Get-FieldCount {
+    param($Obj)
+    if ($null -eq $Obj) { return 0 }
+    if ($Obj -is [System.Collections.IDictionary]) { return @($Obj.Keys).Count }
+    return @($Obj.PSObject.Properties).Count
+}
 function Save-Pilot {
     param($Pilot, [switch]$Shrink)
     if (-not $Pilot) { throw 'Save-Pilot was given nothing to save.' }
@@ -247,8 +355,8 @@ function Save-Pilot {
         try { $old = Get-Content $PilotPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
         if ($old) {
             if (-not $Shrink) {
-                $wasN = @($old.PSObject.Properties).Count
-                $nowN = @($Pilot.PSObject.Properties).Count
+                $wasN = Get-FieldCount $old
+                $nowN = Get-FieldCount $Pilot
                 if ($nowN -lt $wasN) {
                     throw ("Save-Pilot refused to replace a $wasN field record for " +
                            "'$($old.pilot)' with a $nowN field one for '$name'. " +
@@ -1042,7 +1150,8 @@ function Set-Header {
 # gives the researched position; anything nudged by hand is kept here,
 # and kept PER TYPE, because a Hurricane's fuselage is not a Spitfire's
 # and a letter that sits right on one lands on the roundel of the other.
-$AcPosPath = Join-Path $StateDir 'acpos.json'
+# assigned by Set-StateSide, with every other state path, so a side
+# change cannot leave this one pointing at the other air force
 function Get-AcKey { param([string]$Type) if ("$Type" -match 'Hurricane') { 'Hurricane' } else { 'Spitfire' } }
 function Get-AcPos {
     $t = @{}
@@ -1756,7 +1865,7 @@ function Get-UnnamedLosses {
 #  the save only grows after this block). It is verified by signature
 #  before use, and searched for when the check fails. Empty slots carry
 #  0xFFFF in the first and fourth fields.
-$AutoClaimPath   = Join-Path $StateDir 'autoclaim.json'
+# assigned by Set-StateSide (see the note beside AcPosPath)
 $DiaryRowSize    = 25
 $DiaryTableGuess = 99047
 $DiaryMaxRows    = 200
