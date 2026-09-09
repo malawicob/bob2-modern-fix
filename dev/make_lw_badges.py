@@ -31,23 +31,26 @@ Hauptgefreiter has four and no braid. It is drawn here.
 Unterfeldwebel, at two gulls, is on the plate but is not in the Room's
 ladder, so it is not drawn.
 
-OFFICER PATCHES, AND WHAT IS AND IS NOT KNOWN FROM THE SOURCES
+OFFICER PATCHES
 
-A second reference, "German Air Force: Insignia of Rank", gives the
-company officers. It settles the STRUCTURE beyond doubt: a patch edged
-all round in twisted silver cord, an oak-leaf spray across the bottom,
-and gulls above it. Nothing like the NCO pattern, which has flat braid on
-two edges and no wreath.
+Two scans were too small to count the officer gulls from, so those
+counts started as the standard pattern rather than as anything read off a
+source. They have since been CHECKED against the collar tab drawings on
+the Wikipedia article "Ranks and insignia of the Luftwaffe (1935-1945)",
+fetched at 500px, and they were right:
 
-It does NOT settle the COUNT. That scan is 675 pixels wide and the
-patches are a few pixels each; magnifying them only interpolates. What is
-legible in the same cells is the shoulder boards, and those confirm the
-order: Leutnant no pip, Oberleutnant one, Hauptmann two.
+    Unteroffizier   1 gull    flat braid, no wreath
+    Feldwebel       3 gulls   flat braid
+    Oberfeldwebel   4 gulls   flat braid
+    Leutnant        1 gull    oak-leaf wreath, twisted silver cord
+    Oberleutnant    2 gulls   wreath and cord
+    Hauptmann       3 gulls   wreath and cord
 
-So the gull counts below - Leutnant 1, Oberleutnant 2 - are taken from
-the standard pattern and not from either scan, and they are one number
-each to change if a better plate turns up. Everything else about these
-two is drawn from what the reference actually shows.
+Those drawings also confirm the yellow: the Oberfeldwebel tab is shown in
+the Fliegertruppe's yellow, which is what a flying man wore.
+
+Hauptmann is still not drawn. It is a command in this Room, reached
+through cmode, not a rung anybody is promoted to.
 """
 import argparse, os
 
@@ -91,6 +94,13 @@ def gull(d, cx, cy, span, thick):
         (cx - half * 0.60, cy - rise + thick * 1.15),
     ]
     d.polygon(pts, fill=GULL, outline=GULL_ED)
+    # the small ring at the centre of each gull, which the reference
+    # drawings all carry and which is the one detail still legible when
+    # the patch is down at the 46 pixels the Room shows it at
+    r = thick * 0.62
+    d.ellipse([cx - r, cy + tip_drop * 0.6 + thick * 0.35 - r,
+               cx + r, cy + tip_drop * 0.6 + thick * 0.35 + r],
+              fill=None, outline=GULL_ED, width=max(1, int(thick * 0.28)))
 
 
 def wreath(d, cx, cy, span):
