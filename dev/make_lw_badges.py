@@ -31,11 +31,23 @@ Hauptgefreiter has four and no braid. It is drawn here.
 Unterfeldwebel, at two gulls, is on the plate but is not in the Room's
 ladder, so it is not drawn.
 
-Officer patches are NOT drawn. Company officers carried gulls and a
-silver cord edge rather than braid, and the number rises with rank, but
-the three figures on this plate are too small to count and I would rather
-leave a gap than invent a rank badge. The Room shows a rank in words when
-its badge is missing, so a Leutnant looks unfinished rather than wrong.
+OFFICER PATCHES, AND WHAT IS AND IS NOT KNOWN FROM THE SOURCES
+
+A second reference, "German Air Force: Insignia of Rank", gives the
+company officers. It settles the STRUCTURE beyond doubt: a patch edged
+all round in twisted silver cord, an oak-leaf spray across the bottom,
+and gulls above it. Nothing like the NCO pattern, which has flat braid on
+two edges and no wreath.
+
+It does NOT settle the COUNT. That scan is 675 pixels wide and the
+patches are a few pixels each; magnifying them only interpolates. What is
+legible in the same cells is the shoulder boards, and those confirm the
+order: Leutnant no pip, Oberleutnant one, Hauptmann two.
+
+So the gull counts below - Leutnant 1, Oberleutnant 2 - are taken from
+the standard pattern and not from either scan, and they are one number
+each to change if a better plate turns up. Everything else about these
+two is drawn from what the reference actually shows.
 """
 import argparse, os
 
@@ -81,7 +93,32 @@ def gull(d, cx, cy, span, thick):
     d.polygon(pts, fill=GULL, outline=GULL_ED)
 
 
-def patch(gulls, braid, path, scale=4):
+def wreath(d, cx, cy, span):
+    """The oak-leaf spray across the foot of an officer's patch.
+
+    Two sprays rising from the centre. Not botanically anything, but at
+    the size this is seen the silhouette is what says "officer" and the
+    leaves are a texture rather than a shape anyone reads.
+    """
+    # A first attempt drew four big leaves a side with a heavy stem line
+    # between them, and it came out as a V of grey blobs. The stems are
+    # gone and the leaves are smaller, more numerous and set along a
+    # shallow curve, which at this size reads as a wreath rather than as
+    # anything in particular - which is exactly what it should do.
+    n = 7
+    for side in (-1, 1):
+        for i in range(n):
+            t = (i + 1) / float(n)
+            bx = cx + side * span * 0.46 * t
+            by = cy - span * 0.30 * (t ** 1.35)
+            r = span * (0.070 - i * 0.0045)
+            # each leaf tilted along the sweep, drawn as a squashed
+            # ellipse; a rotated polygon would be truer and invisible
+            d.ellipse([bx - r * 1.25, by - r * 0.60, bx + r * 1.25, by + r * 0.60],
+                      fill=GULL, outline=GULL_ED)
+
+
+def patch(gulls, braid, path, scale=4, wreathed=False, cord=False):
     """One collar patch, drawn big and shrunk, which is the cheapest
     antialiasing there is and needs no extra library."""
     w, h = W * scale, H * scale
@@ -97,6 +134,13 @@ def patch(gulls, braid, path, scale=4):
     # yellow band stuck across the patch rather than as light on cloth,
     # so there is none. Flat is better than wrong.
 
+    if cord:
+        # An officer's patch is edged all round in twisted silver cord,
+        # not braided down two sides like an NCO's. Drawn as an outline
+        # rather than filled bands, which is the whole visual difference.
+        d.polygon(body, fill=None, outline=BRAID, width=max(2, int(w * 0.030)))
+        d.polygon(body, fill=None, outline=BRAID_D, width=max(1, scale))
+
     if braid:
         # the Tresse runs down the leading edge and along the bottom
         t = int(w * 0.085)
@@ -105,10 +149,14 @@ def patch(gulls, braid, path, scale=4):
         d.polygon([(ins, h - ins - t), (w - ins - lean, h - ins - t),
                    (w - ins - lean, h - ins), (ins, h - ins)], fill=BRAID, outline=BRAID_D)
 
+    if wreathed:
+        wreath(d, w * 0.52, h * 0.82, w * 0.72)
+
     # the gulls, stacked down the patch and inset clear of the braid
     span = w * 0.56
     thick = h * 0.034
-    top, bottom = h * 0.20, h * 0.80
+    # an officer's gulls sit above the wreath, so they use the upper part
+    top, bottom = (h * 0.22, h * 0.52) if wreathed else (h * 0.20, h * 0.80)
     if gulls == 1:
         ys = [h * 0.50]
     else:
@@ -122,10 +170,13 @@ def patch(gulls, braid, path, scale=4):
     return path
 
 
+# name, gulls, braid (NCO), wreath+cord (officer)
 RANKS = [
-    ('unteroffizier.png', 1, True),
-    ('feldwebel.png',     3, True),
-    ('oberfeldwebel.png', 4, True),
+    ('unteroffizier.png', 1, True,  False),
+    ('feldwebel.png',     3, True,  False),
+    ('oberfeldwebel.png', 4, True,  False),
+    ('leutnant.png',      1, False, True),
+    ('oberleutnant.png',  2, False, True),
 ]
 
 
@@ -134,11 +185,11 @@ def main():
     ap.add_argument('--out', default='squadronroom/lw/badges')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
-    for name, n, braid in RANKS:
-        p = patch(n, braid, os.path.join(a.out, name))
-        print('  %-22s %d gull%s%s' % (name, n, '' if n == 1 else 's', ', braid' if braid else ''))
+    for name, n, braid, off in RANKS:
+        patch(n, braid, os.path.join(a.out, name), wreathed=off, cord=off)
+        print('  %-22s %d gull%s  %s' % (name, n, '' if n == 1 else 's',
+                                         'wreath and cord (officer)' if off else 'braid (NCO)'))
     print('%d collar patches in %s' % (len(RANKS), a.out))
-    print('Officer patches deliberately not drawn: see the note at the top.')
 
 
 if __name__ == '__main__':
