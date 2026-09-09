@@ -27,3 +27,15 @@ at equal height it looks the smaller thing.
 The collar patches beside it are drawn by dev/make_lw_badges.py. See the
 note at the top of that script for what the references do and do not
 settle, and why nothing here is a copied image.
+
+ek2.png, ek1.png and ritterkreuz.png are the Iron Cross ladder, all 1957
+patterns like the pilot badge, so none of them carries a swastika. Their
+white backgrounds were flooded out from the edges rather than cleared by
+colour: the crosses have pale silver beading and the EK II ribbon has
+white stripes, and a colour-based clear would have eaten through both.
+
+A fourth image was supplied and is NOT used. It is the Winterschlacht im
+Osten medal, the Eastern Front winter medal of 1941/42, instituted 26 May
+1942. A man flying the Channel in 1940 could not have had it. It is left
+out for the same reason the RAF ladder leaves out the CGM (Flying), which
+was not instituted until November 1942.

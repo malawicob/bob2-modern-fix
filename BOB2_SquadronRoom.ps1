@@ -4065,6 +4065,87 @@ function Show-GruppeSelect {
 #  New-Frame, New-Stat, New-BadgeImage and the chrome, are called from
 #  here exactly as the RAF screens call them.
 # ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+#  The Iron Cross ladder.
+#
+#  Dated with the same care the RAF ladder is. That one leaves out the
+#  CGM (Flying) because it was not instituted until November 1942, and
+#  the AFC and AFM because they were for non-operational flying. The same
+#  test throws three well-known German awards out of a 1940 career:
+#
+#    Deutsches Kreuz in Gold   instituted 28 September 1941
+#    Frontflugspange           instituted 30 January 1941
+#    Winterschlacht im Osten   instituted 26 May 1942, and for the East
+#
+#  The last of those was among the images to hand and is the easiest
+#  mistake to make, being unmistakably German and unmistakably a medal.
+#  A man flying the Channel in 1940 could not have had any of them.
+#
+#  What is left, and when:
+#
+#    Eisernes Kreuz II. Klasse   a first victory, or three sorties
+#    Eisernes Kreuz I. Klasse    five victories, or twenty sorties
+#    Ritterkreuz                 twenty victories
+#
+#  Twenty is the right benchmark for the second half of 1940. It was
+#  raised to forty in 1941, which is the figure most often quoted and the
+#  wrong one for this campaign.
+#
+#  The Eichenlaub, at about forty, is not here: it wants its own art, and
+#  no career in this Room is going to reach it before the rest of the
+#  German side is finished.
+$LwHonourSpec = @(
+    # Heights are set by how each one READS, not by how big the thing is.
+    # The Ritterkreuz is a tall narrow picture, cross and neck ribbon, so
+    # at the same height as the others it comes out much the smallest on
+    # screen. These three sit about level.
+    @{ Award = 'Ritterkreuz'; File = 'ritterkreuz.png'; Height = 66; Tip = 'Ritterkreuz des Eisernen Kreuzes' }
+    @{ Award = 'EK I';        File = 'ek1.png';         Height = 42; Tip = 'Eisernes Kreuz I. Klasse' }
+    @{ Award = 'EK II';       File = 'ek2.png';         Height = 56; Tip = 'Eisernes Kreuz II. Klasse' }
+)
+function Get-LwHonours {
+    param($Pilot, $Career)
+    $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
+    $sorties = 0; if ($Career) { $sorties = [int]$Career.sorties }
+    $h = @()
+    # what he already holds is kept, exactly as on the RAF side: a
+    # decoration is not taken away because a new campaign reset the count
+    if (($Pilot.PSObject.Properties.Name -contains 'honours') -and $Pilot.honours) {
+        foreach ($a in @($Pilot.honours)) { $h += "$($a.award)" }
+    }
+    if ((($v -ge 1) -or ($sorties -ge 3))  -and ($h -notcontains 'EK II'))       { $h += 'EK II' }
+    if ((($v -ge 5) -or ($sorties -ge 20)) -and ($h -notcontains 'EK I'))        { $h += 'EK I' }
+    if (($v -ge 20)                        -and ($h -notcontains 'Ritterkreuz')) { $h += 'Ritterkreuz' }
+    $h
+}
+# Worn, rather than laid out as ribbon chips.
+#
+# New-RibbonRow puts every RAF decoration in one bar of 15px ribbons, in
+# order of precedence, and that is right for the RAF: they ARE ribbons.
+# These are not. The EK II hangs from a ribbon, the EK I is pinned flat to
+# the breast and has no ribbon at all, and the Ritterkreuz is worn at the
+# throat. Rendering the three as identical little strips would be wrong in
+# a way anybody who cares about this period would see at once, so they are
+# drawn as the objects they are, at the sizes they are.
+function New-LwHonourRow {
+    param($Honours, [double]$Scale = 1.0)
+    $set = @($Honours)
+    if (-not $set.Count) { return $null }
+    $row = New-Object Windows.Controls.StackPanel
+    $row.Orientation = 'Horizontal'; $row.VerticalAlignment = 'Center'
+    foreach ($spec in $LwHonourSpec) {
+        if ($set -notcontains $spec.Award) { continue }
+        $bmp = Load-Image -Path (Join-Path $script:BadgeDir $spec.File)
+        if (-not $bmp) { continue }
+        $img = New-Object Windows.Controls.Image
+        $img.Source = $bmp; $img.Stretch = 'Uniform'; $img.Height = [double]$spec.Height * $Scale
+        $img.Margin = '0,0,12,0'; $img.ToolTip = $spec.Tip
+        [void]$row.Children.Add($img)
+    }
+    if (-not $row.Children.Count) { return $null }
+    $row
+}
+
 function Show-GruppeCreate {
     $script:Stage.Children.Clear()
     $script:SelPortrait = $null; $script:SelBorder = $null
@@ -4213,7 +4294,8 @@ function Show-ReadyRoom {
 
     $sessions = Get-Sessions
     $career = Get-Career $Pilot $sessions
-    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours @()
+    $honours = @(Get-LwHonours -Pilot $Pilot -Career $career)
+    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours $honours
 
     $base = "$($Pilot.base)".ToUpper()
     $eyebrow = if ($script:CampaignDate) { "$base  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $base }
@@ -4244,6 +4326,8 @@ function Show-ReadyRoom {
     $fb = New-BadgeImage -File 'pilot-badge.png' -Height 62 -Tip 'Flugzeugfuehrerabzeichen, the pilot badge'
     if ($fb) { [void]$chipRow.Children.Add($fb) }
     if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
+    $hr = New-LwHonourRow $honours
+    if ($hr) { $hr.Margin = '0,14,0,0'; [void]$d.Children.Add($hr) }
     [void]$hero.Children.Add($d)
     [void]$script:Stage.Children.Add($hero)
 
@@ -4252,6 +4336,8 @@ function Show-ReadyRoom {
     [void]$tiles.Children.Add((New-Stat 'SORTIES' "$($career.sorties)"))
     [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
     [void]$tiles.Children.Add((New-Stat 'RANK' (Short-Rank "$($Pilot.rank)")))
+    $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
+    [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile -Chip (New-LwHonourRow $honours -Scale 0.30)))
     [void]$script:Stage.Children.Add($tiles)
     if ($career.next) {
         $nx = New-TB -Text "Next promotion: $($career.next) at $($career.nextAt) sorties." -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
