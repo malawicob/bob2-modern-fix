@@ -544,12 +544,20 @@ $Xaml = @'
              on the day a career starts, because a campaign that has flown
              nothing has no player record to read, so this is the way in
              rather than a fallback for odd cases. -->
-        <Border x:Name="SideSwitch" Background="#101B22" BorderBrush="#22303C" BorderThickness="1"
-                CornerRadius="3" Cursor="Hand" Padding="12,6" Margin="26,0,0,0" VerticalAlignment="Center">
-          <TextBlock x:Name="SideSwitchText" Text="RAF"
-                     FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="12.5"
-                     FontWeight="Bold" Foreground="#9FB0B8" VerticalAlignment="Center"/>
-        </Border>
+        <StackPanel x:Name="SideSwitch" Orientation="Horizontal" Margin="26,0,0,0" VerticalAlignment="Center">
+          <Border x:Name="SideRaf" Background="#213540" BorderBrush="#C8973F" BorderThickness="0,0,0,2"
+                  CornerRadius="3,0,0,3" Cursor="Hand" Padding="13,7">
+            <TextBlock x:Name="SideRafText" Text="RAF"
+                       FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="12.5"
+                       FontWeight="Bold" Foreground="#E9E3D4" VerticalAlignment="Center"/>
+          </Border>
+          <Border x:Name="SideLw" Background="#101B22" BorderBrush="#101B22" BorderThickness="0,0,0,2"
+                  CornerRadius="0,3,3,0" Cursor="Hand" Padding="13,7">
+            <TextBlock x:Name="SideLwText" Text="LUFTWAFFE"
+                       FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="12.5"
+                       FontWeight="Bold" Foreground="#6F828C" VerticalAlignment="Center"/>
+          </Border>
+        </StackPanel>
       </StackPanel>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0">
         <!-- the way back, and the one thing to press on whatever screen is
@@ -687,17 +695,29 @@ if ($ra) {
 # Move between the two air forces. Each keeps its own pilot, log book and
 # claims under its own folder, so nothing of one is visible from the other
 # and a man can have a British and a German career at the same time.
-$sw = C 'SideSwitch'
-if ($sw) {
-    $sw.Add_MouseLeftButtonUp({
-        Set-Side $(if ($script:Side -eq 'raf') { 'lw' } else { 'raf' })
+foreach ($pair in @(@('SideRaf','raf'), @('SideLw','lw'))) {
+    $seg = C $pair[0]
+    if (-not $seg) { continue }
+    $seg.Tag = $pair[1]
+    # Pressing the side you are already in does nothing rather than
+    # rebuilding the screen under the pointer.
+    $seg.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        if ("$($sender.Tag)" -ne $script:Side) { Set-Side "$($sender.Tag)" }
     })
-    $sw.Add_MouseEnter({ param($se,$e) $se.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
-    $sw.Add_MouseLeave({ param($se,$e) $se.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom('#22303C') })
 }
 function Update-SideSwitch {
-    $t = C 'SideSwitchText'
-    if ($t) { $t.Text = $(if ($script:Side -eq 'lw') { 'LUFTWAFFE' } else { 'RAF' }) }
+    # Both segments are always there; the one you are in is lit and the
+    # other is dim, so the control says where you are AND what it will do.
+    $lwOn = ($script:Side -eq 'lw')
+    foreach ($x in @(@('SideRaf','SideRafText', -not $lwOn), @('SideLw','SideLwText', $lwOn))) {
+        $b = C $x[0]; $t = C $x[1]; $on = [bool]$x[2]
+        if ($b) {
+            $b.Background  = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($on) { '#213540' } else { '#101B22' }))
+            $b.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($on) { '#C8973F' } else { '#101B22' }))
+        }
+        if ($t) { $t.Foreground = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($on) { '#E9E3D4' } else { '#6F828C' })) }
+    }
     # The emblem is the quickest way to see which air force is up. The RAF
     # gets its roundel and the Luftwaffe its Balkenkreuz, rather than the
     # header quietly changing a word nobody reads.
@@ -5252,6 +5272,10 @@ function Show-Create {
 
 # =====================================================================
 Finalize-Flight
+# Paint the side switch once before anything is shown. It was only ever
+# painted BY a side change, and the markup happens to start on the RAF
+# segment, so it looked right by luck rather than by saying so.
+Update-SideSwitch
 $existing = Get-Pilot
 if ($existing) { Show-Roster -Pilot $existing } else { Show-SquadronSelect }
 [void]$Win.ShowDialog()
