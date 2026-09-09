@@ -4237,9 +4237,12 @@ function Show-ReadyRoom {
         $cuff = New-BadgeImage -File $rbf -Height 52 -Tip "$($Pilot.rank)"
         if ($cuff) { $cuff.Margin = '0,0,10,0'; [void]$chipRow.Children.Add($cuff) }
     }
-    # There is no Flugzeugfuehrerabzeichen drawn yet, so nothing stands in
-    # for the RAF's wings. New-BadgeImage would return $null anyway; this
-    # says so out loud rather than leaving a silent gap.
+    # The pilot's badge, which is the German answer to the RAF's wings.
+    # Taller than it is wide where the wings are the opposite, so at the
+    # same 52 pixels it reads as much the smaller thing; 62 puts them
+    # about level by area.
+    $fb = New-BadgeImage -File 'pilot-badge.png' -Height 62 -Tip 'Flugzeugfuehrerabzeichen, the pilot badge'
+    if ($fb) { [void]$chipRow.Children.Add($fb) }
     if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
     [void]$hero.Children.Add($d)
     [void]$script:Stage.Children.Add($hero)
