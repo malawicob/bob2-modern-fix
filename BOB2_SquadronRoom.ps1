@@ -654,9 +654,16 @@ function Get-CampaignPilot {
         if ($b.Length -lt 160) { return $null }
         if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
         $name  = [System.Text.Encoding]::ASCII.GetString($b, 100, 21).TrimEnd([char]0)
-        $plane = [System.Text.Encoding]::ASCII.GetString($b, 121, 21).TrimEnd([char]0)
         if ($name -notmatch '^[ -~]{2,20}$') { return $null }
-        return @{ Name = $name; Plane = $plane }
+        # The save also carries an aircraft name at 121 - "Silver Eagle" by
+        # default - and it is not shown. RAF fighters in 1940 were known by
+        # their squadron code and individual letter, QJ-K, and their serial.
+        # Machines were pooled: a man flew whatever was serviceable that
+        # morning, so a personally named aeroplane is not a thing he had.
+        # The names that WERE painted on were presentation names, put there
+        # by the Spitfire Fund for the donor, and nothing to do with the
+        # pilot. This one is the game's invention, so it stays out.
+        return @{ Name = $name }
     } catch { return $null }
 }
 # Pull a date out of a fate string like "KIA 19 Oct 1940" / "24 Sept 1940"
@@ -2148,7 +2155,6 @@ function Show-Logbook {
     $cp = Get-CampaignPilot
     if ($cp) {
         $cpTxt = "Campaign pilot on record: $($cp.Name)"
-        if ($cp.Plane) { $cpTxt += ", flying '$($cp.Plane)'" }
         $cpl = New-TB -Text $cpTxt -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
         $cpl.Margin = '0,-12,0,14'
         [void]$script:Stage.Children.Add($cpl)
