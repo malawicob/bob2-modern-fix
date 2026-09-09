@@ -3722,12 +3722,12 @@ function Add-SquadronPlaques {
                     param($sender, $e)
                     $t = $sender.Tag
                     if (-not $sender.ToolTip) {
-                        # the squadron card is built from the RAF order of
-                        # battle and its roster, and there is neither for a
-                        # Gruppe yet; the readout below says who it is
-                        if ($script:Side -ne 'lw') {
-                            $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date)
+                        $cardCtl = if ($script:Side -eq 'lw') {
+                            New-GruppeCard (@(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq "$($t.Label)" } | Select-Object -First 1) $t.Mine
+                        } else {
+                            New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date
                         }
+                        if ($cardCtl) { $sender.ToolTip = New-SquadronTip $cardCtl }
                         [Windows.Controls.ToolTipService]::SetInitialShowDelay($sender, 90)
                         [Windows.Controls.ToolTipService]::SetShowDuration($sender, 90000)
                         [Windows.Controls.ToolTipService]::SetBetweenShowDelay($sender, 0)
@@ -4157,6 +4157,76 @@ function Format-LwDate {
 # board uses for its sectors. Luftflotte 2 flew from the Pas de Calais
 # against London and the south east, which is where the battle was.
 function Get-LwActivity { param($G) if ([int]$G.luftflotte -eq 2) { 3 } else { 2 } }
+
+# The Gruppe's own aircraft. Forty side views arrived, one per Gruppe of
+# each fighter Geschwader, named exactly as the Room names a unit's
+# roster file - I_JG26 for I./JG 26 - so the lookup is the unit's own key
+# and nothing has to be mapped by hand.
+#
+# The Zerstoerer Gruppen fly Bf 110s and there is no 110 art, so they get
+# NOTHING rather than a 109 with somebody else's emblem on it.
+function Get-GruppeAircraftPath {
+    param($G)
+    if (-not $G) { return $null }
+    if ("$($G.type)" -notmatch '109') { return $null }
+    $key = ("$($G.unit)" -replace '\.','' -replace '/','_' -replace ' ','')
+    $f = Join-Path $script:AircraftDir ($key + '.png')
+    if (Test-Path $f) { return $f }
+    # a Gruppe with no profile of its own gets the plain scheme
+    $f = Join-Path $script:AircraftDir 'RLM70_71.png'
+    if (Test-Path $f) { return $f }
+    $null
+}
+# The card that comes up under the pointer on the plotting table, the
+# same idea as Fighter Command's: which Gruppe, what it flies, where it
+# stands and how the campaign rates it.
+function New-GruppeCard {
+    param($G, [bool]$Mine = $false)
+    if (-not $G) { return $null }
+    $card = New-Object Windows.Controls.Border
+    $card.Background = B '#F20B141B'; $card.BorderBrush = B $(if ($Mine) { '#FFE28A' } else { '#2C3A52' })
+    $card.BorderThickness = '1'; $card.CornerRadius = '3'; $card.Padding = '0'; $card.MaxWidth = 460
+    $col = New-Object Windows.Controls.StackPanel
+
+    $head = New-Object Windows.Controls.Border
+    $head.Background = B '#14202B'; $head.Padding = '16,12,16,11'
+    $hrow = New-Object Windows.Controls.StackPanel; $hrow.Orientation = 'Horizontal'
+    $ap = Get-GruppeAircraftPath $G
+    if ($ap) {
+        $sil = Load-Image -Path $ap -DecodeWidth 340
+        if ($sil) {
+            $im = New-Object Windows.Controls.Image
+            $im.Source = $sil; $im.Width = 130; $im.Stretch = 'Uniform'
+            $im.Opacity = 0.92; $im.Margin = '0,0,14,0'; $im.VerticalAlignment = 'Center'
+            [void]$hrow.Children.Add($im)
+        }
+    }
+    $hc = New-Object Windows.Controls.StackPanel; $hc.VerticalAlignment = 'Center'
+    [void]$hc.Children.Add((New-TB -Text "$($G.unit)" -Family $SerifFam -Size 19 -Colour $(if ($Mine) { '#FFE28A' } else { '#E9E3D4' })))
+    [void]$hc.Children.Add((New-TB -Text "$($G.type)   $([char]0x2022)   Luftflotte $($G.luftflotte)" -Family $CondFam -Size 12.5 -Colour '#F8C87E'))
+    [void]$hrow.Children.Add($hc)
+    $head.Child = $hrow
+    [void]$col.Children.Add($head)
+
+    $body = New-Object Windows.Controls.StackPanel; $body.Margin = '16,12,16,14'
+    $t = "At $($G.field) since $(Format-LwDate "$($G.activation)"). The campaign rates it " +
+         "$("$($G.skill)".ToLower()) with $("$($G.fatigue)".ToLower()) fatigue."
+    $tb = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text $t
+    $tb.MaxWidth = 420
+    [void]$body.Children.Add($tb)
+    # what it has done in this campaign, if the save knows the unit
+    $rec = Get-GruppeRecord $G.sqidx
+    if ($rec) {
+        $r2 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text (
+            "In this campaign: $($rec.Launched) sorties, $($rec.AcLost) aircraft and " +
+            "$($rec.PilotsLost) pilots lost, $($rec.Total) claims.")
+        $r2.Margin = '0,8,0,0'; $r2.MaxWidth = 420
+        [void]$body.Children.Add($r2)
+    }
+    $col.Children.Add($body) | Out-Null
+    $card.Child = $col
+    $card
+}
 
 function Show-GruppeSelect {
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
@@ -4785,8 +4855,8 @@ function Show-ReadyRoom {
     }
 
     # his aircraft
-    $acFile = Join-Path $script:AircraftDir 'bf109.png'
-    if (Test-Path $acFile) {
+    $acFile = Get-GruppeAircraftPath $g
+    if ($acFile) {
         # Bare on the page, exactly as New-Aircraft puts the Spitfire and
         # the Hurricane. It was in a Panel-coloured card with a border, and
         # that read as the aeroplane sitting on a grey box while the RAF's
@@ -4799,9 +4869,8 @@ function Show-ReadyRoom {
             [void]$script:Stage.Children.Add($img)
         }
         $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
-            'This one already carries its markings, so nothing is painted on it. The Staffel number, ' +
-            'the Gruppe symbol and the chevrons go on once there is a bare aeroplane to paint them on, ' +
-            'the way the squadron codes go on a Spitfire.')
+            "$($Pilot.unit) in its own markings. The individual number and the Gruppe symbol are not " +
+            'painted on yet, the way the squadron codes go on a Spitfire.')
         $note.Margin = '0,-4,0,18'; $note.MaxWidth = 760; $note.HorizontalAlignment = 'Left'
         [void]$script:Stage.Children.Add($note)
     }
