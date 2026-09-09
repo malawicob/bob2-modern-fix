@@ -87,6 +87,23 @@ foreach ($q in (Get-Squadrons)) {
 }
 Set-Content -Path $PilotPath -Value $saved -Encoding UTF8
 "  dispersal for all $((Get-Squadrons).Count) squadrons x 3 dates: $bad failure(s)"
+
+# --- the German side ---------------------------------------------------
+# It has no career yet, so there is nothing but the postings board to
+# build. Every period, because a Gruppe only appears once it has been
+# moved up and the empty early periods are where a board like this breaks.
+try {
+    Set-Side 'lw'
+    $g = @(Get-LwGruppen)
+    "  luftwaffe : $($g.Count) fighter Gruppen loaded"
+    foreach ($per in $Periods) {
+        $script:SelPeriod = $per.Id
+        Show-GruppeSelect
+        "    $($per.Id) : drew $($script:Stage.Children.Count) blocks"
+    }
+    Set-Side 'raf'
+}
+catch { $fails += "luftwaffe : $($_.Exception.Message)"; "  luftwaffe : FAILED - $($_.Exception.Message)" }
 }
 finally {
     # the throwaway copy goes, whatever happened above

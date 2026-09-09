@@ -468,7 +468,7 @@ $Xaml = @'
         <Grid Width="52" Height="52" VerticalAlignment="Center">
           <Ellipse Fill="#1C3F94"/>
           <Ellipse Fill="#F2EFE6" Margin="8"/>
-          <Ellipse Fill="#C8102E" Margin="17"/>
+          <Ellipse x:Name="HdrEmblemCentre" Fill="#C8102E" Margin="17"/>
         </Grid>
         <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
           <TextBlock Style="{StaticResource Serif}" FontSize="27" FontWeight="Bold"
@@ -476,6 +476,16 @@ $Xaml = @'
           <TextBlock Style="{StaticResource Cond}" FontSize="13" Foreground="{StaticResource Faint}"
                      x:Name="HdrMotto" Text="ROYAL AIR FORCE  &#x2022;  AUT PUGNA AUT MORERE" Margin="1,3,0,0"/>
         </StackPanel>
+        <!-- Which air force. Detection from the campaign save cannot help
+             on the day a career starts, because a campaign that has flown
+             nothing has no player record to read, so this is the way in
+             rather than a fallback for odd cases. -->
+        <Border x:Name="SideSwitch" Background="#101B22" BorderBrush="#22303C" BorderThickness="1"
+                CornerRadius="3" Cursor="Hand" Padding="12,6" Margin="26,0,0,0" VerticalAlignment="Center">
+          <TextBlock x:Name="SideSwitchText" Text="RAF"
+                     FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="12.5"
+                     FontWeight="Bold" Foreground="#9FB0B8" VerticalAlignment="Center"/>
+        </Border>
       </StackPanel>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0">
         <!-- the way back, and the one thing to press on whatever screen is
@@ -603,6 +613,39 @@ if ($ra) {
     $ra.Add_MouseEnter({ param($se,$e) if ($script:ChromeActionOn) { $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') } })
     $ra.Add_MouseLeave({ param($se,$e) if ($script:ChromeActionOn) { $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') } })
 }
+# Move between the two air forces. Each keeps its own pilot, log book and
+# claims under its own folder, so nothing of one is visible from the other
+# and a man can have a British and a German career at the same time.
+$sw = C 'SideSwitch'
+if ($sw) {
+    $sw.Add_MouseLeftButtonUp({
+        Set-Side $(if ($script:Side -eq 'raf') { 'lw' } else { 'raf' })
+    })
+    $sw.Add_MouseEnter({ param($se,$e) $se.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
+    $sw.Add_MouseLeave({ param($se,$e) $se.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom('#22303C') })
+}
+function Update-SideSwitch {
+    $t = C 'SideSwitchText'
+    if ($t) { $t.Text = $(if ($script:Side -eq 'lw') { 'LUFTWAFFE' } else { 'RAF' }) }
+    # The emblem is the quickest way to see which air force is up, so the
+    # roundel's red centre goes dark for the German side rather than the
+    # header quietly changing a word nobody reads.
+    $c = C 'HdrEmblemCentre'
+    if ($c) { $c.Fill = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($script:Side -eq 'lw') { '#1B2B34' } else { '#C8102E' })) }
+}
+function Set-Side {
+    param([string]$Side)
+    Set-StateSide $Side
+    $script:SquadronList = $null
+    $script:SelSq = $null
+    Update-SideSwitch
+    if ($Side -eq 'lw') { Show-GruppeSelect }
+    else {
+        $p = Get-Pilot
+        if ($p) { Show-Roster -Pilot $p } else { Show-SquadronSelect }
+    }
+}
+
 $rnc = C 'RoomNewCareer'
 if ($rnc) {
     $rnc.Add_MouseLeftButtonUp({ Start-NewCareer })
@@ -3773,6 +3816,134 @@ function Show-Paper {
 # =====================================================================
 #  Postings: choose your squadron on the plotting map
 # =====================================================================
+# =====================================================================
+#  THE LUFTWAFFE SIDE
+#
+#  The order of battle is the game's own, out of English\TEXT\LW_OOB.htm
+#  and extracted by dev\build_lw_oob.py: 66 Gruppen over Luftflotte 2 and
+#  3, of which 32 are fighter units and those are the ones a man can be
+#  posted to. The rest fly bombers, which is a crew and a different sort
+#  of career, and is not built.
+# =====================================================================
+$LwOobPath = Join-Path (Join-Path $ModDir 'lw') 'oob.json'
+function Get-LwGruppen {
+    if ($null -ne $script:LwList) { return $script:LwList }
+    $out = @()
+    if (Test-Path $LwOobPath) {
+        try {
+            $all = @(Get-Content $LwOobPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+            while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
+            $out = @($all | Where-Object { $_.fighter })
+        } catch { }
+    }
+    $script:LwList = $out
+    $out
+}
+# A Gruppe is on the Kanalfront from the day it was activated. Before that
+# it is not there to be posted to, which is the German equivalent of the
+# RAF board's "resting in the north".
+function Test-GruppeInLine {
+    param($G, $Date)
+    if (-not $Date -or -not $G.activation) { return $true }
+    try { return ([datetime]::ParseExact("$($G.activation)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) -le $Date) } catch { }
+    $true
+}
+function Format-LwDate {
+    param([string]$s)
+    try { return ([datetime]::ParseExact($s,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)).ToString('d MMMM') } catch { return $s }
+}
+# How hard a Gruppe was worked, in the same three-arrow shorthand the RAF
+# board uses for its sectors. Luftflotte 2 flew from the Pas de Calais
+# against London and the south east, which is where the battle was.
+function Get-LwActivity { param($G) if ([int]$G.luftflotte -eq 2) { 3 } else { 2 } }
+
+function Show-GruppeSelect {
+    if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
+    $script:Stage.Children.Clear()
+    Show-ChromeButtons $false
+    Set-ChromeAction -Text '' -Enabled $false
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Jagdwaffe' }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTEN 2 UND 3" }
+    if (Get-Pilot) { Set-ChromeBack 'BACK TO THE READY ROOM' { Show-Tab 'dispersal' } }
+    else { Set-ChromeBack -Text '' }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE CHANNEL FRONT' -Title 'The fighter Gruppen'))
+
+    $segRow = New-Object Windows.Controls.StackPanel; $segRow.Orientation = 'Horizontal'; $segRow.Margin = '0,-10,0,10'
+    foreach ($per in $Periods) {
+        $seg = New-Object Windows.Controls.Border
+        $seg.Padding = '14,8'; $seg.Margin = '0,0,10,0'; $seg.CornerRadius = '3'; $seg.Cursor = 'Hand'; $seg.Tag = $per.Id
+        $active = ($per.Id -eq $script:SelPeriod)
+        $seg.Background = if ($active) { B '#213540' } else { B '#101B22' }
+        $seg.BorderThickness = '0,0,0,2'
+        $seg.BorderBrush = if ($active) { Res 'Brass' } else { B '#101B22' }
+        $seg.Child = (New-TB -Text $per.Label -Family $CondFam -Size 12.5 -Colour $(if ($active) { '#E9E3D4' } else { '#6F828C' }) -Bold)
+        $seg.Add_MouseLeftButtonUp({ param($sender,$e) $script:SelPeriod = "$($sender.Tag)"; Show-GruppeSelect })
+        [void]$segRow.Children.Add($seg)
+    }
+    [void]$script:Stage.Children.Add($segRow)
+
+    $perDef = $Periods | Where-Object { $_.Id -eq $script:SelPeriod } | Select-Object -First 1
+    $pd = $null; try { $pd = [datetime]::ParseExact($perDef.Key,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
+
+    $all = @(Get-LwGruppen)
+    $inLine = @($all | Where-Object { Test-GruppeInLine $_ $pd })
+    $lead = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text (
+        "The order of battle for $($perDef.Desc), taken from the game's own. " +
+        "$($inLine.Count) of the $($all.Count) fighter Gruppen are on the Kanalfront by this date; " +
+        'the rest have not been moved up yet. Luftflotte 2 flew from the Pas de Calais against London ' +
+        'and the south east, Luftflotte 3 from Normandy and Brittany against the west.')
+    $lead.Margin = '0,0,0,16'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($lead)
+
+    foreach ($lf in @(2, 3)) {
+        $mine = @($inLine | Where-Object { [int]$_.luftflotte -eq $lf })
+        if (-not $mine.Count) { continue }
+        $hdr = New-TB -Text ("LUFTFLOTTE $lf") -Family $CondFam -Size 13 -Colour '#C8973F' -Bold
+        $hdr.Margin = '0,10,0,10'
+        [void]$script:Stage.Children.Add($hdr)
+
+        $wrap = New-Object Windows.Controls.WrapPanel; $wrap.Margin = '0,0,0,10'; $wrap.HorizontalAlignment = 'Left'
+        foreach ($gsn in ($mine | ForEach-Object { "$($_.geschwader)" } | Select-Object -Unique | Sort-Object)) {
+            $units = @($mine | Where-Object { "$($_.geschwader)" -eq $gsn })
+            $card = New-Object Windows.Controls.Border
+            $card.Background = Res 'Panel'; $card.BorderBrush = Res 'Rule'; $card.BorderThickness = '1'
+            $card.CornerRadius = '3'; $card.Padding = '16,13'; $card.Margin = '0,0,12,12'; $card.Width = 282
+            $sp = New-Object Windows.Controls.StackPanel
+            [void]$sp.Children.Add((New-TB -Text $gsn -Family $SerifFam -Size 20 -Colour '#E9E3D4' -Bold))
+            $act = Get-LwActivity $units[0]
+            $sub = ([string][char]0x25B2) * $act
+            [void]$sp.Children.Add((New-TB -Text ("$($units[0].type)   $sub") -Family $CondFam -Size 12 -Colour '#C8973F'))
+            foreach ($g in ($units | Sort-Object { @('I','II','III','IV','V').IndexOf("$($_.gruppe)") })) {
+                $row = New-Object Windows.Controls.StackPanel; $row.Margin = '0,9,0,0'
+                [void]$row.Children.Add((New-TB -Text "$($g.unit)" -Family $CondFam -Size 14 -Colour '#E9E3D4' -Bold))
+                $t = "$($g.field)   $([char]0x2022)   $($g.skill)   $([char]0x2022)   in the line $(Format-LwDate "$($g.activation)")"
+                [void]$row.Children.Add((New-TB -Text $t -Family 'Segoe UI' -Size 11.5 -Colour '#9FB0B8' -Wrap))
+                [void]$sp.Children.Add($row)
+            }
+            $card.Child = $sp
+            [void]$wrap.Children.Add($card)
+        }
+        [void]$script:Stage.Children.Add($wrap)
+    }
+
+    # Say plainly what is not built yet, rather than offering a button that
+    # goes nowhere.
+    $note = New-Object Windows.Controls.Border
+    $note.Background = B '#1A1710'; $note.BorderBrush = $script:BrassBrush
+    $note.BorderThickness = '3,0,0,0'; $note.CornerRadius = '0,3,3,0'
+    $note.Padding = '16,12'; $note.Margin = '0,16,0,0'; $note.HorizontalAlignment = 'Left'; $note.MaxWidth = 940
+    $ns = New-Object Windows.Controls.StackPanel
+    [void]$ns.Children.Add((New-TB -Text 'NOT FINISHED' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    $nt = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
+        'This is the board only. Reporting to a Gruppe, the ready room, the Flugbuch and the ' +
+        'Iron Cross ladder come next, and they wait on rank insignia, a pilot badge and a Bf 109E ' +
+        'profile being drawn. The switch by the name at the top takes you back to the RAF.')
+    $nt.Margin = '0,5,0,0'
+    [void]$ns.Children.Add($nt)
+    $note.Child = $ns
+    [void]$script:Stage.Children.Add($note)
+}
+
 function Show-SquadronSelect {
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
