@@ -3425,10 +3425,16 @@ function Do-IndividualSteps {
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
             "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
             "13" {
-                # one key for the whole look, and a way back off it
+                # One key for the whole look, and a way back off it. It turns
+                # OFF only when the whole look is already on. Judging that on
+                # the antialiasing alone was wrong once Settings could set the
+                # antialiasing by itself: a player who had turned on 4x there
+                # and then pressed this expecting to add ReShade had his
+                # antialiasing taken away instead.
                 $conf = Join-Path $gameFolder 'dgVoodoo.conf'
                 $aaNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Antialiasing' } else { '' }
-                if ($aaNow -and $aaNow -ne 'appdriven') { Step-VisualEnhancements $gameFolder -Off }
+                $allOn = ($aaNow -and $aaNow -ne 'appdriven') -and ((Get-ReShadeState $gameFolder) -eq 'on')
+                if ($allOn) { Step-VisualEnhancements $gameFolder -Off }
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
             }
