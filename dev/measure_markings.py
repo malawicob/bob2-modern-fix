@@ -190,6 +190,45 @@ BLACK  = lambda r, g, b, a: a > 200 and r < 80 and g < 80 and b < 80
 YELLOW = lambda r, g, b, a: a > 200 and r > 165 and 100 < g < 175 and b < 100 and r - b > 90
 
 
+# The Balkenkreuz by its WHITE BORDER, taken as the union of the corner
+# pieces the border breaks into.
+#
+# The black-core detector works on a 109, whose camouflage is pale enough
+# to leave the cross the darkest thing on the fuselage. It does NOT work
+# on a Bf 110: the 110's dark green sits under the same threshold, so the
+# cross merges with the camouflage into one 356 x 165 region and the
+# reading is nonsense.
+#
+# The white border is unambiguous on both. It is not one shape - the
+# cross's own black arms cut it into four corner blocks - so the box is
+# the union of them, which is the cross plus its border and is exactly
+# what is wanted as a ruler.
+WHITE_EDGE = lambda r, g, b, a: a > 200 and r > 195 and g > 195 and b > 195
+
+
+def find_cross_corners(im, box, want=(0.02, 0.14), min_px=80):
+    W, H = im.size
+    parts = [bb for bb, n in components(im, box, WHITE_EDGE, min_px=min_px)]
+    if len(parts) < 3:
+        return None
+    # keep the four that sit together: the corners of one cross are all
+    # within a couple of cross-widths of each other, while a patch of
+    # white elsewhere on the sheet is not
+    parts.sort(key=lambda b: (b[2] - b[0]) * (b[3] - b[1]), reverse=True)
+    ax = (parts[0][0] + parts[0][2]) / 2.0
+    ay = (parts[0][1] + parts[0][3]) / 2.0
+    near = [b for b in parts
+            if abs((b[0] + b[2]) / 2.0 - ax) < 0.09 * W and abs((b[1] + b[3]) / 2.0 - ay) < 0.35 * H]
+    if len(near) < 3:
+        return None
+    bb = (min(b[0] for b in near), min(b[1] for b in near),
+          max(b[2] for b in near), max(b[3] for b in near))
+    w = bb[2] - bb[0]
+    if not (want[0] * W <= w <= want[1] * W):
+        return None
+    return bb
+
+
 def convert(ms, tex_mark, prof_mark, prof_size):
     """One MultiSkin placement as fractions of a profile drawing.
 
@@ -402,6 +441,13 @@ def main():
     for f in sorted(os.listdir(a.lw_art)):
         if not f.endswith('.png'):
             continue
+        # The 110s live in the same folder and are measured separately
+        # below: their cross is 67 px against the 109's 99, and their dark
+        # camouflage defeats the black-core detector entirely. Left in
+        # here they are flagged as bad readings, which is the consistency
+        # check doing its job on the wrong aeroplane.
+        if '110' in f.lower():
+            continue
         im = Image.open(os.path.join(a.lw_art, f))
         W, H = im.size
         pc = find_marking(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)), BLACK,
@@ -439,6 +485,52 @@ def main():
             del out['lw']['profiles'][f]
         if off:
             print('    %d dropped as a bad reading; those get no markings' % len(off))
+
+    # ---- the Bf 110 --------------------------------------------------
+    #
+    # Its rules declare a canvas of 4048 and the actual skin sheets are
+    # 2048, so every coordinate and every tile size has to be scaled by
+    # 2048/4048 before it can be compared with a cross measured on the
+    # real sheet. The 109 files declare 2048 and match 1:1; this one does
+    # not, and taking the declared canvas at face value puts every code
+    # letter twice as far aft as it belongs.
+    K110 = 2048.0 / 4048.0
+    MS110 = {
+        'code':       (2474, 3200, 0.080),   # Me110_Geshwader_Code.ms
+        'individual': (3025, 3196, 0.043),   # Me110_Aircraft_Code.ms
+        'staffel':    (3175, 3196, 0.043),   # Me110_Staffel_Code.ms
+    }
+    ref110 = os.path.join(a.tex, 'Bf110_70_71_1940.png')
+    if os.path.exists(ref110):
+        r110 = Image.open(ref110)
+        sk = find_cross_corners(r110, (1200, 1520, 1900, 1800))
+        if not sk:
+            print('  ! no Balkenkreuz found on the 110 reference skin', file=sys.stderr)
+        else:
+            out['lw']['skin110'] = {'reference_skin': 'Bf110_70_71_1940.png',
+                                    'marking': list(sk), 'ms_canvas': 4048,
+                                    'skin_px': 2048}
+            print('110 skin: Balkenkreuz at %s  (%d x %d), rules on a 4048 canvas '
+                  'scaled by %.4f' % (sk, sk[2] - sk[0], sk[3] - sk[1], K110))
+            out['lw']['profiles110'] = {}
+            for f in sorted(os.listdir(a.lw_art)):
+                if not f.lower().startswith(('bf110', 'bf110-')) and '110' not in f.lower():
+                    continue
+                im = Image.open(os.path.join(a.lw_art, f))
+                W, H = im.size
+                pc = find_cross_corners(im, (int(W * 0.30), 0, int(W * 0.90), H))
+                if not pc:
+                    print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr)
+                    continue
+                rec = {'marking': list(pc), 'size': [W, H]}
+                for k, (x, y, sx) in MS110.items():
+                    ms = (4048, 4048, sx, sx, x, y)
+                    # convert() works in the SHEET's pixels, so scale first
+                    ms = (int(4048 * K110), int(4048 * K110), sx, sx,
+                          int(round(x * K110)), int(round(y * K110)))
+                    rec[k] = convert(ms, sk, pc, (W, H))
+                out['lw']['profiles110'][f] = rec
+            print('    %d of the 110 profiles measured' % len(out['lw']['profiles110']))
 
     # ---- the Spitfire and the Hurricane ------------------------------
     for name, skin, box, art, idf, codef in (

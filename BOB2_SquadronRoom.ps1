@@ -4899,30 +4899,46 @@ function Show-GruppeCreate {
     # the three he lands in is decided in Invoke-GruppeSubmit a moment
     # later, and the number keeps its meaning whichever it is.
     $pickCol = 'white'
-    [void]$script:Stage.Children.Add((New-TB -Text 'YOUR NUMBER' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
-    $numNote = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+    # A ZERSTOERER IS ASKED FOR A LETTER, NOT A NUMBER. A Bf 110 wears a
+    # bomber's code - the Geschwader's two characters, the Balkenkreuz,
+    # his own letter and the Staffel's - so the one thing that is his is a
+    # letter. The picker is the same tiles-in-a-row; only the alphabet
+    # changes, and acnum stores the position either way.
+    $is110 = ("$($script:SelSq.Type)" -match '110')
+    $pickN = if ($is110) { 11 } else { 15 }
+    [void]$script:Stage.Children.Add((New-TB -Text $(if ($is110) { 'YOUR LETTER' } else { 'YOUR NUMBER' }) `
+                                     -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $numNote = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text $(if ($is110) {
+        'The letter painted aft of the Balkenkreuz, between the Geschwader''s code and your ' +
+        'Staffel''s letter. It is the only part of the code that was ever the pilot''s own: the ' +
+        'other two follow the unit. It will be painted in your Staffel''s colour once you have one.'
+    } else {
         'The number painted forward of the Balkenkreuz. It is the only marking on the aeroplane that ' +
         'was ever the pilot''s own: the Gruppe symbol, the Geschwader emblem and a staff officer''s ' +
-        'chevron all followed the unit. It will be painted in your Staffel''s colour once you have one.')
+        'chevron all followed the unit. It will be painted in your Staffel''s colour once you have one.'
+    })
     $numNote.Margin = '0,6,0,10'; $numNote.MaxWidth = 860; $numNote.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($numNote)
     $numRow = New-Object Windows.Controls.WrapPanel; $numRow.Margin = '0,0,0,18'; $numRow.HorizontalAlignment = 'Left'
     $numRow.MaxWidth = 900
     $script:NumBtns = @{}
     $mk0 = Get-LwMarkings
-    foreach ($n in 1..15) {
+    foreach ($n in 1..$pickN) {
         $nb = New-Object Windows.Controls.Border
         $nb.Width = 54; $nb.Height = 54; $nb.Margin = '0,0,8,8'; $nb.CornerRadius = '3'
         $nb.BorderThickness = 2; $nb.Background = B '#101B22'; $nb.Cursor = 'Hand'; $nb.Tag = $n
         $nb.BorderBrush = B '#22303C'
-        $nf = if ($mk0) { Get-MarkFile "$($mk0.numbers.$n.$pickCol)" } else { $null }
+        $nf = if (-not $mk0) { $null }
+              elseif ($is110) { Get-MarkFile "$($mk0.letters110.($Letters110[$n - 1]).$pickCol)" }
+              else { Get-MarkFile "$($mk0.numbers.$n.$pickCol)" }
         $nbmp = if ($nf) { Load-Image -Path $nf -DecodeWidth 96 } else { $null }
         if ($nbmp) {
             $ni = New-Object Windows.Controls.Image
             $ni.Source = $nbmp; $ni.Stretch = 'Uniform'; $ni.Margin = '8'
             $nb.Child = $ni
         } else {
-            $nb.Child = (New-TB -Text "$n" -Family $CondFam -Size 18 -Colour '#E9E3D4' -Bold)
+            $nb.Child = (New-TB -Text $(if ($is110) { $Letters110[$n - 1] } else { "$n" }) `
+                                -Family $CondFam -Size 18 -Colour '#E9E3D4' -Bold)
         }
         $nb.Add_MouseLeftButtonUp({
             param($sender,$e)
@@ -5294,6 +5310,16 @@ function Get-AcNumber {
     foreach ($c in "$($Pilot.pilot)$($Pilot.unit)".ToCharArray()) { $seed = ($seed * 31 + [int]$c) % 100000 }
     ($seed % 15) + 1
 }
+# A Zerstoerer's own letter. The same acnum the adjutant asks for, read
+# as a letter instead of a numeral: the fuselage rules run A to K and
+# stop there, so eleven letters and no more.
+$Letters110 = @('A','B','C','D','E','F','G','H','I','J','K')
+function Get-Ac110Letter {
+    param($Pilot)
+    $n = Get-AcNumber $Pilot
+    $i = [math]::Max(0, [math]::Min($Letters110.Count - 1, [int]$n - 1))
+    $Letters110[$i]
+}
 function Get-MarkFile {
     param([string]$Rel)
     if (-not $Rel) { return $null }
@@ -5438,6 +5464,54 @@ function New-LwAircraft {
     # the measured placement for THIS profile
     $mp = Get-MarkPositions
     $pk = Split-Path $acFile -Leaf
+
+    # A Bf 110 WEARS LETTERS, NOT A NUMBER, and they are laid out like a
+    # bomber's: the Geschwader's two characters, the Balkenkreuz, the
+    # individual aircraft letter and the Staffel letter - U8+DH. So it
+    # takes a branch of its own rather than the number path with different
+    # numbers in it.
+    #
+    # The individual letter's colour follows the Staffel exactly as the
+    # 109's number does, so Get-StaffelColour serves both. The Staffel
+    # letter is always black: there is no other colour of one anywhere in
+    # the game's rules.
+    if ("$($Gruppe.type)" -match '110') {
+        $P110 = if ($mp -and $mp.lw -and $mp.lw.profiles110) { $mp.lw.profiles110.$pk } else { $null }
+        if ($m -and $P110) {
+            $unit = "$($Pilot.unit)"
+            $key = 'lw110|' + ($unit -replace '[^A-Za-z0-9]','')
+            $col = Get-StaffelColour $Pilot
+            $slot = Get-StaffelSlot $Pilot.staffel
+            # the Geschwader's two characters, forward of the cross
+            $cf = Get-MarkFile "$($m.codes110.$unit)"
+            if ($cf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|code" -File $cf `
+                                   -DX ([double]$P110.code.dx) -DY ([double]$P110.code.dy) `
+                                   -DW ([double]$P110.code.dw) -W $AcW -H $acH `
+                                   -Tip "The Geschwader code.")
+            }
+            # his own letter, aft of the cross
+            $L = Get-Ac110Letter $Pilot
+            $lf = Get-MarkFile "$($m.letters110.$L.$col)"
+            if ($lf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|ind" -File $lf `
+                                   -DX ([double]$P110.individual.dx) -DY ([double]$P110.individual.dy) `
+                                   -DW ([double]$P110.individual.dw) -W $AcW -H $acH `
+                                   -Tip "Your letter, $L, in the $col of the $($Pilot.staffel). Staffel.")
+            }
+            # and the Staffel's letter behind it, always black
+            $sl = "$($m.staffel_letter."$slot")"
+            $sf = Get-MarkFile "$($m.letters110.$sl.black)"
+            if ($sf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|stf" -File $sf `
+                                   -DX ([double]$P110.staffel.dx) -DY ([double]$P110.staffel.dy) `
+                                   -DW ([double]$P110.staffel.dw) -W $AcW -H $acH `
+                                   -Tip "$($Pilot.staffel). Staffel, which is the letter $sl.")
+            }
+        }
+        [void]$wrap.Children.Add($cv)
+        return $wrap
+    }
     $P = if ($mp -and $mp.lw -and $mp.lw.profiles) { $mp.lw.profiles.$pk } else { $null }
     # Falling back to a guess would put a marking somewhere plausible and
     # wrong, and nothing on screen would say which it was. A profile that

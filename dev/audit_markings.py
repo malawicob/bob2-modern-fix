@@ -143,10 +143,26 @@ def main():
         w = r['marking'][2] - r['marking'][0]
         if abs(w - mid) > 0.15 * mid:
             fail('%s: cross read as %d px, the rest agree on %d' % (f, w, mid))
-    missing = [os.path.basename(f) for f in arts if os.path.basename(f) not in profs]
+    # The 110s are measured separately, against their own reference skin
+    # and their own cross: theirs is 67 px where a 109's is 99, and their
+    # dark camouflage defeats the black-core detector altogether. Judged
+    # by the 109 ruler they all read as failures, which is the check
+    # working on the wrong aeroplane.
+    p110 = pos['lw'].get('profiles110', {})
+    missing = [os.path.basename(f) for f in arts
+               if os.path.basename(f) not in profs and os.path.basename(f) not in p110]
     for f in missing:
         warn('%s: no cross found, so it gets no markings' % f)
-    print('  %d profiles measured, cross %d px, %d unmeasured' % (len(profs), mid, len(missing)))
+    print('  %d 109 profiles measured, cross %d px; %d 110 profiles; %d unmeasured'
+          % (len(profs), mid, len(p110), len(missing)))
+    if p110:
+        w110 = sorted(r['marking'][2] - r['marking'][0] for r in p110.values())
+        m110 = w110[len(w110) // 2]
+        for f, r in sorted(p110.items()):
+            w = r['marking'][2] - r['marking'][0]
+            if abs(w - m110) > 0.15 * m110:
+                fail('%s: 110 cross read as %d px, the rest agree on %d' % (f, w, m110))
+        print('  110 cross %d px across %d profiles' % (m110, len(p110)))
 
     print('THE PLACEMENT')
     checked = 0
@@ -196,6 +212,41 @@ def main():
             fail('%s: emblem at %.3f is not on the cowling' % (f, e['dx']))
         checked += 1
     print('  %d placements checked' % checked)
+
+    print('THE PLACEMENT, Bf 110')
+    n110 = 0
+    for f, r in sorted(pos['lw'].get('profiles110', {}).items()):
+        W, H = r['size']
+        cl, ct, cr, cb = r['marking']
+        im = Image.open(os.path.join(LW_ART, f))
+        # the Geschwader code forward of the cross, both letters aft
+        for key, rel, side in (
+                ('code',       marks['codes110'].get('II./ZG 26'), 'fwd'),
+                ('individual', marks['letters110'].get('G', {}).get('white'), 'aft'),
+                ('staffel',    marks['letters110'].get('M', {}).get('black'), 'aft')):
+            if not rel:
+                fail('no tile for the 110 %s' % key); continue
+            t = os.path.join(LW_MARK, rel.replace('/', os.sep))
+            if not os.path.exists(t):
+                fail('missing tile %s' % rel); continue
+            v = visible(t, r[key]['dx'], r[key]['dw'], W)
+            if side == 'fwd' and v[1] > cl:
+                fail('%s: the Geschwader code runs into the cross' % f)
+            if side == 'aft' and v[0] < cr:
+                fail('%s: the %s letter is forward of the cross' % (f, key))
+            cy = r[key]['dy'] * H + r[key]['dh'] * H * 0.5
+            if not opaque_at(im, (v[0] + v[1]) / 2, cy):
+                fail('%s: the %s is not on the aeroplane' % (f, key))
+            n110 += 1
+        # and they must not overlap each other
+        vi = visible(os.path.join(LW_MARK, marks['letters110']['G']['white'].replace('/', os.sep)),
+                     r['individual']['dx'], r['individual']['dw'], W)
+        vs = visible(os.path.join(LW_MARK, marks['letters110']['M']['black'].replace('/', os.sep)),
+                     r['staffel']['dx'], r['staffel']['dw'], W)
+        if vs[0] < vi[1]:
+            fail('%s: the Staffel letter overlaps his own' % f)
+    print('  %d placements checked over %d 110 profiles'
+          % (n110, len(pos['lw'].get('profiles110', {}))))
 
     print('THE PARTS')
     for n in range(1, 16):

@@ -153,6 +153,53 @@ GESCHWADER_EMBLEMS = {
 # only cuts the tiles.
 
 
+# =====================================================================
+#  THE Bf 110, which wears letters where a 109 wears a number
+#
+#  A Zerstoerer carries a bomber-style code: the Geschwader's two
+#  characters, the Balkenkreuz, the individual aircraft letter and the
+#  Staffel letter - U8+DH. Nothing about it resembles the 109's single
+#  numeral, and all of it comes out of the Me110_*.ms rules.
+#
+#  The individual letter's COLOUR follows the Staffel exactly as the
+#  109's number does: the 1st, 4th and 7th Staffel white, the 2nd, 5th
+#  and 8th red, the 3rd, 6th and 9th yellow. The Staffel letter is always
+#  black - there is no white, red or yellow Staffel letter anywhere in
+#  the rules.
+# =====================================================================
+LETTERS_110 = 'ABCDEFGHIJK'          # the fuselage rules stop at K
+# The STAFFEL letter is a different alphabet from the individual letter,
+# and cutting only A to K left every Zerstoerer without one: the Staffel
+# letters are H K L for the 1st to 3rd, M N P for the 4th to 6th, R S T
+# for the 7th to 9th, with B C D for the Stab machines. I, O and Q are
+# skipped, as the Luftwaffe skipped them. They exist in black only.
+STAFFEL_LETTERS_110 = 'BCDHKLMNPRST'
+LETTER_COLOUR_110 = {
+    'white':  'LW_White_%s',
+    'red':    'LW_Red_White_%s',
+    'yellow': 'LW_Yellow_%s',
+    'black':  'LW_Black_%s',
+}
+# The Staffel letter by its slot in the Gruppe. I, O and Q are skipped,
+# as the Luftwaffe skipped them.
+STAFFEL_LETTER = {1: 'H', 2: 'K', 3: 'L', 4: 'M', 5: 'N', 6: 'P',
+                  7: 'R', 8: 'S', 9: 'T'}
+# Which two characters each unit painted, from Me110_Geshwader_Code.ms.
+# Note the painted code is NOT the Staffel key's prefix: the 2S* units
+# wear 3M, A2 or L1 depending on the Gruppe.
+GESCHWADER_CODE_110 = {
+    'I./ZG 2':    '3M_Code',
+    'II./ZG 2':   'A2_Code2',
+    'V./LG 1':    'L1_Code',
+    'I./ZG 26':   'U8_Code',
+    'II./ZG 26':  '3U_Code',
+    'III./ZG 26': '3U_Code',
+    'EG 210':     'S9_Code',
+    'II./ZG 76':  'M8_Code',
+    'III./ZG 76': '2N_Code2',
+}
+
+
 def save(src, dst, maxpx=320, keep_canvas=True):
     """Copy one tile, KEEPING ITS CANVAS.
 
@@ -232,6 +279,27 @@ def main():
         save(os.path.join(a.src, f), os.path.join(a.out, name), maxpx=256)
         made['emblems'][who] = name
 
+    # ---- the Bf 110's letters and codes -----------------------------
+    made['letters110'] = {}
+    for col, pat in LETTER_COLOUR_110.items():
+        letters = LETTERS_110 if col != 'black' else sorted(set(LETTERS_110 + STAFFEL_LETTERS_110))
+        for L in letters:
+            f = pick(idx, pat % L)
+            if not f:
+                missing.append('110 letter %s %s' % (L, col)); continue
+            name = 'letters110/%s_%s.png' % (L, col)
+            save(os.path.join(a.src, f), os.path.join(a.out, name))
+            made['letters110'].setdefault(L, {})[col] = name
+    made['codes110'] = {}
+    for unit, tile in GESCHWADER_CODE_110.items():
+        f = pick(idx, tile)
+        if not f:
+            missing.append('110 code %s (%s)' % (unit, tile)); continue
+        name = 'codes110/%s.png' % re.sub(r'[^A-Za-z0-9]', '', unit)
+        save(os.path.join(a.src, f), os.path.join(a.out, name))
+        made['codes110'][unit] = name
+    made['staffel_letter'] = {str(k): v for k, v in STAFFEL_LETTER.items()}
+
     made['bands'] = {}
     for who, tile in BANDS.items():
         f = pick(idx, tile)
@@ -270,6 +338,9 @@ def main():
         'stab': made['stab'],
         'emblems': made['emblems'],
         'bands': made['bands'],
+        'letters110': made['letters110'],
+        'codes110': made['codes110'],
+        'staffel_letter': made['staffel_letter'],
         'units': per_unit,
     }
     with open(a.json, 'w', encoding='utf-8') as fh:
@@ -351,6 +422,9 @@ group. Credit them in the release notes, and ask if in any doubt.
     print('  numbers  %d in four colours' % len(made['numbers']))
     print('  gruppe   %d symbols' % len(made['gruppe']))
     print('  stab     %d chevrons' % len(made['stab']))
+    print('  110      %d letters in %d colours, %d Geschwader codes'
+          % (len(made['letters110']),
+             len(next(iter(made['letters110'].values()), {})), len(made['codes110'])))
     print('  emblems  %d and %d fuselage band(s), covering %d of the %d fighter Gruppen'
           % (len(made['emblems']), len(made['bands']), withemb, len(per_unit)))
     if missing:
