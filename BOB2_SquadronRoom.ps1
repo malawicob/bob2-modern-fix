@@ -4500,25 +4500,30 @@ function Get-Profile110 {
 }
 function Test-GruppeOwnProfile {
     param($G)
-    if (-not $G) { return $false }
-    # A 110's profile is a base SCHEME rather than a unit's own markings,
-    # so it never carries the Geschwader badge the way a 109 profile does
-    # and the Room must draw one.
-    if ("$($G.type)" -match '110') { return $false }
-    if ("$($G.type)" -notmatch '109') { return $false }
-    $key = ("$($G.unit)" -replace '\.','' -replace '/','_' -replace ' ','')
-    Test-Path (Join-Path $script:AircraftDir ($key + '.png'))
+    # Nothing does any more, and that is the point.
+    #
+    # There were forty of these, one per Gruppe, each carrying its unit's
+    # camouflage and its Geschwader badge already painted on, so the Room
+    # had to be told not to draw a badge over the top of one. They were
+    # also all Bf 109Fs, which 33lima spotted on 10 September 2026, and a
+    # 109F did not fight this battle.
+    #
+    # They are replaced by ONE bare Bf 109E, the way the RAF side has
+    # always worked: spitfire.png and hurricane.png arrive bare and the
+    # Room paints the code, the letter and the serial on. So every unit
+    # marking is now drawn rather than baked, which is why this is false
+    # for everybody.
+    $false
 }
 function Get-GruppeAircraftPath {
     param($G, $Pilot)
     if (-not $G) { return $null }
     if ("$($G.type)" -match '110') { return (Get-Profile110 -G $G -Pilot $Pilot -Date $script:CampaignDate) }
     if ("$($G.type)" -notmatch '109') { return $null }
-    $key = ("$($G.unit)" -replace '\.','' -replace '/','_' -replace ' ','')
-    $f = Join-Path $script:AircraftDir ($key + '.png')
-    if (Test-Path $f) { return $f }
-    # a Gruppe with no profile of its own gets the plain scheme
-    $f = Join-Path $script:AircraftDir 'RLM70_71.png'
+    # One bare Bf 109E for every Gruppe. What tells them apart is painted
+    # on: the number in the Staffel's colour, the Gruppe symbol, the
+    # Geschwader badge, and a Stab chevron where one is due.
+    $f = Join-Path $script:AircraftDir 'bf109e.png'
     if (Test-Path $f) { return $f }
     $null
 }

@@ -100,6 +100,10 @@ def opaque_at(im, x, y):
     return im.convert('RGBA').getpixel((int(x), int(y)))[3] > 100
 
 
+CROSS_DARK = 60   # dark enough to be a Balkenkreuz core on either drawing
+BG_BLACK = 12     # the background the cut is supposed to have removed
+
+
 def main():
     pos = load(os.path.join(ROOT, 'squadronroom', 'marking-positions.json'))
     marks = load(os.path.join(ROOT, 'squadronroom', 'lw', 'markings.json'))
@@ -112,15 +116,29 @@ def main():
         px = im.load()
         W, H = im.size
         cross = wedge = 0
+        # The cross core is dark, but how dark depends on the drawing. The
+        # forty Bf 109F plates this replaced rendered it pure black, under
+        # 12, so that is what this checked for. The bare Bf 109E that came
+        # in on 10 September renders it a soft dark grey: measured over
+        # the middle of its cross, the darkest pixel is 17 and the median
+        # is 34, so a pure-black test reported the cross missing on a
+        # plate whose cross the ruler had just measured at 85 px.
+        #
+        # 60 is well below any camouflage on either drawing and well above
+        # both cross cores, so it separates the two things this is
+        # actually trying to tell apart.
         for y in range(int(H * 0.30), int(H * 0.70)):
             for x in range(int(W * 0.58), int(W * 0.72)):
                 r, g, b, a = px[x, y]
-                if a > 200 and r <= 12 and g <= 12 and b <= 12:
+                if a > 200 and r <= CROSS_DARK and g <= CROSS_DARK and b <= CROSS_DARK:
                     cross += 1
+        # The aerial pocket stays at pure black on purpose: what it looks
+        # for is BACKGROUND the cut failed to clear, and the background
+        # really is black.
         for y in range(int(H * 0.04), int(H * 0.26)):
             for x in range(int(W * 0.44), int(W * 0.72)):
                 r, g, b, a = px[x, y]
-                if a > 200 and r <= 12 and g <= 12 and b <= 12:
+                if a > 200 and r <= BG_BLACK and g <= BG_BLACK and b <= BG_BLACK:
                     wedge += 1
         # the spinner: opaque pixels in the nose cone
         spin = sum(1 for y in range(int(H * 0.35), int(H * 0.62))
