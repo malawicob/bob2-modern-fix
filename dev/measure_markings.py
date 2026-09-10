@@ -45,6 +45,8 @@ of fractions cannot be right for all of them. Each profile is measured on
 its own and gets its own answer.
 """
 import argparse, json, os, re, sys, collections
+
+ROOTDIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
 MS_RE = re.compile(
@@ -146,7 +148,7 @@ def haloed(im, bb, light=150):
     return hit / float(tot) if tot else 0.0
 
 
-def find_marking(im, box, test, want=(0.06, 0.16), aspect=(0.75, 1.7), need_halo=0.0):
+def find_marking(im, box, test, want=(0.06, 0.16), aspect=(0.82, 1.30), need_halo=0.0):
     """The national marking: the candidate that is the right size, the
     right shape, and - for a Balkenkreuz - ringed in white.
 
@@ -163,12 +165,17 @@ def find_marking(im, box, test, want=(0.06, 0.16), aspect=(0.75, 1.7), need_halo
             continue
         if not (aspect[0] <= w / float(h) <= aspect[1]):
             continue
-        score = n / float(w * h)                     # how solidly it fills its box
+        # BIGGEST wins, not best-filled. Scoring by how solidly a
+        # candidate fills its box picked a 61 x 38 patch of dark canopy on
+        # II./JG 26 over the real 99 x 98 cross, because the patch was the
+        # denser of the two. Once the shape gate has thrown out the merged
+        # camouflage regions, the Balkenkreuz is simply the largest
+        # compact dark thing on the fuselage, and area says so plainly.
+        score = float(n)
         if need_halo > 0:
             hal = haloed(im, bb)
             if hal < need_halo:
                 continue
-            score += hal
         if score > bestscore:
             bestscore, best = score, bb
     return best
@@ -243,6 +250,10 @@ def main():
     # ---- the Bf 109 -------------------------------------------------
     # The reference skin is a real III./JG 26 machine because the bare
     # sheet carries only stencils and has no Balkenkreuz to measure from.
+    oobp = os.path.join(ROOTDIR, 'squadronroom', 'lw', 'oob.json')
+    units = [r for r in json.load(open(oobp, encoding='utf-8')) if r.get('fighter')] \
+        if os.path.exists(oobp) else []
+
     ref = Image.open(os.path.join(a.tex, 'M109ULF_IIIJG26.png'))
     tex_cross = find_marking(ref, (1250, 150, 1600, 440), BLACK,
                              want=(0.05, 0.10), need_halo=0.35)
@@ -322,9 +333,70 @@ def main():
             'symbol': f,
             'ms': {'x': rule[4], 'y': rule[5], 'scale_x': rule[2], 'scale_y': rule[3]},
         }
+    # WHERE THE RULES ARE SILENT.
+    #
+    # Most units get blank.dds, which does NOT mean they wore no Gruppe
+    # symbol. It means the game's own main skin for that unit already has
+    # one painted on, so nothing needs adding as a decal. Our profile
+    # artwork is a different set of drawings and carries no bar at all: I
+    # looked at II./JG 2, II./JG 3, II./JG 52, II./JG 53, II./JG 54,
+    # III./JG 2, III./JG 27 and III./JG 54 and every one is bare aft of
+    # the cross. Left as it stood, 24 of the 32 fighter Gruppen would show
+    # no symbol whatever.
+    #
+    # So a unit the rules do not give a symbol to gets the one its Gruppe
+    # numeral implies - II. a horizontal bar, III. a vertical bar, I.
+    # nothing - drawn at the position the rules give for THAT symbol.
+    # This is the one inference in the whole file and it is a small one:
+    # the numeral-to-symbol rule is ordinary Luftwaffe practice, and the
+    # position is still the game's. Each entry says which it is, so the
+    # inferred ones can be told from the read ones.
+    for v in out['lw']['gruppe_by_unit'].values():
+        v['from_rules'] = True
+    # Every symbol's position, from EVERY rule line rather than only the
+    # first one that matches each unit. Built the narrow way, the wavy
+    # line's position at (1520, 199) never appeared at all: the one unit
+    # that wears it, III./JG 2, is blanked by an earlier line, so no
+    # first-match entry carried it and III./JG 2 ended up with no symbol.
+    bysym = {}
+    for line in open(os.path.join(a.ms, 'Me109_PlaneID_2.ms'), encoding='latin-1'):
+        if line.lstrip().startswith('#'):
+            continue
+        mm = MS_RE.match(line.rstrip())
+        if not mm:
+            continue
+        f2 = famof(mm.group('tex'))
+        if f2 and f2 != 'unit':
+            bysym.setdefault(f2, {'x': int(mm.group('x')), 'y': int(mm.group('y')),
+                                  'scale_x': float(mm.group('sx')),
+                                  'scale_y': float(mm.group('sy'))})
+    wavy_units = set()
+    for line in open(os.path.join(a.ms, 'Me109_PlaneID_2.ms'), encoding='latin-1'):
+        if 'wavy' in line.lower():
+            wavy_units.update(re.findall(r'unit\s*==\s*(\w+)', line))
+    inferred = 0
+    for u in units:
+        unit = u['unit']
+        cur = out['lw']['gruppe_by_unit'].get(unit)
+        if cur and cur['symbol'] and cur['symbol'] != 'unit':
+            continue
+        g = unit.split('.')[0]
+        key = unit.replace('.', '').replace('/', '').replace(' ', '')
+        sym = None
+        if g == 'II':
+            sym = 'II'
+        elif g == 'III':
+            sym = 'IIIwavy' if key in wavy_units else 'III'
+        if not sym or sym not in bysym:
+            continue
+        out['lw']['gruppe_by_unit'][unit] = {'symbol': sym, 'ms': bysym[sym],
+                                             'from_rules': False}
+        inferred += 1
     named = sorted(set(v['symbol'] for v in out['lw']['gruppe_by_unit'].values()) - {None})
-    print('    gruppe symbols read from the rules for %d units: %s'
-          % (len(per_unit), ', '.join(named)))
+    fromrules = sum(1 for v in out['lw']['gruppe_by_unit'].values() if v.get('from_rules'))
+    print('    gruppe symbols: %d read from the rules, %d taken from the Gruppe '
+          'numeral where the rules are silent (%s)'
+          % (fromrules, inferred, ', '.join(named)))
 
     out['lw']['profiles'] = {}
     for f in sorted(os.listdir(a.lw_art)):
@@ -349,7 +421,24 @@ def main():
             rec['gruppe_by_unit'][unit] = dict(convert(ms, tex_cross, pc, (W, H)),
                                                symbol=g['symbol'])
         out['lw']['profiles'][f] = rec
-    print('    %d of the 109 profiles measured' % len(out['lw']['profiles']))
+    # These profiles are all the same base drawing, so every cross should
+    # come out the same size. Anything that does not is a detector miss,
+    # and a miss is silent: the whole conversion scales off this box, so
+    # one bad reading draws that aeroplane's markings at the wrong size
+    # somewhere off the tail. It has happened twice, so it is checked.
+    widths = sorted(r['marking'][2] - r['marking'][0] for r in out['lw']['profiles'].values())
+    if widths:
+        mid = widths[len(widths) // 2]
+        off = {f: r['marking'] for f, r in out['lw']['profiles'].items()
+               if abs((r['marking'][2] - r['marking'][0]) - mid) > 0.15 * mid}
+        print('    %d of the 109 profiles measured, cross %d px wide'
+              % (len(out['lw']['profiles']), mid))
+        for f, bb in off.items():
+            print('  ! %s: cross read as %d x %d, well off the %d the rest agree on'
+                  % (f, bb[2] - bb[0], bb[3] - bb[1], mid), file=sys.stderr)
+            del out['lw']['profiles'][f]
+        if off:
+            print('    %d dropped as a bad reading; those get no markings' % len(off))
 
     # ---- the Spitfire and the Hurricane ------------------------------
     for name, skin, box, art, idf, codef in (
