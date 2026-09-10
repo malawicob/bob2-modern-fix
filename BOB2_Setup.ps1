@@ -2266,6 +2266,125 @@ function Step-RemoveLwDispersal { param([string]$GameFolder)
 }
 
 # ============================================================
+# Reach the dressed airfields (optional). The Basic Training and
+# Familiarisation missions let you take off from a Luftwaffe airfield,
+# and the I.D. list offers four: Marck, Abbeville, Wissant and Le Havre.
+# Those are four of the six German fields that already had scenery, so
+# they are the four that test nothing new.
+#
+# The list cannot be made longer. H/SQUICK1.H declares targets[4][4], so
+# four is the size of the array and not a choice. What CAN be changed is
+# which four, and nine missions all spend their four slots on the same
+# fields. Giving each a different quartet reaches 36 airfields instead of
+# 4, or 40 with the Dunkirk pack installed.
+#
+# Unlike the scenery this edits a stock game file, so it is its own step,
+# it is gated on finding exactly what it expects, and quick.dat is kept
+# as quick.dat.before-lwfields before a byte is written.
+# ============================================================
+$LwFieldsBackup = '.before-lwfields'
+
+function Get-LwQuickFieldsPayload { param([string]$GameFolder)
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path $base 'dispersal\lw-quickfields.json'
+        if (Test-Path $cand) { return $cand }
+    }
+    return $null
+}
+
+function Find-BytePattern { param([byte[]]$Hay, [byte[]]$Needle)
+    $hits = New-Object System.Collections.Generic.List[int]
+    $last = $Hay.Length - $Needle.Length
+    for ($i = 0; $i -le $last; $i++) {
+        if ($Hay[$i] -ne $Needle[0]) { continue }
+        $ok = $true
+        for ($j = 1; $j -lt $Needle.Length; $j++) {
+            if ($Hay[$i + $j] -ne $Needle[$j]) { $ok = $false; break }
+        }
+        if ($ok) { [void]$hits.Add($i); $i += $Needle.Length - 1 }
+    }
+    return $hits
+}
+
+function Get-UidBytes { param($Uids)
+    $b = New-Object byte[] ($Uids.Count * 4)
+    for ($i = 0; $i -lt $Uids.Count; $i++) {
+        $v = [uint32]$Uids[$i]
+        $b[$i*4]   = [byte]( $v        -band 0xFF)
+        $b[$i*4+1] = [byte](($v -shr 8)  -band 0xFF)
+        $b[$i*4+2] = [byte](($v -shr 16) -band 0xFF)
+        $b[$i*4+3] = [byte](($v -shr 24) -band 0xFF)
+    }
+    return ,$b
+}
+
+function Get-LwQuickFieldsState { param([string]$GameFolder)
+    # 'on' | 'off' | 'unknown' (a quick.dat this does not recognise)
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (-not (Test-Path $q)) { return 'unknown' }
+    $pay = Get-LwQuickFieldsPayload $GameFolder
+    if (-not $pay) { return 'unknown' }
+    $j = Get-Content $pay -Raw | ConvertFrom-Json
+    $b = [System.IO.File]::ReadAllBytes($q)
+    $stock = Get-UidBytes @($j.stock | ForEach-Object { $_.uid })
+    $first = Get-UidBytes @($j.quartets[0].uids)
+    $nStock = (Find-BytePattern $b $stock).Count
+    $nOurs  = (Find-BytePattern $b $first).Count
+    if ($nOurs -ge 1 -and $nStock -eq 0) { return 'on' }
+    if ($nStock -ge 9) { return 'off' }
+    return 'unknown'
+}
+
+function Step-InstallLwQuickFields { param([string]$GameFolder)
+    Write-Step 'Reach the dressed airfields from Basic Training'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $pay = Get-LwQuickFieldsPayload $GameFolder
+    if (-not $pay) { Write-Warn 'dispersal\lw-quickfields.json payload not found.'; return $false }
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (-not (Test-Path $q)) { Write-Warn 'BFIELDS\quick.dat not found.'; return $false }
+    switch (Get-LwQuickFieldsState $GameFolder) {
+        'on' { Write-OK 'The training missions already offer the dressed airfields'; return $true }
+    }
+    $j = Get-Content $pay -Raw | ConvertFrom-Json
+    $b = [System.IO.File]::ReadAllBytes($q)
+    $stock = Get-UidBytes @($j.stock | ForEach-Object { $_.uid })
+    $hits = Find-BytePattern $b $stock
+    if ($hits.Count -lt 9) {
+        Write-Warn ("quick.dat holds $($hits.Count) of the expected airfield lists, not 9 or more - " +
+                    "this is not a quick.dat this step recognises, so it is left strictly alone.")
+        return $false
+    }
+    if (-not (Test-Path ($q + $LwFieldsBackup))) { Copy-Item $q ($q + $LwFieldsBackup) }
+    $n = [Math]::Min($hits.Count, $j.quartets.Count)
+    for ($k = 0; $k -lt $n; $k++) {
+        $repl = Get-UidBytes @($j.quartets[$k].uids)
+        [Array]::Copy($repl, 0, $b, $hits[$k], 16)
+    }
+    [System.IO.File]::WriteAllBytes($q, $b)
+    Write-OK "Set $n training missions to $($n * 4) different airfields (was 4, repeated)"
+    foreach ($k in 0..($n - 1)) {
+        Write-Host ("        " + (($j.quartets[$k].fields) -join ', ')) -ForegroundColor DarkGray
+    }
+    if ($hits.Count -gt $j.quartets.Count) {
+        Write-Host ("        $($hits.Count - $j.quartets.Count) further list(s) left as they were") -ForegroundColor DarkGray
+    }
+    return $true
+}
+
+function Step-RemoveLwQuickFields { param([string]$GameFolder)
+    Write-Step 'Put the training airfields back'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (Test-Path ($q + $LwFieldsBackup)) {
+        Copy-Item ($q + $LwFieldsBackup) $q -Force
+        Write-OK 'Restored quick.dat from the backup taken before it was touched'
+        return $true
+    }
+    Write-OK 'No backup here, so nothing was ever changed'
+    return $true
+}
+
+# ============================================================
 # Enhanced sea (optional). Replaces Weather\Water.fx with the tuned
 # shader (larger swells, sun glint, sparse white specks on both the
 # detailed and the distant filler water) and sets the deep-navy channel
@@ -3486,12 +3605,18 @@ function Do-IndividualSteps {
             'foreign' { " 13. Dress the Luftwaffe airfields (blocked: a file of that name is not ours)" }
             default   { " 13. Dress the Luftwaffe airfields (optional, 40 German fields)" }
         }) -ForegroundColor White
-        Write-Host " 14. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        $qf14 = Get-LwQuickFieldsState $gameFolder
+        Write-Host $(switch ($qf14) {
+            'on'      { " 14. Put the training airfields back (currently showing 36 of them)" }
+            'unknown' { " 14. Reach the dressed airfields from Basic Training (quick.dat not recognised)" }
+            default   { " 14. Reach the dressed airfields from Basic Training (optional)" }
+        }) -ForegroundColor White
+        Write-Host " 15. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
         Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
-        Write-Host " 15. Back to main menu" -ForegroundColor White
+        Write-Host " 16. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-15): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-16): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -3520,6 +3645,12 @@ function Do-IndividualSteps {
                 Pause-Continue
             }
             "14" {
+                # One key, and it does whatever the current state needs.
+                if ((Get-LwQuickFieldsState $gameFolder) -eq 'on') { Step-RemoveLwQuickFields $gameFolder }
+                else { Step-InstallLwQuickFields $gameFolder }
+                Pause-Continue
+            }
+            "15" {
                 # One key for the whole look, and a way back off it. It turns
                 # OFF only when the whole look is already on. Judging that on
                 # the antialiasing alone was wrong once Settings could set the
@@ -3533,8 +3664,8 @@ function Do-IndividualSteps {
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
             }
-            "15" { return }
-            default { Write-Warn "Invalid option. Please enter 1-15." }
+            "16" { return }
+            default { Write-Warn "Invalid option. Please enter 1-16." }
         }
     }
 }

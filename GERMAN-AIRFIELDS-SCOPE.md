@@ -215,3 +215,54 @@ The placement mode key bindings are still undocumented and still unknown.
 Nothing here needed them, because nothing here was placed by hand. They
 would be needed to do better than a lifted kit, and that remains a
 project rather than a job.
+
+## Getting to them to test
+
+Basic Training and Familiarisation let you take off from a Luftwaffe
+airfield, and the I.D. list offers four: Marck, Abbeville, Wissant and Le
+Havre. Those are four of the six fields that already had scenery, so they
+are precisely the four that test nothing new.
+
+**The list cannot be made longer.** `H/SQUICK1.H` declares
+
+```c
+FixString  targtypeIDs[4];
+UniqueID   targets[4][4];
+```
+
+so four is the size of the array, not a choice. The shipped `quick.dat`
+agrees: nine identical quartets of those four fields, as 4-byte little
+endian UIDs, one per mission at a stride of 1134 bytes. The UIDs are the
+same numbers as the `SimpleItem mainwld_34ff` handles in `MAINWLD.BFI`,
+so Abbeville is `0x34ff` in both.
+
+What can be changed is which four, and there are nine missions all
+spending their slots on the same fields. Setup step 14 gives each mission
+a different quartet, which reaches **36 airfields instead of 4**, or all
+40 with the Dunkirk pack installed, since that adds a tenth:
+
+| | |
+|---|---|
+| 1 | Guines, Audembert, Caffiers, Marquise |
+| 2 | Hermelinghen, Colombert, Samer, Barley |
+| 3 | Yvrench, Amiens, Carquebut, Crepon |
+| 4 | Plumetot, Beaumont-le-Roger, St. Malo, Laval |
+| 5 | Antwerp, St. Trond, Desvres, Lille |
+| 6 | Tramecourt, Arras, Epinoy, Cambrai |
+| 7 | Rosieres-en-Santerre, Montdidier, Beauvais, Creil |
+| 8 | Caen, Cormeilles-en-Vexin, Villacoublay, Orly |
+| 9 | Dreux, Lannion, Dinnard, Chartres |
+| 10 | Etampes, Rennes, Chateaudun, Orleans-Bricy (Dunkirk pack only) |
+
+The order is worked out rather than typed: fighter fields first, because
+that is where a Bf 109 career flies from, and within each group the
+fields nearest England first. So the take-off mission offers the JG 26
+and JG 52 fields of the Pas-de-Calais.
+
+This one edits a stock game file, which the scenery does not, so it is a
+separate step. It is gated on finding at least nine of the expected lists
+before a byte is written, `quick.dat` is copied to
+`quick.dat.before-lwfields` first, and removing it restores that copy
+byte for byte.
+
+    python3 dev/build_lw_quickfields.py    works out the quartets

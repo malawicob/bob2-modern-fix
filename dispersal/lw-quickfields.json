@@ -1,0 +1,209 @@
+{
+ "stock": [
+  {
+   "name": "Marck",
+   "uid": 13556
+  },
+  {
+   "name": "Abbeville",
+   "uid": 13567
+  },
+  {
+   "name": "Wissant",
+   "uid": 13551
+  },
+  {
+   "name": "LeHarve",
+   "uid": 13541
+  }
+ ],
+ "quartets": [
+  {
+   "fields": [
+    "Guines",
+    "Audembert",
+    "Caffiers",
+    "Marquise"
+   ],
+   "uids": [
+    13559,
+    13565,
+    13563,
+    13555
+   ],
+   "based": [
+    "Bf 109E"
+   ]
+  },
+  {
+   "fields": [
+    "Hermelinghen",
+    "Colombert",
+    "Samer",
+    "Barley"
+   ],
+   "uids": [
+    13558,
+    13561,
+    13553,
+    13564
+   ],
+   "based": [
+    "Bf 109E",
+    "Bf 110",
+    "Ju 87"
+   ]
+  },
+  {
+   "fields": [
+    "Yvrench",
+    "Amiens",
+    "Carquebut",
+    "Crepon"
+   ],
+   "uids": [
+    13550,
+    13548,
+    13545,
+    13544
+   ],
+   "based": [
+    "Bf 109E",
+    "Bf 110",
+    "He 111",
+    "Ju 87"
+   ]
+  },
+  {
+   "fields": [
+    "Plumetot",
+    "Beaumont-le-Roger",
+    "St. Malo",
+    "Laval"
+   ],
+   "uids": [
+    13540,
+    13547,
+    13538,
+    13557
+   ],
+   "based": [
+    "Bf 109E",
+    "Bf 110",
+    "Ju 87"
+   ]
+  },
+  {
+   "fields": [
+    "Antwerp",
+    "St. Trond",
+    "Desvres",
+    "Lille"
+   ],
+   "uids": [
+    13536,
+    13525,
+    13560,
+    13528
+   ],
+   "based": [
+    "Do 17",
+    "He 111",
+    "Ju 87"
+   ]
+  },
+  {
+   "fields": [
+    "Tramecourt",
+    "Arras",
+    "Epinoy",
+    "Cambrai"
+   ],
+   "uids": [
+    13549,
+    13535,
+    13529,
+    13533
+   ],
+   "based": [
+    "Do 17",
+    "He 111",
+    "Ju 87"
+   ]
+  },
+  {
+   "fields": [
+    "Rosieres-en-Santerre",
+    "Montdidier",
+    "Beauvais",
+    "Creil"
+   ],
+   "uids": [
+    13526,
+    13527,
+    13534,
+    13531
+   ],
+   "based": [
+    "Do 17",
+    "He 111"
+   ]
+  },
+  {
+   "fields": [
+    "Caen",
+    "Cormeilles-en-Vexin",
+    "Villacoublay",
+    "Orly"
+   ],
+   "uids": [
+    13546,
+    13532,
+    13512,
+    13514
+   ],
+   "based": [
+    "Do 17",
+    "He 111",
+    "Ju 87",
+    "Ju 88"
+   ]
+  },
+  {
+   "fields": [
+    "Dreux",
+    "Lannion",
+    "Dinnard",
+    "Chartres"
+   ],
+   "uids": [
+    13520,
+    13539,
+    13521,
+    13522
+   ],
+   "based": [
+    "He 111",
+    "Ju 87"
+   ]
+  },
+  {
+   "fields": [
+    "Etampes",
+    "Rennes",
+    "Chateaudun",
+    "Orleans-Bricy"
+   ],
+   "uids": [
+    13519,
+    13518,
+    13523,
+    13515
+   ],
+   "based": [
+    "He 111",
+    "Ju 88"
+   ]
+  }
+ ]
+}
