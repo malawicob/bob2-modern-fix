@@ -1380,48 +1380,25 @@ function New-Aircraft {
     $script:AcPos = Get-AcPos
     $acKey = Get-AcKey $ptype
 
-    # THE CODES ARE THE GAME'S OWN, not text in whatever condensed font
-    # this machine happens to have. BOB2 keeps a tile per letter and per
-    # squadron code in RAF Sky grey, and MultiSkin places them by exact
-    # pixel; dev/measure_markings.py converts those coordinates onto this
-    # drawing using the roundel as the ruler. Every one of the 51 codes
-    # the Room uses has a tile and so do all 26 letters, so nothing has to
-    # fall back to a font.
-    $rm = Get-RafMarkings
-    $mp = Get-MarkPositions
-    $pk = if ($ptype -match 'Hurricane') { 'hurricane' } else { 'spitfire' }
-    $R  = if ($mp -and $mp.raf) { $mp.raf.$pk } else { $null }
-    $drew = $false
-    if ($rm -and $R -and $R.code -and $R.letter) {
-        $cf = Get-RafMarkFile "$($rm.codes.$sq)"
-        if ($cf) {
-            [void](Add-AcImage -Canvas $cv -Key "$acKey|sq" -File $cf `
-                               -DX ([double]$R.code.dx) -DY ([double]$R.code.dy) `
-                               -DW ([double]$R.code.dw) -W $AcW -H $acH `
-                               -Tip "The squadron code, $sq.")
-            $drew = $true
-        }
-        $lf = Get-RafMarkFile "$($rm.letters.$ind)"
-        if ($lf) {
-            [void](Add-AcImage -Canvas $cv -Key "$acKey|ind" -File $lf `
-                               -DX ([double]$R.letter.dx) -DY ([double]$R.letter.dy) `
-                               -DW ([double]$R.letter.dw) -W $AcW -H $acH `
-                               -Tip "Your letter, $ind.")
-            $drew = $true
-        }
-    }
-    # A squadron with no tile, or a marking-positions.json that has not
-    # been built, still gets its codes: the old drawn text is the fallback
-    # rather than a bare aeroplane.
-    if (-not $drew) {
-        [void](Add-AcMark -Canvas $cv -Key "$acKey|sq"  -Text $sq  -Family $CodeFont -Size ([double]$spec.CodeSize) `
-                          -Colour $CodeColour -DX ([double]$spec.SqX)  -DY ([double]$spec.SqY)  -W $AcW -H $acH)
-        [void](Add-AcMark -Canvas $cv -Key "$acKey|ind" -Text $ind -Family $CodeFont -Size ([double]$spec.CodeSize) `
-                          -Colour $CodeColour -DX ([double]$spec.IndX) -DY ([double]$spec.IndY) -W $AcW -H $acH)
-    }
-    # The serial stays TEXT. There is no tile for it: in the game it is
-    # painted into the skin rather than placed as a decal, so there is
-    # nothing to take and nothing to measure.
+    # The RAF codes are DRAWN TEXT, as they always were.
+    #
+    # They were briefly switched to BOB2's own letter tiles, placed by the
+    # game's own MultiSkin coordinates, and Patrick's call is to leave the
+    # RAF as it was. The measurement stands and is worth keeping: it
+    # confirmed the horizontal placement here is right to within one or
+    # two per cent of what the game does. What it could not settle is the
+    # vertical, because the game positions a picture and this positions a
+    # TextBlock, whose leading sits above the glyphs, so the two numbers
+    # are not comparable without calibrating the font - and nobody had
+    # seen the tile version rendered.
+    #
+    # squadronroom/marking-positions.json keeps the RAF measurements, and
+    # dev/build_raf_markings.py will cut the tiles again if anyone wants
+    # to take it up. Nothing reads either on this side.
+    $tSq  = Add-AcMark -Canvas $cv -Key "$acKey|sq"  -Text $sq  -Family $CodeFont   -Size ([double]$spec.CodeSize) `
+                       -Colour $CodeColour   -DX ([double]$spec.SqX)  -DY ([double]$spec.SqY)  -W $AcW -H $acH
+    $tInd = Add-AcMark -Canvas $cv -Key "$acKey|ind" -Text $ind -Family $CodeFont   -Size ([double]$spec.CodeSize) `
+                       -Colour $CodeColour   -DX ([double]$spec.IndX) -DY ([double]$spec.IndY) -W $AcW -H $acH
     $ser = "$($Pilot.serials)"
     if ($ser) {
         [void](Add-AcMark -Canvas $cv -Key "$acKey|ser" -Text $ser -Family $SerialFont -Size ([double]$spec.SerSize) `
@@ -1429,23 +1406,6 @@ function New-Aircraft {
     }
     [void]$wrap.Children.Add($cv)
     $wrap
-}
-$RafMarkPath = Join-Path (Join-Path $ModDir 'aircraft') 'markings.json'
-function Get-RafMarkings {
-    if ($null -ne $script:RafMarks) { return $script:RafMarks }
-    $m = $null
-    if (Test-Path $RafMarkPath) {
-        try { $m = Get-Content $RafMarkPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
-    }
-    $script:RafMarks = $m
-    $m
-}
-function Get-RafMarkFile {
-    param([string]$Rel)
-    if (-not $Rel) { return $null }
-    $f = Join-Path (Join-Path (Join-Path $ModDir 'aircraft') 'markings') ($Rel -replace '/','\')
-    if (Test-Path $f) { return $f }
-    $null
 }
 # One mark on the aeroplane: drawn where the spec says, or where it was
 # last put by hand, and draggable to somewhere better. Dragging is the

@@ -45,10 +45,17 @@ JG 53's red band is cut but NOT DRAWN. It has no MultiSkin rule: the game
 swaps the whole skin for it, so there is no position to read, and a guess
 put it on top of the Gruppe's own symbol.
 
-PROVENANCE, WHICH IS NOT SETTLED
+PROVENANCE, NOW SETTLED
 
-These tiles came from Patrick's own BOB2 folder and appear to be from the
-MultiSkin set or something like it. Their licence is not recorded
-anywhere in the folder: there is no readme, no credit file and no licence
-beside them. They are fine on his own machine and they are NOT cleared
-for a public release until somebody knows where they came from.
+These are BOB2's OWN textures. The skin-previews folder is a PNG
+conversion of MultiSkin\MultiSkinTextures in the game install: 1,080 of
+its 1,081 filenames match that folder exactly, with one extra. MultiSkin
+is not a stray third-party pack either; it is a feature of the official
+BDG patch from 2.08 onward, documented in the game's own
+Docs\Multiskin\README - 2.08 Multiskin feature summary.txt, dated 2008.
+
+So the question is not "where did these come from", it is "may a mod
+redistribute 97 small crops of the game's own art". The mod is useless to
+anyone who does not own BOB2, which is the ordinary footing for this, but
+it is still somebody else's work and the BDG is a real and contactable
+group. Credit them in the release notes, and ask if in any doubt.

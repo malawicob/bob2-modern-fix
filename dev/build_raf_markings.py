@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Take the RAF code letters out of the game's own skin tiles.
 
-    python3 dev/build_raf_markings.py --out squadronroom/aircraft/markings
+NOT IN USE. The RAF codes are drawn text, as they always have been, and
+that is Patrick's call: "leave the raf as we originally had them". This
+script is kept because the work is done and the finding is worth having,
+not because anything reads its output. It writes OUTSIDE the mod by
+default so a stray run cannot put 77 unused tiles back into a release.
+
+    python3 dev/build_raf_markings.py --out /tmp/raf-markings
 
 The Room has always painted the squadron code, the individual letter and
 the serial onto the Spitfire as TEXT, in whatever condensed font the
@@ -21,8 +27,14 @@ inside it. Trim the padding and every letter lands somewhere slightly
 different.
 
 The serial is NOT here. There is no tile for it, because in the game it
-is part of the painted skin rather than a decal, so it stays as drawn
-text in the Room.
+is part of the painted skin rather than a decal.
+
+WHAT THE MEASUREMENT SETTLED, which stands whether or not the tiles are
+used: the horizontal placement the Room has always drawn is within one or
+two per cent of the game's own. The vertical could not be compared,
+because the game positions a picture and the Room positions a TextBlock
+whose leading sits above the glyphs. squadronroom/marking-positions.json
+keeps the figures and dev/audit_markings.py checks they still agree.
 """
 import argparse, json, os, re, shutil, sys
 from PIL import Image
@@ -42,8 +54,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', default='/mnt/d/BOB2 Files/skin-previews')
     ap.add_argument('--room', default='BOB2_SquadronRoom.ps1')
-    ap.add_argument('--out', default='squadronroom/aircraft/markings')
-    ap.add_argument('--json', default='squadronroom/aircraft/markings.json')
+    ap.add_argument('--out', default='/tmp/raf-markings')
+    ap.add_argument('--json', default='/tmp/raf-markings/markings.json')
     a = ap.parse_args()
 
     idx = {f.lower(): f for f in os.listdir(a.src) if f.lower().endswith('.png')}

@@ -218,32 +218,33 @@ def main():
           % (own, len(unit_prof) - own))
 
     print('THE RAF')
-    rm = load(os.path.join(RAF_ART, 'markings.json'))
+    # The RAF codes are drawn text again, at Patrick's call, so there are
+    # no tiles to check. What is still worth checking is the measurement
+    # itself: it confirmed the horizontal placement the Room has always
+    # used is within a couple of per cent of the game's own, and if that
+    # ever stops being true somebody has moved something.
     for t in ('spitfire', 'hurricane'):
+        r = pos['raf'].get(t)
+        if not r:
+            fail('no RAF measurement for %s' % t); continue
+        cl, cr = r['marking'][0], r['marking'][2]
+        W = r['size'][0]
+        if not (0.30 * W < cl < 0.70 * W):
+            fail('%s: roundel found at %d, which is not mid-fuselage' % (t, cl))
+        for k in ('code', 'letter'):
+            if k not in r:
+                fail('%s: no %s measurement' % (t, k)); continue
+            if not (0.05 < r[k]['dx'] < 0.95):
+                fail('%s: %s measured off the aeroplane at %.3f' % (t, k, r[k]['dx']))
+    spec = {'spitfire': (0.4194, 0.6727), 'hurricane': (0.4118, 0.6313)}
+    for t, (sqx, indx) in spec.items():
         r = pos['raf'][t]
-        W, H = r['size']
-        cl, ct, cr, cb = r['marking']
-        im = Image.open(os.path.join(RAF_ART, '%s.png' % t))
-        code = os.path.join(RAF_ART, 'markings', rm['codes']['GZ'].replace('/', os.sep))
-        lett = os.path.join(RAF_ART, 'markings', rm['letters']['D'].replace('/', os.sep))
-        for name, tile, rec, side in (('code', code, r['code'], 'fwd'),
-                                      ('letter', lett, r['letter'], 'aft')):
-            if not os.path.exists(tile):
-                fail('%s: %s tile missing' % (t, name)); continue
-            v = visible(tile, rec['dx'], rec['dw'], W)
-            if side == 'fwd' and v[1] > cl:
-                fail('%s: %s overlaps the roundel' % (t, name))
-            if side == 'aft' and v[0] < cr:
-                fail('%s: %s overlaps the roundel' % (t, name))
-            cy = rec['dy'] * H + rec['dh'] * H * 0.5
-            if not opaque_at(im, (v[0] + v[1]) / 2, cy):
-                fail('%s: %s is not on the aeroplane' % (t, name))
-    miss = [c for c in rm['codes'] if not os.path.exists(
-        os.path.join(RAF_ART, 'markings', rm['codes'][c].replace('/', os.sep)))]
-    if miss:
-        fail('RAF codes with no tile: %s' % ', '.join(miss))
-    print('  %d squadron codes and %d letters, both aeroplanes placed'
-          % (len(rm['codes']), len(rm['letters'])))
+        for k, cur in (('code', sqx), ('letter', indx)):
+            d = abs(r[k]['dx'] - cur)
+            if d > 0.05:
+                warn('%s: the Room draws the %s at %.4f, the game puts it at %.4f'
+                     % (t, k, cur, r[k]['dx']))
+    print('  both aeroplanes: roundel found, measurements agree with what the Room draws')
 
     print()
     if fails:
