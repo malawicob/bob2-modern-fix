@@ -4894,14 +4894,42 @@ function Get-OkwForDate {
 # every time the column is: a warning at the foot of a page is a warning
 # somebody reads after they have already believed the numbers.
 $OkwCaption = 'Nazi propaganda. The figures were inflated on purpose.'
+# The note is FOLDED AWAY behind a line you click, because open it ran
+# to two paragraphs and a source credit and swamped the page it was
+# meant to caption. What stays on the screen unfolded is the short
+# caption above the figures, which is the part that has to be read
+# before the numbers are.
+#
+# Whether it is open is remembered for the session, so a man who opens
+# it once does not have to open it again every time he changes day.
 function New-OkwNote {
     param($Rec)
     $b = New-Object Windows.Controls.Border
     $b.Background = B '#241A17'; $b.BorderBrush = B '#7A3E32'; $b.BorderThickness = '3,0,0,0'
-    $b.CornerRadius = '0,3,3,0'; $b.Padding = '18,14'; $b.Margin = '0,18,0,0'
+    $b.CornerRadius = '0,3,3,0'; $b.Padding = '18,12'; $b.Margin = '0,16,0,0'
     $b.HorizontalAlignment = 'Left'; $b.MaxWidth = 940
     $s = New-Object Windows.Controls.StackPanel
-    [void]$s.Children.Add((New-TB -Text 'ABOUT THIS COLUMN' -Family $CondFam -Size 12 -Colour '#D98E7E' -Bold))
+
+    $hdr = New-Object Windows.Controls.Border
+    $hdr.Background = B '#00000000'; $hdr.Cursor = 'Hand'
+    $hrow = New-Object Windows.Controls.StackPanel; $hrow.Orientation = 'Horizontal'
+    $open = [bool]$script:OkwNoteOpen
+    $chev = New-TB -Text $(if ($open) { [string][char]0x25BE } else { [string][char]0x25B8 }) `
+                   -Family $CondFam -Size 12 -Colour '#D98E7E' -Bold
+    $chev.Margin = '0,0,8,0'
+    [void]$hrow.Children.Add($chev)
+    [void]$hrow.Children.Add((New-TB -Text 'DISCLAIMER & HISTORICAL CONTEXT' -Family $CondFam -Size 12 -Colour '#D98E7E' -Bold))
+    # the hint has to agree with the state it is drawn in, not just with
+    # the state the click handler leaves behind
+    $hint = New-TB -Text $(if ($open) { 'click to close' } else { 'click to read' }) `
+                   -Family $CondFam -Size 11.5 -Colour '#8A7C77'
+    $hint.Margin = '12,0,0,0'
+    [void]$hrow.Children.Add($hint)
+    $hdr.Child = $hrow
+    [void]$s.Children.Add($hdr)
+
+    $body = New-Object Windows.Controls.StackPanel
+    $body.Visibility = $(if ($open) { 'Visible' } else { 'Collapsed' })
     $t1 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#C9BDB8' -Text (
         'The Wehrmachtbericht was the daily communique of the German Armed Forces High Command, ' +
         'written by the propaganda department of the OKW and broadcast every day of the war. It was ' +
@@ -4909,23 +4937,39 @@ function New-OkwNote {
         'inflated on purpose and losses were understated. On 11 August 1940 it claimed 73 British ' +
         'aircraft shot down for 14 German aircraft missing. The real figures were nothing like that, ' +
         'and the men reading it had no way of knowing.')
-    $t1.Margin = '0,8,0,0'; $t1.MaxWidth = 880; $t1.LineHeight = 18
-    [void]$s.Children.Add($t1)
+    $t1.Margin = '0,10,0,0'; $t1.MaxWidth = 880; $t1.LineHeight = 18
+    [void]$body.Children.Add($t1)
     $t2 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#C9BDB8' -Text (
         'It is here for one reason: this is what a Luftwaffe pilot was told that morning, and the ' +
         'distance between what he was told and what his own Gruppe''s diary records is the honest ' +
         'thing to put in front of you. It is shown to be understood, not believed, and nothing in ' +
         'it is endorsed.')
     $t2.Margin = '0,8,0,0'; $t2.MaxWidth = 880; $t2.LineHeight = 18
-    [void]$s.Children.Add($t2)
+    [void]$body.Children.Add($t2)
     if ($Rec) {
         $src = New-TB -Wrap -Family 'Segoe UI' -Size 11.5 -Colour '#8A7C77' -Text (
             "Rendered into English from the communique as printed in $($Rec.paper), " +
             "$(Format-ShortDate "$($Rec.date)"), held by the Deutsches Zeitungsportal of the " +
             "Deutsche Digitale Bibliothek under $($Rec.licence).")
         $src.Margin = '0,10,0,0'; $src.MaxWidth = 880; $src.FontStyle = 'Italic'
-        [void]$s.Children.Add($src)
+        [void]$body.Children.Add($src)
     }
+    [void]$s.Children.Add($body)
+
+    # The two controls the handler needs travel in the Tag. A scriptblock
+    # cannot simply close over them: .GetNewClosure() gives it its own
+    # module scope and a $script: write inside one never reaches the Room,
+    # which is what made it impossible to join a Gruppe for a while.
+    $hdr.Tag = @{ Body = $body; Chev = $chev; Hint = $hint }
+    $hdr.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        $t = $sender.Tag
+        $was = ($t.Body.Visibility -eq 'Visible')
+        $t.Body.Visibility = $(if ($was) { 'Collapsed' } else { 'Visible' })
+        $t.Chev.Text = $(if ($was) { [string][char]0x25B8 } else { [string][char]0x25BE })
+        $t.Hint.Text = $(if ($was) { 'click to read' } else { 'click to close' })
+        $script:OkwNoteOpen = (-not $was)
+    })
     $b.Child = $s
     $b
 }
