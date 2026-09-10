@@ -21,7 +21,10 @@ lightning bolt in its claws, set low and to one side, with the wreath
 left plainer. That difference is the whole point of drawing it rather
 than reusing the other one.
 
-ITS OUTPUT IS NOT SHIPPED, AND SHOULD NOT BE UNTIL IT IS BETTER.
+SUPERSEDED, AND KEPT ONLY AS A RECORD OF WHY DRAWING IT WAS WRONG.
+
+Patrick supplied a real image on 10 September and dev/cut_badge.py cuts
+it. Nothing calls this script. What follows is why it was abandoned.
 
 The collar patches in dev/make_lw_badges.py are drawn and they work,
 because a collar patch IS flat shapes: a coloured lozenge, some braid,

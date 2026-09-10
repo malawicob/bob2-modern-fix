@@ -65,3 +65,21 @@ and both Moelders and Galland had them by September that year, which is
 inside this campaign. In the Room they REPLACE the plain Knight's Cross
 rather than sitting beside it, because the leaves clasp onto the cross a
 man already wears; drawing both would show him with two of them.
+
+THE AIR CREW BADGE (crew-badge.png)
+-----------------------------------
+The Fliegerschuetzen- und Bordfunkerabzeichen, worn by the man in the
+back of a Bf 110. NOT the pilot's badge: same silver wreath, but the
+eagle dives steeply and sits lower in it, and carries a bundle of
+lightning bolts in its claws. The pilot's has none, and giving a
+Bordfunker the pilot's badge would be RAF wings on an air gunner.
+
+Supplied by Patrick, cut from its background by dev/cut_badge.py. The
+first version he sent was the pilot's badge again - the two are similar
+enough at a glance that it took putting them side by side to be sure.
+They now differ by 52.7 mean grey at 64x64; the duplicate scored 12.6,
+which is rendering variation rather than a different design.
+
+I drew one before that and it was not good enough to sit beside a
+photographic badge - dev/make_crew_badge.py is kept with the reasoning
+at the top. Nothing calls it.
