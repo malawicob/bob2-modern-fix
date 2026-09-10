@@ -1880,6 +1880,10 @@ function Get-CrewRoles {
 # where he has always been, at the top level of the record: every screen
 # and every write path already reads him there, and moving him would mean
 # touching all of them for no gain.
+# A crew member's NAME FIELD IS `pilot`, not `name`, so New-Frame and
+# New-LwRosterRow take one straight off the record. Both read .pilot, and
+# every roster man in squadronroom/lw/rosters uses `pilot` too, so one
+# spelling serves the player, his crew and the whole Staffel.
 function Get-Crew {
     param($Pilot)
     if (-not $Pilot) { return @() }
@@ -4439,16 +4443,76 @@ function Get-LwActivity { param($G) if ([int]$G.luftflotte -eq 2) { 3 } else { 2
 # profiles already carry their Geschwader's badge: II./JG 26's aeroplane
 # has the Schlageter S on it before the Room draws anything, and drawing
 # ours on top puts two of them on one cowling.
+# WHICH Bf 110 PROFILE, and it is not a lookup by unit.
+#
+# The 109 profiles are named for units, so a Gruppe's aeroplane is its own
+# key and there is nothing to work out. The twelve 110 profiles are named
+# for the game's BASE SKINS, and Me110_MainSkin.ms says which unit flies
+# which on which dates - so a Zerstoerer's aeroplane is chosen the way the
+# game chooses it, by unit, Staffel and the campaign date.
+#
+# skins110.json is that file parsed, by dev/build_lw_110_skins.py. Its
+# rules are in FILE ORDER and the first that matches wins, because the
+# game's conditions overlap and that is how MultiSkin reads them.
+$Skins110Path = Join-Path (Join-Path $ModDir 'lw') 'skins110.json'
+function Get-Skins110 {
+    if ($null -ne $script:Skins110) { return $script:Skins110 }
+    $m = $null
+    if (Test-Path $Skins110Path) {
+        try { $m = Get-Content $Skins110Path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:Skins110 = $m
+    $m
+}
+# The Staffel's slot in its Gruppe, 1 to 9, which is what the game's rules
+# key on. A man's staffel is already stored as 1-15 by Invoke-GruppeSubmit
+# ((gruppe index x 3) + 1..3), so V./LG 1 lands on 13-15 and folds back to
+# the 7-8-9 slot, which is exactly what the game does with it.
+function Get-StaffelSlot {
+    param($Staffel)
+    $n = [int]$Staffel
+    if ($n -lt 1) { return 1 }
+    (($n - 1) % 9) + 1
+}
+function Get-Profile110 {
+    param($G, $Pilot, $Date)
+    $m = Get-Skins110
+    if (-not $m) { return $null }
+    $slot = Get-StaffelSlot $(if ($Pilot) { $Pilot.staffel } else { 1 })
+    $key = "$($G.unit)|$slot"
+    $rules = @()
+    if ($m.by_unit_staffel.PSObject.Properties.Name -contains $key) { $rules += @($m.by_unit_staffel.$key) }
+    if ($m.by_unit_staffel.PSObject.Properties.Name -contains '*')   { $rules += @($m.by_unit_staffel.'*') }
+    $d = $Date
+    foreach ($r in ($rules | Sort-Object { [int]$_.order })) {
+        $ok = $true
+        if ($d) {
+            if ("$($r.from)") { try { if ($d -lt [datetime]::ParseExact("$($r.from)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+            if ($ok -and "$($r.to)") { try { if ($d -ge [datetime]::ParseExact("$($r.to)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+        }
+        if (-not $ok) { continue }
+        $f = Join-Path $script:AircraftDir "$($r.skin)"
+        if (Test-Path $f) { return $f }
+    }
+    $f = Join-Path $script:AircraftDir "$($m.default)"
+    if (Test-Path $f) { return $f }
+    $null
+}
 function Test-GruppeOwnProfile {
     param($G)
     if (-not $G) { return $false }
+    # A 110's profile is a base SCHEME rather than a unit's own markings,
+    # so it never carries the Geschwader badge the way a 109 profile does
+    # and the Room must draw one.
+    if ("$($G.type)" -match '110') { return $false }
     if ("$($G.type)" -notmatch '109') { return $false }
     $key = ("$($G.unit)" -replace '\.','' -replace '/','_' -replace ' ','')
     Test-Path (Join-Path $script:AircraftDir ($key + '.png'))
 }
 function Get-GruppeAircraftPath {
-    param($G)
+    param($G, $Pilot)
     if (-not $G) { return $null }
+    if ("$($G.type)" -match '110') { return (Get-Profile110 -G $G -Pilot $Pilot -Date $script:CampaignDate) }
     if ("$($G.type)" -notmatch '109') { return $null }
     $key = ("$($G.unit)" -replace '\.','' -replace '/','_' -replace ' ','')
     $f = Join-Path $script:AircraftDir ($key + '.png')
@@ -4472,7 +4536,9 @@ function New-GruppeCard {
     $head = New-Object Windows.Controls.Border
     $head.Background = B '#14202B'; $head.Padding = '16,12,16,11'
     $hrow = New-Object Windows.Controls.StackPanel; $hrow.Orientation = 'Horizontal'
-    $ap = Get-GruppeAircraftPath $G
+    # no pilot here: the hover card on the postings board is about the
+    # Gruppe, not about a man, so a 110 falls to its 1. Staffel scheme
+    $ap = Get-GruppeAircraftPath -G $G
     if ($ap) {
         $sil = Load-Image -Path $ap -DecodeWidth 340
         if ($sil) {
@@ -5354,7 +5420,7 @@ function Get-StabChevron {
 # put the cross in quite the same place.
 function New-LwAircraft {
     param($Pilot, $Career, $Gruppe)
-    $acFile = Get-GruppeAircraftPath $Gruppe
+    $acFile = Get-GruppeAircraftPath -G $Gruppe -Pilot $Pilot
     if (-not $acFile) { return $null }
     $bmp = Load-Image -Path $acFile -DecodeWidth 900
     if (-not $bmp) { return $null }
@@ -5939,6 +6005,44 @@ function Show-ReadyRoom {
     $hr = New-LwHonourRow $honours
     if ($hr) { $hr.Margin = '0,14,0,0'; [void]$d.Children.Add($hr) }
     [void]$hero.Children.Add($d)
+
+    # THE REST OF THE CREW, beside him and in the same frame.
+    #
+    # New-Frame takes a man and reads .pilot and .portrait, which is why a
+    # crew member's name field is `pilot` and not `name`: one spelling
+    # serves the player, his crew and every man on the Staffel roster.
+    # Without -IsPlayer the frame comes out dark rather than brass, which
+    # says who the screen is about without a label doing it.
+    foreach ($m in (Get-Crew $Pilot)) {
+        $cc = Get-CrewCareer -Member $m -Pilot $Pilot -Sorties ([int]$career.sorties) -Hours ([double]$career.hours)
+        [void]$hero.Children.Add((New-Frame -Pilot $m))
+        $cd = New-Object Windows.Controls.StackPanel; $cd.Margin = '30,4,0,0'; $cd.VerticalAlignment = 'Top'
+        [void]$cd.Children.Add((New-TB -Text "$($m.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+        $cl = "$($cc.rank)   $([char]0x2022)   $(Get-CrewAppointment -Member $m -Career $cc)"
+        $clt = New-TB -Text $cl -Family $CondFam -Size 15 -Colour '#9FB0B8'; $clt.Margin = '0,7,0,0'
+        [void]$cd.Children.Add($clt)
+        $cRow = New-Object Windows.Controls.StackPanel; $cRow.Orientation = 'Horizontal'; $cRow.Margin = '0,14,0,0'
+        $crb = Get-RankBadgeFile "$($cc.rank)"
+        if ($crb) {
+            $ccuff = New-BadgeImage -File $crb -Height 52 -Tip "$($cc.rank)"
+            if ($ccuff) { $ccuff.Margin = '0,0,10,0'; [void]$cRow.Children.Add($ccuff) }
+        }
+        # NOT the pilot's badge. The Flugzeugfuehrerabzeichen is for a man
+        # who flies the aeroplane; the man in the back wore the
+        # Fliegerschuetzenabzeichen, and giving him the pilot's badge would
+        # be as wrong as putting RAF wings on an air gunner.
+        $cb = New-BadgeImage -File 'crew-badge.png' -Height 62 -Tip 'Fliegerschuetzenabzeichen, the air crew badge'
+        if ($cb) { [void]$cRow.Children.Add($cb) }
+        if ($cRow.Children.Count -gt 0) { [void]$cd.Children.Add($cRow) }
+        $chr = New-LwHonourRow (@(Get-CrewHonours -Member $m -Career $cc))
+        if ($chr) { $chr.Margin = '0,14,0,0'; [void]$cd.Children.Add($chr) }
+        $inv = New-TB -Wrap -Family 'Segoe UI' -Size 11.5 -Colour '#6F828C' -Text (
+            'Invented. The game keeps no record of a second crewman, so his rank, ' +
+            'his sorties and his decorations are this Room''s and not the save''s.')
+        $inv.Margin = '0,12,0,0'; $inv.MaxWidth = 260
+        [void]$cd.Children.Add($inv)
+        [void]$hero.Children.Add($cd)
+    }
     [void]$script:Stage.Children.Add($hero)
 
     # the counters
@@ -5987,7 +6091,7 @@ function Show-ReadyRoom {
         $mk = Get-LwMarkings
         $u = if ($mk) { $mk.units."$($Pilot.unit)" } else { $null }
         $mp2 = Get-MarkPositions
-        $pk2 = Split-Path (Get-GruppeAircraftPath $g) -Leaf
+        $pk2 = Split-Path (Get-GruppeAircraftPath -G $g -Pilot $Pilot) -Leaf
         $P2 = if ($mp2 -and $mp2.lw -and $mp2.lw.profiles) { $mp2.lw.profiles.$pk2 } else { $null }
         $ownArt = Test-GruppeOwnProfile $g
         $gu = if ($P2 -and $P2.gruppe_by_unit) { $P2.gruppe_by_unit."$($Pilot.unit)" } else { $null }

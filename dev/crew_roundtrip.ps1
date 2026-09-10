@@ -65,7 +65,7 @@ try {
         period = 'P2'; historical = $false; portrait = 'pilot01.jpg'; acnum = 7
         created = '1940-08-01'; campaignSorties = 0
         campaignKills = @(0,0,0,0,0,0,0)
-        crew = @([ordered]@{ role = 'Bordfunker'; name = 'Kessler, H.'
+        crew = @([ordered]@{ role = 'Bordfunker'; pilot = 'Kessler, H.'
                              rank = 'Unteroffizier'; rank_date = ''
                              portrait = 'pilot02.jpg'; honours = @()
                              sortiesBase = 0; src = 'invented' })
@@ -102,7 +102,7 @@ try {
     Check 'the pilot was promoted on disk'   ("$($p3.rank)" -eq 'Oberleutnant') "$($p3.rank)"
     $m = (Get-Crew $p3)[0]
     Check 'the crewman was left alone'       ("$($m.rank)" -eq 'Unteroffizier') "$($m.rank)"
-    Check 'the crewman kept his name'        ("$($m.name)" -eq 'Kessler, H.')
+    Check 'the crewman kept his name'        ("$($m.pilot)" -eq 'Kessler, H.')
 
     "his own decorations"
     $car2 = Get-Career $p3 @() -Sorties 30
