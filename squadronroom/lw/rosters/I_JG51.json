@@ -16,7 +16,8 @@
   "staffel": null,
   "portrait": null,
   "src": "unit and appointment are ordinary record; nothing else recorded",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wolff, P",
@@ -39,7 +40,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Vogel, J",
@@ -62,7 +64,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Ulrich, F",
@@ -85,7 +88,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Vogt, H",
@@ -104,7 +108,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Seidel, A",
@@ -127,7 +132,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Walter, C",
@@ -146,7 +152,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kirchner, R",
@@ -165,7 +172,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Bauer, R",
@@ -188,7 +196,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Peters, H",
@@ -211,7 +220,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schneider, J",
@@ -230,7 +240,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Dietrich, K",
@@ -249,6 +260,7 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

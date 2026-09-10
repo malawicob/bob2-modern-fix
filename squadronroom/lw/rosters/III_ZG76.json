@@ -16,7 +16,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Nowak, W",
@@ -35,7 +36,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Ulrich, W",
@@ -58,7 +60,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Zimmermann, H",
@@ -77,7 +80,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Möller, P",
@@ -100,7 +104,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Winkler, R",
@@ -119,7 +124,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Keller, J",
@@ -138,7 +144,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Koch, F",
@@ -157,7 +164,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Braun, S",
@@ -176,7 +184,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Vogel, A",
@@ -195,7 +204,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Lehmann, P",
@@ -214,7 +224,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kramer, K",
@@ -233,6 +244,279 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
+ },
+ {
+  "pilot": "Gross, H",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": null,
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 8,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Brandt, O",
+  "rank": "Feldwebel",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-09-11",
+  "left_reason": "killed",
+  "fate": {
+   "status": "Killed",
+   "date": "1940-09-11",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Klein, R",
+  "rank": "Feldwebel",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-09-19",
+  "left_reason": "missing",
+  "fate": {
+   "status": "Missing",
+   "date": "1940-09-19",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 8,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Richter, W",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-09-02",
+  "left_reason": "missing",
+  "fate": {
+   "status": "Missing",
+   "date": "1940-09-02",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 9,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Schulz, A",
+  "rank": "Feldwebel",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": null,
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Huber, E",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-08-23",
+  "left_reason": "missing",
+  "fate": {
+   "status": "Missing",
+   "date": "1940-08-23",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Krüger, A",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-09-27",
+  "left_reason": "killed",
+  "fate": {
+   "status": "Killed",
+   "date": "1940-09-27",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Reinhardt, O",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-09-02",
+  "left_reason": "missing",
+  "fate": {
+   "status": "Missing",
+   "date": "1940-09-02",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Stein, R",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": null,
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 9,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Ludwig, M",
+  "rank": "Feldwebel",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-07-16",
+  "left_reason": "prisoner",
+  "fate": {
+   "status": "Prisoner",
+   "date": "1940-07-16",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Hartmann, K",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": null,
+  "left_reason": null,
+  "fate": null,
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
+ },
+ {
+  "pilot": "Kirchner, A",
+  "rank": "Unteroffizier",
+  "historical": false,
+  "appointment": null,
+  "unit": "III./ZG 76",
+  "joined": null,
+  "left": "1940-09-13",
+  "left_reason": "wounded",
+  "fate": {
+   "status": "Wounded",
+   "date": "1940-09-13",
+   "note": ""
+  },
+  "victories": [],
+  "victories_total": null,
+  "vic_source": "not credited; the save does not record which gun fired",
+  "awards": [],
+  "staffel": 7,
+  "portrait": null,
+  "src": "generated",
+  "note": "",
+  "role": "Bordfunker"
  }
 ]

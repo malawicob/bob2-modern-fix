@@ -16,7 +16,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Heinrich, W",
@@ -39,7 +40,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Stein, L",
@@ -58,7 +60,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Seidel, B",
@@ -77,7 +80,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Möller, G",
@@ -96,7 +100,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Klein, G",
@@ -115,7 +120,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Straub, D",
@@ -138,7 +144,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Herrmann, R",
@@ -157,7 +164,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Brandt, K",
@@ -180,7 +188,8 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Reinhardt, H",
@@ -199,7 +208,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hein, R",
@@ -222,7 +232,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Berger, A",
@@ -241,6 +252,7 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

@@ -20,7 +20,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Horn, H",
@@ -43,7 +44,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Ulrich, R",
@@ -62,7 +64,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kern, E",
@@ -81,7 +84,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Herrmann, U",
@@ -100,7 +104,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hartmann, F",
@@ -123,7 +128,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Bauer, J",
@@ -146,7 +152,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Busch, D",
@@ -165,7 +172,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kessler, K",
@@ -184,7 +192,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Haas, W",
@@ -207,7 +216,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wilhelm, S",
@@ -230,7 +240,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kuhn, T",
@@ -253,6 +264,7 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

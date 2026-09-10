@@ -5032,6 +5032,11 @@ function Invoke-GruppeSubmit {
         acnum   = [int]$script:SelAcNum
         created = (Get-Date).ToString('yyyy-MM-dd')
     }
+    # THE REST OF THE CREW, for a type that carries one. A 109 gets an
+    # empty array and the record is what it has always been.
+    $pilot['crew'] = @(New-CrewFor -Unit "$($q.Unit)" -Type "$($q.Type)" `
+                                   -Date $script:CampaignDate `
+                                   -Seed "$($script:NameBox.Text)$($q.Unit)" -SortiesBase 0)
     $ld0 = Get-LatestSaveDiary
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
@@ -5309,6 +5314,93 @@ function Get-AcNumber {
     $seed = 0
     foreach ($c in "$($Pilot.pilot)$($Pilot.unit)".ToCharArray()) { $seed = ($seed * 31 + [int]$c) % 100000 }
     ($seed % 15) + 1
+}
+# WHO FLIES WITH HIM, drawn from the Gruppe's own roster.
+#
+# The roster now carries a role on every man, so a Zerstoerer Gruppe has
+# twelve pilots and twelve Bordfunker rather than twelve men. This picks
+# one for each further seat the aeroplane has.
+#
+# The choice is SEEDED FROM THE PLAYER'S OWN NAME, so the same man gets
+# the same crew every time the Room is opened rather than a fresh one
+# each visit. Men whose invented fate has already passed are skipped:
+# there is no sense being posted alongside somebody who was killed in
+# July when it is September.
+function Get-CrewCandidate {
+    param($Unit, [string]$Role, $Date, $Seed, $Taken = @())
+    $men = @(Get-LwRoster -Unit $Unit | Where-Object {
+        ("$($_.role)" -eq $Role) -and ($Taken -notcontains "$($_.pilot)")
+    })
+    if (-not $men.Count) { return $null }
+    $alive = @($men | Where-Object {
+        if (-not $_.left -or -not $Date) { return $true }
+        try { return ([datetime]::ParseExact("$($_.left)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) -gt $Date) } catch { return $true }
+    })
+    if ($alive.Count) { $men = $alive }
+    $h = 0
+    foreach ($c in "$Seed$Role".ToCharArray()) { $h = ($h * 31 + [int]$c) % 100000 }
+    $men[$h % $men.Count]
+}
+# His photograph, settled the same way: from his own name, so it is the
+# same face every time and nothing has to be stored beyond the name.
+function Get-CrewPortrait {
+    param([string]$Name)
+    # FLATTENED, with the loop this file uses everywhere else.
+    # ConvertFrom-Json hands the portrait list back as ONE element that
+    # IS the array, so @(Get-Portraits) counts 1 and index 0 is all 92
+    # names - which came out as a portrait field holding every filename
+    # joined by spaces. The RAF morning paper shipped broken once for
+    # exactly this, with a single flatten where a loop was needed.
+    $ps = @(Get-Portraits)
+    while ($ps.Count -eq 1 -and ($ps[0] -is [System.Array])) { $ps = $ps[0] }
+    if (-not $ps.Count) { return $null }
+    $h = 0
+    foreach ($c in "$Name".ToCharArray()) { $h = ($h * 31 + [int]$c) % 100000 }
+    return [string]$ps[$h % $ps.Count]
+}
+# The crew a man gets on the day he is posted, one member per further
+# seat. Returns an empty array for a single-seat type, so a 109 career is
+# exactly what it always was.
+function New-CrewFor {
+    param($Unit, [string]$Type, $Date, [string]$Seed, [int]$SortiesBase = 0)
+    $roles = @(Get-CrewRoles $Type)
+    if ($roles.Count -le 1) { return @() }
+    $out = @(); $taken = @()
+    foreach ($r in $roles[1..($roles.Count - 1)]) {
+        $m = Get-CrewCandidate -Unit $Unit -Role $r -Date $Date -Seed $Seed -Taken $taken
+        if (-not $m) { continue }
+        $taken += "$($m.pilot)"
+        # Built with plain statements rather than inline $(if ...) inside
+        # the hashtable. Written that way, `rank` came out as the string
+        # "1" - the branch's own boolean leaking into the value - and the
+        # fault is invisible until a screen shows a man whose rank is a
+        # number.
+        $mName = "$($m.pilot)"
+        $mRank = "$($m.rank)"
+        if (-not $mRank) {
+            $mRank = 'Unteroffizier'
+            if ($CrewEntryRank.ContainsKey($r)) { $mRank = [string]$CrewEntryRank[$r] }
+        }
+        $mPort = Get-CrewPortrait $mName
+        $mJoin = ''
+        if ($Date) { $mJoin = $Date.ToString('yyyy-MM-dd') }
+        $out += [ordered]@{
+            role        = [string]$r
+            pilot       = [string]$mName
+            rank        = [string]$mRank
+            rank_date   = ''
+            portrait    = [string]$mPort
+            honours     = @()
+            sortiesBase = [int]$SortiesBase
+            joined      = [string]$mJoin
+            src         = 'invented'
+        }
+    }
+    # A PLAIN return. Comma-returning here and collecting with @() at the
+    # caller nests the crew one level deep, and the whole array then
+    # arrives as a single "member" whose rank reads as 1. Same rule as
+    # everywhere else in this file: comma return XOR @() at the caller.
+    $out
 }
 # A Zerstoerer's own letter. The same acnum the adjutant asks for, read
 # as a letter instead of a numeral: the fuselage rules run A to K and

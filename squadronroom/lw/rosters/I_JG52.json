@@ -16,7 +16,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Berger, S",
@@ -39,7 +40,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Krüger, C",
@@ -62,7 +64,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Lehmann, U",
@@ -81,7 +84,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Becker, R",
@@ -100,7 +104,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schwarz, R",
@@ -123,7 +128,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Heinrich, K",
@@ -142,7 +148,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Zimmermann, W",
@@ -165,7 +172,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Werner, M",
@@ -184,7 +192,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schumacher, E",
@@ -203,7 +212,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Koch, J",
@@ -222,7 +232,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Stein, W",
@@ -241,6 +252,7 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

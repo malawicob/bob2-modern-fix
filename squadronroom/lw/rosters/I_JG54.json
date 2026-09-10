@@ -20,7 +20,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Weber, O",
@@ -43,7 +44,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Frey, S",
@@ -66,7 +68,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hoffmann, E",
@@ -85,7 +88,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Riedel, K",
@@ -104,7 +108,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Lehmann, J",
@@ -123,7 +128,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Haas, W",
@@ -142,7 +148,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Mayer, C",
@@ -165,7 +172,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schulz, A",
@@ -184,7 +192,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Graf, R",
@@ -203,7 +212,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Lindner, M",
@@ -222,7 +232,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kuhn, R",
@@ -241,6 +252,7 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

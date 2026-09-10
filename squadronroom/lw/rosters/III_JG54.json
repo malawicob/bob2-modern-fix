@@ -16,7 +16,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kirchner, S",
@@ -35,7 +36,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Pohl, A",
@@ -54,7 +56,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Sauer, M",
@@ -73,7 +76,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Gerlach, A",
@@ -92,7 +96,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Ludwig, K",
@@ -111,7 +116,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Krause, H",
@@ -130,7 +136,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wolff, P",
@@ -149,7 +156,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Köhler, K",
@@ -168,7 +176,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wegner, R",
@@ -187,7 +196,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Brandt, H",
@@ -206,7 +216,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Sommer, H",
@@ -229,6 +240,7 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

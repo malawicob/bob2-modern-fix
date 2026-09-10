@@ -16,7 +16,8 @@
   "staffel": null,
   "portrait": null,
   "src": "unit and appointment are ordinary record; nothing else recorded",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wolf, G",
@@ -35,7 +36,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Straub, F",
@@ -54,7 +56,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Stahl, H",
@@ -73,7 +76,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Pohl, J",
@@ -92,7 +96,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Graf, R",
@@ -111,7 +116,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Engel, A",
@@ -134,7 +140,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hoffmann, K",
@@ -157,7 +164,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Franke, J",
@@ -176,7 +184,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wolff, C",
@@ -195,7 +204,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Roth, G",
@@ -214,7 +224,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Ulrich, K",
@@ -233,6 +244,7 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

@@ -20,7 +20,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "König, G",
@@ -39,7 +40,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Roth, E",
@@ -58,7 +60,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Riedel, F",
@@ -77,7 +80,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Horn, R",
@@ -96,7 +100,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schulz, L",
@@ -115,7 +120,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wolf, O",
@@ -134,7 +140,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hahn, E",
@@ -153,7 +160,8 @@
   "staffel": 3,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Huber, H",
@@ -172,7 +180,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Voigt, L",
@@ -191,7 +200,8 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Franke, R",
@@ -210,7 +220,8 @@
   "staffel": 2,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Pfeiffer, E",
@@ -233,6 +244,7 @@
   "staffel": 1,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

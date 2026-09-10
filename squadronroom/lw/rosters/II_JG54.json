@@ -16,7 +16,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schneider, K",
@@ -35,7 +36,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Straub, F",
@@ -54,7 +56,8 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Roth, A",
@@ -73,7 +76,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schumacher, H",
@@ -96,7 +100,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Heinrich, R",
@@ -115,7 +120,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Stahl, F",
@@ -134,7 +140,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Lindner, K",
@@ -153,7 +160,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Franke, K",
@@ -172,7 +180,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Braun, J",
@@ -195,7 +204,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hoffmann, F",
@@ -214,7 +224,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Maier, R",
@@ -233,6 +244,7 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

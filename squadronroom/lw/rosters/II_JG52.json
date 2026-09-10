@@ -20,7 +20,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wilhelm, L",
@@ -39,7 +40,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Ludwig, H",
@@ -58,7 +60,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Nowak, H",
@@ -77,7 +80,8 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Graf, G",
@@ -96,7 +100,8 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Weiss, W",
@@ -119,7 +124,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Vogel, F",
@@ -142,7 +148,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kessler, J",
@@ -161,7 +168,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Roth, E",
@@ -180,7 +188,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Kaiser, W",
@@ -203,7 +212,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Gerlach, E",
@@ -222,7 +232,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hahn, M",
@@ -245,6 +256,7 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

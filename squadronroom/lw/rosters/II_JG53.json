@@ -20,7 +20,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Busch, G",
@@ -39,7 +40,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Krause, K",
@@ -58,7 +60,8 @@
   "staffel": 5,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Klein, A",
@@ -81,7 +84,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Brandt, H",
@@ -100,7 +104,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Meier, G",
@@ -119,7 +124,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Werner, H",
@@ -142,7 +148,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schubert, H",
@@ -165,7 +172,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Hahn, A",
@@ -184,7 +192,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Martin, A",
@@ -203,7 +212,8 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Mayer, M",
@@ -226,7 +236,8 @@
   "staffel": 4,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Weiss, E",
@@ -249,6 +260,7 @@
   "staffel": 6,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

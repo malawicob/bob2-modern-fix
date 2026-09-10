@@ -20,7 +20,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Wolff, E",
@@ -39,7 +40,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Meyer, P",
@@ -58,7 +60,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Busch, G",
@@ -81,7 +84,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Böhm, K",
@@ -100,7 +104,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Bauer, K",
@@ -119,7 +124,8 @@
   "staffel": 7,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Fischer, E",
@@ -138,7 +144,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Lindner, J",
@@ -157,7 +164,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Werner, E",
@@ -176,7 +184,8 @@
   "staffel": 8,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Becker, W",
@@ -199,7 +208,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Haas, W",
@@ -222,7 +232,8 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  },
  {
   "pilot": "Schneider, J",
@@ -245,6 +256,7 @@
   "staffel": 9,
   "portrait": null,
   "src": "generated",
-  "note": ""
+  "note": "",
+  "role": "Flugzeugfuehrer"
  }
 ]

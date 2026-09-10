@@ -96,7 +96,35 @@ KNOWN = [
 RANKS = (['Unteroffizier'] * 5 + ['Feldwebel'] * 4 + ['Oberfeldwebel'] * 2 +
          ['Leutnant'] * 3 + ['Oberleutnant'] * 1)
 
-ESTABLISHMENT = 12          # pilots a Gruppe carries on this board
+ESTABLISHMENT = 12          # aircraft a Gruppe carries on this board
+
+# HOW MANY MEN PER AEROPLANE, and what they are called.
+#
+# A Jagdgruppe needs twelve pilots. A Zerstoerergruppe needs twelve
+# pilots AND twelve Bordfunker, and this script used to make twelve men
+# full stop - so a 110 pilot had nobody to fly with and the Room had
+# nothing to draw his crewman's name from.
+#
+# Keyed on the order of battle's own type string. The bombers are here
+# because the crew model is built for them, not because their careers
+# are: a He 111 roster comes out right whenever somebody wants one.
+CREW_BY_TYPE = {
+    'Bf 109E': ['Flugzeugfuehrer'],
+    'Bf 110':  ['Flugzeugfuehrer', 'Bordfunker'],
+    'Ju 87':   ['Flugzeugfuehrer', 'Bordfunker'],
+    'Do 17':   ['Flugzeugfuehrer', 'Beobachter', 'Bordfunker', 'Bordmechaniker'],
+    'Ju 88':   ['Flugzeugfuehrer', 'Beobachter', 'Bordfunker', 'Bordschuetze'],
+    'He 111':  ['Flugzeugfuehrer', 'Beobachter', 'Bordfunker', 'Bordmechaniker',
+                'Bordschuetze'],
+}
+
+# What the men in the back were. Overwhelmingly non-commissioned: a
+# Bordfunker was a trained signaller who flew, not an officer, and the
+# officer in a bomber crew was usually the Beobachter rather than the
+# pilot. So the back seats draw from a shorter, lower ladder than the
+# pilots do.
+CREW_RANKS = (['Unteroffizier'] * 6 + ['Feldwebel'] * 4 + ['Oberfeldwebel'] * 2)
+OBSERVER_RANKS = (['Leutnant'] * 3 + ['Oberleutnant'] * 1 + ['Feldwebel'] * 2)
 
 # How a Staffel's summer goes. Weighted so most men are alive with a few
 # victories, a good number have none at all, and a minority do not come
@@ -110,7 +138,7 @@ def unit_file(unit):
     return unit.replace('.', '').replace('/', '_').replace(' ', '') + '.json'
 
 
-def build(unit, known):
+def build(unit, known, crew=('Flugzeugfuehrer',)):
     # Seeded from the unit's own name, so a Gruppe's men do not change
     # between one opening of the Room and the next.
     rnd = random.Random('bob2-lw-' + unit)
@@ -124,7 +152,7 @@ def build(unit, known):
             'vic_source': 'not traced',
             'awards': [], 'staffel': None, 'portrait': None,
             'src': 'unit and appointment are ordinary record; nothing else recorded',
-            'note': '',
+            'note': '', 'role': 'Flugzeugfuehrer',
         })
     used = {k[2].split(',')[0] for k in known}
     while len(out) < ESTABLISHMENT:
@@ -155,8 +183,44 @@ def build(unit, known):
             'victories': [], 'victories_total': vics,
             'vic_source': 'assumed',
             'awards': [], 'staffel': gi * 3 + rnd.randint(1, 3), 'portrait': None,
-            'src': 'generated', 'note': '',
+            'src': 'generated', 'note': '', 'role': 'Flugzeugfuehrer',
         })
+
+    # THE MEN IN THE BACK, one set per further seat the type carries.
+    #
+    # They get no victories at all, and that is Patrick's decision rather
+    # than an oversight: the campaign save records one kill tally per
+    # sortie with no gun position, so crediting the man on the rear MG
+    # with a share of it would be a fabricated attribution sitting beside
+    # figures that really are read from the save. What they do get is a
+    # rank, a Staffel and a fate, because a crew that cannot be killed is
+    # not a crew.
+    for seat in list(crew)[1:]:
+        ranks = OBSERVER_RANKS if seat == 'Beobachter' else CREW_RANKS
+        for _ in range(ESTABLISHMENT):
+            while True:
+                sur = rnd.choice(SURNAMES)
+                fore = rnd.choice(FORENAMES)
+                if sur not in used:
+                    break
+            used.add(sur)
+            gi = ['I', 'II', 'III', 'IV', 'V'].index(unit.split('.')[0]) \
+                if unit.split('.')[0] in ('I', 'II', 'III', 'IV', 'V') else 0
+            fate = rnd.choice(FATES)
+            left = None
+            if fate != 'On strength':
+                left = '1940-%02d-%02d' % (rnd.choice([7, 8, 8, 9, 9, 10]), rnd.randint(1, 28))
+            out.append({
+                'pilot': '%s, %s' % (sur, fore[0]), 'rank': rnd.choice(ranks),
+                'historical': False, 'appointment': None, 'unit': unit,
+                'joined': None, 'left': left,
+                'left_reason': (None if fate == 'On strength' else fate.lower()),
+                'fate': ({'status': fate, 'date': left, 'note': ''} if fate != 'On strength' else None),
+                'victories': [], 'victories_total': None,
+                'vic_source': 'not credited; the save does not record which gun fired',
+                'awards': [], 'staffel': gi * 3 + rnd.randint(1, 3), 'portrait': None,
+                'src': 'generated', 'note': '', 'role': seat,
+            })
     return out
 
 
@@ -168,6 +232,7 @@ def main():
     with open(a.oob, encoding='utf-8') as fh:
         oob = json.load(fh)
     units = [r['unit'] for r in oob if r['fighter']]
+    types = {r['unit']: r.get('type', '') for r in oob}
     # the Stab flights are not in the order of battle but the known men
     # belong to them, so they are carried on their I. Gruppe's board
     os.makedirs(a.out, exist_ok=True)
@@ -176,12 +241,19 @@ def main():
     for u in sorted(set(units)):
         gesch = u.split('/')[1]
         mine = [k for k in KNOWN if k[0] == u or (k[0] == 'Stab/' + gesch and u.startswith('I.'))]
-        recs = build(u, mine)
+        crew = next((v for k, v in CREW_BY_TYPE.items() if types.get(u, '').startswith(k)),
+                    ['Flugzeugfuehrer'])
+        recs = build(u, mine, crew)
         nknown += len(mine)
         with open(os.path.join(a.out, unit_file(u)), 'w', encoding='utf-8') as fh:
             json.dump(recs, fh, indent=1, ensure_ascii=False)
             fh.write('\n')
     print('%d Gruppen written to %s' % (len(set(units)), a.out))
+    multi = [u for u in set(units)
+             if len(next((v for k, v in CREW_BY_TYPE.items() if types.get(u, '').startswith(k)),
+                         ['x'])) > 1]
+    print('%d of them fly a type with more than one seat, so they carry aircrew '
+          'as well as pilots' % len(multi))
     print('%d men of record placed; the rest are generated and say so' % nknown)
     return 0
 
