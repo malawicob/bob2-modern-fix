@@ -1,4 +1,4 @@
-﻿# Smoke test: BUILD every screen of the Squadron Room, offscreen.
+# Smoke test: BUILD every screen of the Squadron Room, offscreen.
 #
 # Why it exists: on 8 September 2026 the Room would not open at all. One
 # line still read a roster record's victories as a number after they had
@@ -123,6 +123,44 @@ try {
         $lp = Get-Pilot
         "    $rk : $($lp.rank) of $($lp.unit), $($lp.staffel). Staffel, ready room drew $($script:Stage.Children.Count) blocks"
     }
+    # AND A ZERSTOERER, because a Bf 110 carries two men and every screen
+    # that draws a crew is a screen the fighter path never touches: the
+    # second frame, the loss-and-replacement line, the Flugbuch's two
+    # names, the seat column on the Staffel table. A sweep that only ever
+    # posts a man to a Jagdgruppe proves none of it.
+    $zg = @($g) | Where-Object { "$($_.type)" -match '110' } | Select-Object -First 1
+    if ($zg) {
+        $script:SelSq = @{
+            Unit = "$($zg.unit)"; Gesch = "$($zg.geschwader)"; Gruppe = "$($zg.gruppe)"
+            Type = "$($zg.type)"; Base = "$($zg.field)"; Skill = "$($zg.skill)"
+            Luftflotte = [int]$zg.luftflotte; Period = 'P2'
+        }
+        Show-GruppeCreate
+        $script:NameBox.Text = 'Zerstoerer'
+        $script:SelPortrait = 'pilot01.jpg'
+        $script:SelAcNum = 4
+        $script:SelRank = 'Leutnant'
+        Invoke-GruppeSubmit
+        $zp = Get-Pilot
+        $zc = @(Get-Crew $zp)
+        "    $($zg.unit) : $($zp.rank), crew of $($zc.Count + 1)$(if ($zc.Count) { " with $($zc[0].rank) $($zc[0].pilot), $($zc[0].role)" })"
+        if (-not $zc.Count) { $fails += "zerstoerer : posted with no crew"; "    zerstoerer : NO CREW" }
+        # every tab again, this time with two men in the aeroplane
+        foreach ($tab in 'dispersal','logbook','gruppen','paper') {
+            try { Show-Tab $tab; "    110 tab $tab : drew $($script:Stage.Children.Count) blocks" }
+            catch { $fails += "110 tab $tab : $($_.Exception.Message)"; "    110 tab $tab : FAILED - $($_.Exception.Message)" }
+        }
+        # and late in the campaign, when his crewman's fate has passed and
+        # the replacement path runs
+        try {
+            $script:CampaignDate = [datetime]'1940-10-31'
+            Show-Tab 'dispersal'
+            "    110 late-war dispersal : drew $($script:Stage.Children.Count) blocks"
+        } catch { $fails += "110 late : $($_.Exception.Message)"; "    110 late : FAILED - $($_.Exception.Message)" }
+    } else {
+        $fails += 'no Bf 110 Gruppe in the order of battle to test with'
+    }
+
     # Every tab on the German side, the way the RAF's four are swept
     # above. The Morgenmeldung shipped only because it was added by hand
     # to this list; a tab that nothing builds is a tab nobody finds broken

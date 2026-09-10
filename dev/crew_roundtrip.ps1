@@ -115,6 +115,47 @@ try {
     Check 'his honours survived as objects'  (-not ("$($m2.honours)" -match 'Hashtable')) "$($m2.honours)"
     Check 'he was promoted by 30'            ("$($m2.rank)" -eq 'Feldwebel') "$($m2.rank)"
 
+    "losing him, and his replacement"
+    # A crewman whose invented fate has passed must be replaced, and the
+    # replacement must start at NOUGHT rather than inheriting the sorties
+    # he did not fly. This is the path that WRITES to the record, so it
+    # is the one that can lose a career if it is wrong.
+    $roster = @(Get-LwRoster -Unit 'II./ZG 26' | Where-Object { "$($_.role)" -eq 'Bordfunker' })
+    $dead = $roster | Where-Object { "$($_.left)" } | Select-Object -First 1
+    if (-not $dead) {
+        Check 'a Bordfunker with a fate exists to test with' $false
+    } else {
+        $p5 = Get-Pilot
+        $o5 = [ordered]@{}
+        foreach ($pp in $p5.PSObject.Properties) { $o5[$pp.Name] = $pp.Value }
+        $o5['crew'] = @([pscustomobject]([ordered]@{
+            role = 'Bordfunker'; pilot = "$($dead.pilot)"; rank = 'Unteroffizier'
+            rank_date = ''; portrait = 'pilot01.jpg'; honours = @()
+            sortiesBase = 0; joined = '1940-07-10'; src = 'invented' }))
+        Save-Pilot -Pilot $o5 -Shrink
+        $script:CampaignDate = [datetime]'1940-10-31'   # after any fate date
+        $before = (Get-Crew (Get-Pilot))[0].pilot
+        $lost = @(Update-CrewLosses -Pilot (Get-Pilot) -Sorties 40)
+        Check 'the loss is reported'          ($lost.Count -eq 1) "$($lost.Count)"
+        $after = Get-Pilot
+        $now = @(Get-Crew $after)
+        Check 'he still has a crewman'        ($now.Count -eq 1) "$($now.Count)"
+        if ($now.Count) {
+            Check 'it is a different man'     ("$($now[0].pilot)" -ne "$before") "$($now[0].pilot)"
+            Check 'the new man starts at nought' ([int]$now[0].sortiesBase -eq 40) "$($now[0].sortiesBase)"
+            $cc5 = Get-CrewCareer -Member $now[0] -Pilot $after -Sorties 40
+            Check 'so his own count is 0'     ([int]$cc5.sorties -eq 0) "$($cc5.sorties)"
+            Check 'and he has no honours yet' (-not @($now[0].honours).Count)
+            Check 'the replacement has a face' ([bool]"$($now[0].portrait)") "$($now[0].portrait)"
+        }
+        Check 'the loss names the day'        ([bool]"$($lost[0].date)") "$($lost[0].date)"
+        Check 'and who took the seat'         ([bool]"$($lost[0].replacedBy)") "$($lost[0].replacedBy)"
+        # and it must be idempotent: drawing the screen twice must not
+        # keep killing the man who has just arrived
+        $again = @(Update-CrewLosses -Pilot (Get-Pilot) -Sorties 40)
+        Check 'nobody is lost twice'          ($again.Count -eq 0) "$($again.Count)"
+    }
+
     "his seat, not a flight command"
     $ap = Get-CrewAppointment -Member $m2 -Career (Get-CrewCareer -Member $m2 -Pilot $p4 -Sorties 30)
     Check 'his appointment is his seat'      ($ap -eq 'Bordfunker') "$ap"

@@ -5103,7 +5103,7 @@ function New-LwRosterRow {
     }
     if ($Header) {
         $i = 0
-        foreach ($t in @('', 'PILOT', '', 'VICTORIES', 'STATUS')) {
+        foreach ($t in @('', 'PILOT', 'SEAT', 'VICTORIES', 'STATUS')) {
             $tb = New-TB -Text $t -Family $CondFam -Size 11 -Colour '#6F828C' -Bold
             if ($i -ge 2) { $tb.Margin = '14,0,0,0' }
             [Windows.Controls.Grid]::SetColumn($tb, $i); [void]$g.Children.Add($tb); $i++
@@ -5116,8 +5116,16 @@ function New-LwRosterRow {
     [Windows.Controls.Grid]::SetColumn($r0, 0); [void]$g.Children.Add($r0)
     $nm = New-TB -Text "$($Man.pilot)" -Family $CondFam -Size 14 -Colour $col -Bold
     [Windows.Controls.Grid]::SetColumn($nm, 1); [void]$g.Children.Add($nm)
+    # The seat comes before the Staffel now, because on a Zerstoerer board
+    # half the men are Bordfunker and a column of Staffel numbers does not
+    # say which half is which.
+    $seat = ''
+    if (($Man.PSObject.Properties.Name -contains 'role') -and "$($Man.role)" -and "$($Man.role)" -ne 'Flugzeugfuehrer') {
+        $seat = "$($Man.role)"
+    }
     $rt = if ($IsPlayer) { 'you' }
           elseif ($Man.appointment) { "$($Man.appointment)" }
+          elseif ($seat) { $seat }
           elseif ($Man.staffel) { "$($Man.staffel). Staffel" } else { '' }
     $r2 = New-TB -Text $rt -Family 'Segoe UI' -Size 12 -Colour $(if ($Man.historical) { '#C8973F' } else { '#6F828C' }) -Wrap
     $r2.Margin = '14,0,0,0'
@@ -5161,6 +5169,26 @@ function Show-Flugbuch {
         $cpl = New-TB -Text "Campaign pilot on record: $($cp.Name)" -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
         $cpl.Margin = '0,-12,0,14'
         [void]$script:Stage.Children.Add($cpl)
+    }
+    # WHO ELSE IS IN THE AEROPLANE. Every sortie in this book was flown by
+    # both of them, so both are named at the top of it.
+    $crewF = @(Get-Crew $Pilot)
+    if ($crewF.Count) {
+        $who = @($crewF | ForEach-Object { "$(Short-Rank "$($_.rank)") $($_.pilot), $($_.role)" })
+        $cw = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text (
+            'Flying with him: ' + ($who -join '; ') + '.')
+        $cw.Margin = '0,-8,0,4'; $cw.MaxWidth = 900; $cw.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($cw)
+        # Patrick's decision, said on the screen rather than buried in a
+        # commit: the save keeps ONE kill tally per sortie and no gun
+        # position, so there is nothing to divide between the two of them
+        # and nothing here pretends otherwise.
+        $cn = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+            'The claims below are the aircraft''s. The save records one tally for the sortie and ' +
+            'does not record which gun fired, so they are not split between the two men. His ' +
+            'crewman''s rank and decorations come off sorties flown, and are this Room''s invention.')
+        $cn.Margin = '0,0,0,14'; $cn.MaxWidth = 900; $cn.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($cn)
     }
 
     $sessions = Get-Sessions
@@ -5401,6 +5429,71 @@ function New-CrewFor {
     # arrives as a single "member" whose rank reads as 1. Same rule as
     # everywhere else in this file: comma return XOR @() at the caller.
     $out
+}
+# WHEN A CREWMAN DOES NOT COME BACK.
+#
+# Every man on the roster carries an invented fate on a dated day, and
+# the Bordfunker is drawn from that roster, so his day comes like anyone
+# else's. Patrick's decision was that he is replaced and the Room says
+# so, rather than being quietly swapped or made unkillable - every other
+# man on the board can be killed, and one who cannot reads oddly.
+#
+# The replacement's sortiesBase is set to the count SO FAR, so he starts
+# at nought and does not inherit sorties he did not fly.
+#
+# Returns the list of losses, so the Ready Room can name them.
+function Update-CrewLosses {
+    param($Pilot, [int]$Sorties)
+    $crew = @(Get-Crew $Pilot)
+    if (-not $crew.Count) { return @() }
+    $d = $script:CampaignDate
+    if (-not $d) { return @() }
+    $roster = @(Get-LwRoster -Unit "$($Pilot.unit)")
+    $lost = @(); $newCrew = @(); $changed = $false
+    $taken = @($crew | ForEach-Object { "$($_.pilot)" })
+    foreach ($m in $crew) {
+        $man = $roster | Where-Object { "$($_.pilot)" -eq "$($m.pilot)" } | Select-Object -First 1
+        $gone = $false; $when = $null; $how = 'did not come back'
+        if ($man -and "$($man.left)") {
+            try {
+                $ld = [datetime]::ParseExact("$($man.left)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)
+                if ($ld -le $d) {
+                    $gone = $true; $when = $ld
+                    if ($man.fate -and "$($man.fate.status)") { $how = "$($man.fate.status)".ToLower() }
+                }
+            } catch { }
+        }
+        if (-not $gone) { $newCrew += $m; continue }
+        $rep = Get-CrewCandidate -Unit "$($Pilot.unit)" -Role "$($m.role)" -Date $d `
+                                 -Seed "$($Pilot.pilot)$($m.pilot)" -Taken $taken
+        $lost += [ordered]@{ pilot = "$($m.pilot)"; rank = "$($m.rank)"; role = "$($m.role)"
+                             date = $when.ToString('yyyy-MM-dd'); how = $how
+                             replacedBy = $(if ($rep) { "$($rep.pilot)" } else { '' }) }
+        $changed = $true
+        if (-not $rep) { continue }
+        $taken += "$($rep.pilot)"
+        $rk = "$($rep.rank)"
+        if (-not $rk) { $rk = 'Unteroffizier' }
+        $newCrew += [pscustomobject]([ordered]@{
+            role        = [string]$m.role
+            pilot       = [string]$rep.pilot
+            rank        = [string]$rk
+            rank_date   = ''
+            portrait    = [string](Get-CrewPortrait "$($rep.pilot)")
+            honours     = @()
+            sortiesBase = [int]$Sorties
+            joined      = [string]$d.ToString('yyyy-MM-dd')
+            src         = 'invented'
+        })
+    }
+    if (-not $changed) { return @() }
+    $obj = [ordered]@{}
+    foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+    $obj['crew'] = @($newCrew)
+    # -Shrink because a man lost and not replaced makes the record
+    # genuinely smaller, and that is a real event rather than a mistake.
+    Save-Pilot -Pilot $obj -Shrink
+    $lost
 }
 # A Zerstoerer's own letter. The same acnum the adjutant asks for, read
 # as a letter instead of a numeral: the fuselage rules run A to K and
@@ -6172,6 +6265,13 @@ function Show-ReadyRoom {
     if ($hr) { $hr.Margin = '0,14,0,0'; [void]$d.Children.Add($hr) }
     [void]$hero.Children.Add($d)
 
+    # Anyone who did not come back is replaced first, so the men drawn
+    # below are the men on strength today.
+    $lost = @(Update-CrewLosses -Pilot $Pilot -Sorties ([int]$career.sorties))
+    if ($lost.Count) {
+        $p2 = Get-Pilot; if ($p2) { $Pilot = $p2 }
+    }
+
     # THE REST OF THE CREW, beside him and in the same frame.
     #
     # New-Frame takes a man and reads .pilot and .portrait, which is why a
@@ -6210,6 +6310,22 @@ function Show-ReadyRoom {
         [void]$hero.Children.Add($cd)
     }
     [void]$script:Stage.Children.Add($hero)
+
+    # WHO WAS LOST, named, with the day and who took his place.
+    foreach ($l in $lost) {
+        $lb = New-Object Windows.Controls.Border
+        $lb.Background = B '#241A17'; $lb.BorderBrush = B '#7A3E32'
+        $lb.BorderThickness = '3,0,0,0'; $lb.CornerRadius = '0,3,3,0'
+        $lb.Padding = '16,12'; $lb.Margin = '0,0,0,18'
+        $lb.HorizontalAlignment = 'Left'; $lb.MaxWidth = 940
+        $txt = "$(Short-Rank "$($l.rank)") $($l.pilot) $($l.how) on $(Format-ShortDate "$($l.date)")."
+        if ("$($l.replacedBy)") { $txt += "  $($l.replacedBy) has taken the back seat." }
+        else { $txt += '  There is nobody left in the Staffel to replace him.' }
+        $lt2 = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#D9C9C4' -Text $txt
+        $lt2.MaxWidth = 880
+        $lb.Child = $lt2
+        [void]$script:Stage.Children.Add($lb)
+    }
 
     # the counters
     $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,0,0,26'
