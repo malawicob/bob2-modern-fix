@@ -96,6 +96,7 @@ DXVK is excluded by default: 7.5 MB, two thirds of the package, for a wrapper th
 | **Sector map** | Drawn, not photographed. Coastlines, land and rivers from [Natural Earth](https://www.naturalearthdata.com) (public domain), shaded from public elevation data. Every airfield placed from its own latitude and longitude, and squadrons plotted from the same projection. |
 | **Order of battle** | Which squadron stood where, and how Fighter Command rated it, read out of the game's own files. |
 | **Morning Bulletin headlines** | Genuine 1940 headlines and extracts from New Zealand newspapers, digitised by Papers Past, National Library of New Zealand — <https://paperspast.natlib.govt.nz>. CC BY-NC-SA 4.0, non-commercial use with attribution; each front page credits its source paper. |
+| **Morgenmeldung: what Berlin claimed** | The OKW daily communique, rendered into English. There is no free digital edition of it, so the text comes from the newspapers that printed it verbatim, held by the [Deutsches Zeitungsportal](https://www.deutsche-digitale-bibliothek.de/newspaper) of the Deutsche Digitale Bibliothek, from papers carrying Public Domain Mark 1.0, CC BY-SA 4.0 or CC BY-NC-SA 4.0. Each day names the paper it was read from and its licence. This material is Nazi propaganda whose figures were inflated on purpose; the screen carries a note saying so, and it is there to be understood rather than believed. |
 | **PresentMon** | Intel, not shipped — a separate download |
 
 ---

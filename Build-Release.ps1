@@ -187,6 +187,19 @@ the ones you supply.
                             attribution; each front page credits its
                             source newspaper.
 
+  Morgenmeldung: what       The OKW daily communique, rendered into
+  Berlin claimed            English. Taken from the newspapers that
+                            printed it verbatim, held by the Deutsches
+                            Zeitungsportal of the Deutsche Digitale
+                            Bibliothek, from papers carrying Public
+                            Domain Mark 1.0, CC BY-SA 4.0 or
+                            CC BY-NC-SA 4.0.
+                            https://www.deutsche-digitale-bibliothek.de/newspaper
+                            Each day names the paper it was read from
+                            and its licence. The material is Nazi
+                            propaganda and the screen says so: see the
+                            note on that page.
+
 $(if ($IncludeDxvk) { "  DXVK                      zlib/libpng licence - https://github.com/doitsujin/dxvk`n" } else { "" })
 NOT INCLUDED, and needed separately:
 

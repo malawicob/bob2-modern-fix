@@ -19,6 +19,7 @@
 param(
     [ValidateSet('raf','lw')][string]$Side = 'raf',
     [ValidateSet('dispersal','logbook','map','paper','postings')][string]$Tab = 'dispersal',
+    [string]$Date,
     [string]$Room,
     [string]$Png
 )
@@ -35,6 +36,7 @@ Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase
 $WantSide = $Side
 $WantTab  = $Tab
 $WantPng  = $Png
+$WantDate = $Date
 if (-not (Test-Path $Room)) { Write-Host "Cannot find the Room at $Room" -ForegroundColor Red; exit 1 }
 $src = Get-Content $Room -Raw
 $src = $src -replace '(?m)^\[void\]\$Win\.ShowDialog\(\)\s*$', ''
@@ -71,6 +73,14 @@ if (-not $pl -and $WantSide -eq 'lw' -and $WantTab -ne 'postings') {
     $script:SelRank = 'Leutnant'
     Invoke-GruppeSubmit
     $pl = Get-Pilot
+}
+# Pin the campaign date, so a screen can be looked at on the day that
+# actually shows something. Get-CampaignDate reads the save and every
+# screen calls it, so it is replaced rather than assigned to.
+if ($WantDate) {
+    $script:PinnedDate = [datetime]::ParseExact($WantDate,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)
+    function Get-CampaignDate { $script:PinnedDate }
+    $script:CampaignDate = $script:PinnedDate
 }
 if ($WantTab -eq 'postings') {
     if ($WantSide -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }

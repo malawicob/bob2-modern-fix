@@ -4824,6 +4824,112 @@ function Show-Flugbuch {
 }
 
 # =====================================================================
+#  What Berlin claimed: the OKW communique, in English, labelled
+#
+#  Patrick's decision, and it is the right one: an English rendering of
+#  what Berlin claimed rather than the German text, with the material
+#  labelled for what it is.
+#
+#  squadronroom/lw/okw.json is built by dev/harvest_okw.py and
+#  dev/render_okw.py. The chain is worth knowing before anybody changes
+#  a word of what follows.
+#
+#  There is no free digital edition of the Wehrmachtbericht: both
+#  complete printed editions are in copyright as editions, and the
+#  Bundesarchiv's own file of them is not digitised. So the text comes
+#  from the newspapers that printed it verbatim every morning, out of
+#  the Deutsches Zeitungsportal of the Deutsche Digitale Bibliothek,
+#  from twelve papers that carry Public Domain Mark 1.0, CC BY-SA 4.0
+#  or CC BY-NC-SA 4.0. Most days have five to seven independent
+#  readings of the same words.
+#
+#  The pages are Fraktur and the OCR is imperfect, so NOTHING here is a
+#  paraphrase. What is shown is the two figures - British aircraft
+#  claimed, German aircraft admitted missing - and the British places
+#  named, all pulled out by pattern and checked against a fixed list of
+#  real places. A machine paraphrase of a propaganda communique written
+#  out in confident English prose is the one thing this must never
+#  produce, because it would read as a report of what happened. Each
+#  record keeps the German it was read from so any reading can be
+#  checked.
+#
+#  A day with no figures shows nothing rather than a guess.
+# =====================================================================
+$OkwPath = Join-Path (Join-Path $ModDir 'lw') 'okw.json'
+function Get-Okw {
+    $out = @()
+    if (Test-Path $OkwPath) {
+        try { $out = @(Get-Content $OkwPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { $out = @() }
+    }
+    ,$out
+}
+# ConvertFrom-Json plus the pipeline nests the array several layers deep.
+# The RAF paper shipped broken once for exactly this, with a single
+# flatten where a loop was needed.
+function Get-OkwEntries {
+    if ($null -ne $script:OkwCache) { return $script:OkwCache }
+    $e = @(Get-Okw)
+    while ($e.Count -eq 1 -and ($e[0] -is [System.Array])) { $e = $e[0] }
+    $script:OkwCache = $e
+    ,$e
+}
+# The communique for the campaign's day, or the nearest earlier one. The
+# same rule the RAF paper uses, and for the same reason: a campaign day
+# with no entry should show the last thing that was said, not a blank.
+function Get-OkwForDate {
+    param($Date)
+    $e = Get-OkwEntries
+    if (-not $e.Count) { return $null }
+    $i = Get-LeadBulletinIndex -Entries $e -Date $Date
+    if ($i -lt 0) { return $null }
+    $r = $e[$i]
+    # A day with no figures can still have named its targets, and what
+    # Berlin said it had attacked is worth as much as what it said it had
+    # shot down. Only a record with neither is nothing to show.
+    if (($null -eq $r.claimed_british) -and ($null -eq $r.admitted_german) -and
+        (-not @($r.targets).Count)) { return $null }
+    $r
+}
+# The caption under the heading. Short, unmissable, and on the screen
+# every time the column is: a warning at the foot of a page is a warning
+# somebody reads after they have already believed the numbers.
+$OkwCaption = 'Nazi propaganda. The figures were inflated on purpose.'
+function New-OkwNote {
+    param($Rec)
+    $b = New-Object Windows.Controls.Border
+    $b.Background = B '#241A17'; $b.BorderBrush = B '#7A3E32'; $b.BorderThickness = '3,0,0,0'
+    $b.CornerRadius = '0,3,3,0'; $b.Padding = '18,14'; $b.Margin = '0,18,0,0'
+    $b.HorizontalAlignment = 'Left'; $b.MaxWidth = 940
+    $s = New-Object Windows.Controls.StackPanel
+    [void]$s.Children.Add((New-TB -Text 'ABOUT THIS COLUMN' -Family $CondFam -Size 12 -Colour '#D98E7E' -Bold))
+    $t1 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#C9BDB8' -Text (
+        'The Wehrmachtbericht was the daily communique of the German Armed Forces High Command, ' +
+        'written by the propaganda department of the OKW and broadcast every day of the war. It was ' +
+        'an instrument of the Nazi state and it is not a record of what happened. Victories were ' +
+        'inflated on purpose and losses were understated. On 11 August 1940 it claimed 73 British ' +
+        'aircraft shot down for 14 German aircraft missing. The real figures were nothing like that, ' +
+        'and the men reading it had no way of knowing.')
+    $t1.Margin = '0,8,0,0'; $t1.MaxWidth = 880; $t1.LineHeight = 18
+    [void]$s.Children.Add($t1)
+    $t2 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#C9BDB8' -Text (
+        'It is here for one reason: this is what a Luftwaffe pilot was told that morning, and the ' +
+        'distance between what he was told and what his own Gruppe''s diary records is the honest ' +
+        'thing to put in front of you. It is shown to be understood, not believed, and nothing in ' +
+        'it is endorsed.')
+    $t2.Margin = '0,8,0,0'; $t2.MaxWidth = 880; $t2.LineHeight = 18
+    [void]$s.Children.Add($t2)
+    if ($Rec) {
+        $src = New-TB -Wrap -Family 'Segoe UI' -Size 11.5 -Colour '#8A7C77' -Text (
+            "Rendered into English from the communique as printed in $($Rec.paper), " +
+            "$(Format-ShortDate "$($Rec.date)"), held by the Deutsches Zeitungsportal of the " +
+            "Deutsche Digitale Bibliothek under $($Rec.licence).")
+        $src.Margin = '0,10,0,0'; $src.MaxWidth = 880; $src.FontStyle = 'Italic'
+        [void]$s.Children.Add($src)
+    }
+    $b.Child = $s
+    $b
+}
+# =====================================================================
 #  The Morgenmeldung: the German side's morning bulletin
 #
 #  Patrick asked where the German morning bulletin was, and said the two
@@ -5010,46 +5116,63 @@ function Show-Morgenmeldung {
     $vr = New-Object Windows.Controls.Border; $vr.Width=1; $vr.Background=B '#3A3324'; $vr.HorizontalAlignment='Center'
     [Windows.Controls.Grid]::SetColumn($vr,1); [void]$bodyG.Children.Add($vr)
 
-    # The enemy's press, monitored. Real British reporting of that date,
-    # out of the same file the RAF side reads, and labelled as what it is.
+    # What Berlin claimed that morning, in English, and said plainly to
+    # be propaganda. This column used to carry the British press instead,
+    # which was a stopgap: it was the only thing in the repo that was
+    # both dated and honest. Patrick's decision was to go and get the
+    # actual OKW communique, render it in English, and label it.
+    $okw = Get-OkwForDate $script:CampaignDate
     $sc = New-Object Windows.Controls.StackPanel
-    [void]$sc.Children.Add((New-TB -Text 'WAS LONDON MELDET' -Family $CondFam -Size 12 -Colour '#7A5E2E' -Bold))
-    [void]$sc.Children.Add((New-Rule '#7A5E2E' 1))
-    $entries = Get-PaperEntries
-    $li = Get-LeadBulletinIndex -Entries $entries -Date $script:CampaignDate
-    $shown = 0
-    if ($li -ge 0 -and $entries.Count) {
-        $e = $entries[$li]
-        $hh = New-TB -Text ([string]$e.headline) -Family 'Georgia, serif' -Size 14 -Colour '#1C1810' -Bold -Wrap
-        $hh.Margin = '0,0,0,4'; $hh.LineHeight = 17
-        [void]$sc.Children.Add($hh)
-        if (($e.PSObject.Properties.Name -contains 'paper') -and $e.paper) {
-            $pp = New-TB -Text ("$($e.paper), $(Format-ShortDate ([string]$e.date))") -Family $CondFam -Size 11 -Colour '#7A5E2E' -Bold
-            $pp.Margin = '0,0,0,13'
-            [void]$sc.Children.Add($pp)
+    [void]$sc.Children.Add((New-TB -Text 'WHAT BERLIN CLAIMED' -Family $CondFam -Size 12 -Colour '#8C3A2A' -Bold))
+    [void]$sc.Children.Add((New-Rule '#8C3A2A' 1))
+    # The caption sits ABOVE the figures, not under them. A warning at
+    # the foot of a column is a warning somebody reads after they have
+    # already believed the numbers.
+    $capTop = New-TB -Wrap -Family 'Georgia, serif' -Size 12 -Colour '#8C3A2A' -Text $OkwCaption
+    $capTop.FontStyle = 'Italic'; $capTop.Margin = '0,0,0,12'
+    [void]$sc.Children.Add($capTop)
+    if ($okw) {
+        if ($null -ne $okw.claimed_british) {
+            $k1 = New-TB -Text "$([int]$okw.claimed_british) British aircraft" -Family 'Georgia, serif' -Size 21 -Colour '#1C1810' -Bold -Wrap
+            [void]$sc.Children.Add($k1)
+            $k1b = New-TB -Text 'claimed shot down' -Family $CondFam -Size 11.5 -Colour '#6B6250' -Bold
+            $k1b.Margin = '0,0,0,12'
+            [void]$sc.Children.Add($k1b)
         }
-        $shown++
-        if (($e.PSObject.Properties.Name -contains 'signals') -and $e.signals) {
-            foreach ($sg in @($e.signals)) {
-                if ($shown -ge 5) { break }
-                $item = New-TB -Text ([string]$sg) -Family 'Georgia, serif' -Size 14 -Colour '#1C1810' -Bold -Wrap
-                $item.Margin = '0,0,0,13'; $item.LineHeight = 17
-                [void]$sc.Children.Add($item)
-                $shown++
-            }
+        if ($null -ne $okw.admitted_german) {
+            $k2 = New-TB -Text "$([int]$okw.admitted_german) German aircraft" -Family 'Georgia, serif' -Size 21 -Colour '#1C1810' -Bold -Wrap
+            [void]$sc.Children.Add($k2)
+            $k2b = New-TB -Text 'admitted missing' -Family $CondFam -Size 11.5 -Colour '#6B6250' -Bold
+            $k2b.Margin = '0,0,0,12'
+            [void]$sc.Children.Add($k2b)
         }
+        $tg = @($okw.targets)
+        if ($tg.Count) {
+            $tt = New-TB -Wrap -Family 'Georgia, serif' -Size 13.5 -Colour '#2A2620' -Text (
+                'Targets named: ' + (($tg | Select-Object -First 7) -join ', ') + '.')
+            $tt.Margin = '0,0,0,10'; $tt.LineHeight = 18
+            [void]$sc.Children.Add($tt)
+        }
+        # The communique is dated the morning AFTER the fighting it
+        # describes, because that is when the papers carried it. Saying
+        # so stops the figures being read against the wrong day.
+        $dl = New-TB -Wrap -Family $CondFam -Size 11 -Colour '#7A6A62' -Text (
+            "Communique of $(Format-ShortDate "$($okw.date)"), covering the day before.")
+        [void]$sc.Children.Add($dl)
     }
-    if ($shown -eq 0) { [void]$sc.Children.Add((New-TB -Text 'Nichts abgehoert.' -Family 'Georgia, serif' -Size 13 -Colour '#4A4436')) }
-    $cap = New-TB -Wrap -Family 'Georgia, serif' -Size 12 -Colour '#6B6250' -Text (
-        'The British press of that morning, as it was monitored. Their claims are theirs, not ours.')
-    $cap.FontStyle = 'Italic'; $cap.Margin = '0,4,0,0'
-    [void]$sc.Children.Add($cap)
+    else {
+        [void]$sc.Children.Add((New-TB -Wrap -Family 'Georgia, serif' -Size 13 -Colour '#4A4436' -Text (
+            'No communique has been read for this date. Nothing is shown rather than a guess.')))
+    }
     [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
 
     [void]$col.Children.Add($bodyG)
     [void]$col.Children.Add((New-Rule '#1A1712' 2))
     $paper.Child = $col
     [void]$script:Stage.Children.Add($paper)
+    # The full note, on the page every time, below the sheet where there
+    # is room for it to be read properly.
+    [void]$script:Stage.Children.Add((New-OkwNote $okw))
 }
 function Show-ReadyRoom {
     param($Pilot)
