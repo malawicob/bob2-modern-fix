@@ -1,4 +1,4 @@
-﻿# BOB2 2.13 Modern Fix - install and repair
+# BOB2 2.13 Modern Fix - install and repair
 # Automates patching from v2.06 through v2.12/v2.13, dgVoodoo2, and crash fix
 
 param(
@@ -2208,6 +2208,64 @@ function Step-RemoveDunkirkPack { param([string]$GameFolder)
 }
 
 # ============================================================
+# Luftwaffe dispersal (optional). Dresses the 40 German-held airfields
+# that ship with no scenery at all: tents, revetments, barns, a flak
+# piece, ground crew and a few vehicles, about 23 objects a field, all
+# static. Every object is lifted from one of the six French fields the
+# BDG dressed by hand, and set down at the bearing that keeps it
+# furthest from that field's own runway markers.
+#
+# Unlike the RAF living dispersal this modifies NOTHING. It writes one
+# new file into ObjectAdds\, which the game globs, so installing is a
+# copy and removing is a delete. Object count is the dominant CPU cost
+# in this engine, so if the frame rate suffers this is one file to bin.
+# ============================================================
+$LwDispersalFile   = 'LW_Airfields.txt'
+$LwDispersalMarker = '# Luftwaffe dispersal'
+
+function Get-LwDispersalState { param([string]$GameFolder)
+    # 'on' | 'off' | 'foreign' (a file of that name that is not ours)
+    $p = Join-Path $GameFolder ('ObjectAdds\' + $LwDispersalFile)
+    if (-not (Test-Path $p)) { return 'off' }
+    $head = Get-Content $p -TotalCount 3 -ErrorAction SilentlyContinue
+    if ($head -and (($head -join "`n") -match [regex]::Escape($LwDispersalMarker))) { return 'on' }
+    return 'foreign'
+}
+
+function Step-InstallLwDispersal { param([string]$GameFolder)
+    Write-Step 'Dress the Luftwaffe airfields'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $payload = $null
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path $base ('dispersal\' + $LwDispersalFile)
+        if (Test-Path $cand) { $payload = $cand; break }
+    }
+    if (-not $payload) { Write-Warn "dispersal\$LwDispersalFile payload not found."; return $false }
+    $oa = Join-Path $GameFolder 'ObjectAdds'
+    if (-not (Test-Path $oa)) { Write-Warn 'ObjectAdds folder not found in the game folder.'; return $false }
+    switch (Get-LwDispersalState $GameFolder) {
+        'on'      { Write-OK 'Luftwaffe airfields already dressed'; return $true }
+        'foreign' { Write-Warn "ObjectAdds\$LwDispersalFile exists and is not ours - leaving it strictly alone."; return $false }
+    }
+    Copy-Item $payload (Join-Path $oa $LwDispersalFile) -Force
+    $n = @(Get-Content (Join-Path $oa $LwDispersalFile) | Where-Object { $_ -match '^OBJECT_ADD' }).Count
+    Write-OK "Dressed 40 German airfields ($n static objects, no trees)"
+    return $true
+}
+
+function Step-RemoveLwDispersal { param([string]$GameFolder)
+    Write-Step 'Undress the Luftwaffe airfields'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    switch (Get-LwDispersalState $GameFolder) {
+        'off'     { Write-OK 'Not installed'; return $true }
+        'foreign' { Write-Warn "ObjectAdds\$LwDispersalFile is not ours - leaving it strictly alone."; return $false }
+    }
+    Remove-Item (Join-Path $GameFolder ('ObjectAdds\' + $LwDispersalFile)) -Force
+    Write-OK 'Removed the Luftwaffe dispersal; nothing else was ever touched'
+    return $true
+}
+
+# ============================================================
 # Enhanced sea (optional). Replaces Weather\Water.fx with the tuned
 # shader (larger swells, sun glint, sparse white specks on both the
 # detailed and the distant filler water) and sets the deep-navy channel
@@ -3422,12 +3480,18 @@ function Do-IndividualSteps {
         }) -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
-        Write-Host " 13. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        $lw13 = Get-LwDispersalState $gameFolder
+        Write-Host $(switch ($lw13) {
+            'on'      { " 13. Undress the Luftwaffe airfields (currently dressed)" }
+            'foreign' { " 13. Dress the Luftwaffe airfields (blocked: a file of that name is not ours)" }
+            default   { " 13. Dress the Luftwaffe airfields (optional, 40 German fields)" }
+        }) -ForegroundColor White
+        Write-Host " 14. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
         Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
-        Write-Host " 14. Back to main menu" -ForegroundColor White
+        Write-Host " 15. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-14): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-15): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -3449,6 +3513,13 @@ function Do-IndividualSteps {
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
             "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
             "13" {
+                # One key, and it does whatever the current state needs, the
+                # way step 10 does for ReShade.
+                if ((Get-LwDispersalState $gameFolder) -eq 'on') { Step-RemoveLwDispersal $gameFolder }
+                else { Step-InstallLwDispersal $gameFolder }
+                Pause-Continue
+            }
+            "14" {
                 # One key for the whole look, and a way back off it. It turns
                 # OFF only when the whole look is already on. Judging that on
                 # the antialiasing alone was wrong once Settings could set the
@@ -3462,8 +3533,8 @@ function Do-IndividualSteps {
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
             }
-            "14" { return }
-            default { Write-Warn "Invalid option. Please enter 1-13." }
+            "15" { return }
+            default { Write-Warn "Invalid option. Please enter 1-15." }
         }
     }
 }

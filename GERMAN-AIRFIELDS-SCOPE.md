@@ -137,3 +137,81 @@ marked "Was an experimental file".
 - Whether ObjectAdds objects can be damaged, or only collided with. They do have
   collision: the manual credits `FIX_OBJECTADDS` with fixing "collisions and
   explosion problems on take-off and landing at certain airfields".
+
+---
+
+# What was actually built, and why it is not what this study priced
+
+*Added 10 September 2026. The study above stands as the reasoning; this is
+the decision it led to.*
+
+The course priced above, 3,000 to 5,000 hand placed objects, was **not**
+taken. Two findings made a much smaller job possible, and one of them
+only appeared once the data was measured rather than read.
+
+**The kits could be lifted rather than invented.** Filtered to the German
+airfield kit, so that Wissant contributes its aerodrome and not the 285
+objects that are the village of Wissant, every airfield Shape has a
+dressed exemplar: Cocquelles for `GLFTTNT2`, Wissant for `GLFTTNT1`,
+Abbeville for `GLFTFUL2`, Marck for `GLFTFUL1`. These have shipped and
+flown for twenty years, which is a better guarantee than judgement.
+
+**The runway markers are not a runway.** The obvious reading of the three
+`RunwaySBAND` markers is three points along a strip, and fitting a line
+to them would give a centreline to keep clear of. That reading does not
+survive the data. At Abbeville they sit at bearings of 94, 141 and 191
+degrees from the reference point at much the same distance, so they are
+three places around the field, not three points on a line. Villacoublay's
+four give pairwise bearings of 13, 15, 18, 99, 131 and 153. A fitted
+centreline is an inference on top of an inference.
+
+So the rule came from what already flies. Measured across the six fields
+the BDG dressed by hand, every one keeps its kit at least **165 m** from
+the nearest runway marker:
+
+| Abbeville | Cocquelles | Peuplingues | Marck | Wissant |
+|---|---|---|---|---|
+| 239 m | 345 m | 427 m | 171 m | 165 m |
+
+Nothing else about them is consistent. The angle between the kit and the
+nearest marker runs from 2 degrees at Abbeville to 63 at Peuplingues, and
+Wissant has an object a metre off the line from a marker to the field
+centre, so neither bearing nor that line was what the authors respected.
+Distance from the markers was. Each kit is therefore planted at the
+bearing that puts it furthest from that field's own markers, and the
+result is measured rather than assumed.
+
+## What shipped
+
+| | |
+|---|---|
+| Fields dressed | 40, every one in the order of battle that had nothing |
+| Objects | 928, about 23 a field |
+| Trees | none |
+| Clearance from the nearest runway marker | 395 m at worst, 737 m typical |
+| Delivery | `ObjectAdds\LW_Airfields.txt`, one new file |
+| Install | setup step 13; removing it is deleting the file |
+
+Against the 3,000 to 5,000 above, and against a British median of 203 a
+field. The restraint is deliberate and it is the same restraint the RAF
+Living dispersal already shows at 16 objects a field: ground object count
+is the dominant CPU load in this engine, it is the single biggest frame
+rate cost, and it is what took this project's own measurement from 28 to
+76 FPS. Handing that back as scenery would have been absurd.
+
+Nothing shipped is modified. The game globs `ObjectAdds\*.txt`, so
+installing is a copy and removing is a delete, which also makes this the
+easy thing to bin first if a machine is struggling.
+
+## The tools
+
+    python3 dev/build_lw_dispersal.py      writes the payload and a manifest
+    python3 dev/audit_lw_dispersal.py      measures it; exit 1 gates a release
+    python3 dev/preview_lw_dispersal.py    all 40 fields on one sheet, from above
+
+## Still open from the study above
+
+The placement mode key bindings are still undocumented and still unknown.
+Nothing here needed them, because nothing here was placed by hand. They
+would be needed to do better than a lifted kit, and that remains a
+project rather than a job.

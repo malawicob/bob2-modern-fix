@@ -29,6 +29,8 @@ A companion app for **Battle of Britain II: Wings of Victory** — gets the 2005
 
 **Takes you to Dunkirk.** An optional pack of four Battle of France missions over the evacuation. It adds Dunkerque to the game's map, the first new named place on it, dresses the harbour and the beaches, and puts the little ships in the Channel.
 
+**Puts something on the German airfields.** Forty of the forty six fields the Luftwaffe flies from ship with nothing on them at all, so a German career takes off from bare grass. An optional step dresses every one of them: tents and revetments, a barn or two, a flak piece, ground crew and a few vehicles, about twenty three static objects a field and not a single tree. Every object is lifted from one of the six French fields that were dressed by hand twenty years ago, and set down where it stays well clear of the runway. It is one file, so if your frame rate ever suffers it is one file to delete.
+
 ---
 
 ## What you need
