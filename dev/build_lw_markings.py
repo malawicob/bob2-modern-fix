@@ -37,10 +37,12 @@ covering every marking in the game for both sides and all types. This
 takes the ones a 109 needs and leaves the rest: the bomber code letters,
 the spinners, the Stuka and Do 17 bands, and the RAF sheets.
 
-Numbers 1 to 15 exist in all four colours, which is exactly the range a
-Staffel used. 0 and 16 exist in black only and are not offered, because
+Numbers 1 to 15 exist in the Staffel colours, which is exactly the range
+a Staffel used. 0 and 16 exist in black only and are not offered, because
 a number a man cannot have in his own Staffel's colour is not a number
-he can have.
+he can have. Brown on black is cut as well, for the three Gruppen whose
+numbers change colour partway through the campaign; see number_dates
+below.
 
 Everything is trimmed to its own bounding box before it is saved. The
 tiles are mostly empty space and the Room places these by fraction of
@@ -72,6 +74,10 @@ COLOURS = {
     'red':    ('%d_Red white', '%d_red white', '%d_red'),
     'yellow': ('%d_yellow black', '%d_yellow'),
     'black':  ('%d_black white', '%d_black'),
+    # Brown on black, worn by 3. Staffel of II./JG 26 and I./JG 51 until
+    # 18 August 1940 and by nobody else. It is here because
+    # Me109_PlaneID_1.ms says so, not because it looks likely.
+    'brown':  ('%d_brown black', '%d_Brown black', '%d_Brown Black', '%d_brown blackv3'),
 }
 
 GRUPPE = {
@@ -200,6 +206,123 @@ GESCHWADER_CODE_110 = {
 }
 
 
+
+# ---------------------------------------------------------------------
+#  The number's colour changes with the date, for three Gruppen
+# ---------------------------------------------------------------------
+# The Staffel's colour is the rule almost everywhere: 1., 4. and 7. wore
+# white, 2., 5. and 8. red, 3., 6. and 9. yellow. Me109_PlaneID_1.ms
+# names three Gruppen where the date overrides that, and the Room was
+# ignoring all of it because the 109 never looked at the campaign date at
+# all. Derived here rather than typed, so it stays true if the rules move.
+#
+# planeid is the aeroplane's place in the Gruppe, 1 to 36, so the Staffel
+# it belongs to is ((planeid - 1) // 12) + 1 counted within the Gruppe,
+# and the Gruppe's own numeral turns that into 1 to 9.
+GRUPPE_FIRST = {'I': 1, 'II': 4, 'III': 7, 'IV': 10, 'V': 13}
+MS_DATES = {
+    'May1st1940':  '1940-05-01', 'Aug18th1940': '1940-08-18',
+    'Aug21st1940': '1940-08-21', 'Aug31st1940': '1940-08-31',
+    'Sep1st1940':  '1940-09-01', 'Oct1st1940':  '1940-10-01',
+    'Oct31st1940': '1940-10-31',
+}
+# tile suffix in the .ms -> the colour key this script cuts
+MS_COLOUR = {
+    'brown black': 'brown', 'brown blackv3': 'brown',
+    'black white': 'black', 'white black': 'white',
+    'red white': 'red', 'red': 'red', 'yellow black': 'yellow',
+}
+
+
+def ms_unit_to_room(u):
+    """IIIJG27 -> III./JG 27, and the Staffel numbers of that Gruppe."""
+    m = re.match(r'(I{1,3}|IV|V)(JG|ZG|LG)(\d+)$', u)
+    if not m:
+        return None, None
+    g, arm, num = m.group(1), m.group(2), m.group(3)
+    first = GRUPPE_FIRST.get(g)
+    if first is None:
+        return None, None
+    return '%s./%s %s' % (g, arm, num), first
+
+
+def number_dates(ms_dir):
+    """Where the number's colour depends on the date, both sides of it.
+
+    A dated rule only ever says what is worn on ONE side of the date. The
+    other side comes from the undated rule for the same aeroplane, which
+    is why both are collected: III./JG 27's 8. Staffel is red until 21
+    August because a dated rule says so, and black on white afterwards
+    because that is what it falls through to.
+    """
+    path = os.path.join(ms_dir, 'Me109_PlaneID_1.ms')
+    if not os.path.exists(path):
+        return []
+
+    def rule(s):
+        if not s.lower().startswith('use') or ' if ' not in s:
+            return None
+        m = re.match(r'use\s+(.+?)\.dds\s*,', s, re.I)
+        if not m:
+            return None
+        tile = os.path.basename(m.group(1).replace('\\', '/'))
+        colour = MS_COLOUR.get(re.sub(r'^\d+_?', '', tile).strip().lower())
+        cond = s.split(' if ', 1)[1]
+        pids = [int(x) for x in re.findall(r'planeid\s*==\s*(\d+)', cond)]
+        units = re.findall(r'unit\s*==\s*(\w+)', cond)
+        dts = re.findall(r'date\s*(<=|>=|<|>)\s*(\w+)', cond)
+        if not (colour and pids and units):
+            return None
+        return colour, units, pids, dts
+
+    # The colour an aeroplane gets when no rule names its unit. Every
+    # such rule in the file is white on black, but it is read rather than
+    # assumed, because that is the point of doing any of this.
+    generic = None
+    for ln in open(path, encoding='latin-1', errors='ignore'):
+        t = ln.strip()
+        if not t.lower().startswith('use') or ' if ' not in t or 'unit ==' in t:
+            continue
+        m = re.match(r'use\s+(.+?)\.dds\s*,', t, re.I)
+        if m and 'planeid' in t:
+            tile = os.path.basename(m.group(1).replace('\\', '/'))
+            c = MS_COLOUR.get(re.sub(r'^\d+_?', '', tile).strip().lower())
+            if c:
+                generic = c
+                break
+
+    dated, plain = {}, {}
+    for ln in open(path, encoding='latin-1', errors='ignore'):
+        r = rule(ln.strip())
+        if not r:
+            continue
+        colour, units, pids, dts = r
+        for u in units:
+            unit, first = ms_unit_to_room(u)
+            if not unit:
+                continue
+            for pid in pids:
+                key = (unit, first + (pid - 1) // 12)
+                if dts:
+                    for op, tok in dts:
+                        d = MS_DATES.get(tok)
+                        if d:
+                            dated.setdefault(key, (colour, op, d))
+                else:
+                    plain.setdefault(key, colour)
+
+    out = []
+    for key in sorted(dated):
+        colour, op, d = dated[key]
+        other = plain.get(key) or generic
+        row = {'unit': key[0], 'staffel': key[1], 'date': d}
+        if op in ('<', '<='):
+            row['before'], row['after'] = colour, other
+        else:
+            row['before'], row['after'] = other, colour
+        out.append(row)
+    return out
+
 def save(src, dst, maxpx=320, keep_canvas=True):
     """Copy one tile, KEEPING ITS CANVAS.
 
@@ -231,6 +354,7 @@ def save(src, dst, maxpx=320, keep_canvas=True):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--src', default='/mnt/d/BOB2 Files/skin-previews')
+    ap.add_argument('--ms',  default='/mnt/d/Battle of Britain II_Latest_test/MultiSkin')
     ap.add_argument('--out', default='squadronroom/lw/markings')
     ap.add_argument('--oob', default='squadronroom/lw/oob.json')
     ap.add_argument('--json', default='squadronroom/lw/markings.json')
@@ -240,6 +364,7 @@ def main():
         print('cannot find %s' % a.src, file=sys.stderr)
         return 2
     idx = index(a.src)
+    nd = number_dates(a.ms)
     if os.path.isdir(a.out):
         shutil.rmtree(a.out)
 
@@ -334,6 +459,7 @@ def main():
                             '4': 'white', '5': 'red', '6': 'yellow',
                             '7': 'white', '8': 'red', '9': 'yellow'},
         'numbers': made['numbers'],
+        'number_dates': nd,
         'gruppe': made['gruppe'],
         'stab': made['stab'],
         'emblems': made['emblems'],
@@ -369,7 +495,7 @@ The colour is the STAFFEL's, not the Gruppe's: white for the 1st, 4th and
 9th. That is why 1., 4. and 7. all come out white although they sit in
 three different Gruppen.
 
-Numbers 1 to 15 exist in all four colours and 0 and 16 in black only, so
+Numbers 1 to 15 exist in the Staffel colours and 0 and 16 in black only, so
 0 and 16 are not offered: a number a man cannot have in his own Staffel's
 colour is not a number he can have.
 
@@ -419,7 +545,8 @@ group. Credit them in the release notes, and ask if in any doubt.
               len(made['gruppe']) + len(made['stab']) + len(made['emblems']) + len(made['bands'])
     withemb = sum(1 for v in per_unit.values() if v['emblem'] or v['band'])
     print('%d tiles cut -> %s' % (n_files, a.out))
-    print('  numbers  %d in four colours' % len(made['numbers']))
+    ncol = len(set(c for v in made['numbers'].values() for c in v))
+    print('  numbers  %d in %d colours' % (len(made['numbers']), ncol))
     print('  gruppe   %d symbols' % len(made['gruppe']))
     print('  stab     %d chevrons' % len(made['stab']))
     print('  110      %d letters in %d colours, %d Geschwader codes'

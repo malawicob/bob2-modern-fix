@@ -16,61 +16,71 @@
    "white": "numbers/1_white.png",
    "red": "numbers/1_red.png",
    "yellow": "numbers/1_yellow.png",
-   "black": "numbers/1_black.png"
+   "black": "numbers/1_black.png",
+   "brown": "numbers/1_brown.png"
   },
   "2": {
    "white": "numbers/2_white.png",
    "red": "numbers/2_red.png",
    "yellow": "numbers/2_yellow.png",
-   "black": "numbers/2_black.png"
+   "black": "numbers/2_black.png",
+   "brown": "numbers/2_brown.png"
   },
   "3": {
    "white": "numbers/3_white.png",
    "red": "numbers/3_red.png",
    "yellow": "numbers/3_yellow.png",
-   "black": "numbers/3_black.png"
+   "black": "numbers/3_black.png",
+   "brown": "numbers/3_brown.png"
   },
   "4": {
    "white": "numbers/4_white.png",
    "red": "numbers/4_red.png",
    "yellow": "numbers/4_yellow.png",
-   "black": "numbers/4_black.png"
+   "black": "numbers/4_black.png",
+   "brown": "numbers/4_brown.png"
   },
   "5": {
    "white": "numbers/5_white.png",
    "red": "numbers/5_red.png",
    "yellow": "numbers/5_yellow.png",
-   "black": "numbers/5_black.png"
+   "black": "numbers/5_black.png",
+   "brown": "numbers/5_brown.png"
   },
   "6": {
    "white": "numbers/6_white.png",
    "red": "numbers/6_red.png",
    "yellow": "numbers/6_yellow.png",
-   "black": "numbers/6_black.png"
+   "black": "numbers/6_black.png",
+   "brown": "numbers/6_brown.png"
   },
   "7": {
    "white": "numbers/7_white.png",
    "red": "numbers/7_red.png",
    "yellow": "numbers/7_yellow.png",
-   "black": "numbers/7_black.png"
+   "black": "numbers/7_black.png",
+   "brown": "numbers/7_brown.png"
   },
   "8": {
    "white": "numbers/8_white.png",
    "red": "numbers/8_red.png",
    "yellow": "numbers/8_yellow.png",
-   "black": "numbers/8_black.png"
+   "black": "numbers/8_black.png",
+   "brown": "numbers/8_brown.png"
   },
   "9": {
    "white": "numbers/9_white.png",
    "red": "numbers/9_red.png",
    "yellow": "numbers/9_yellow.png",
-   "black": "numbers/9_black.png"
+   "black": "numbers/9_black.png",
+   "brown": "numbers/9_brown.png"
   },
   "10": {
    "white": "numbers/10_white.png",
    "red": "numbers/10_red.png",
    "yellow": "numbers/10_yellow.png",
-   "black": "numbers/10_black.png"
+   "black": "numbers/10_black.png",
+   "brown": "numbers/10_brown.png"
   },
   "11": {
    "white": "numbers/11_white.png",
@@ -82,7 +92,8 @@
    "white": "numbers/12_white.png",
    "red": "numbers/12_red.png",
    "yellow": "numbers/12_yellow.png",
-   "black": "numbers/12_black.png"
+   "black": "numbers/12_black.png",
+   "brown": "numbers/12_brown.png"
   },
   "13": {
    "white": "numbers/13_white.png",
@@ -94,7 +105,8 @@
    "white": "numbers/14_white.png",
    "red": "numbers/14_red.png",
    "yellow": "numbers/14_yellow.png",
-   "black": "numbers/14_black.png"
+   "black": "numbers/14_black.png",
+   "brown": "numbers/14_brown.png"
   },
   "15": {
    "white": "numbers/15_white.png",
@@ -103,6 +115,29 @@
    "black": "numbers/15_black.png"
   }
  },
+ "number_dates": [
+  {
+   "unit": "I./JG 51",
+   "staffel": 3,
+   "date": "1940-08-18",
+   "before": "brown",
+   "after": "white"
+  },
+  {
+   "unit": "II./JG 26",
+   "staffel": 6,
+   "date": "1940-08-18",
+   "before": "brown",
+   "after": "white"
+  },
+  {
+   "unit": "III./JG 27",
+   "staffel": 8,
+   "date": "1940-08-21",
+   "before": "red",
+   "after": "black"
+  }
+ ],
  "gruppe": {
   "II_white": "gruppe/II_white.png",
   "II_red": "gruppe/II_red.png",

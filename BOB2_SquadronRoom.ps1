@@ -5329,7 +5329,35 @@ function Get-StaffelColour {
     if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'staffel') -and $Pilot.staffel) {
         $n = [int]$Pilot.staffel
     }
-    switch ((($n - 1) % 3) + 1) { 1 { 'white' } 2 { 'red' } default { 'yellow' } }
+    $col = switch ((($n - 1) % 3) + 1) { 1 { 'white' } 2 { 'red' } default { 'yellow' } }
+
+    # Three Gruppen do not follow their Staffel's colour all campaign, and
+    # Me109_PlaneID_1.ms is where that is written down. II./JG 26 and
+    # I./JG 51 paint their third Staffel brown on black until 18 August;
+    # III./JG 27's 8. Staffel is red until 21 August and black on white
+    # after it. The rules are read out of the file by
+    # dev/build_lw_markings.py rather than typed in here.
+    #
+    # This is the whole reason the 109 needed the campaign date at all. It
+    # never had it: Get-GruppeAircraftPath picks a 109 plate by unit name
+    # alone, where a 110 goes through Get-Profile110 with the date, so
+    # every one of these was being drawn in the wrong colour before its
+    # date. Raised by 33lima on 10 September 2026.
+    $m = Get-LwMarkings
+    if ($m -and $m.PSObject.Properties.Name -contains 'number_dates' -and $script:CampaignDate) {
+        $unit = "$($Pilot.unit)"
+        foreach ($r in @($m.number_dates)) {
+            if ("$($r.unit)" -ne $unit) { continue }
+            if ([int]$r.staffel -ne $n) { continue }
+            $d = $null
+            try { $d = [datetime]::ParseExact("$($r.date)", 'yyyy-MM-dd', $null) } catch { }
+            if (-not $d) { continue }
+            $pick = if ($script:CampaignDate -lt $d) { "$($r.before)" } else { "$($r.after)" }
+            if ($pick) { $col = $pick }
+            break
+        }
+    }
+    $col
 }
 # The number he flies. Chosen when he reports to the Gruppe; an older
 # record made before there was a choice gets one from his own name, so

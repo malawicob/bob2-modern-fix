@@ -17,7 +17,7 @@ The colour is the STAFFEL's, not the Gruppe's: white for the 1st, 4th and
 9th. That is why 1., 4. and 7. all come out white although they sit in
 three different Gruppen.
 
-Numbers 1 to 15 exist in all four colours and 0 and 16 in black only, so
+Numbers 1 to 15 exist in the Staffel colours and 0 and 16 in black only, so
 0 and 16 are not offered: a number a man cannot have in his own Staffel's
 colour is not a number he can have.
 
