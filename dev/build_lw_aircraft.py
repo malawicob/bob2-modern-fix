@@ -48,7 +48,15 @@ import glob, os, sys
 from collections import deque
 from PIL import Image
 
-SRC = '/home/patrick_millin/bob2/Me109_Sideviews_GermanCross_Only/me109_sideviews'
+# Two sets, cut identically. The 109s are named per GRUPPE (I_JG26), so
+# the Room looks a unit's profile up by its own key. The 110s are named
+# per BASE SKIN (Bf110_70_71_1940, bf110_Shark), which is how the game
+# names them, and Me110_MainSkin.ms says which unit and date gets which -
+# so a Zerstoerer's aeroplane is chosen the way the game chooses it.
+SRCS = [
+    '/home/patrick_millin/bob2/Me109_Sideviews_GermanCross_Only/me109_sideviews',
+    '/home/patrick_millin/bob2/bf110_sideviews',
+]
 OUT = 'squadronroom/lw/aircraft'
 TOL  = 26      # definite background, flooded from the edges
 HALO = 78      # a dark pixel close to the background is JPEG halo
@@ -174,10 +182,18 @@ def cut(path):
 def main():
     os.makedirs(OUT, exist_ok=True)
     n = 0
-    for f in sorted(glob.glob(os.path.join(SRC, '*.jpg'))):
-        base = os.path.splitext(os.path.basename(f))[0]
-        cut(f).save(os.path.join(OUT, base + '.png'))
-        n += 1
+    for src in SRCS:
+        if not os.path.isdir(src):
+            print('  ! no such source: %s' % src, file=sys.stderr)
+            continue
+        for f in sorted(glob.glob(os.path.join(src, '*.jpg'))):
+            # Windows writes a Zone.Identifier stream beside a downloaded
+            # file and it turns up here as its own entry
+            if 'Zone.Identifier' in f:
+                continue
+            base = os.path.splitext(os.path.basename(f))[0]
+            cut(f).save(os.path.join(OUT, base + '.png'))
+            n += 1
     print('%d profiles cut: flood at %d, halo grown %d px at %d -> %s'
           % (n, TOL, GROW, HALO, OUT))
     return 0

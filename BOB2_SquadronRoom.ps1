@@ -405,11 +405,26 @@ function Get-Pilot {
 # record holds. Counting that way made the guard below refuse every
 # legitimate write through Sync-CampaignClaims the moment a career grew
 # past seven fields, which is to say immediately.
+#
+# It also counts THE CREW. A Bf 110 record carries a `crew` array of the
+# other men in the aeroplane, and if only top-level keys were counted then
+# losing a crewman's rank, his honours or the whole man would read as no
+# change at all and the guard below would wave it through. The guard is
+# here because a career was destroyed on 9 September; it should protect
+# the second man as well as the first.
 function Get-FieldCount {
     param($Obj)
     if ($null -eq $Obj) { return 0 }
-    if ($Obj -is [System.Collections.IDictionary]) { return @($Obj.Keys).Count }
-    return @($Obj.PSObject.Properties).Count
+    if ($Obj -is [System.Collections.IDictionary]) {
+        $n = @($Obj.Keys).Count
+        if ($Obj.Contains('crew')) { foreach ($m in @($Obj['crew'])) { $n += Get-FieldCount $m } }
+        return $n
+    }
+    $n = @($Obj.PSObject.Properties).Count
+    if ($Obj.PSObject.Properties.Name -contains 'crew') {
+        foreach ($m in @($Obj.crew)) { $n += Get-FieldCount $m }
+    }
+    $n
 }
 function Save-Pilot {
     param($Pilot, [switch]$Shrink)
@@ -449,7 +464,10 @@ function Save-Pilot {
             } catch { }
         }
     }
-    $Pilot | ConvertTo-Json -Depth 6 | Set-Content -Path $PilotPath -Encoding UTF8
+    # Depth 8, not 6: a crew member's honours array sits two levels deeper
+    # than anything the record used to hold, and ConvertTo-Json silently
+    # writes the string "System.Collections.Hashtable" once it runs out.
+    $Pilot | ConvertTo-Json -Depth 8 | Set-Content -Path $PilotPath -Encoding UTF8
 }
 
 # =====================================================================
@@ -1715,6 +1733,75 @@ function Get-Career {
     if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($curIdx + 1) * $step }
     @{ sorties = $sorties; hours = $hours; rank = $ladder[$curIdx]; next = $next; nextAt = $nextAt }
 }
+# THE SECOND MAN'S CAREER, on the same sorties as the first.
+#
+# He flies every sortie the pilot flies, so the count is shared and only
+# the ladder and the step differ. Everything here is invented; see the
+# note on $CrewByType. Nothing in it is read from the save, and no screen
+# that shows it may present it as though it were.
+function Get-CrewCareer {
+    param($Member, $Pilot, [int]$Sorties, [double]$Hours = 0)
+    $role = "$($Member.role)"
+    # sorties flown SINCE HE JOINED THE CREW. A man who replaces a lost
+    # Bordfunker does not inherit the sorties flown before he arrived.
+    $base = 0
+    if ($Member.PSObject.Properties.Name -contains 'sortiesBase') { $base = [int]$Member.sortiesBase }
+    $his = [math]::Max(0, $Sorties - $base)
+    $ladder = Get-CrewLadder -Role $role -Rank "$($Member.rank)"
+    $idx = [array]::IndexOf($ladder, "$($Member.rank)"); if ($idx -lt 0) { $idx = 0 }
+    $promos = [math]::Floor($his / $CrewRankStep)
+    $curIdx = [math]::Min($ladder.Count - 1, [math]::Max($idx, $promos))
+    $next = $null; $nextAt = 0
+    if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($curIdx + 1) * $CrewRankStep + $base }
+    @{ sorties = $his; hours = $Hours; rank = $ladder[$curIdx]; next = $next; nextAt = $nextAt
+       role = $role; step = $CrewRankStep }
+}
+# What he is doing, which is his seat and nothing else. Rottenflieger,
+# Schwarmfuehrer and Staffelkapitaen are flying-leadership appointments
+# and none of them belongs to a man in the back.
+function Get-CrewAppointment {
+    param($Member, $Career)
+    $role = "$($Member.role)"
+    if ($role -eq 'Bordfunker' -and [int]$Career.sorties -ge 40) { return 'Bordfunkermeister' }
+    switch ($role) {
+        'Bordfunker'     { 'Bordfunker' }
+        'Beobachter'     { 'Beobachter' }
+        'Bordmechaniker' { 'Bordmechaniker' }
+        'Bordschuetze'   { 'Bordschuetze' }
+        default          { $role }
+    }
+}
+# His decorations, earned on SORTIES rather than on victories.
+#
+# Patrick's decision, and the right one: the save records one kill tally
+# per sortie with no gun position, so splitting it between the pilot and
+# the man on the rear MG would be a fabricated attribution sitting next to
+# figures that really are read from the save. He has no victories here, so
+# the Ritterkreuz and the Eichenlaub - both awarded on a score - are not
+# on his ladder at all. What is left is what a crewman actually got: the
+# Iron Cross, on sorties flown and a unit recommendation.
+function Get-CrewHonours {
+    param($Member, $Career)
+    $out = @()
+    if ($Member.PSObject.Properties.Name -contains 'honours') {
+        foreach ($h in @($Member.honours)) { if ("$($h.award)") { $out += "$($h.award)" } }
+    }
+    $n = [int]$Career.sorties
+    foreach ($a in @(
+        @{ At = 5;  Award = 'Eisernes Kreuz II. Klasse' },
+        @{ At = 25; Award = 'Eisernes Kreuz I. Klasse' },
+        @{ At = 60; Award = 'Ehrenpokal fuer besondere Leistungen im Luftkrieg' })) {
+        if ($n -ge $a.At -and ($out -notcontains $a.Award)) { $out += $a.Award }
+    }
+    # A PLAIN return, not ",$out". Every caller collects with @(...), and a
+    # comma return plus @() at the caller nests the array one level deeper,
+    # so the honour list arrives as a single element printing as
+    # "System.Object[]" and no award is ever matched. Get-PlayerHonours
+    # shipped with exactly this and put "Honours: System.Object[]" on the
+    # logbook. The rule in this file is: comma return XOR @() at the
+    # caller, never both.
+    $out
+}
 # Rank and decorations are PERSISTED the first time they are earned, with
 # the date, and never taken away. Without this a pilot who starts a fresh
 # campaign in the game drops from Flight Lieutenant back to Sergeant, and
@@ -1744,6 +1831,89 @@ $RankLadder = @('Sergeant','Pilot Officer','Flying Officer','Flight Lieutenant')
 # thirty-six.
 $LwRankNCO     = @('Unteroffizier','Feldwebel','Oberfeldwebel')
 $LwRankOfficer = @('Leutnant','Oberleutnant')
+
+# =====================================================================
+#  THE CREW
+#
+#  A Bf 109 carries one man. A Bf 110 carries two, and the Room was built
+#  throughout on the assumption of one - one pilot.json, one name, one
+#  rank, one set of honours.
+#
+#  WHAT THE GAME KNOWS ABOUT THE SECOND MAN: nothing whatever. Not a
+#  detail, the whole thing. GunnerInfo in the game's own headers is a 3D
+#  shape and two eye angles, a camera station rather than a person. The
+#  110's four gunner slots are the placeholder shape CPT2 where the Ju 87
+#  has real turrets. SquadronBase counts numpilotslost, and the game's own
+#  Luftwaffe diary screen prints that counter under the heading "Air
+#  Crew", so a downed 110 cannot register two men even there.
+#  Diary::Player has one outcome per sortie and one kill tally with no gun
+#  position, and the save holds one pilot surname at offset 100. The words
+#  Bordfunker and crewman do not occur in the source at all.
+#
+#  So EVERY PART OF THE SECOND MAN IS INVENTED. That is a deliberate
+#  choice, and the price of it is that he must be marked as invention
+#  wherever he appears and never allowed to borrow the authority of the
+#  figures beside him that really are read out of the save.
+#
+#  The crew is a property of the AEROPLANE, keyed by the order of
+#  battle's own type string, so the bombers need no rework when their turn
+#  comes. A single-seat type returns one role and every screen behaves
+#  exactly as it did.
+# =====================================================================
+$CrewByType = [ordered]@{
+    'Bf 109E' = @('Flugzeugfuehrer')
+    'Bf 110'  = @('Flugzeugfuehrer','Bordfunker')
+    'Ju 87'   = @('Flugzeugfuehrer','Bordfunker')
+    'Do 17'   = @('Flugzeugfuehrer','Beobachter','Bordfunker','Bordmechaniker')
+    'Ju 88'   = @('Flugzeugfuehrer','Beobachter','Bordfunker','Bordschuetze')
+    'He 111'  = @('Flugzeugfuehrer','Beobachter','Bordfunker','Bordmechaniker','Bordschuetze')
+}
+function Get-CrewRoles {
+    param([string]$Type)
+    foreach ($k in $CrewByType.Keys) {
+        if ("$Type" -like "$k*") { return $CrewByType[$k] }
+    }
+    # An unknown type is flown single-handed rather than guessed at.
+    @('Flugzeugfuehrer')
+}
+# The men in the aeroplane besides the player. The player himself stays
+# where he has always been, at the top level of the record: every screen
+# and every write path already reads him there, and moving him would mean
+# touching all of them for no gain.
+function Get-Crew {
+    param($Pilot)
+    if (-not $Pilot) { return @() }
+    if ($Pilot.PSObject.Properties.Name -notcontains 'crew') { return @() }
+    @($Pilot.crew | Where-Object { $_ })
+}
+function Test-MultiCrew {
+    param($Pilot)
+    (@(Get-CrewRoles "$($Pilot.actype)").Count -gt 1)
+}
+# What a man in a given seat is called on the day he arrives.
+$CrewEntryRank = @{
+    'Bordfunker'      = 'Unteroffizier'
+    'Beobachter'      = 'Leutnant'
+    'Bordmechaniker'  = 'Unteroffizier'
+    'Bordschuetze'    = 'Unteroffizier'
+}
+# A crewman climbs the NCO ladder and no other. Leutnant, Oberleutnant and
+# Hauptmann are a pilot's, and cmode 'commander' means a Gruppe command,
+# which is not a thing a radio operator holds.
+#
+# The step is SIXTEEN sorties against the pilot's twelve, and that number
+# is invented. It is not from a source and there is no source to have: it
+# is chosen only so that two men flying the identical sortie do not step
+# up together at twelve, twenty-four and thirty-six, which reads as
+# machinery rather than as two careers.
+$CrewRankStep = 16
+function Get-CrewLadder {
+    param([string]$Role, [string]$Rank)
+    if ("$Role" -eq 'Beobachter' -and (($LwRankOfficer -contains "$Rank") -or -not "$Rank")) {
+        return $LwRankOfficer
+    }
+    $LwRankNCO
+}
 function Get-RankLadder {
     param([string]$Rank)
     if ($script:Side -ne 'lw') { return $RankLadder }
@@ -1774,6 +1944,45 @@ function Update-CareerRecord {
             $obj['honours'] = @($had)
             $changed = $true
         }
+    }
+    # THE REST OF THE CREW, advanced in the same pass.
+    #
+    # Done here rather than in a second function with a second Save-Pilot,
+    # because two saves in one screen draw is how the autobackup ring used
+    # to eat itself, and because a crewman must never be written by a path
+    # that does not also carry the pilot: every other write in this file
+    # rebuilds the record by copying properties flat, so a crew updated on
+    # its own would be silently discarded by the next such write.
+    $crew = @(Get-Crew $Pilot)
+    if ($crew.Count) {
+        $newCrew = @()
+        foreach ($m in $crew) {
+            $mo = [ordered]@{}
+            foreach ($mp in $m.PSObject.Properties) { $mo[$mp.Name] = $mp.Value }
+            $cc = Get-CrewCareer -Member $m -Pilot $Pilot -Sorties ([int]$Career.sorties) -Hours ([double]$Career.hours)
+            $ml = Get-CrewLadder -Role "$($m.role)" -Rank "$($m.rank)"
+            $mStored = [array]::IndexOf($ml, "$($m.rank)")
+            $mEarned = [array]::IndexOf($ml, "$($cc.rank)")
+            if ($mEarned -gt $mStored) {
+                $mo['rank'] = $ml[$mEarned]
+                $mo['rank_date'] = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
+                $changed = $true
+            }
+            $mh = @(Get-CrewHonours -Member $m -Career $cc)
+            if ($mh.Count) {
+                $mhad = @(); if (($m.PSObject.Properties.Name -contains 'honours') -and $m.honours) { $mhad = @($m.honours) }
+                $mnames = @($mhad | ForEach-Object { "$($_.award)" })
+                $madd = @($mh | Where-Object { $mnames -notcontains "$_" })
+                if ($madd.Count) {
+                    $when = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
+                    foreach ($a in $madd) { $mhad += [ordered]@{ award = "$a"; date = $when } }
+                    $mo['honours'] = @($mhad)
+                    $changed = $true
+                }
+            }
+            $newCrew += [pscustomobject]$mo
+        }
+        $obj['crew'] = @($newCrew)
     }
     if (-not $changed) { return $Pilot }
     Save-Pilot $obj
