@@ -187,6 +187,9 @@ def find_marking(im, box, test, want=(0.06, 0.16), aspect=(0.82, 1.30), need_hal
 # aeroplane. Both are tested with alpha so the transparent surround is
 # never mistaken for black.
 BLACK  = lambda r, g, b, a: a > 200 and r < 80 and g < 80 and b < 80
+# Tighter, for telling a Balkenkreuz core from dark camouflage. See the
+# 109 profile loop for why 80 was not enough.
+CROSS_CORE = lambda r, g, b, a: a > 200 and r < 50 and g < 50 and b < 50
 YELLOW = lambda r, g, b, a: a > 200 and r > 165 and 100 < g < 175 and b < 100 and r - b > 90
 
 
@@ -450,7 +453,14 @@ def main():
             continue
         im = Image.open(os.path.join(a.lw_art, f))
         W, H = im.size
-        pc = find_marking(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)), BLACK,
+        # BLACK calls anything under 80 dark, which was safe while every
+        # 109 plate was the same pale drawing. The late Bf 109E, the one
+        # with the yellow cowl, is painted in a much darker grey: its
+        # camouflage sits around 50 to 70 and its cross core around 20 to
+        # 30, so at 80 the two run together and the cross was read as a
+        # 77 x 63 patch of canopy. 50 separates them on that drawing and
+        # changes the pale one by a pixel.
+        pc = find_marking(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)), CROSS_CORE,
                           want=(0.06, 0.16))
         if not pc:
             print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr); continue

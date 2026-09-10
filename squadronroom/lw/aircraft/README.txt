@@ -39,13 +39,34 @@ onto a plate by finding the national marking in both and scaling x and y
 between them. A plate with no cross cannot be measured at all, and the
 first version supplied had none, which is why there was a second.
 
-WHAT IS STILL NOT DONE
+THE RECOGNITION MARKINGS, AND THE DATE THAT SWITCHES THEM
 
-The recognition markings. The yellow cowl and rudder came in through the
-late summer of 1940 and this drawing has neither, which is right for July
-and wrong from about the end of August. Painting them on by campaign date
-is the remaining piece, and it has to be a historical rule of our own
-because the game does not carry one.
+There are two plates, and Get-GruppeAircraftPath chooses between them by
+the campaign date the way Get-Profile110 already did for the Zerstoerer:
+
+    bf109e.png       grey cowl, grey rudder      before 21 August 1940
+    bf109e_late.png  yellow cowl, yellow rudder  from 21 August 1940
+
+MultiSkin carries no rule that puts the yellow on, anywhere: it is
+painted into each individual .DDS, which is why matching the game would
+never have fixed this. So the rule is ours. The DATE is not invented
+though. 21 August is the game's own phase boundary, the one
+Me109MainSkin.ms uses for III./JG 52 and Me109_PlaneID_1.ms for
+III./JG 27, and Me109_PlaneID_1.ms uses 18 August for the other two.
+
+THE ONE THAT CAUGHT US OUT
+
+A marking's HEIGHT comes from the rule, not from the tile. MultiSkin
+scales x and y separately and measure_markings.py says so in as many
+words, works both out, and writes dw AND dh. Add-AcImage then sized
+everything from the tile's own pixel aspect and never read dh.
+
+Every tile is a square 128 x 128 canvas, so this was invisible wherever
+the rule was square too, which the number and the emblem are. The Gruppe
+symbol is not: its rule asks for 106 x 71 on these plates, so the bar was
+drawn 106 x 106 and came out half as tall again as it should be. Patrick
+spotted the white stripe. audit_markings.py now fails any Add-AcImage
+call that does not pass -DH.
 
 The cut is dev/build_lw_aircraft.py at its usual settings. The aerial
 wire comes out dashed where it crosses open sky, because in this drawing

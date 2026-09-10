@@ -29,7 +29,7 @@ against how it looks:
 
 Exit code is 1 if anything failed, so it can gate a release.
 """
-import json, os, sys, glob
+import re, json, os, sys, glob
 from PIL import Image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -285,6 +285,37 @@ def main():
     own = sum(1 for u, p in unit_prof.items() if p != 'RLM70_71.png')
     print('  %d fly a profile in their own markings, %d the plain scheme'
           % (own, len(unit_prof) - own))
+
+    # ---- the Room must size a marking from the rule, not the tile ----
+    print('THE DRAWN SIZE')
+    room = os.path.join(ROOT, 'BOB2_SquadronRoom.ps1')
+    if not os.path.exists(room):
+        warn('BOB2_SquadronRoom.ps1 not beside this script, drawn size not checked')
+    else:
+        src = open(room, encoding='utf-8-sig', errors='ignore').read()
+        calls = re.findall(r'Add-AcImage[^\n]*(?:\n[^\n]*){0,4}', src)
+        calls = [c for c in calls if '-Canvas' in c]
+        missing = [c for c in calls if '-DW ' in c and '-DH ' not in c]
+        for c in missing:
+            key = re.search(r'-Key\s+"([^"]+)"', c)
+            fail('Add-AcImage without -DH (%s): height would come from the tile, '
+                 'not from the rule' % (key.group(1) if key else '?'))
+        # and the thing that made it matter: the tiles are square and the
+        # rules are not, so a tile-derived height is wrong by that ratio
+        worst = (0.0, None)
+        for pf, r in sorted(profs.items()):
+            for k in ('number', 'gruppe', 'emblem'):
+                if k not in r or 'dh' not in r[k]:
+                    fail('%s: %s has no dh, so the Room cannot size it' % (pf, k))
+                    continue
+                W, H = r['size']
+                want = (r[k]['dh'] * H) / (r[k]['dw'] * W)
+                if abs(want - 1.0) > worst[0]:
+                    worst = (abs(want - 1.0), '%s %s wants h/w %.2f' % (pf, k, want))
+        print('  %d Add-AcImage calls, every one passing -DH' % len(calls))
+        if worst[1]:
+            print('  furthest from square: %s (a square tile would be wrong by that much)'
+                  % worst[1])
 
     print('THE RAF')
     # The RAF codes are drawn text again, at Patrick's call, so there are

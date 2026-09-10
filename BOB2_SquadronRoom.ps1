@@ -4523,8 +4523,23 @@ function Get-GruppeAircraftPath {
     # One bare Bf 109E for every Gruppe. What tells them apart is painted
     # on: the number in the Staffel's colour, the Gruppe symbol, the
     # Geschwader badge, and a Stab chevron where one is due.
-    $f = Join-Path $script:AircraftDir 'bf109e.png'
-    if (Test-Path $f) { return $f }
+    #
+    # There are two of it, and the date chooses. The yellow cowl and
+    # rudder were not worn at the start of the battle and were general by
+    # the end of it, and MultiSkin carries no rule that puts them on,
+    # because they are painted into each individual .DDS. So the rule is
+    # ours. The date is not invented though: 21 August is the game's own
+    # phase boundary, the one Me109MainSkin.ms uses for III./JG 52 and
+    # Me109_PlaneID_1.ms for III./JG 27.
+    #
+    # 33lima raised this: MultiSkin "applies things like quick recognition
+    # yellow and white markings only in later phases", and the Room was
+    # showing a yellow nose on 10 July because the plate never changed.
+    $late = $script:CampaignDate -and $script:CampaignDate -ge $LwYellowFrom
+    foreach ($n in @($(if ($late) { 'bf109e_late.png' } else { 'bf109e.png' }), 'bf109e.png')) {
+        $f = Join-Path $script:AircraftDir $n
+        if (Test-Path $f) { return $f }
+    }
     $null
 }
 # The card that comes up under the pointer on the plotting table, the
@@ -5307,6 +5322,8 @@ $MarkPath = Join-Path (Join-Path $ModDir 'lw') 'markings.json'
 # profile drawing using the Balkenkreuz as the ruler. Per profile, because
 # there are forty of them and they do not all put the cross in the same
 # place.
+# When the yellow recognition markings go on. See Get-GruppeAircraftPath.
+$LwYellowFrom = [datetime]'1940-08-21'
 $MarkPosPath = Join-Path $ModDir 'marking-positions.json'
 function Get-MarkPositions {
     if ($null -ne $script:MarkPos) { return $script:MarkPos }
@@ -5552,11 +5569,28 @@ function Get-MarkFile {
 # own shape so a chevron cannot be squashed into a square.
 function Add-AcImage {
     param($Canvas, [string]$Key, [string]$File, [double]$DX, [double]$DY,
-          [double]$DW, [double]$W, [double]$H, [string]$Tip)
+          [double]$DW, [double]$DH = 0, [double]$W, [double]$H, [string]$Tip)
     if (-not $File) { return $null }
     $bmp = Load-Image -Path $File -DecodeWidth 320
     if (-not $bmp) { return $null }
-    $ratio = if ($bmp.PixelWidth -gt 0) { [double]$bmp.PixelHeight / [double]$bmp.PixelWidth } else { 1.0 }
+    # HOW TALL A MARKING IS COMES FROM THE RULE, NOT FROM THE TILE.
+    #
+    # MultiSkin scales x and y separately, and measure_markings.py says so
+    # in as many words: "One combined scale puts everything at the wrong
+    # height." It works both out and writes dw AND dh into
+    # marking-positions.json. This function then used the tile's own pixel
+    # aspect instead and never read dh.
+    #
+    # Every tile is a square 128 x 128 canvas, so that was invisible
+    # wherever the rule happened to be square too, which the number and
+    # the emblem are. The Gruppe symbol is not: its rule asks for 106 x 71
+    # on the 109 plate, so the bar was drawn 106 x 106 and came out half
+    # as tall again as it should be. Patrick spotted the white stripe.
+    $ratio = if ($DH -gt 0 -and $DW -gt 0 -and $W -gt 0) {
+        ($DH * $H) / ($DW * $W)
+    } elseif ($bmp.PixelWidth -gt 0) {
+        [double]$bmp.PixelHeight / [double]$bmp.PixelWidth
+    } else { 1.0 }
     $fx = $DX; $fy = $DY; $wf = $DW
     if ($script:AcPos.ContainsKey($Key)) {
         $rec = $script:AcPos[$Key]
@@ -5705,7 +5739,7 @@ function New-LwAircraft {
             if ($cf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|code" -File $cf `
                                    -DX ([double]$P110.code.dx) -DY ([double]$P110.code.dy) `
-                                   -DW ([double]$P110.code.dw) -W $AcW -H $acH `
+                                   -DW ([double]$P110.code.dw) -DH ([double]$P110.code.dh) -W $AcW -H $acH `
                                    -Tip "The Geschwader code.")
             }
             # his own letter, aft of the cross
@@ -5714,7 +5748,7 @@ function New-LwAircraft {
             if ($lf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|ind" -File $lf `
                                    -DX ([double]$P110.individual.dx) -DY ([double]$P110.individual.dy) `
-                                   -DW ([double]$P110.individual.dw) -W $AcW -H $acH `
+                                   -DW ([double]$P110.individual.dw) -DH ([double]$P110.individual.dh) -W $AcW -H $acH `
                                    -Tip "Your letter, $L, in the $col of the $($Pilot.staffel). Staffel.")
             }
             # and the Staffel's letter behind it, always black
@@ -5723,7 +5757,7 @@ function New-LwAircraft {
             if ($sf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|stf" -File $sf `
                                    -DX ([double]$P110.staffel.dx) -DY ([double]$P110.staffel.dy) `
-                                   -DW ([double]$P110.staffel.dw) -W $AcW -H $acH `
+                                   -DW ([double]$P110.staffel.dw) -DH ([double]$P110.staffel.dh) -W $AcW -H $acH `
                                    -Tip "$($Pilot.staffel). Staffel, which is the letter $sl.")
             }
         }
@@ -5745,7 +5779,7 @@ function New-LwAircraft {
         if ($chev) {
             [void](Add-AcImage -Canvas $cv -Key "$key|chev" -File $chev `
                                -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
-                               -DW ([double]$P.number.dw) -W $AcW -H $acH `
+                               -DW ([double]$P.number.dw) -DH ([double]$P.number.dh) -W $AcW -H $acH `
                                -Tip 'The Stab chevron, worn in place of an individual number.')
         }
         else {
@@ -5754,7 +5788,7 @@ function New-LwAircraft {
             if ($nf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|num" -File $nf `
                                    -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
-                                   -DW ([double]$P.number.dw) -W $AcW -H $acH `
+                                   -DW ([double]$P.number.dw) -DH ([double]$P.number.dh) -W $AcW -H $acH `
                                    -Tip "Your number, in the $col of the $($Pilot.staffel). Staffel.")
             }
         }
@@ -5779,7 +5813,7 @@ function New-LwAircraft {
             if ($gf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|grp" -File $gf `
                                    -DX ([double]$gu.dx) -DY ([double]$gu.dy) `
-                                   -DW ([double]$gu.dw) -W $AcW -H $acH `
+                                   -DW ([double]$gu.dw) -DH ([double]$gu.dh) -W $AcW -H $acH `
                                    -Tip "The $($gu.symbol -replace 'IIIwavy','III') Gruppe symbol.")
             }
         }
@@ -5793,7 +5827,7 @@ function New-LwAircraft {
             if ($ef) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|emb" -File $ef `
                                    -DX ([double]$P.emblem.dx) -DY ([double]$P.emblem.dy) `
-                                   -DW ([double]$P.emblem.dw) -W $AcW -H $acH `
+                                   -DW ([double]$P.emblem.dw) -DH ([double]$P.emblem.dh) -W $AcW -H $acH `
                                    -Tip 'The Geschwader emblem.')
             }
         }
