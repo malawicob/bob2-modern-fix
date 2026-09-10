@@ -151,163 +151,131 @@
  "units": {
   "I./JG 3": {
    "emblem": null,
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 3": {
    "emblem": "emblems/IIJG3.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./JG 3": {
    "emblem": "emblems/IIIJG3.png",
-   "band": null,
-   "gruppe_symbol": "IIIwavy"
+   "band": null
   },
   "I./JG 26": {
    "emblem": "emblems/JG26.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 26": {
    "emblem": "emblems/JG26.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./JG 26": {
    "emblem": "emblems/JG26.png",
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "I./JG 51": {
    "emblem": "emblems/JG51.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 51": {
    "emblem": "emblems/IIJG51.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./JG 51": {
    "emblem": "emblems/JG51.png",
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "I./JG 52": {
    "emblem": null,
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 52": {
    "emblem": "emblems/IIJG52.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "I./LG 2": {
    "emblem": null,
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "I./JG 54": {
    "emblem": "emblems/IJG54.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 54": {
    "emblem": "emblems/IIJG54.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./JG 54": {
    "emblem": "emblems/IIIJG54.png",
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "I./ZG 26": {
    "emblem": "emblems/IZG26.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./ZG 26": {
    "emblem": "emblems/IIZG26.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./ZG 26": {
    "emblem": null,
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "II./ZG 76": {
    "emblem": null,
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./ZG 76": {
    "emblem": "emblems/IIIZG76.png",
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "I./JG 2": {
    "emblem": "emblems/JG2.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 2": {
    "emblem": "emblems/JG2.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./JG 2": {
    "emblem": "emblems/JG2.png",
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "I./JG 27": {
    "emblem": "emblems/IJG27.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./JG 27": {
    "emblem": "emblems/IIJG27.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "III./JG 27": {
    "emblem": "emblems/IIIJG27.png",
-   "band": null,
-   "gruppe_symbol": "III"
+   "band": null
   },
   "I./JG 53": {
    "emblem": null,
-   "band": "bands/JG53.png",
-   "gruppe_symbol": null
+   "band": "bands/JG53.png"
   },
   "II./JG 53": {
    "emblem": null,
-   "band": "bands/JG53.png",
-   "gruppe_symbol": "II"
+   "band": "bands/JG53.png"
   },
   "III./JG 53": {
    "emblem": null,
-   "band": "bands/JG53.png",
-   "gruppe_symbol": "IIIwavy"
+   "band": "bands/JG53.png"
   },
   "I./ZG 2": {
    "emblem": "emblems/IZG2.png",
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   },
   "II./ZG 2": {
    "emblem": "emblems/IIZG2.png",
-   "band": null,
-   "gruppe_symbol": "II"
+   "band": null
   },
   "V./LG 1": {
    "emblem": null,
-   "band": null,
-   "gruppe_symbol": null
+   "band": null
   }
  }
 }

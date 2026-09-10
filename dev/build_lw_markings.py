@@ -139,10 +139,18 @@ GESCHWADER_EMBLEMS = {
     'JG 51': 'JG51_1',
 }
 
-# Which of the two III. Gruppe symbols a Geschwader used. The vertical bar
-# was the common one; JG 3, JG 52 and JG 53 wore the wavy line. Anything
-# not named here gets the bar.
-WAVY = ('JG 3', 'JG 52', 'JG 53')
+# WHICH GRUPPE SYMBOL A UNIT WEARS IS NOT DECIDED HERE ANY MORE.
+#
+# There was a table here saying JG 3, JG 52 and JG 53 wore the wavy line
+# and everyone else the bar. It was written from memory and it was wrong.
+# Me109_PlaneID_2.ms gives III./JG 3, III./JG 51 and III./JG 53 the
+# VERTICAL BAR, and the only wavy rules in the file name III./JG 2. It
+# also gives each symbol its own position, so the table was wrong twice
+# over.
+#
+# dev/measure_markings.py now reads the assignment straight out of those
+# rules into marking-positions.json, and the Room uses that. This script
+# only cuts the tiles.
 
 
 def save(src, dst, maxpx=320, keep_canvas=True):
@@ -244,13 +252,9 @@ def main():
         unit = u['unit']; gesch = u['geschwader']
         emb = made['emblems'].get(unit) or made['emblems'].get(gesch)
         band = made['bands'].get(gesch)
-        g = unit.split('.')[0]
-        sym = None
-        if g == 'II':
-            sym = 'II'
-        elif g == 'III':
-            sym = 'IIIwavy' if gesch in WAVY else 'III'
-        per_unit[unit] = {'emblem': emb, 'band': band, 'gruppe_symbol': sym}
+        # no gruppe_symbol here: it comes from the game's own rules,
+        # via dev/measure_markings.py
+        per_unit[unit] = {'emblem': emb, 'band': band}
 
     doc = {
         'note': ('Markings for the Bf 109. The individual number is the '
@@ -271,6 +275,67 @@ def main():
     with open(a.json, 'w', encoding='utf-8') as fh:
         json.dump(doc, fh, indent=1, ensure_ascii=False)
         fh.write('\n')
+
+    # The README is WRITTEN, not kept by hand, because this script wipes
+    # the folder before it rebuilds it and a hand-written one is deleted
+    # the first time anybody re-runs it. That happened.
+    readme = """Markings for the Bf 109, cut from Patrick's skin-preview tiles by
+dev/build_lw_markings.py. This file is written by that script; edit the
+script, not this.
+
+  numbers/   1 to 15 in white, red, yellow and black
+  gruppe/    the II. and III. Gruppe symbols, bar and wavy, in each colour
+  stab/      the staff chevrons: Kommandeur, adjutant, technical officer
+  emblems/   Geschwader and Gruppe badges
+  bands/     JG 53's red fuselage band
+
+Only the NUMBER was ever the pilot's own. The Gruppe symbol follows the
+unit, the emblem follows the unit, and a chevron follows the appointment,
+so the Room asks about the number and works the rest out.
+
+The colour is the STAFFEL's, not the Gruppe's: white for the 1st, 4th and
+7th Staffel, red for the 2nd, 5th and 8th, yellow for the 3rd, 6th and
+9th. That is why 1., 4. and 7. all come out white although they sit in
+three different Gruppen.
+
+Numbers 1 to 15 exist in all four colours and 0 and 16 in black only, so
+0 and 16 are not offered: a number a man cannot have in his own Staffel's
+colour is not a number he can have.
+
+THE CANVAS IS KEPT. MultiSkin places the whole tile and sizes it as a
+fraction of the 2048 skin sheet, and the glyph sits wherever it sits
+inside it. Trim the padding and every digit lands somewhere different,
+because a 1 is narrow and a 7 is not.
+
+WHERE THEY GO IS NOT DECIDED HERE. ../marking-positions.json carries it,
+read out of the game's own MultiSkin rules by dev/measure_markings.py,
+and that includes WHICH symbol each unit wears. A table in this script
+once said JG 3, JG 52 and JG 53 wore the wavy line; the rules give
+III./JG 3, III./JG 51 and III./JG 53 the vertical bar and name III./JG 2
+as the only wavy unit, and each symbol sits at its own position.
+
+WHERE THE EMBLEMS DO AND DO NOT APPEAR
+
+Every Gruppe with a profile painted in its own markings already wears its
+badge in the artwork. II./JG 26's aeroplane has the Schlageter S on it
+before the Room draws anything, and drawing ours on top gives it two. So
+the emblem is drawn ONLY on the plain factory scheme, which is what a
+Gruppe with no profile of its own falls back to.
+
+JG 53's red band is cut but NOT DRAWN. It has no MultiSkin rule: the game
+swaps the whole skin for it, so there is no position to read, and a guess
+put it on top of the Gruppe's own symbol.
+
+PROVENANCE, WHICH IS NOT SETTLED
+
+These tiles came from Patrick's own BOB2 folder and appear to be from the
+MultiSkin set or something like it. Their licence is not recorded
+anywhere in the folder: there is no readme, no credit file and no licence
+beside them. They are fine on his own machine and they are NOT cleared
+for a public release until somebody knows where they came from.
+"""
+    with open(os.path.join(a.out, 'README.txt'), 'w', encoding='utf-8') as fh:
+        fh.write(readme)
 
     n_files = sum(len(v) for v in made['numbers'].values()) + \
               len(made['gruppe']) + len(made['stab']) + len(made['emblems']) + len(made['bands'])

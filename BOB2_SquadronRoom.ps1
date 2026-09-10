@@ -5231,15 +5231,29 @@ function New-LwAircraft {
                                    -Tip "Your number, in the $col of the $($Pilot.staffel). Staffel.")
             }
         }
-        # the Gruppe symbol, aft of the cross
-        if ($u -and "$($u.gruppe_symbol)") {
-            $gf = Get-MarkFile "$($m.gruppe."$($u.gruppe_symbol)_$col")"
-            if (-not $gf) { $gf = Get-MarkFile "$($m.gruppe."$($u.gruppe_symbol)_white")" }
+        # THE GRUPPE SYMBOL, aft of the cross, taken from the game's own
+        # rule FOR THIS UNIT rather than from a table of my own.
+        #
+        # The table was wrong. It said JG 3, JG 52 and JG 53 wore the
+        # wavy line; Me109_PlaneID_2.ms gives III./JG 3, III./JG 51 and
+        # III./JG 53 the vertical bar, and names III./JG 2 as the only
+        # wavy unit in the file. The three symbols also sit at three
+        # different positions - the II. bar at (1500, 202), the III. bar
+        # at (1470, 199), the wavy at (1520, 199) - so a single figure
+        # was wrong even where the symbol happened to be right. That is
+        # what Patrick was looking at.
+        #
+        # A unit the rules do not name, or name with blank.dds, gets
+        # nothing. Its own artwork carries whatever it wore.
+        $gu = if ($P.gruppe_by_unit) { $P.gruppe_by_unit.$unit } else { $null }
+        if ($gu -and "$($gu.symbol)") {
+            $gf = Get-MarkFile "$($m.gruppe."$($gu.symbol)_$col")"
+            if (-not $gf) { $gf = Get-MarkFile "$($m.gruppe."$($gu.symbol)_white")" }
             if ($gf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|grp" -File $gf `
-                                   -DX ([double]$P.gruppe.dx) -DY ([double]$P.gruppe.dy) `
-                                   -DW ([double]$P.gruppe.dw) -W $AcW -H $acH `
-                                   -Tip "The $($u.gruppe_symbol -replace 'wavy','') Gruppe symbol.")
+                                   -DX ([double]$gu.dx) -DY ([double]$gu.dy) `
+                                   -DW ([double]$gu.dw) -W $AcW -H $acH `
+                                   -Tip "The $($gu.symbol -replace 'IIIwavy','III') Gruppe symbol.")
             }
         }
         # The Geschwader emblem, but ONLY on the plain factory scheme.
@@ -5803,8 +5817,12 @@ function Show-ReadyRoom {
         else { $parts += "your number $(Get-AcNumber $Pilot) in the $col of the $($Pilot.staffel). Staffel" }
         $mk = Get-LwMarkings
         $u = if ($mk) { $mk.units."$($Pilot.unit)" } else { $null }
+        $mp2 = Get-MarkPositions
+        $pk2 = Split-Path (Get-GruppeAircraftPath $g) -Leaf
+        $P2 = if ($mp2 -and $mp2.lw -and $mp2.lw.profiles) { $mp2.lw.profiles.$pk2 } else { $null }
         $ownArt = Test-GruppeOwnProfile $g
-        if ($u -and "$($u.gruppe_symbol)") { $parts += 'the Gruppe symbol aft of the cross' }
+        $gu = if ($P2 -and $P2.gruppe_by_unit) { $P2.gruppe_by_unit."$($Pilot.unit)" } else { $null }
+        if ($gu -and "$($gu.symbol)") { $parts += 'the Gruppe symbol aft of the cross' }
         if ((-not $ownArt) -and $u -and "$($u.emblem)") { $parts += 'the Geschwader emblem on the cowling' }
 
         if ($ownArt) { $parts += 'and the Geschwader badge already in its paint' }

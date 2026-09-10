@@ -75,27 +75,15 @@ def ms_positions(path):
     return got.most_common()
 
 
-def largest_blob(im, box, test):
-    """The biggest connected run of matching pixels in a region, boxed.
-
-    Column and row histograms were tried first and were not good enough:
-    a Balkenkreuz's white border is broken into corner pieces by its own
-    black arms, and the camouflage on a profile drawing is dark enough in
-    places to stretch a box across half the aeroplane. A connected
-    component cannot do either.
-
-    ALPHA IS TESTED. The profile art is transparent around the aeroplane,
-    and converting it to RGB turns all of that into pure black, which
-    reads as one enormous marking covering the whole image. That is what
-    the first attempt reported.
-    """
+def components(im, box, test, min_px=200):
+    """Every connected run of matching pixels in a region, with its box."""
     from collections import deque
     x0, y0, x1, y1 = box
     c = im.convert('RGBA').crop(box)
     px = c.load()
     w, h = c.size
     seen = bytearray(w * h)
-    best, bestn = None, 0
+    out = []
     for sy in range(h):
         for sx in range(w):
             i = sy * w + sx
@@ -115,11 +103,75 @@ def largest_blob(im, box, test):
                     if 0 <= nx < w and 0 <= ny < h and not seen[ny * w + nx] and test(*px[nx, ny]):
                         seen[ny * w + nx] = 1
                         q.append((nx, ny))
-            if n > bestn:
-                bestn, best = n, (mnx, mny, mxx + 1, mxy + 1)
-    if not best:
-        return None
-    return (x0 + best[0], y0 + best[1], x0 + best[2], y0 + best[3])
+            if n >= min_px:
+                out.append(((x0 + mnx, y0 + mny, x0 + mxx + 1, y0 + mxy + 1), n))
+    return out
+
+
+def haloed(im, bb, light=150):
+    """How much of a box's border is nearly white.
+
+    Used on the SKIN SHEET only, where the cross sits on a pale fuselage
+    and 84 per cent of its box edge is white. It does not work on the
+    profile drawings: there the cross's own white border IS the edge of
+    the box, and two pixels further out is camouflage, so a real cross
+    scores 0.06 and would be thrown away.
+
+    On the drawings the cross is told apart by shape instead - the right
+    size, nearly square, and solidly filled. That matters because taking
+    simply the biggest dark blob was wrong on 20 of the 41 profiles and
+    was not obviously wrong: it returned a box the exact size of the
+    search area, having joined the canopy, its shadow and the dark
+    camouflage into one region, and every marking was then drawn at a
+    wild scale off the end of the aeroplane.
+    """
+    x0, y0, x1, y1 = bb
+    px = im.convert('RGBA').load()
+    W, H = im.size
+    hit = tot = 0
+    for x in range(x0, x1):
+        for y in (y0 - 2, y1 + 1):
+            if 0 <= y < H:
+                r, g, b, al = px[x, y]
+                tot += 1
+                if al > 200 and r > light and g > light and b > light:
+                    hit += 1
+    for y in range(y0, y1):
+        for x in (x0 - 2, x1 + 1):
+            if 0 <= x < W:
+                r, g, b, al = px[x, y]
+                tot += 1
+                if al > 200 and r > light and g > light and b > light:
+                    hit += 1
+    return hit / float(tot) if tot else 0.0
+
+
+def find_marking(im, box, test, want=(0.06, 0.16), aspect=(0.75, 1.7), need_halo=0.0):
+    """The national marking: the candidate that is the right size, the
+    right shape, and - for a Balkenkreuz - ringed in white.
+
+    Anything that fails is not returned. A wrong answer here is far worse
+    than none: the whole conversion is scaled off this box, so a box that
+    is twice too small puts every marking at twice the size, somewhere
+    off the tail. A profile with no answer simply gets no markings.
+    """
+    W, H = im.size
+    best, bestscore = None, -1.0
+    for bb, n in components(im, box, test):
+        w, h = bb[2] - bb[0], bb[3] - bb[1]
+        if not (want[0] * W <= w <= want[1] * W):
+            continue
+        if not (aspect[0] <= w / float(h) <= aspect[1]):
+            continue
+        score = n / float(w * h)                     # how solidly it fills its box
+        if need_halo > 0:
+            hal = haloed(im, bb)
+            if hal < need_halo:
+                continue
+            score += hal
+        if score > bestscore:
+            bestscore, best = score, bb
+    return best
 
 
 # The national marking, found by the one colour that is only ever part of
@@ -192,7 +244,8 @@ def main():
     # The reference skin is a real III./JG 26 machine because the bare
     # sheet carries only stencils and has no Balkenkreuz to measure from.
     ref = Image.open(os.path.join(a.tex, 'M109ULF_IIIJG26.png'))
-    tex_cross = largest_blob(ref, (1250, 150, 1600, 440), BLACK)
+    tex_cross = find_marking(ref, (1250, 150, 1600, 440), BLACK,
+                             want=(0.05, 0.10), need_halo=0.35)
     if not tex_cross:
         print('  ! no Balkenkreuz found in the reference skin', file=sys.stderr)
         return 1
@@ -219,18 +272,82 @@ def main():
     # Every profile measured on its own: there are forty of them and they
     # do not all put the cross in the same place, so one set of fractions
     # cannot be right for all of them.
+    # WHICH GRUPPE SYMBOL EACH UNIT WEARS, and where.
+    #
+    # This was a table I wrote from memory - "JG 3, JG 52 and JG 53 wore
+    # the wavy line" - and the game says otherwise. Me109_PlaneID_2.ms
+    # gives III./JG 3, III./JG 51 and III./JG 53 the VERTICAL BAR at
+    # (1470, 199), and the only wavy rules in the file name III./JG 2.
+    # Several units get blank.dds, which means no symbol from this layer
+    # at all because their own skin already carries it.
+    #
+    # Three different symbols, three different positions, so one figure
+    # for all of them was wrong even where the symbol was right. Read it
+    # from the rules and there is nothing left to get wrong.
+    #
+    # MultiSkin's precedence between rules is not documented anywhere I
+    # can see, so FIRST match wins here, which is the ordinary reading.
+    # It only matters for III./JG 2, which has both a blank rule and a
+    # wavy rule; taken this way it gets no symbol, which is also what its
+    # own artwork suggests.
+    def famof(t):
+        t = t.replace('\\', '/').split('/')[-1].lower()
+        if t.startswith('blank'):
+            return None
+        if 'wavy' in t:
+            return 'IIIwavy'
+        if t.startswith('ii_'):
+            return 'II'
+        if t.startswith('iii_'):
+            return 'III'
+        return 'unit'          # a badge of the unit's own, not a Gruppe bar
+    per_unit = {}
+    for line in open(os.path.join(a.ms, 'Me109_PlaneID_2.ms'), encoding='latin-1'):
+        if line.lstrip().startswith('#'):
+            continue
+        m = MS_RE.match(line.rstrip())
+        if not m:
+            continue
+        rule = (int(m.group('cw')), int(m.group('ch')), float(m.group('sx')),
+                float(m.group('sy')), int(m.group('x')), int(m.group('y')))
+        f = famof(m.group('tex'))
+        for u in re.findall(r'unit\s*==\s*(\w+)', m.group('cond') or ''):
+            per_unit.setdefault(u, (f, rule))
+    def pretty(u):
+        mm = re.match(r'^(IV|I{1,3}|V)(JG|ZG|LG)(\d+)$', u)
+        return '%s./%s %s' % (mm.group(1), mm.group(2), mm.group(3)) if mm else u
+    out['lw']['gruppe_by_unit'] = {}
+    for u, (f, rule) in per_unit.items():
+        out['lw']['gruppe_by_unit'][pretty(u)] = {
+            'symbol': f,
+            'ms': {'x': rule[4], 'y': rule[5], 'scale_x': rule[2], 'scale_y': rule[3]},
+        }
+    named = sorted(set(v['symbol'] for v in out['lw']['gruppe_by_unit'].values()) - {None})
+    print('    gruppe symbols read from the rules for %d units: %s'
+          % (len(per_unit), ', '.join(named)))
+
     out['lw']['profiles'] = {}
     for f in sorted(os.listdir(a.lw_art)):
         if not f.endswith('.png'):
             continue
         im = Image.open(os.path.join(a.lw_art, f))
         W, H = im.size
-        pc = largest_blob(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.62)), BLACK)
+        pc = find_marking(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)), BLACK,
+                          want=(0.06, 0.16))
         if not pc:
             print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr); continue
         rec = {'marking': list(pc), 'size': [W, H]}
         for k, v in marks.items():
             rec[k] = convert(v['ms'], tex_cross, pc, (W, H))
+        # and every Gruppe symbol at ITS OWN position, converted onto
+        # this profile, so the Room never has to pick between them
+        rec['gruppe_by_unit'] = {}
+        for unit, g in out['lw']['gruppe_by_unit'].items():
+            if not g['symbol'] or g['symbol'] == 'unit':
+                continue
+            ms = (2048, 2048, g['ms']['scale_x'], g['ms']['scale_y'], g['ms']['x'], g['ms']['y'])
+            rec['gruppe_by_unit'][unit] = dict(convert(ms, tex_cross, pc, (W, H)),
+                                               symbol=g['symbol'])
         out['lw']['profiles'][f] = rec
     print('    %d of the 109 profiles measured' % len(out['lw']['profiles']))
 
@@ -245,10 +362,11 @@ def main():
         if not (os.path.exists(sp) and os.path.exists(pp)):
             print('  ! %s: missing skin or profile' % name, file=sys.stderr); continue
         tex = Image.open(sp)
-        tm = largest_blob(tex, box, YELLOW)
+        tm = find_marking(tex, box, YELLOW, want=(0.05, 0.12))
         pim = Image.open(pp)
         W, H = pim.size
-        pm = largest_blob(pim, (int(W * 0.40), 0, int(W * 0.85), int(H * 0.75)), YELLOW)
+        pm = find_marking(pim, (int(W * 0.40), 0, int(W * 0.85), int(H * 0.75)), YELLOW,
+                          want=(0.06, 0.16))
         if not (tm and pm):
             print('  ! %s: roundel not found (skin %s, profile %s)' % (name, tm, pm), file=sys.stderr); continue
         rec = {'reference_skin': skin, 'skin_marking': list(tm),
