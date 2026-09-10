@@ -771,11 +771,24 @@ $xaml = @'
                      is trimmed by exactly what the box gains (32 + 8 as
                      against 24 + 16) so the column of titles beside it
                      does not step out of line. -->
-                <Viewbox Width="32" Height="32" Margin="0,1,8,0" VerticalAlignment="Center">
+                <!-- Two emblems, one shown at a time. Which one is decided
+                     at load by the side the pilot was last flying, so the
+                     row says which air force he is going back to. -->
+                <Viewbox x:Name="IcoRoundel" Width="32" Height="32" Margin="0,1,8,0" VerticalAlignment="Center">
                   <Canvas Width="32" Height="32">
                     <Ellipse Canvas.Left="0"     Canvas.Top="0"     Width="32"    Height="32"    Fill="#FF1C3F94"/>
                     <Ellipse Canvas.Left="5.33"  Canvas.Top="5.33"  Width="21.33" Height="21.33" Fill="#FFF2EFE6"/>
                     <Ellipse Canvas.Left="10.67" Canvas.Top="10.67" Width="10.67" Height="10.67" Fill="#FFC8102E"/>
+                  </Canvas>
+                </Viewbox>
+                <!-- The Balkenkreuz, drawn the way it was painted: a black
+                     cross over a white one, the white showing as a border
+                     and as the flared outer arms. Collapsed unless the last
+                     career was German. -->
+                <Viewbox x:Name="IcoKreuz" Width="32" Height="32" Margin="0,1,8,0" VerticalAlignment="Center" Visibility="Collapsed">
+                  <Canvas Width="32" Height="32">
+                    <Path Fill="#FFF2EFE6" Data="M 12,0 H 20 V 12 H 32 V 20 H 20 V 32 H 12 V 20 H 0 V 12 H 12 Z"/>
+                    <Path Fill="#FF141414" Data="M 14.5,2.5 H 17.5 V 14.5 H 29.5 V 17.5 H 17.5 V 29.5 H 14.5 V 17.5 H 2.5 V 14.5 H 14.5 Z"/>
                   </Canvas>
                 </Viewbox>
                 <StackPanel VerticalAlignment="Center">
@@ -1355,6 +1368,44 @@ function Start-SquadronRoom {
     }
 }
 (C 'BtnSquadron').Add_Click({ Start-SquadronRoom })
+
+# WHICH AIR FORCE THE ROOM WILL OPEN ON, and therefore which emblem this
+# row wears. The Room keeps a career per side under SquadronRoom\raf and
+# SquadronRoom\lw, so the last one WRITTEN is the last one flown: the
+# Room saves the pilot record every time it draws his screens.
+#
+# The campaign save itself would be the truer source, and it is not used,
+# because it does not say. Byte 0 of the .BSR is MissMan::currcampaignnum,
+# which is WHICH campaign and not which side, and no other field is known
+# to carry the nationality. Picking a byte and hoping is exactly the thing
+# that broke a working install twice, so the answer comes off the Room's
+# own state until a German save exists to check against.
+function Get-LastRoomSide {
+    $root = Join-Path $GameDir 'SquadronRoom'
+    $best = 'raf'; $bestAt = $null
+    foreach ($side in @('raf', 'lw')) {
+        $f = Join-Path (Join-Path $root $side) 'pilot.json'
+        if (-not (Test-Path $f)) { continue }
+        $t = (Get-Item $f).LastWriteTimeUtc
+        if (($null -eq $bestAt) -or ($t -gt $bestAt)) { $bestAt = $t; $best = $side }
+    }
+    $best
+}
+function Set-SquadronEmblem {
+    $lw = ((Get-LastRoomSide) -eq 'lw')
+    $r = C 'IcoRoundel'; if ($r) { $r.Visibility = $(if ($lw) { 'Collapsed' } else { 'Visible' }) }
+    $k = C 'IcoKreuz';   if ($k) { $k.Visibility = $(if ($lw) { 'Visible' } else { 'Collapsed' }) }
+    $s = C 'SubSquadron'
+    if ($s) {
+        $s.Text = $(if ($lw) { 'your pilot, the Staffel and the day''s readiness' }
+                    else { 'your pilot, the roster and the day''s readiness' })
+    }
+}
+Set-SquadronEmblem
+# The Room is a separate process, so the launcher cannot be told when a
+# man changes sides in it. Re-reading when the window comes back to the
+# front costs nothing and is right by the time anybody looks at it.
+$win.Add_Activated({ try { Set-SquadronEmblem } catch { } })
 
 # The FLIGHT TRAINING icon glows amber while the Tiger Moth swap is armed,
 # so an active session state is visible at a glance.

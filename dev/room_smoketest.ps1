@@ -1,4 +1,4 @@
-# Smoke test: BUILD every screen of the Squadron Room, offscreen.
+﻿# Smoke test: BUILD every screen of the Squadron Room, offscreen.
 #
 # Why it exists: on 8 September 2026 the Room would not open at all. One
 # line still read a roster record's victories as a number after they had
@@ -37,8 +37,9 @@ $fails = @()
 $src = Get-Content $Room -Raw
 $src = $src -replace '(?m)^\[void\]\$Win\.ShowDialog\(\)\s*$', ''
 $src = $src -replace '(?m)^Finalize-Flight\s*$', ''
-$src = $src -replace '(?m)^\$existing = Get-Pilot\s*$', ''
-$src = $src -replace '(?m)^if \(\$existing\) \{ Show-Roster -Pilot \$existing \} else \{ Show-SquadronSelect \}\s*$', ''
+# The Room's bootstrap is one named call, so this is one line to take
+# out and it cannot drift as that bootstrap grows.
+$src = $src -replace '(?m)^Start-Room\s*$', ''
 $tmp = Join-Path (Split-Path -Parent $Room) '_rendertest.ps1'
 Set-Content -Path $tmp -Value $src -Encoding UTF8
 try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }

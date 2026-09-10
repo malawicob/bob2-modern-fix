@@ -1,4 +1,4 @@
-# Awards preview: every rung of the honours ladder, side by side.
+﻿# Awards preview: every rung of the honours ladder, side by side.
 #
 # Why it exists: the decorations only appear on a career that has EARNED
 # them, so seeing what a Bar or a DSO actually looks like meant flying
@@ -53,8 +53,9 @@ if (-not (Test-Path $Room)) {
 $src = Get-Content $Room -Raw
 $src = $src -replace '(?m)^\[void\]\$Win\.ShowDialog\(\)\s*$', ''
 $src = $src -replace '(?m)^Finalize-Flight\s*$', ''
-$src = $src -replace '(?m)^\$existing = Get-Pilot\s*$', ''
-$src = $src -replace '(?m)^if \(\$existing\) \{ Show-Roster -Pilot \$existing \} else \{ Show-SquadronSelect \}\s*$', ''
+# The Room's bootstrap is one named call, so this is one line to take
+# out and it cannot drift as that bootstrap grows.
+$src = $src -replace '(?m)^Start-Room\s*$', ''
 $tmp = Join-Path (Split-Path -Parent $Room) '_awardspreview.ps1'
 Set-Content -Path $tmp -Value $src -Encoding UTF8
 try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }

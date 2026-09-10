@@ -145,11 +145,26 @@ GESCHWADER_EMBLEMS = {
 WAVY = ('JG 3', 'JG 52', 'JG 53')
 
 
-def save(src, dst, maxpx=320):
+def save(src, dst, maxpx=320, keep_canvas=True):
+    """Copy one tile, KEEPING ITS CANVAS.
+
+    The tiles were trimmed to their own bounding box at first, and that
+    was wrong. MultiSkin places these by the corner of the WHOLE 128 x 128
+    tile and sizes them as a fraction of it: "1_yellow black.dds, 2048,
+    2048, 0.070, 0.068, 1165, 190" means the tile goes at (1165, 190) at
+    seven per cent of the canvas wide, and the numeral sits wherever it
+    sits inside that tile. Trim the padding away and both the position and
+    the size are wrong, and wrong by a different amount for every digit,
+    because a 1 is narrow and a 7 is not.
+
+    Keeping the canvas means the game's own coordinates can be used
+    directly and every digit lands in the same place.
+    """
     im = Image.open(src).convert('RGBA')
-    bb = im.getbbox()
-    if bb:
-        im = im.crop(bb)
+    if not keep_canvas:
+        bb = im.getbbox()
+        if bb:
+            im = im.crop(bb)
     if max(im.size) > maxpx:
         r = maxpx / float(max(im.size))
         im = im.resize((max(1, int(im.size[0] * r)), max(1, int(im.size[1] * r))), Image.LANCZOS)

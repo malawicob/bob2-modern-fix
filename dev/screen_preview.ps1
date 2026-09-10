@@ -1,4 +1,4 @@
-# Screen preview: render any one screen of the Room to a PNG.
+﻿# Screen preview: render any one screen of the Room to a PNG.
 #
 # Why it exists: Patrick asked whether the British and the German sides
 # look the same, and the only way to answer that was to launch the game,
@@ -43,8 +43,9 @@ if (-not (Test-Path $Room)) { Write-Host "Cannot find the Room at $Room" -Foregr
 $src = Get-Content $Room -Raw
 $src = $src -replace '(?m)^\[void\]\$Win\.ShowDialog\(\)\s*$', ''
 $src = $src -replace '(?m)^Finalize-Flight\s*$', ''
-$src = $src -replace '(?m)^\$existing = Get-Pilot\s*$', ''
-$src = $src -replace '(?m)^if \(\$existing\) \{ Show-Roster -Pilot \$existing \} else \{ Show-SquadronSelect \}\s*$', ''
+# The Room's bootstrap is one named call, so this is one line to take
+# out and it cannot drift as that bootstrap grows.
+$src = $src -replace '(?m)^Start-Room\s*$', ''
 $tmp = Join-Path (Split-Path -Parent $Room) '_screenpreview.ps1'
 Set-Content -Path $tmp -Value $src -Encoding UTF8
 try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
@@ -91,6 +92,24 @@ if ($WantDate) {
     function Get-CampaignDate { $script:PinnedDate }
     $script:CampaignDate = $script:PinnedDate
 }
+# 'aircraft' draws the aeroplane on its own, both ways, so the markings
+# can be compared without flying a sortie first: the dispersal only draws
+# an aeroplane once a man has one in his logbook.
+# 'aircraft' shows the aeroplane with its markings. The dispersal only
+# draws one once a man has a sortie in his logbook, so this puts a single
+# session into the THROWAWAY COPY of the state and then goes through the
+# ordinary screen. Building the aeroplane into the stage by hand was
+# tried first and rendered blank every time; going through the real
+# screen is both simpler and a better test, because it is the path a
+# player actually takes.
+# 'aircraft' was going to draw the aeroplane on its own so the markings
+# could be looked at without flying first. It is not here: the dispersal
+# counts sorties from the campaign SAVE, and every way of persuading it
+# otherwise - writing a session, stubbing the counter, building the
+# aeroplane into the stage by hand - rendered a blank sheet. Rather than
+# leave a preview that lies, the branch is gone. The German markings are
+# checked through the ordinary ready room, which does draw its aeroplane
+# from the first day.
 if ($WantTab -eq 'postings') {
     if ($WantSide -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
 } else {

@@ -76,6 +76,27 @@ function Set-StateSide {
     Set-AssetSide $Side
     if (Get-Command Load-MapProjection -ErrorAction SilentlyContinue) { Load-MapProjection $Side }
 }
+# WHICH SIDE THE ROOM OPENS ON. It always opened on the RAF, so a man
+# with a German career had to find the side switch every time.
+#
+# The last side WRITTEN is the last side flown, because the Room saves the
+# pilot record every time it draws his screens. The campaign save would be
+# a truer source and it is not used: byte 0 of the .BSR is
+# MissMan::currcampaignnum, which is WHICH campaign and not which side,
+# and no other field is known to carry the nationality. The launcher picks
+# its emblem by the same rule, in Get-LastRoomSide, so the button and the
+# Room cannot disagree.
+function Get-LastSide {
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $best = 'raf'; $bestAt = $null
+    foreach ($side in @('raf', 'lw')) {
+        $f = Join-Path (Join-Path $root $side) 'pilot.json'
+        if (-not (Test-Path $f)) { continue }
+        $t = (Get-Item $f).LastWriteTimeUtc
+        if (($null -eq $bestAt) -or ($t -gt $bestAt)) { $bestAt = $t; $best = $side }
+    }
+    $best
+}
 Set-StateSide 'raf'
 
 # Careers made before there were two sides sit loose in the state root.
@@ -1359,10 +1380,48 @@ function New-Aircraft {
     $script:AcPos = Get-AcPos
     $acKey = Get-AcKey $ptype
 
-    $tSq  = Add-AcMark -Canvas $cv -Key "$acKey|sq"  -Text $sq  -Family $CodeFont   -Size ([double]$spec.CodeSize) `
-                       -Colour $CodeColour   -DX ([double]$spec.SqX)  -DY ([double]$spec.SqY)  -W $AcW -H $acH
-    $tInd = Add-AcMark -Canvas $cv -Key "$acKey|ind" -Text $ind -Family $CodeFont   -Size ([double]$spec.CodeSize) `
-                       -Colour $CodeColour   -DX ([double]$spec.IndX) -DY ([double]$spec.IndY) -W $AcW -H $acH
+    # THE CODES ARE THE GAME'S OWN, not text in whatever condensed font
+    # this machine happens to have. BOB2 keeps a tile per letter and per
+    # squadron code in RAF Sky grey, and MultiSkin places them by exact
+    # pixel; dev/measure_markings.py converts those coordinates onto this
+    # drawing using the roundel as the ruler. Every one of the 51 codes
+    # the Room uses has a tile and so do all 26 letters, so nothing has to
+    # fall back to a font.
+    $rm = Get-RafMarkings
+    $mp = Get-MarkPositions
+    $pk = if ($ptype -match 'Hurricane') { 'hurricane' } else { 'spitfire' }
+    $R  = if ($mp -and $mp.raf) { $mp.raf.$pk } else { $null }
+    $drew = $false
+    if ($rm -and $R -and $R.code -and $R.letter) {
+        $cf = Get-RafMarkFile "$($rm.codes.$sq)"
+        if ($cf) {
+            [void](Add-AcImage -Canvas $cv -Key "$acKey|sq" -File $cf `
+                               -DX ([double]$R.code.dx) -DY ([double]$R.code.dy) `
+                               -DW ([double]$R.code.dw) -W $AcW -H $acH `
+                               -Tip "The squadron code, $sq.")
+            $drew = $true
+        }
+        $lf = Get-RafMarkFile "$($rm.letters.$ind)"
+        if ($lf) {
+            [void](Add-AcImage -Canvas $cv -Key "$acKey|ind" -File $lf `
+                               -DX ([double]$R.letter.dx) -DY ([double]$R.letter.dy) `
+                               -DW ([double]$R.letter.dw) -W $AcW -H $acH `
+                               -Tip "Your letter, $ind.")
+            $drew = $true
+        }
+    }
+    # A squadron with no tile, or a marking-positions.json that has not
+    # been built, still gets its codes: the old drawn text is the fallback
+    # rather than a bare aeroplane.
+    if (-not $drew) {
+        [void](Add-AcMark -Canvas $cv -Key "$acKey|sq"  -Text $sq  -Family $CodeFont -Size ([double]$spec.CodeSize) `
+                          -Colour $CodeColour -DX ([double]$spec.SqX)  -DY ([double]$spec.SqY)  -W $AcW -H $acH)
+        [void](Add-AcMark -Canvas $cv -Key "$acKey|ind" -Text $ind -Family $CodeFont -Size ([double]$spec.CodeSize) `
+                          -Colour $CodeColour -DX ([double]$spec.IndX) -DY ([double]$spec.IndY) -W $AcW -H $acH)
+    }
+    # The serial stays TEXT. There is no tile for it: in the game it is
+    # painted into the skin rather than placed as a decal, so there is
+    # nothing to take and nothing to measure.
     $ser = "$($Pilot.serials)"
     if ($ser) {
         [void](Add-AcMark -Canvas $cv -Key "$acKey|ser" -Text $ser -Family $SerialFont -Size ([double]$spec.SerSize) `
@@ -1370,6 +1429,23 @@ function New-Aircraft {
     }
     [void]$wrap.Children.Add($cv)
     $wrap
+}
+$RafMarkPath = Join-Path (Join-Path $ModDir 'aircraft') 'markings.json'
+function Get-RafMarkings {
+    if ($null -ne $script:RafMarks) { return $script:RafMarks }
+    $m = $null
+    if (Test-Path $RafMarkPath) {
+        try { $m = Get-Content $RafMarkPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:RafMarks = $m
+    $m
+}
+function Get-RafMarkFile {
+    param([string]$Rel)
+    if (-not $Rel) { return $null }
+    $f = Join-Path (Join-Path (Join-Path $ModDir 'aircraft') 'markings') ($Rel -replace '/','\')
+    if (Test-Path $f) { return $f }
+    $null
 }
 # One mark on the aeroplane: drawn where the spec says, or where it was
 # last put by hand, and draggable to somewhere better. Dragging is the
@@ -4931,6 +5007,27 @@ function Show-Flugbuch {
 #  the same acpos.json under the same per-side key.
 # =====================================================================
 $MarkPath = Join-Path (Join-Path $ModDir 'lw') 'markings.json'
+# Where each marking goes, measured off the game's own MultiSkin rules by
+# dev/measure_markings.py rather than placed by eye. Patrick asked the
+# obvious question - the game puts these in the right place, is the right
+# place written down? It is, in MultiSkin\*.ms, as
+#
+#     use <tile>.dds, 2048, 2048, <scaleX>, <scaleY>, <x>, <y> if <unit...>
+#
+# and the measuring script converts those texture coordinates onto each
+# profile drawing using the Balkenkreuz as the ruler. Per profile, because
+# there are forty of them and they do not all put the cross in the same
+# place.
+$MarkPosPath = Join-Path $ModDir 'marking-positions.json'
+function Get-MarkPositions {
+    if ($null -ne $script:MarkPos) { return $script:MarkPos }
+    $m = $null
+    if (Test-Path $MarkPosPath) {
+        try { $m = Get-Content $MarkPosPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:MarkPos = $m
+    $m
+}
 function Get-LwMarkings {
     if ($null -ne $script:LwMarks) { return $script:LwMarks }
     $m = $null
@@ -5103,7 +5200,14 @@ function New-LwAircraft {
     $cv = New-Object Windows.Controls.Canvas; $cv.Width = $AcW; $cv.Height = $acH
     $script:AcPos = Get-AcPos
     $m = Get-LwMarkings
-    if ($m) {
+    # the measured placement for THIS profile
+    $mp = Get-MarkPositions
+    $pk = Split-Path $acFile -Leaf
+    $P = if ($mp -and $mp.lw -and $mp.lw.profiles) { $mp.lw.profiles.$pk } else { $null }
+    # Falling back to a guess would put a marking somewhere plausible and
+    # wrong, and nothing on screen would say which it was. A profile that
+    # has not been measured gets a bare aeroplane and the note says so.
+    if ($m -and $P) {
         $unit = "$($Pilot.unit)"
         $key = 'lw|' + ($unit -replace '[^A-Za-z0-9]','')
         $u = $m.units.$unit
@@ -5113,7 +5217,8 @@ function New-LwAircraft {
         $chev = Get-StabChevron -Pilot $Pilot -Career $Career
         if ($chev) {
             [void](Add-AcImage -Canvas $cv -Key "$key|chev" -File $chev `
-                               -DX 0.440 -DY 0.380 -DW 0.075 -W $AcW -H $acH `
+                               -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
+                               -DW ([double]$P.number.dw) -W $AcW -H $acH `
                                -Tip 'The Stab chevron, worn in place of an individual number.')
         }
         else {
@@ -5121,7 +5226,8 @@ function New-LwAircraft {
             $nf = Get-MarkFile "$($m.numbers.$n.$col)"
             if ($nf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|num" -File $nf `
-                                   -DX 0.468 -DY 0.360 -DW 0.045 -W $AcW -H $acH `
+                                   -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
+                                   -DW ([double]$P.number.dw) -W $AcW -H $acH `
                                    -Tip "Your number, in the $col of the $($Pilot.staffel). Staffel.")
             }
         }
@@ -5131,7 +5237,8 @@ function New-LwAircraft {
             if (-not $gf) { $gf = Get-MarkFile "$($m.gruppe."$($u.gruppe_symbol)_white")" }
             if ($gf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|grp" -File $gf `
-                                   -DX 0.705 -DY 0.395 -DW 0.055 -W $AcW -H $acH `
+                                   -DX ([double]$P.gruppe.dx) -DY ([double]$P.gruppe.dy) `
+                                   -DW ([double]$P.gruppe.dw) -W $AcW -H $acH `
                                    -Tip "The $($u.gruppe_symbol -replace 'wavy','') Gruppe symbol.")
             }
         }
@@ -5144,20 +5251,26 @@ function New-LwAircraft {
             $ef = Get-MarkFile "$($u.emblem)"
             if ($ef) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|emb" -File $ef `
-                                   -DX 0.115 -DY 0.330 -DW 0.052 -W $AcW -H $acH `
+                                   -DX ([double]$P.emblem.dx) -DY ([double]$P.emblem.dy) `
+                                   -DW ([double]$P.emblem.dw) -W $AcW -H $acH `
                                    -Tip 'The Geschwader emblem.')
             }
         }
-        # or, for JG 53, the red band round the rear fuselage, on the
-        # same terms
-        if ((-not $ownArt) -and $u -and "$($u.band)") {
-            $bf = Get-MarkFile "$($u.band)"
-            if ($bf) {
-                [void](Add-AcImage -Canvas $cv -Key "$key|band" -File $bf `
-                                   -DX 0.775 -DY 0.285 -DW 0.018 -W $AcW -H $acH `
-                                   -Tip 'The red band the Geschwader wore round the rear fuselage.')
-            }
-        }
+        # JG 53's red band is NOT DRAWN, and that is deliberate.
+        #
+        # Every other marking here has a MultiSkin rule saying exactly
+        # where it goes. The band has none: the game does not place it as
+        # a decal at all, it swaps the entire skin, in Me109_Markings.ms:
+        #
+        #   use ...M109ULF_BARE_DETAIL MARKINGS_JG53.dds, 2048, 2048,
+        #       1.000, 1.000, 0, 0 if unit == IJG53 ... and date >= Oct1st1940
+        #
+        # so there is no position to read. Putting it somewhere plausible
+        # is the very thing this whole exercise replaced, and the guess
+        # showed: it sat on top of the Gruppe's wavy line. The tile is
+        # kept in markings/bands so it can be drawn the day somebody
+        # measures where it belongs. The Geschwader still reads from its
+        # Gruppe symbol in the meantime.
     }
     [void]$wrap.Children.Add($cv)
     $wrap
@@ -5693,7 +5806,7 @@ function Show-ReadyRoom {
         $ownArt = Test-GruppeOwnProfile $g
         if ($u -and "$($u.gruppe_symbol)") { $parts += 'the Gruppe symbol aft of the cross' }
         if ((-not $ownArt) -and $u -and "$($u.emblem)") { $parts += 'the Geschwader emblem on the cowling' }
-        if ((-not $ownArt) -and $u -and "$($u.band)") { $parts += 'the red band the Geschwader wore round the rear fuselage' }
+
         if ($ownArt) { $parts += 'and the Geschwader badge already in its paint' }
         $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
             "$($Pilot.unit) in its own markings, with " + ($parts -join ', ') + '. ' +
@@ -6090,7 +6203,24 @@ Finalize-Flight
 # Paint the side switch once before anything is shown. It was only ever
 # painted BY a side change, and the markup happens to start on the RAF
 # segment, so it looked right by luck rather than by saying so.
-Update-SideSwitch
-$existing = Get-Pilot
-if ($existing) { Show-Roster -Pilot $existing } else { Show-SquadronSelect }
+# ONE LINE, so the test harnesses can take it out.
+#
+# This used to be three loose statements and each harness stripped them
+# with its own regex. Growing it to open on the last side would have left
+# those regexes matching nothing, and the harnesses would then have run
+# the bootstrap for real: Set-StateSide against the LIVE install, before
+# StateRootOverride is set, which is how a pilot record was destroyed
+# once already. A named function cannot drift out from under them.
+function Start-Room {
+    # Open on the side he was last flying, not always on the RAF.
+    Set-StateSide (Get-LastSide)
+    Update-SideSwitch
+    $existing = Get-Pilot
+    if ($script:Side -eq 'lw') {
+        if ($existing) { Show-ReadyRoom -Pilot $existing } else { Show-GruppeSelect }
+    } else {
+        if ($existing) { Show-Roster -Pilot $existing } else { Show-SquadronSelect }
+    }
+}
+Start-Room
 [void]$Win.ShowDialog()
