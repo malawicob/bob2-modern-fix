@@ -639,8 +639,8 @@ function Show-Tab {
     }
     switch ($Tab) {
         'logbook' { if ($script:Side -eq 'lw') { Show-Flugbuch -Pilot $pl } else { Show-Logbook -Pilot $pl } }
-        'map'     { Show-Map -Pilot $pl }
-        'paper'   { Show-Paper -Pilot $pl }
+        'map'     { if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-Map -Pilot $pl } }
+        'paper'   { if ($script:Side -eq 'lw') { Show-Morgenmeldung -Pilot $pl } else { Show-Paper -Pilot $pl } }
         'gruppen' { Show-GruppeSelect }
         default   { if ($script:Side -eq 'lw') { Show-ReadyRoom -Pilot $pl } else { Show-Roster -Pilot $pl } }
     }
@@ -2442,13 +2442,15 @@ function New-Stat {
 function New-Nav {
     param([string]$Current)
     $nav = New-Object Windows.Controls.StackPanel; $nav.Orientation = 'Horizontal'; $nav.Margin = '0,0,0,22'
-    # The German side gets only the two screens that exist. Offering the
-    # RAF's Log Book, plotting table and morning paper would run three
-    # screens full of Fighter Command against a Luftwaffe pilot: the paper
-    # is a hundred Allied front pages, the map is southern England, and
-    # the Log Book counts victories in German aircraft types.
+    # Four tabs a side, and they answer each other: the room you sit in,
+    # your own book, the plotting table, and the morning's news. The German
+    # side ran three for a while because the RAF's paper is a hundred
+    # Allied front pages and its map is southern England, so neither could
+    # simply be pointed at a Luftwaffe pilot. Both now have a German
+    # counterpart of their own - Show-Morgenmeldung and the Kanalfront
+    # table - so the shapes match.
     $tabs = if ($script:Side -eq 'lw') {
-        @(@{k='dispersal';l='THE READY ROOM'}, @{k='logbook';l='FLUGBUCH'}, @{k='gruppen';l='THE GRUPPEN'})
+        @(@{k='dispersal';l='THE READY ROOM'}, @{k='logbook';l='FLUGBUCH'}, @{k='gruppen';l='THE GRUPPEN'}, @{k='paper';l='MORGENMELDUNG'})
     } else {
         @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'}, @{k='paper';l='MORNING BULLETIN'})
     }
@@ -2480,7 +2482,9 @@ function Start-NewCareer {
     # The old man is put away by Complete-NewCareer, when the new one is
     # actually posted.
     $script:NewCareerPending = $true
-    Show-SquadronSelect
+    # the board for HIS air force. This sent a German pilot to the Fighter
+    # Command plotting table, where he could have reported to No. 32 Squadron.
+    if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
 }
 # Put the previous pilot away. Called at the moment a new man is posted.
 function Complete-NewCareer {
@@ -4819,6 +4823,234 @@ function Show-Flugbuch {
     }
 }
 
+# =====================================================================
+#  The Morgenmeldung: the German side's morning bulletin
+#
+#  Patrick asked where the German morning bulletin was, and said the two
+#  sides must be the same. They now are, in shape: same cream page, same
+#  masthead, same dateline row, same two columns, same unread strip on the
+#  ready room. What is ON the page is necessarily different, and the
+#  reason is worth writing down because somebody will otherwise try to
+#  "fix" it by pointing the German side at paper.json.
+#
+#  paper.json is 104 real front pages from New Zealand papers under
+#  CC BY-NC-SA. It is Allied press. Running it at a Luftwaffe pilot as HIS
+#  morning paper would be nonsense.
+#
+#  The obvious counterpart is the Wehrmachtbericht, the OKW's daily
+#  communique. It is exactly the right thing and it is not in this repo,
+#  and writing German communiques myself and putting OKW's name on them
+#  would be inventing propaganda and passing it off as the record. So the
+#  page is built from two things that are both true:
+#
+#    THE LEFT COLUMN is the campaign's own figures, read out of the German
+#    diary table in the save by Get-GruppeDiary. Sorties put up, aircraft
+#    lost, claims by British type, for the whole Jagdwaffe and for your own
+#    Gruppe. It is not history, it is the war the player is actually
+#    flying, which is the one thing on the page that is his.
+#
+#    THE RIGHT COLUMN is the British press of that date, out of the same
+#    paper.json, and it says so: headed WAS LONDON MELDET and captioned as
+#    the British reports monitored that morning. Monitoring the enemy's
+#    press and broadcasts is what both sides actually did, so it earns its
+#    place rather than being a reuse of convenience.
+#
+#  Nothing on this page claims to be a German communique.
+# =====================================================================
+# The day's figures. Cumulative over the campaign, because that is what
+# the save records: there is no per-day breakdown in the German table.
+function Get-LwDayReport {
+    param($Pilot)
+    $rows = @(Get-GruppeDiary)
+    $all = @(Get-LwGruppen)
+    $out = @{
+        Rows = $rows.Count; Launched = 0; AcLost = 0; AcDamaged = 0; PilotsLost = 0
+        Kills = (New-Object int[] 6); Total = 0
+        Mine = $null; MineUnit = "$($Pilot.unit)"; InLine = 0; Fighters = $all.Count
+    }
+    # Only the fighter Gruppen. The diary carries the bombers and the
+    # Stukas too, and folding those in would credit the Jagdwaffe with
+    # somebody else's sorties.
+    $fighterIdx = @{}
+    foreach ($q in $all) { if ($null -ne $q.sqidx) { $fighterIdx["$([int]$q.sqidx)"] = $q } }
+    foreach ($r in $rows) {
+        if (-not $fighterIdx.ContainsKey("$([int]$r.Idx)")) { continue }
+        $out.Launched   += [int]$r.Launched
+        $out.AcLost     += [int]$r.AcLost
+        $out.AcDamaged  += [int]$r.AcDamaged
+        $out.PilotsLost += [int]$r.PilotsLost
+        for ($j = 0; $j -lt 6; $j++) { $out.Kills[$j] += [int]$r.Kills[$j]; $out.Total += [int]$r.Kills[$j] }
+    }
+    $g = $all | Where-Object { "$($_.unit)" -eq "$($Pilot.unit)" } | Select-Object -First 1
+    if ($g) { $out.Mine = Get-GruppeRecord $g.sqidx }
+    $out.InLine = @($all | Where-Object { Test-GruppeInLine $_ $script:CampaignDate }).Count
+    $out
+}
+# The line the ready room's strip carries, and the page's own headline.
+# Built from the largest thing that is actually true this morning, so a
+# quiet campaign says so instead of shouting.
+function Get-LwLead {
+    param($Rep, $Pilot)
+    if ($Rep.Mine -and [int]$Rep.Mine.Total -gt 0) {
+        return "$($Rep.MineUnit) meldet $([int]$Rep.Mine.Total) Abschuesse"
+    }
+    if ([int]$Rep.Total -gt 0) {
+        return "Jagdwaffe meldet $([int]$Rep.Total) Abschuesse ueber dem Kanal"
+    }
+    if ([int]$Rep.Launched -gt 0) {
+        return "$([int]$Rep.Launched) Feindfluege geflogen, keine Abschuesse gemeldet"
+    }
+    'Die Gruppen stehen in Bereitschaft'
+}
+# Today's report counts as unread until it has been opened. The RAF flag
+# keys on the front page's own date because the papers are dated; there
+# is one report a day here, so it keys on the campaign date. State is
+# split per side, so the two flags cannot tread on each other.
+function Get-UnreadMeldung {
+    param($Pilot)
+    if (-not $script:CampaignDate) { return $null }
+    $d = $script:CampaignDate.ToString('yyyy-MM-dd')
+    $seen = $null
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'paperRead')) { $seen = "$($Pilot.paperRead)" }
+    if ($seen -and ($seen -eq $d)) { return $null }
+    $d
+}
+function Show-Morgenmeldung {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'paper'))
+    Show-ChromeButtons $true
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($Pilot.unit)" }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  MORGENMELDUNG" }
+
+    $rep = Get-LwDayReport -Pilot $Pilot
+    $lead = Get-LwLead -Rep $rep -Pilot $Pilot
+    # opening it is what marks it read, exactly as the RAF page does
+    $today = Get-UnreadMeldung -Pilot $Pilot
+    if ($today) { Set-BulletinRead -Pilot $Pilot -Date $today }
+
+    $paper = New-Object Windows.Controls.Border
+    $paper.Background = B '#E9E0CA'; $paper.CornerRadius = '2'; $paper.Padding = '40,26,40,34'
+    $paper.MaxWidth = 940; $paper.HorizontalAlignment = 'Left'
+    $paper.BorderBrush = B '#2A2418'; $paper.BorderThickness = '1'
+    $col = New-Object Windows.Controls.StackPanel
+
+    # ---- masthead, the same furniture as the RAF page ----
+    [void]$col.Children.Add((New-Rule '#1A1712' 3))
+    $mh = New-TB -Text 'Morgenmeldung' -Family "Old English Text MT, Blackadder ITC, Georgia, 'Times New Roman', serif" -Size 50 -Colour '#141109'
+    $mh.HorizontalAlignment = 'Center'; $mh.Margin = '0,6,0,2'
+    [void]$col.Children.Add($mh)
+    [void]$col.Children.Add((New-Rule '#1A1712' 1))
+
+    $dstr = if ($script:CampaignDate) { $script:CampaignDate.ToString('dddd, d MMMM yyyy').ToUpper() } else { 'DIE LUFTSCHLACHT UM ENGLAND, 1940' }
+    $dl = New-Object Windows.Controls.Grid; $dl.Margin = '0,5,0,5'
+    foreach ($w in @('*','*','*')) { $cd=New-Object Windows.Controls.ColumnDefinition; $cd.Width=New-Object Windows.GridLength(1,([Windows.GridUnitType]::Star)); [void]$dl.ColumnDefinitions.Add($cd) }
+    $dLeft  = New-TB -Text "$($Pilot.unit)" -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dLeft.VerticalAlignment='Center'
+    $dCent  = New-TB -Text ("GEFECHTSSTAND $("$($Pilot.base)".ToUpper())") -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dCent.HorizontalAlignment='Center'; $dCent.VerticalAlignment='Center'
+    $dRight = New-TB -Text $dstr -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dRight.HorizontalAlignment='Right'; $dRight.VerticalAlignment='Center'
+    [Windows.Controls.Grid]::SetColumn($dLeft,0); [Windows.Controls.Grid]::SetColumn($dCent,1); [Windows.Controls.Grid]::SetColumn($dRight,2)
+    [void]$dl.Children.Add($dLeft); [void]$dl.Children.Add($dCent); [void]$dl.Children.Add($dRight)
+    [void]$col.Children.Add($dl)
+    [void]$col.Children.Add((New-Rule '#1A1712' 2.5))
+
+    # ---- two columns: the front's own figures | what London is saying ----
+    $bodyG = New-Object Windows.Controls.Grid; $bodyG.Margin = '0,12,0,0'
+    $g0=New-Object Windows.Controls.ColumnDefinition; $g0.Width=New-Object Windows.GridLength(2,([Windows.GridUnitType]::Star))
+    $g1=New-Object Windows.Controls.ColumnDefinition; $g1.Width=New-Object Windows.GridLength(26)
+    $g2=New-Object Windows.Controls.ColumnDefinition; $g2.Width=New-Object Windows.GridLength(1.15,([Windows.GridUnitType]::Star))
+    [void]$bodyG.ColumnDefinitions.Add($g0); [void]$bodyG.ColumnDefinitions.Add($g1); [void]$bodyG.ColumnDefinitions.Add($g2)
+
+    $lc = New-Object Windows.Controls.StackPanel
+    $hl = New-TB -Text $lead -Family 'Georgia, Cambria, serif' -Size 31 -Colour '#120F08' -Bold -Wrap
+    $hl.LineHeight = 34
+    [void]$lc.Children.Add($hl)
+    [void]$lc.Children.Add((New-Rule '#7A5E2E' 1))
+
+    $bins = Get-KillBins $Pilot
+    $byType = @()
+    for ($k = 0; $k -lt $bins.Count; $k++) { if ([int]$rep.Kills[$k] -gt 0) { $byType += "$([int]$rep.Kills[$k]) $($bins[$k])" } }
+    # A zero is a sentence, not a number. "0 machines have not come back
+    # and 0 were brought home damaged. 0 pilots are gone" is what counting
+    # into a template reads like, and it is worse than saying nothing.
+    $para = @()
+    if ([int]$rep.Launched -gt 0) {
+        $claims = if ([int]$rep.Total -gt 0) { "and claim $([int]$rep.Total) British aircraft" + $(if ($byType.Count) { ": $($byType -join ', ')." } else { '.' }) }
+                  else { 'and have nothing to claim for them yet.' }
+        $para += "The fighter Gruppen have put up $([int]$rep.Launched) sorties in this campaign $claims"
+        $loss = @()
+        if ([int]$rep.AcLost -gt 0)     { $loss += "$([int]$rep.AcLost) machines have not come back" }
+        if ([int]$rep.AcDamaged -gt 0)  { $loss += "$([int]$rep.AcDamaged) were brought home damaged" }
+        if ([int]$rep.PilotsLost -gt 0) { $loss += "$([int]$rep.PilotsLost) pilots are gone" }
+        $para += $(if ($loss.Count) { 'Against that, ' + ($loss -join ', ') + '.' } else { 'Nothing has been lost.' })
+    } else {
+        $para += 'Nothing has been flown from this Gefechtsstand yet. The figures fill in as the campaign runs.'
+    }
+    if ($rep.Mine -and [int]$rep.Mine.Launched -gt 0) {
+        $mb = @()
+        for ($k = 0; $k -lt $bins.Count; $k++) { if ([int]$rep.Mine.Kills[$k] -gt 0) { $mb += "$([int]$rep.Mine.Kills[$k]) $($bins[$k])" } }
+        $mine = "$($rep.MineUnit) itself has flown $([int]$rep.Mine.Launched) of them"
+        $mine += if ([int]$rep.Mine.Total -gt 0) { ", for $([int]$rep.Mine.Total) claims" + $(if ($mb.Count) { " ($($mb -join ', '))" } else { '' }) } else { ' without a claim so far' }
+        $ml = @()
+        if ([int]$rep.Mine.AcLost -gt 0)     { $ml += "$([int]$rep.Mine.AcLost) aircraft" }
+        if ([int]$rep.Mine.PilotsLost -gt 0) { $ml += "$([int]$rep.Mine.PilotsLost) pilots" }
+        $mine += $(if ($ml.Count) { " and the loss of $($ml -join ' and ')." } else { ' and has lost nothing.' })
+        $para += $mine
+    }
+    $para += "$($rep.InLine) of the $($rep.Fighters) fighter Gruppen stand on the Kanalfront this morning."
+    $bd = New-TB -Text ($para -join '  ') -Family 'Georgia, Cambria, serif' -Size 15 -Colour '#2A2620' -Wrap
+    $bd.LineHeight = 24; $bd.Margin = '0,8,0,0'; $bd.TextAlignment = 'Justify'
+    [void]$lc.Children.Add($bd)
+    $src = New-TB -Text ("$([char]0x2014) from the campaign's own Gruppen diary, not from the record of 1940") `
+                  -Family 'Georgia, Cambria, serif' -Size 12.5 -Colour '#6B6250'
+    $src.Margin = '0,10,0,0'; $src.FontStyle = 'Italic'
+    [void]$lc.Children.Add($src)
+    [Windows.Controls.Grid]::SetColumn($lc,0); [void]$bodyG.Children.Add($lc)
+
+    $vr = New-Object Windows.Controls.Border; $vr.Width=1; $vr.Background=B '#3A3324'; $vr.HorizontalAlignment='Center'
+    [Windows.Controls.Grid]::SetColumn($vr,1); [void]$bodyG.Children.Add($vr)
+
+    # The enemy's press, monitored. Real British reporting of that date,
+    # out of the same file the RAF side reads, and labelled as what it is.
+    $sc = New-Object Windows.Controls.StackPanel
+    [void]$sc.Children.Add((New-TB -Text 'WAS LONDON MELDET' -Family $CondFam -Size 12 -Colour '#7A5E2E' -Bold))
+    [void]$sc.Children.Add((New-Rule '#7A5E2E' 1))
+    $entries = Get-PaperEntries
+    $li = Get-LeadBulletinIndex -Entries $entries -Date $script:CampaignDate
+    $shown = 0
+    if ($li -ge 0 -and $entries.Count) {
+        $e = $entries[$li]
+        $hh = New-TB -Text ([string]$e.headline) -Family 'Georgia, serif' -Size 14 -Colour '#1C1810' -Bold -Wrap
+        $hh.Margin = '0,0,0,4'; $hh.LineHeight = 17
+        [void]$sc.Children.Add($hh)
+        if (($e.PSObject.Properties.Name -contains 'paper') -and $e.paper) {
+            $pp = New-TB -Text ("$($e.paper), $(Format-ShortDate ([string]$e.date))") -Family $CondFam -Size 11 -Colour '#7A5E2E' -Bold
+            $pp.Margin = '0,0,0,13'
+            [void]$sc.Children.Add($pp)
+        }
+        $shown++
+        if (($e.PSObject.Properties.Name -contains 'signals') -and $e.signals) {
+            foreach ($sg in @($e.signals)) {
+                if ($shown -ge 5) { break }
+                $item = New-TB -Text ([string]$sg) -Family 'Georgia, serif' -Size 14 -Colour '#1C1810' -Bold -Wrap
+                $item.Margin = '0,0,0,13'; $item.LineHeight = 17
+                [void]$sc.Children.Add($item)
+                $shown++
+            }
+        }
+    }
+    if ($shown -eq 0) { [void]$sc.Children.Add((New-TB -Text 'Nichts abgehoert.' -Family 'Georgia, serif' -Size 13 -Colour '#4A4436')) }
+    $cap = New-TB -Wrap -Family 'Georgia, serif' -Size 12 -Colour '#6B6250' -Text (
+        'The British press of that morning, as it was monitored. Their claims are theirs, not ours.')
+    $cap.FontStyle = 'Italic'; $cap.Margin = '0,4,0,0'
+    [void]$sc.Children.Add($cap)
+    [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
+
+    [void]$col.Children.Add($bodyG)
+    [void]$col.Children.Add((New-Rule '#1A1712' 2))
+    $paper.Child = $col
+    [void]$script:Stage.Children.Add($paper)
+}
 function Show-ReadyRoom {
     param($Pilot)
     $script:Stage.Children.Clear()
@@ -4826,6 +5058,14 @@ function Show-ReadyRoom {
     [void]$script:Stage.Children.Add((New-Nav 'dispersal'))
     Show-ChromeButtons $true
     $unit = "$($Pilot.unit)"
+    # The Gruppe's own record out of the order of battle. Looked up HERE,
+    # at the top, because it is wanted by three blocks below and the first
+    # of them is the aeroplane. It used to be looked up further down, after
+    # the aircraft block had already asked for it, so $g was still null
+    # there and the Ready Room drew no aeroplane at all while the RAF
+    # dispersal drew its Spitfire. That is one of the differences Patrick
+    # was looking at.
+    $g = @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq $unit } | Select-Object -First 1
     $h = C 'HdrSquadron'; if ($h) { $h.Text = $unit }
     $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTE $($Pilot.luftflotte)" }
 
@@ -4837,6 +5077,37 @@ function Show-ReadyRoom {
     $base = "$($Pilot.base)".ToUpper()
     $eyebrow = if ($script:CampaignDate) { "$base  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $base }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "$unit at readiness"))
+
+    # This morning's Meldung, if he has not read it. Same strip, same
+    # newspaper block, same click-to-open as the RAF dispersal: it carries
+    # the line itself rather than "you have unread news", because the line
+    # is the reason to go and read it.
+    $mday = Get-UnreadMeldung -Pilot $Pilot
+    if ($mday) {
+        $nb = New-Object Windows.Controls.Border
+        $nb.Background = B '#1A1710'; $nb.BorderBrush = $script:BrassBrush
+        $nb.BorderThickness = '3,0,0,0'; $nb.CornerRadius = '0,3,3,0'
+        $nb.Padding = '16,12'; $nb.Margin = '0,0,0,20'
+        $nb.HorizontalAlignment = 'Stretch'; $nb.Cursor = 'Hand'
+        $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'
+        $ic = New-NewspaperIcon
+        $ic.Margin = '2,3,18,0'; $ic.VerticalAlignment = 'Top'
+        [void]$row.Children.Add($ic)
+        $ns = New-Object Windows.Controls.StackPanel
+        $eb = New-TB -Text ('DIE MORGENMELDUNG  ' + [char]0x2022 + '  ' + (Format-ShortDate $mday)) `
+                     -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold
+        [void]$ns.Children.Add($eb)
+        $hl0 = New-TB -Text (Get-LwLead -Rep (Get-LwDayReport -Pilot $Pilot) -Pilot $Pilot) -Family $SerifFam -Size 17 -Colour '#E9E3D4' -Wrap
+        $hl0.Margin = '0,4,0,0'
+        [void]$ns.Children.Add($hl0)
+        $go = New-TB -Text 'not yet read - click to open it' -Family $CondFam -Size 12 -Colour '#6F828C'
+        $go.Margin = '0,5,0,0'
+        [void]$ns.Children.Add($go)
+        [void]$row.Children.Add($ns)
+        $nb.Child = $row
+        $nb.Add_MouseLeftButtonUp({ param($s,$e) Show-Tab 'paper' })
+        [void]$script:Stage.Children.Add($nb)
+    }
 
     # the man himself
     # -22 at the foot: New-Frame carries a 26px bottom margin of its own,
@@ -4882,6 +5153,22 @@ function Show-ReadyRoom {
         [void]$script:Stage.Children.Add($nx)
     }
 
+    # First-timer's orders, the same box the RAF dispersal puts up until a
+    # sortie is in the book. A man posted to a Gruppe has no more idea
+    # what to press than a man posted to a squadron does.
+    if ([int]$career.sorties -eq 0) {
+        $ord = New-Object Windows.Controls.Border
+        $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
+        $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
+        $os2 = New-Object Windows.Controls.StackPanel
+        [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
+        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        $ot.Margin = '0,6,0,0'
+        [void]$os2.Children.Add($ot)
+        $ord.Child = $os2
+        [void]$script:Stage.Children.Add($ord)
+    }
+
     # his aircraft
     $acFile = Get-GruppeAircraftPath $g
     if ($acFile) {
@@ -4904,7 +5191,6 @@ function Show-ReadyRoom {
     }
 
     # where the Gruppe stands
-    $g = @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq $unit } | Select-Object -First 1
     if ($g) {
         $rec = New-Object Windows.Controls.Border
         $rec.Background = Res 'Panel'; $rec.BorderBrush = Res 'Rule'; $rec.BorderThickness = '1'
@@ -4935,8 +5221,15 @@ function Show-ReadyRoom {
         $gb = Get-KillBins $Pilot
         $byType = @()
         for ($k = 0; $k -lt $gb.Count; $k++) { if ([int]$gr.Kills[$k] -gt 0) { $byType += "$([int]$gr.Kills[$k]) x $($gb[$k])" } }
+        # Zeros written out as sentences, not counted into a template.
+        # "0 aircraft lost and 0 damaged, 0 pilots gone" is what the
+        # template produced and it reads like a form rather than a report.
+        $ls = @()
+        if ([int]$gr.AcLost -gt 0)     { $ls += "$($gr.AcLost) aircraft lost" }
+        if ([int]$gr.AcDamaged -gt 0)  { $ls += "$($gr.AcDamaged) damaged" }
+        if ([int]$gr.PilotsLost -gt 0) { $ls += "$($gr.PilotsLost) pilots gone" }
         $t1 = "$($gr.Actions) action$(if ($gr.Actions -ne 1) { 's' } else { '' }) flown, $($gr.Launched) sorties put up. " +
-              "$($gr.AcLost) aircraft lost and $($gr.AcDamaged) damaged, $($gr.PilotsLost) pilots gone. " +
+              $(if ($ls.Count) { ($ls -join ', ') + '. ' } else { 'Nothing lost. ' }) +
               $(if ($gr.Total -gt 0) { "Claims: $($gr.Total), $($byType -join ', ')." } else { 'No claims yet.' })
         $tb1 = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text $t1
         $tb1.Margin = '0,8,0,0'; $tb1.MaxWidth = 900

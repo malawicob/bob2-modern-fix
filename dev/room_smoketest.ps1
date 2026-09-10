@@ -1,4 +1,4 @@
-# Smoke test: BUILD every screen of the Squadron Room, offscreen.
+﻿# Smoke test: BUILD every screen of the Squadron Room, offscreen.
 #
 # Why it exists: on 8 September 2026 the Room would not open at all. One
 # line still read a roster record's victories as a number after they had
@@ -118,6 +118,14 @@ try {
         Invoke-GruppeSubmit
         $lp = Get-Pilot
         "    $rk : $($lp.rank) of $($lp.unit), $($lp.staffel). Staffel, ready room drew $($script:Stage.Children.Count) blocks"
+    }
+    # Every tab on the German side, the way the RAF's four are swept
+    # above. The Morgenmeldung shipped only because it was added by hand
+    # to this list; a tab that nothing builds is a tab nobody finds broken
+    # until a player finds it.
+    foreach ($tab in 'dispersal','logbook','gruppen','paper') {
+        try { Show-Tab $tab; "    tab $tab : drew $($script:Stage.Children.Count) blocks" }
+        catch { $fails += "lw tab $tab : $($_.Exception.Message)"; "    tab $tab : FAILED - $($_.Exception.Message)" }
     }
     Set-Side 'raf'
 }
