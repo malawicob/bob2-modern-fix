@@ -1,4 +1,4 @@
-﻿# Smoke test: BUILD every screen of the Squadron Room, offscreen.
+# Smoke test: BUILD every screen of the Squadron Room, offscreen.
 #
 # Why it exists: on 8 September 2026 the Room would not open at all. One
 # line still read a roster record's victories as a number after they had
@@ -113,6 +113,9 @@ try {
     "    adjutant : drew $($script:Stage.Children.Count) blocks"
     $script:NameBox.Text = 'Testflieger'
     $script:SelPortrait = 'pilot01.jpg'
+    # reporting now asks for an aircraft number as well, and without one
+    # Invoke-GruppeSubmit writes acnum 0 and the aeroplane comes out bare
+    $script:SelAcNum = 7
     foreach ($rk in @('Unteroffizier','Leutnant')) {
         $script:SelRank = $rk
         Invoke-GruppeSubmit

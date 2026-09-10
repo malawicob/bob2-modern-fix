@@ -20,6 +20,7 @@ param(
     [ValidateSet('raf','lw')][string]$Side = 'raf',
     [ValidateSet('dispersal','logbook','map','paper','postings')][string]$Tab = 'dispersal',
     [string]$Date,
+    [string]$Unit,
     [string]$Room,
     [string]$Png
 )
@@ -37,6 +38,7 @@ $WantSide = $Side
 $WantTab  = $Tab
 $WantPng  = $Png
 $WantDate = $Date
+$WantUnit = $Unit
 if (-not (Test-Path $Room)) { Write-Host "Cannot find the Room at $Room" -ForegroundColor Red; exit 1 }
 $src = Get-Content $Room -Raw
 $src = $src -replace '(?m)^\[void\]\$Win\.ShowDialog\(\)\s*$', ''
@@ -55,13 +57,19 @@ Set-StateSide $WantSide
 $script:Side = $WantSide
 if (-not (Test-Path $script:StateDir)) { New-Item -ItemType Directory -Path $script:StateDir -Force | Out-Null }
 
+# -Unit means "show me THIS Gruppe", so an existing career in the copied
+# state has to go or the preview quietly shows the career it found and
+# ignores what was asked for. It cost three identical renders once.
+if ($WantUnit -and (Test-Path $PilotPath)) { Remove-Item $PilotPath -Force }
 $pl = Get-Pilot
 # The German side may have no career on this machine yet. Post a man to
 # the first Gruppe in the line so there is a ready room to look at,
 # rather than falling back to the postings board and pretending that is
 # what was asked for.
 if (-not $pl -and $WantSide -eq 'lw' -and $WantTab -ne 'postings') {
-    $u = @(Get-LwGruppen)[0]
+    $u = if ($WantUnit) { @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq $WantUnit } | Select-Object -First 1 }
+         else { @(Get-LwGruppen)[0] }
+    if (-not $u) { Write-Host "no such Gruppe: $WantUnit"; exit 1 }
     $script:SelSq = @{
         Unit = "$($u.unit)"; Gesch = "$($u.geschwader)"; Gruppe = "$($u.gruppe)"
         Type = "$($u.type)"; Base = "$($u.field)"; Skill = "$($u.skill)"
@@ -71,6 +79,7 @@ if (-not $pl -and $WantSide -eq 'lw' -and $WantTab -ne 'postings') {
     $script:NameBox.Text = 'Vorschau'
     $script:SelPortrait = 'pilot01.jpg'
     $script:SelRank = 'Leutnant'
+    $script:SelAcNum = 7
     Invoke-GruppeSubmit
     $pl = Get-Pilot
 }

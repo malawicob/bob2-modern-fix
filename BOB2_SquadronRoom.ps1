@@ -4189,6 +4189,18 @@ function Get-LwActivity { param($G) if ([int]$G.luftflotte -eq 2) { 3 } else { 2
 #
 # The Zerstoerer Gruppen fly Bf 110s and there is no 110 art, so they get
 # NOTHING rather than a 109 with somebody else's emblem on it.
+# Whether the Gruppe has a profile painted in ITS OWN markings, or is
+# falling back to the plain factory scheme. It matters because the unit
+# profiles already carry their Geschwader's badge: II./JG 26's aeroplane
+# has the Schlageter S on it before the Room draws anything, and drawing
+# ours on top puts two of them on one cowling.
+function Test-GruppeOwnProfile {
+    param($G)
+    if (-not $G) { return $false }
+    if ("$($G.type)" -notmatch '109') { return $false }
+    $key = ("$($G.unit)" -replace '\.','' -replace '/','_' -replace ' ','')
+    Test-Path (Join-Path $script:AircraftDir ($key + '.png'))
+}
 function Get-GruppeAircraftPath {
     param($G)
     if (-not $G) { return $null }
@@ -4507,7 +4519,7 @@ function New-LwHonourRow {
 
 function Show-GruppeCreate {
     $script:Stage.Children.Clear()
-    $script:SelPortrait = $null; $script:SelBorder = $null
+    $script:SelPortrait = $null; $script:SelBorder = $null; $script:SelAcNum = 0
     if (-not $script:SelSq) { Show-GruppeSelect; return }
     Show-ChromeButtons $false
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($script:SelSq.Unit)" }
@@ -4564,6 +4576,55 @@ function Show-GruppeCreate {
     if (-not $script:SelRank -or ($script:SelRank -notin @('Unteroffizier','Leutnant'))) { $script:SelRank = 'Unteroffizier' }
     Update-LwRankButtons
 
+    # THE ONE MARKING THAT WAS HIS. The Gruppe symbol, the Geschwader
+    # emblem and any Stab chevron all follow the unit and the
+    # appointment, so there is nothing to ask about them. The individual
+    # number is the pilot's own and is painted in his Staffel's colour,
+    # so the choice is shown as the numbers themselves rather than as a
+    # list of bare numerals.
+    #
+    # The Staffel is not settled until he is posted, so these are shown
+    # in white, which is what the 1st, 4th and 7th Staffel wore. Which of
+    # the three he lands in is decided in Invoke-GruppeSubmit a moment
+    # later, and the number keeps its meaning whichever it is.
+    $pickCol = 'white'
+    [void]$script:Stage.Children.Add((New-TB -Text 'YOUR NUMBER' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $numNote = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+        'The number painted forward of the Balkenkreuz. It is the only marking on the aeroplane that ' +
+        'was ever the pilot''s own: the Gruppe symbol, the Geschwader emblem and a staff officer''s ' +
+        'chevron all followed the unit. It will be painted in your Staffel''s colour once you have one.')
+    $numNote.Margin = '0,6,0,10'; $numNote.MaxWidth = 860; $numNote.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($numNote)
+    $numRow = New-Object Windows.Controls.WrapPanel; $numRow.Margin = '0,0,0,18'; $numRow.HorizontalAlignment = 'Left'
+    $numRow.MaxWidth = 900
+    $script:NumBtns = @{}
+    $mk0 = Get-LwMarkings
+    foreach ($n in 1..15) {
+        $nb = New-Object Windows.Controls.Border
+        $nb.Width = 54; $nb.Height = 54; $nb.Margin = '0,0,8,8'; $nb.CornerRadius = '3'
+        $nb.BorderThickness = 2; $nb.Background = B '#101B22'; $nb.Cursor = 'Hand'; $nb.Tag = $n
+        $nb.BorderBrush = B '#22303C'
+        $nf = if ($mk0) { Get-MarkFile "$($mk0.numbers.$n.$pickCol)" } else { $null }
+        $nbmp = if ($nf) { Load-Image -Path $nf -DecodeWidth 96 } else { $null }
+        if ($nbmp) {
+            $ni = New-Object Windows.Controls.Image
+            $ni.Source = $nbmp; $ni.Stretch = 'Uniform'; $ni.Margin = '8'
+            $nb.Child = $ni
+        } else {
+            $nb.Child = (New-TB -Text "$n" -Family $CondFam -Size 18 -Colour '#E9E3D4' -Bold)
+        }
+        $nb.Add_MouseLeftButtonUp({
+            param($sender,$e)
+            $script:SelAcNum = [int]$sender.Tag
+            Update-NumButtons
+            Update-GruppeCreateValid
+        })
+        $script:NumBtns[$n] = $nb
+        [void]$numRow.Children.Add($nb)
+    }
+    [void]$script:Stage.Children.Add($numRow)
+    Update-NumButtons
+
     [void]$script:Stage.Children.Add((New-TB -Text 'YOUR PHOTOGRAPH' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
     $wrap = New-Object Windows.Controls.WrapPanel; $wrap.Margin = '0,10,0,0'; $wrap.HorizontalAlignment = 'Left'
     foreach ($pf in (Get-Portraits)) {
@@ -4596,8 +4657,22 @@ function Update-LwRankButtons {
         $script:LwRankBtns[$k].BorderBrush = if ($on) { $script:BrassBrush } else { B '#22303C' }
     }
 }
+function Update-NumButtons {
+    if (-not $script:NumBtns) { return }
+    foreach ($k in $script:NumBtns.Keys) {
+        $on = ([int]$k -eq [int]$script:SelAcNum)
+        $script:NumBtns[$k].Background = if ($on) { Res 'PanelHi' } else { B '#101B22' }
+        $script:NumBtns[$k].BorderBrush = if ($on) { $script:BrassBrush } else { B '#22303C' }
+    }
+}
 function Update-GruppeCreateValid {
-    $ok = ($script:NameBox -and $script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
+    # The number is part of reporting now, so it is part of the test. A
+    # man who has not picked one would otherwise be given one worked out
+    # from his own name, which is the right answer for a record made
+    # before there was a choice and the wrong one for a new man: he was
+    # asked, and he should answer.
+    $ok = ($script:NameBox -and $script:NameBox.Text.Trim().Length -ge 2) -and
+          ($null -ne $script:SelPortrait) -and ([int]$script:SelAcNum -gt 0)
     Set-ChromeActionEnabled $ok
 }
 function Invoke-GruppeSubmit {
@@ -4627,6 +4702,7 @@ function Invoke-GruppeSubmit {
         period  = "$($q.Period)"
         historical = $false
         portrait = $script:SelPortrait
+        acnum   = [int]$script:SelAcNum
         created = (Get-Date).ToString('yyyy-MM-dd')
     }
     $ld0 = Get-LatestSaveDiary
@@ -4823,6 +4899,269 @@ function Show-Flugbuch {
     }
 }
 
+# =====================================================================
+#  The markings on a Bf 109
+#
+#  An RAF fighter carries two squadron code letters, an individual
+#  letter and a serial, and New-Aircraft paints all four onto the
+#  Spitfire as draggable text. A 109 is a different problem, and only
+#  one part of it was ever the pilot's own:
+#
+#    THE INDIVIDUAL NUMBER, forward of the Balkenkreuz, in his STAFFEL's
+#    colour: white for the 1st, 4th and 7th Staffel, red for the 2nd,
+#    5th and 8th, yellow for the 3rd, 6th and 9th. He picks this.
+#
+#    THE GRUPPE SYMBOL, aft of the cross. I. Gruppe wore nothing at all,
+#    II. a horizontal bar, III. a vertical bar or a wavy line depending
+#    on the Geschwader. Follows the unit.
+#
+#    THE GESCHWADER EMBLEM on the cowling, or, for JG 53, a red band
+#    round the rear fuselage. Follows the unit.
+#
+#    A STAB CHEVRON in place of the number, for the men on the staff.
+#    Follows the appointment.
+#
+#  So the Room offers the number and works the rest out, which is the
+#  right way round and happens to be the historically true one.
+#
+#  These are images rather than glyphs, so they cannot go through
+#  Add-AcMark. Add-AcImage is the same idea for a picture: drawn where
+#  the table says or where it was last dragged to, moved with the mouse,
+#  sized with the wheel, put back with a double-click, and remembered in
+#  the same acpos.json under the same per-side key.
+# =====================================================================
+$MarkPath = Join-Path (Join-Path $ModDir 'lw') 'markings.json'
+function Get-LwMarkings {
+    if ($null -ne $script:LwMarks) { return $script:LwMarks }
+    $m = $null
+    if (Test-Path $MarkPath) {
+        try { $m = Get-Content $MarkPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:LwMarks = $m
+    $m
+}
+# White, red or yellow. The Staffel's colour, not the Gruppe's: 1., 4.
+# and 7. Staffel all wore white, and they sit in different Gruppen.
+function Get-StaffelColour {
+    param($Pilot)
+    $n = 1
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'staffel') -and $Pilot.staffel) {
+        $n = [int]$Pilot.staffel
+    }
+    switch ((($n - 1) % 3) + 1) { 1 { 'white' } 2 { 'red' } default { 'yellow' } }
+}
+# The number he flies. Chosen when he reports to the Gruppe; an older
+# record made before there was a choice gets one from his own name, so
+# it is the same every time rather than a fresh number each opening.
+function Get-AcNumber {
+    param($Pilot)
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'acnum') -and [int]$Pilot.acnum -gt 0) {
+        return [int]$Pilot.acnum
+    }
+    $seed = 0
+    foreach ($c in "$($Pilot.pilot)$($Pilot.unit)".ToCharArray()) { $seed = ($seed * 31 + [int]$c) % 100000 }
+    ($seed % 15) + 1
+}
+function Get-MarkFile {
+    param([string]$Rel)
+    if (-not $Rel) { return $null }
+    $f = Join-Path (Join-Path (Join-Path $ModDir 'lw') 'markings') ($Rel -replace '/','\')
+    if (Test-Path $f) { return $f }
+    $null
+}
+# One picture on the aeroplane. The twin of Add-AcMark, which does the
+# same for text: same acpos.json, same drag, same wheel, same
+# double-click to put it back. The wheel changes WIDTH here where the
+# text version changes FontSize, and the height follows the picture's
+# own shape so a chevron cannot be squashed into a square.
+function Add-AcImage {
+    param($Canvas, [string]$Key, [string]$File, [double]$DX, [double]$DY,
+          [double]$DW, [double]$W, [double]$H, [string]$Tip)
+    if (-not $File) { return $null }
+    $bmp = Load-Image -Path $File -DecodeWidth 320
+    if (-not $bmp) { return $null }
+    $ratio = if ($bmp.PixelWidth -gt 0) { [double]$bmp.PixelHeight / [double]$bmp.PixelWidth } else { 1.0 }
+    $fx = $DX; $fy = $DY; $wf = $DW
+    if ($script:AcPos.ContainsKey($Key)) {
+        $rec = $script:AcPos[$Key]
+        $fx = [double]$rec.x; $fy = [double]$rec.y
+        if ($rec.ContainsKey('s') -and [double]$rec.s -gt 0) { $wf = [double]$rec.s }
+    }
+    $img = New-Object Windows.Controls.Image
+    $img.Source = $bmp; $img.Stretch = 'Fill'
+    $img.Width = $wf * $W; $img.Height = $img.Width * $ratio
+    $img.Cursor = 'SizeAll'
+    $img.ToolTip = $(if ($Tip) { "$Tip  Drag to move, roll the wheel to size it, double-click to put it back." }
+                     else { 'Drag to move, roll the wheel to size it, double-click to put it back.' })
+    [Windows.Controls.Canvas]::SetLeft($img, $fx * $W)
+    [Windows.Controls.Canvas]::SetTop($img,  $fy * $H)
+    # Everything the handlers need travels in the Tag. A closure would
+    # get its own module scope and the $script: writes inside it would
+    # never reach the Room.
+    $img.Tag = @{ Key = $Key; W = $W; H = $H; DX = $DX; DY = $DY; DW = $DW; Ratio = $ratio
+                  Drag = $false; Moved = $false; OX = 0.0; OY = 0.0 }
+    $img.Add_MouseWheel({
+        param($sender, $e)
+        $t = $sender.Tag
+        $wf = ($sender.Width / $t.W) * $(if ($e.Delta -gt 0) { 1.06 } else { 1.0 / 1.06 })
+        $wf = [math]::Max(0.006, [math]::Min(0.45, $wf))
+        $sender.Width = $wf * $t.W; $sender.Height = $sender.Width * $t.Ratio
+        Save-AcImage $sender
+        $e.Handled = $true
+    })
+    $img.Add_MouseLeftButtonDown({
+        param($sender, $e)
+        $t = $sender.Tag
+        if ($e.ClickCount -ge 2) {
+            [Windows.Controls.Canvas]::SetLeft($sender, $t.DX * $t.W)
+            [Windows.Controls.Canvas]::SetTop($sender,  $t.DY * $t.H)
+            $sender.Width = $t.DW * $t.W; $sender.Height = $sender.Width * $t.Ratio
+            $script:AcPos.Remove($t.Key); Save-AcPos $script:AcPos
+            $e.Handled = $true; return
+        }
+        $p = $e.GetPosition($sender.Parent)
+        $t.OX = $p.X - [Windows.Controls.Canvas]::GetLeft($sender)
+        $t.OY = $p.Y - [Windows.Controls.Canvas]::GetTop($sender)
+        $t.Drag = $true; $t.Moved = $false
+        [void]$sender.CaptureMouse(); $e.Handled = $true
+    })
+    $img.Add_MouseMove({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $p = $e.GetPosition($sender.Parent)
+        $nx = $p.X - $t.OX; $ny = $p.Y - $t.OY
+        if (-not $t.Moved -and ([math]::Abs($nx - [Windows.Controls.Canvas]::GetLeft($sender)) -le 2) `
+                          -and ([math]::Abs($ny - [Windows.Controls.Canvas]::GetTop($sender)) -le 2)) { return }
+        $t.Moved = $true
+        $nx = [math]::Max(-20.0, [math]::Min($t.W - 10.0, $nx))
+        $ny = [math]::Max(-20.0, [math]::Min($t.H - 10.0, $ny))
+        [Windows.Controls.Canvas]::SetLeft($sender, $nx)
+        [Windows.Controls.Canvas]::SetTop($sender, $ny)
+    })
+    $img.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
+        if (-not $t.Moved) { return }
+        Save-AcImage $sender
+    })
+    [void]$Canvas.Children.Add($img)
+    $img
+}
+function Save-AcImage {
+    param($Mark)
+    $t = $Mark.Tag
+    $script:AcPos[$t.Key] = @{
+        x = [math]::Round([Windows.Controls.Canvas]::GetLeft($Mark) / $t.W, 4)
+        y = [math]::Round([Windows.Controls.Canvas]::GetTop($Mark)  / $t.H, 4)
+        s = [math]::Round($Mark.Width / $t.W, 4)
+    }
+    Save-AcPos $script:AcPos
+}
+# Which chevron, if any. Only the men on the staff wore one, and only in
+# place of a number: a Kommandeur's machine has no individual number at
+# all. Get-Appointment already works out what a man is doing from his
+# rank and his sorties, so the two agree without a second rule.
+function Get-StabChevron {
+    param($Pilot, $Career)
+    $m = Get-LwMarkings
+    if (-not $m) { return $null }
+    $appt = ''
+    try { $appt = "$(Get-Appointment -Pilot $Pilot -Career $Career)" } catch { }
+    $key = switch -Regex ($appt) {
+        'Kommodore'   { 'kommandeur2'; break }
+        'Kommandeur'  { 'kommandeur';  break }
+        'Adjutant'    { 'adjutant';    break }
+        'Technischer' { 'technical';   break }
+        default       { $null }
+    }
+    if (-not $key) { return $null }
+    Get-MarkFile "$($m.stab.$key)"
+}
+# The aeroplane with his markings on it. Where each mark starts is a
+# fraction of the profile's width, taken off the drawings: the number
+# sits just forward of the cross, the Gruppe symbol just aft of it, the
+# emblem on the cowling below the exhausts, and the band round the rear
+# fuselage. All four can be dragged, because no two of these profiles
+# put the cross in quite the same place.
+function New-LwAircraft {
+    param($Pilot, $Career, $Gruppe)
+    $acFile = Get-GruppeAircraftPath $Gruppe
+    if (-not $acFile) { return $null }
+    $bmp = Load-Image -Path $acFile -DecodeWidth 900
+    if (-not $bmp) { return $null }
+    $ratio = if ($bmp.PixelWidth -gt 0) { [double]$bmp.PixelHeight / [double]$bmp.PixelWidth } else { 0.29 }
+    $acH = $AcW * $ratio
+    $wrap = New-Object Windows.Controls.Grid
+    $wrap.Width = $AcW; $wrap.Height = $acH; $wrap.HorizontalAlignment = 'Left'; $wrap.Margin = '0,2,0,10'
+    $img = New-Object Windows.Controls.Image
+    $img.Source = $bmp; $img.Stretch = 'Fill'; $img.Width = $AcW; $img.Height = $acH
+    [void]$wrap.Children.Add($img)
+
+    $cv = New-Object Windows.Controls.Canvas; $cv.Width = $AcW; $cv.Height = $acH
+    $script:AcPos = Get-AcPos
+    $m = Get-LwMarkings
+    if ($m) {
+        $unit = "$($Pilot.unit)"
+        $key = 'lw|' + ($unit -replace '[^A-Za-z0-9]','')
+        $u = $m.units.$unit
+        $col = Get-StaffelColour $Pilot
+
+        # the number, or a chevron in its place for a staff officer
+        $chev = Get-StabChevron -Pilot $Pilot -Career $Career
+        if ($chev) {
+            [void](Add-AcImage -Canvas $cv -Key "$key|chev" -File $chev `
+                               -DX 0.440 -DY 0.380 -DW 0.075 -W $AcW -H $acH `
+                               -Tip 'The Stab chevron, worn in place of an individual number.')
+        }
+        else {
+            $n = Get-AcNumber $Pilot
+            $nf = Get-MarkFile "$($m.numbers.$n.$col)"
+            if ($nf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|num" -File $nf `
+                                   -DX 0.468 -DY 0.360 -DW 0.045 -W $AcW -H $acH `
+                                   -Tip "Your number, in the $col of the $($Pilot.staffel). Staffel.")
+            }
+        }
+        # the Gruppe symbol, aft of the cross
+        if ($u -and "$($u.gruppe_symbol)") {
+            $gf = Get-MarkFile "$($m.gruppe."$($u.gruppe_symbol)_$col")"
+            if (-not $gf) { $gf = Get-MarkFile "$($m.gruppe."$($u.gruppe_symbol)_white")" }
+            if ($gf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|grp" -File $gf `
+                                   -DX 0.705 -DY 0.395 -DW 0.055 -W $AcW -H $acH `
+                                   -Tip "The $($u.gruppe_symbol -replace 'wavy','') Gruppe symbol.")
+            }
+        }
+        # The Geschwader emblem, but ONLY on the plain factory scheme.
+        # Every Gruppe that has a profile of its own already wears its
+        # badge in the artwork, and drawing ours over the top gives
+        # II./JG 26 two Schlageter shields.
+        $ownArt = Test-GruppeOwnProfile $Gruppe
+        if ((-not $ownArt) -and $u -and "$($u.emblem)") {
+            $ef = Get-MarkFile "$($u.emblem)"
+            if ($ef) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|emb" -File $ef `
+                                   -DX 0.115 -DY 0.330 -DW 0.052 -W $AcW -H $acH `
+                                   -Tip 'The Geschwader emblem.')
+            }
+        }
+        # or, for JG 53, the red band round the rear fuselage, on the
+        # same terms
+        if ((-not $ownArt) -and $u -and "$($u.band)") {
+            $bf = Get-MarkFile "$($u.band)"
+            if ($bf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|band" -File $bf `
+                                   -DX 0.775 -DY 0.285 -DW 0.018 -W $AcW -H $acH `
+                                   -Tip 'The red band the Geschwader wore round the rear fuselage.')
+            }
+        }
+    }
+    [void]$wrap.Children.Add($cv)
+    $wrap
+}
 # =====================================================================
 #  What Berlin claimed: the OKW communique, in English, labelled
 #
@@ -5336,24 +5675,32 @@ function Show-ReadyRoom {
         [void]$script:Stage.Children.Add($ord)
     }
 
-    # his aircraft
-    $acFile = Get-GruppeAircraftPath $g
-    if ($acFile) {
+    # his aircraft, with his markings on it
+    $ac = New-LwAircraft -Pilot $Pilot -Career $career -Gruppe $g
+    if ($ac) {
         # Bare on the page, exactly as New-Aircraft puts the Spitfire and
         # the Hurricane. It was in a Panel-coloured card with a border, and
         # that read as the aeroplane sitting on a grey box while the RAF's
         # sits on the room itself. Same Room, same treatment.
-        $bmp = Load-Image -Path $acFile -DecodeWidth 900
-        if ($bmp) {
-            $img = New-Object Windows.Controls.Image
-            $img.Source = $bmp; $img.Stretch = 'Uniform'
-            $img.Width = $AcW; $img.HorizontalAlignment = 'Left'; $img.Margin = '0,2,0,10'
-            [void]$script:Stage.Children.Add($img)
-        }
+        [void]$script:Stage.Children.Add($ac)
+        $col = Get-StaffelColour $Pilot
+        $parts = @()
+        $chev = Get-StabChevron -Pilot $Pilot -Career $career
+        if ($chev) { $parts += 'your Stab chevron, worn in place of a number' }
+        else { $parts += "your number $(Get-AcNumber $Pilot) in the $col of the $($Pilot.staffel). Staffel" }
+        $mk = Get-LwMarkings
+        $u = if ($mk) { $mk.units."$($Pilot.unit)" } else { $null }
+        $ownArt = Test-GruppeOwnProfile $g
+        if ($u -and "$($u.gruppe_symbol)") { $parts += 'the Gruppe symbol aft of the cross' }
+        if ((-not $ownArt) -and $u -and "$($u.emblem)") { $parts += 'the Geschwader emblem on the cowling' }
+        if ((-not $ownArt) -and $u -and "$($u.band)") { $parts += 'the red band the Geschwader wore round the rear fuselage' }
+        if ($ownArt) { $parts += 'and the Geschwader badge already in its paint' }
         $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
-            "$($Pilot.unit) in its own markings. The individual number and the Gruppe symbol are not " +
-            'painted on yet, the way the squadron codes go on a Spitfire.')
-        $note.Margin = '0,-4,0,18'; $note.MaxWidth = 760; $note.HorizontalAlignment = 'Left'
+            "$($Pilot.unit) in its own markings, with " + ($parts -join ', ') + '. ' +
+            'Only the number was ever the pilot''s own; the rest followed the unit and the appointment. ' +
+            'Each can be dragged to sit better on the aeroplane, and the wheel sizes it. Where you put ' +
+            'them is remembered.')
+        $note.Margin = '0,-4,0,18'; $note.MaxWidth = 860; $note.HorizontalAlignment = 'Left'
         [void]$script:Stage.Children.Add($note)
     }
 
