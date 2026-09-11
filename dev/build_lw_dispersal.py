@@ -199,7 +199,7 @@ LWHUT = 438             # the Luftwaffe hut, also never placed anywhere
 # a single lwtent and every GLFTTNT2 field inherited it, so the tent line
 # is built rather than lifted. Eight in a shallow row, the way the ones
 # at Abbeville sit.
-TENT_LINE = 8
+TENT_LINE = 12
 TENT_SPACING = 26
 
 # AIR DEFENCE. Five guns across forty fields was not a defended aerodrome.
@@ -348,15 +348,27 @@ GROUP_OF[328] = GROUP_OF[329] = 'flock'
 # better: they were on the wrong side. Spreading the groups evenly round
 # the compass, which fixed the pile-up, guaranteed most of them faced
 # away from him.
-DISPERSAL_EAST = 92      # degrees, the mean of the five
-EAST_ARC = 45            # groups sit within this of it
+# 99, Abbeville's own bearing, not the mean of the five. Patrick reports
+# Abbeville's vehicles a few METRES off his starboard wing while ours,
+# at the same radius but 66 degrees, are still away in the distance. At
+# 500 m a 33 degree difference is 290 m of arc, which is a field's width
+# round the perimeter, so the mean was not close enough.
+DISPERSAL_EAST = 99
+# And a narrow arc, not a wide one. Spreading the groups round the
+# compass was the fix for them piling up on one side; it turns out the
+# BDG pile theirs up too, and on purpose. Every Abbeville object sits
+# between 75 and 114 degrees. The pile is right, it was the BEARING that
+# was wrong.
+EAST_ARC = 22
+# Abbeville's own radii: tents 528 to 541, barns and byres 534 to 545,
+# vehicles 546 to 594, revetment 574. Ours now sit in the same band.
 GROUP_PLAN = {
-    'dispersal': (540, 55),
-    'aircraft':  (580, 50),
-    'transport': (640, 45),
-    'flak':      (520, 70),
-    'bombs':     (670, 30),
-    'farm':      (620, 55),
+    'dispersal': (530, 55),
+    'aircraft':  (600, 50),
+    'transport': (575, 45),
+    'flak':      (640, 70),
+    'bombs':     (660, 30),
+    'farm':      (545, 55),
     'flock':     (700, 40),
 }
 
@@ -406,7 +418,12 @@ def anchor_group(items, fld, markers, want_r, taken, aim=None, spread=40):
             if c is None or c < MIN_CLEAR:
                 continue
             apart = min((math.hypot(cx - tx, cz - tz) / U for tx, tz in taken), default=9e9)
-            if apart < 75:
+            # 45, not 75. Seven groups needing 75 m between them is 525 m
+            # of separation, and a 44 degree arc at 530 m is only 407 m
+            # long, so they could not fit and spilled out of the arc
+            # westward. They differ by radius as well as bearing, so a
+            # smaller gap is enough to keep them from merging.
+            if apart < 45:
                 continue
             score = min(c, 400.0) + min(apart, 400.0) * 0.4
             if best is None or score > best[0]:
@@ -729,9 +746,15 @@ def main():
         # fanned across the eastern arc rather than round the whole
         # compass, so the field faces the aeroplane instead of hiding
         # behind it
-        step = (2.0 * EAST_ARC) / (len(order) - 1)
-        turn = rnd.uniform(-8, 8)
-        aims = {g: (DISPERSAL_EAST - EAST_ARC + i * step + turn) % 360
+        # The dispersal sits ON the bearing, not at one end of the arc.
+        # Fanning all seven groups evenly across it put the biggest one,
+        # twelve tents and the hangar, at 77 degrees and dragged the
+        # field's centre round to 72 at Audembert. It is the thing you
+        # are meant to see, so it goes where Abbeville's is and the rest
+        # fan out either side of it.
+        turn = rnd.uniform(-6, 6)
+        offsets = (0, -14, 14, -21, 21, -8, 8)
+        aims = {g: (DISPERSAL_EAST + offsets[i % len(offsets)] + turn) % 360
                 for i, g in enumerate(order)}
         for gname in order:
             items = groups.pop(gname, [])
@@ -740,7 +763,7 @@ def main():
             want, span = GROUP_PLAN.get(gname, (300, 60))
             tighten(items, span)
             got = anchor_group(items, fld, fld['runway'], max(want, MIN_RADIUS_G),
-                               taken, aim=aims[gname], spread=18)
+                               taken, aim=aims[gname], spread=14)
             if not got:                      # nowhere in its own narrow arc
                 got = anchor_group(items, fld, fld['runway'],
                                    max(want, MIN_RADIUS_G), taken,
