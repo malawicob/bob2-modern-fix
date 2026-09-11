@@ -20,20 +20,21 @@
  "quartets": [
   {
    "fields": [
-    "Guines",
-    "Audembert",
     "Caffiers",
-    "Marquise"
+    "Abbeville",
+    "Guines",
+    "Audembert"
    ],
    "uids": [
-    13559,
-    13565,
     13563,
-    13555
+    13567,
+    13559,
+    13565
    ],
    "based": [
     "Bf 109E"
-   ]
+   ],
+   "note": "TEST: Caffiers is ours, Abbeville is the BDG's own dressing"
   },
   {
    "fields": [

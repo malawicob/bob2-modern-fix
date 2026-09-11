@@ -122,7 +122,7 @@ MIN_RADIUS = 400
 # WISSANT PUTS ONE 88 m FROM ITS REFERENCE and Le Havre 82 m. So going in
 # close is not a liberty, it is one of the two ways it was actually done,
 # and what governs is distance from the markers, which is unchanged.
-MIN_RADIUS_G = 110
+MIN_RADIUS_G = 80
 MAX_RADIUS = 700
 SMALL_FIELD = 1.4        # a dispersal may sit this far out relative to the field
 JITTER = 15              # metres, vehicles and figures only
@@ -314,13 +314,13 @@ GROUP_OF[328] = GROUP_OF[329] = 'flock'
 # is the thing you are meant to see on the way in, so it is the closest
 # in that the runway markers allow.
 GROUP_PLAN = {
-    'dispersal': (130, 55),
-    'aircraft':  (170, 50),
-    'transport': (200, 45),
-    'flak':      (260, 70),
-    'bombs':     (300, 30),
-    'farm':      (330, 55),
-    'flock':     (380, 40),
+    'dispersal': (90, 55),
+    'aircraft':  (120, 50),
+    'transport': (150, 45),
+    'flak':      (200, 70),
+    'bombs':     (230, 30),
+    'farm':      (260, 55),
+    'flock':     (300, 40),
 }
 
 
@@ -356,7 +356,7 @@ def anchor_group(items, fld, markers, want_r, taken):
             if c is None or c < MIN_CLEAR:
                 continue
             apart = min((math.hypot(cx - tx, cz - tz) / U for tx, tz in taken), default=9e9)
-            if apart < 95:
+            if apart < 75:
                 continue
             score = min(c, 400.0) + min(apart, 400.0) * 0.4
             if best is None or score > best[0]:
