@@ -324,3 +324,71 @@ and no `TX` taxi points at all, and there is no compiler in this install
 for the `.BFI` source they would be written in. The exe does support a
 second record type, `CHAR_ANIM_ADD`, for animated figures, but not one of
 the 295 shipped files uses it, so it is unproven.
+
+
+## Third pass, 11 September 2026: both sides
+
+Worked out from the game's own catalogue rather than from taste. 957 shapes,
+and **297 that nobody has ever placed anywhere**.
+
+### The German fields had no buildings at all
+
+Not "no scenery": no buildings. Every `BFIELDS/LUFAF` file is a 33-byte stub,
+and the airfield `Shape` each field carries in `MAINWLD.BFI` is a few hundred
+bytes (`GLFTTNT2` is 367) where a real hangar model is 110 KB. The `Shape` is a
+ground marker. So:
+
+- **A hangar on every field.** `436 frchhngr` and `437 frhngro` at the permanent
+  stations, `503 TntHgr` at the tented ones, chosen by the field's own `Shape`.
+  None had ever been placed.
+- **`438 lwhut`**, the Luftwaffe's own hut, also never placed.
+- **Air defence that exists.** Five guns over forty fields became two or three a
+  field, three at the Kanalfront, using `419` the 88, `421` the Flakvierling,
+  `427` the half-track mounting, `428` the 88 on tow and `430` the large
+  revetment. None of those five had been placed either.
+- **The bomb dumps came off the fighter fields.** 128 `324 BM1000` were spread
+  over all forty because the Cocquelles exemplar carries a dump; a 1000 kg bomb
+  has no business at a 109 field.
+
+1,324 objects to **1,460**, 36.5 a field. The six the BDG dressed by hand carry
+60 to 115 each, so this is still lighter than any of them.
+
+### The RAF fields had the same disease
+
+13 of 44 have under ten objects within 2 km and 12 have none; 17 of the
+`AF*.BF` files are the same 33-byte stubs. Meanwhile **44 of the 82 RAF
+airfield-building shapes had never been placed once**, including every hangar
+the RAF had.
+
+`dev/build_raf_dispersal.py` puts the Living dispersal on **28 more fields**: the
+ones already carrying scenery, plus Coltishall, Wittering, Digby and Kirton,
+four bare fighter stations a player can be posted to. 540 objects. Parked
+Spitfires and Hurricanes go on as well, `25 SPIT` and `44 HURR`, neither ever
+placed anywhere; Digby and Kirton, whose battlefield files are stubs, also get a
+hangar, a watch office and a guard house.
+
+**The British runway data is better than the German.** Fourteen fields carry a
+real centreline in `MAINWLD.BFI`, two absolute points with an offset either
+side, so clearance is a distance to a line segment rather than to a cloud of
+markers. Coltishall's strip is a known 772 m on a known axis. Clearance comes
+out at 164 m at worst against the 120 m Kenley's own hand-made block keeps.
+
+**Eleven fields are deliberately left alone.** Andover, Boscombe Down, Brize
+Norton, Detling, Ford, Hendon, Newcastle, Odiham, Pembrey, Shoreham and Worthy
+Down have neither a centreline nor scenery near enough to show where the ground
+is safe. Detling's nearest object is 2.2 km away. Placing blind is how objects
+end up on a strip.
+
+### A check that was wrong all along
+
+The audit verified a shape's `.bin` by matching the catalogue name against
+filenames in three folders. Both halves were wrong. There are **nine** shape
+folders, `GRPBIN`, `GRPBIN2`, `SHPBIN`, `ShpBin2`, `shpbin3`, `Shpbin4`,
+`Shpbin5`, `Shpbin6`, `Shpbin7`, with the case varying between them. And the
+catalogue name is not the filename: shape 479 is `acctrolley` in the catalogue
+and `ACCTRL.bin` on disk, an abbreviation rather than a truncation, so no prefix
+rule recovers it. It reported models missing that have shipped since 2005.
+
+The test now is that an id must be in the catalogue, and must either have a
+model findable by name or already be placed in a shipped file. Being in a file
+that ships and flies is the better evidence of the two.

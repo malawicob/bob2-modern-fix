@@ -25,7 +25,7 @@ floor rather than a target: the generator searches for the bearing that
 maximises the distance, so the fields it writes clear it several times
 over. Everything below this check is hygiene.
 """
-import re, os, sys, math, json
+import math, re, os, sys, math, json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -39,7 +39,15 @@ FIELD_RADIUS = 1500   # metres from the field reference point
 # 24), two aeroplanes per Gruppe based there (up to 6), and seven sheep
 # and cows. 1,324 objects over 40 fields against 87,272 already loading
 # is about 1.5%, and only the field you are standing at is ever near you.
-CEILING = 40
+# 44, raised from 40 on 11 September 2026 when the hangar, the hut and
+# real air defence went on. A field is now the dressing (up to 24), a
+# hangar and two huts, two or three guns with a revetment, two aeroplanes
+# per Gruppe based there, and five sheep and cows.
+#
+# For scale: the six fields the BDG dressed by hand carry 60 to 115
+# objects each, and Marck 224. 44 is still well under the lightest of
+# them, and 1,460 objects against the 87,272 already loading is 1.7%.
+CEILING = 44
 FLOOR = 14
 CLASH = 25            # metres; closer than this to a stock object is a stack
 
@@ -131,25 +139,51 @@ def main():
         if mm:
             cat[int(mm.group(1))] = re.sub(r'\.bin$', '', mm.group(2), flags=re.I)
     have = set()
-    for d in ('SHPBIN', 'ShpBin2', 'GRPBIN'):
-        p = os.path.join(GAME, d)
-        if os.path.isdir(p):
-            for fn in os.listdir(p):
+    # THE .bin CHECK CANNOT BE DONE BY NAME, and pretending otherwise
+    # reported models missing that have shipped since 2005.
+    #
+    # Two reasons. The folders are not the three this scanned: there are
+    # nine, GRPBIN, GRPBIN2, SHPBIN, ShpBin2, shpbin3, Shpbin4, Shpbin5,
+    # Shpbin6 and Shpbin7, with the case varying between them. And the
+    # catalogue's name is not the filename: shape 479 is "acctrolley" in
+    # the catalogue and ACCTRL.bin on disk, which is an abbreviation and
+    # not a truncation, so no prefix rule recovers it.
+    #
+    # So the test is what it should always have been: an id must be IN
+    # THE CATALOGUE, and it must either have a model findable by name or
+    # already be placed in a shipped ObjectAdds file. Being placed in a
+    # file that ships and flies is the better evidence of the two.
+    oa_dir = os.path.join(GAME, 'ObjectAdds')
+    have = set()
+    for d in sorted(os.listdir(GAME)):
+        if re.match(r'(shp|grp)bin\d*$', d, re.I) and os.path.isdir(os.path.join(GAME, d)):
+            for fn in os.listdir(os.path.join(GAME, d)):
                 have.add(os.path.splitext(fn)[0].lower())
+    shipped = set()
+    for fn in sorted(os.listdir(oa_dir)):
+        if fn.lower().endswith('.txt') and not fn.startswith(('LW_Airfields', 'RAF_Airfields')):
+            shipped.update(s for _x, _z, _h, s in read_objectadds(os.path.join(oa_dir, fn)))
+
+    def check_shape(sid, where):
+        if sid not in cat:
+            fail('%s: shape %d is not in List_From_Bin_catalog.txt' % (where, sid))
+            return
+        if cat[sid].lower() in have or sid in shipped:
+            return
+        fail('%s: shape %d (%s) has neither a model found by name nor any use '
+             'in a shipped file' % (where, sid, cat[sid]))
+
     used = sorted({o['id'] for f in man['fields'] for o in f['objects']})
     for sid in used:
-        if sid not in cat:
-            fail('shape %d is not in List_From_Bin_catalog.txt' % sid)
-        elif cat[sid].lower() not in have:
-            fail('shape %d (%s) has no .bin on disk' % (sid, cat[sid]))
-    print('  %d distinct shapes, every one catalogued and present as a .bin' % len(used))
+        check_shape(sid, 'Luftwaffe')
+    print('  %d distinct shapes, every one catalogued and either modelled or already flying'
+          % len(used))
 
     # ---- coverage and size -------------------------------------------
     print('THE COVERAGE')
     oob = json.load(open(os.path.join(ROOT, 'squadronroom/lw/oob.json'), encoding='utf-8'))
     want = set(r['field'] for r in oob)
     got = set(f['field'] for f in man['fields'])
-    oa_dir = os.path.join(GAME, 'ObjectAdds')
     dressed = []
     for fn in sorted(os.listdir(oa_dir)):
         if fn.lower().endswith('.txt') and fn != 'LW_Airfields.txt':
@@ -198,6 +232,59 @@ def main():
                 fail('%s: a negative coordinate, which the exe reads as unsigned' % f['field'])
     if not far:
         print('  every object within %d m of its own field' % FIELD_RADIUS)
+
+    # ---- the RAF side, which has a real runway to measure against ----
+    raf_path = os.path.join(ROOT, 'dispersal/raf-airfields.json')
+    raf_txt = os.path.join(ROOT, 'dispersal/RAF_Airfields.txt')
+    if os.path.exists(raf_path) and os.path.exists(raf_txt):
+        print('THE RAF FIELDS')
+        raf = json.load(open(raf_path, encoding='utf-8'))['fields']
+        rtot = sum(len(f['objects']) for f in raf)
+        rraw = open(raf_txt, encoding='ascii', errors='replace').read()
+        rn = 0
+        for ln in rraw.splitlines():
+            t = ln.strip()
+            if not t or t.startswith('#'):
+                continue
+            if not re.match(r'^OBJECT_ADD (\d+),(\d+),(-?\d+(?:\.\d+)?),(\d+)(?: #.*)?$', t):
+                fail('a RAF line the exe would reject: %r' % t[:70])
+            else:
+                rn += 1
+        if rn != rtot:
+            fail('RAF file has %d objects, the manifest says %d' % (rn, rtot))
+
+        def segd(p, a, b):
+            ax, az = a; bx, bz = b; px, pz = p
+            dx, dz = bx - ax, bz - az
+            L = dx * dx + dz * dz
+            t = 0.0 if L == 0 else max(0.0, min(1.0, ((px-ax)*dx + (pz-az)*dz) / L))
+            return math.hypot(px - (ax + t*dx), pz - (az + t*dz)) / U
+
+        RAF_MIN = 120        # Kenley's own clearance, the least of the five
+        worst = (1e9, None)
+        withrw = 0
+        for f in raf:
+            if f.get('runway'):
+                withrw += 1
+                a, b = [tuple(p) for p in f['runway']]
+                for o in f['objects']:
+                    d = segd((o['x'], o['z']), a, b)
+                    if d < RAF_MIN:
+                        fail('%s: shape %d is %.0f m from the runway centreline, '
+                             'inside the %d m the five hand-made blocks keep'
+                             % (f['field'], o['id'], d, RAF_MIN))
+                    if d < worst[0]:
+                        worst = (d, f['field'])
+            for o in f['objects']:
+                check_shape(o['id'], 'RAF')
+            n = len(f['objects'])
+            if n > 30:
+                fail('%s has %d objects, over the RAF ceiling of 30' % (f['field'], n))
+        if worst[1]:
+            print('  closest object to a runway centreline: %.0f m, at %s (floor is %d m)'
+                  % (worst[0], worst[1], RAF_MIN))
+        print('  %d fields, %d objects, %d measured against a real centreline'
+              % (len(raf), rtot, withrw))
 
     print('')
     if fails:

@@ -142,7 +142,33 @@ PARK_SPACING = 55       # metres between them, as the shipped Ju 52s sit
 # and nine cows near Marck. A grass aerodrome was kept down by somebody's
 # flock, and it costs a handful of objects.
 SHEEP, COW = 328, 329
-FLOCK = 7
+FLOCK = 5
+
+# A HANGAR, WHICH NO GERMAN FIELD IN THE GAME HAS.
+#
+# Not "no scenery": no buildings. All 62 BFIELDS\LUFAF files are 33-byte
+# stubs, and the airfield Shape each field carries in MAINWLD.BFI is a
+# few hundred bytes - GLFTTNT2 is 367 - where a real hangar model is
+# 110 KB. So the Shape is a ground marker and nothing more, and 436, 437
+# and 503 have never been placed anywhere by anyone.
+#
+# Which one follows the field's own Shape: FUL is a permanent station and
+# gets a requisitioned French hangar, TNT is a tented field and gets the
+# tent hangar. EMPTY has no ground model at all, so it takes the tent.
+HANGAR = {'GLFTFUL1': 436, 'GLFTFUL2': 437, 'GLFTTNT1': 503,
+          'GLFTTNT2': 503, 'EMPTY': 503}
+LWHUT = 438             # the Luftwaffe hut, also never placed anywhere
+
+# AIR DEFENCE. Five guns across forty fields was not a defended aerodrome.
+# The 88 and the large revetment that goes with it, the Flakvierling, and
+# the half-track mounting; none of 419, 421, 427, 428 or 430 has ever been
+# placed either.
+FLAK_LIGHT = [420, 421]                  # 2 cm Flak 38, Flakvierling
+FLAK_HEAVY = [419, 428]                  # 88 firing, 88 on tow
+REVET_HEAVY = 430                        # large revetment, beside an 88
+FLAK_TRACK = 427                         # Flakvierling on an SdKfz 7
+# The Kanalfront stations were the ones being bombed, so they get more.
+KANALFRONT_LAT = 50.4
 
 # What is based at a field changes what is standing about on it. These
 # swap shape ids in place, never positions, so the geometry that was
@@ -344,6 +370,11 @@ def dress(kit, types, rnd):
     """Give the field the character of what is based on it."""
     out = [dict(k) for k in kit]
     bomber = any(t.split()[0] in ('He', 'Ju', 'Do') for t in types)
+    # A 1000 kg bomb has no business at a 109 field. 128 of them were
+    # spread over all forty, because the Cocquelles exemplar carries a
+    # bomb dump and every tented field inherited it.
+    if not bomber:
+        out = [k for k in out if k['id'] != 324]
     swaps = BOMBER_KIT if bomber else FIGHTER_KIT
     vehicles = [k for k in out if k['id'] in MOVEABLE and k['id'] not in CREW]
     rnd.shuffle(vehicles)
@@ -355,6 +386,40 @@ def dress(kit, types, rnd):
         if k['id'] in MOVEABLE:
             k['dx'] += rnd.uniform(-JITTER, JITTER)
             k['dz'] += rnd.uniform(-JITTER, JITTER)
+    return out
+
+
+def buildings(fld, rnd):
+    """The hangar and the hut, which no German field has ever had."""
+    out = []
+    h = HANGAR.get(fld['shape'], 503)
+    out.append({'dx': rnd.uniform(-40, 40) - 150, 'dz': rnd.uniform(-30, 30) + 150,
+                'hdg': rnd.choice([0, 90, 180, 270]) + rnd.uniform(-6, 6), 'id': h})
+    for i in range(2):
+        out.append({'dx': -210 + i * 46 + rnd.uniform(-10, 10),
+                    'dz': 96 + rnd.uniform(-14, 14),
+                    'hdg': rnd.uniform(0, 360), 'id': LWHUT})
+    return out
+
+
+def flak(rnd, kanalfront):
+    """Two guns, three at the Kanalfront, and a revetment for the 88."""
+    out = []
+    n = 3 if kanalfront else 2
+    for i in range(n):
+        heavy = (i == 0)
+        a = math.radians(rnd.uniform(0, 360))
+        r = rnd.uniform(210, 330)
+        dx, dz = r * math.cos(a), r * math.sin(a)
+        sid = rnd.choice(FLAK_HEAVY) if heavy else rnd.choice(FLAK_LIGHT)
+        out.append({'dx': dx, 'dz': dz, 'hdg': rnd.uniform(0, 360), 'id': sid})
+        if heavy:
+            out.append({'dx': dx + rnd.uniform(-7, 7), 'dz': dz + rnd.uniform(-7, 7),
+                        'hdg': rnd.uniform(0, 360), 'id': REVET_HEAVY})
+    if kanalfront:
+        a = math.radians(rnd.uniform(0, 360))
+        out.append({'dx': 260 * math.cos(a), 'dz': 260 * math.sin(a),
+                    'hdg': rnd.uniform(0, 360), 'id': FLAK_TRACK})
     return out
 
 
@@ -443,6 +508,10 @@ def main():
                             'ratio': (radius / reach) if reach > 0 else 1.4,
                             'raw': len(kit)}
 
+    geo = {}
+    geo_path = os.path.join(ROOT, 'squadronroom/lw/fields.json')
+    if os.path.exists(geo_path):
+        geo = json.load(open(geo_path, encoding='utf-8'))
     oob = json.load(open(a.oob, encoding='utf-8'))
     by_field = {}
     for r in oob:
@@ -472,7 +541,12 @@ def main():
         # A bigger station gets more on it: two aeroplanes per Gruppe
         # based there, which is the only thing that scales with how busy
         # the field was. Plus somebody's flock keeping the grass down.
-        kit = kit + parked(by_field[field], rnd, len(by_field[field])) + flock(rnd)
+        lat = (geo.get(field) or [0, 0])[0]
+        kit = (kit
+               + buildings(fld, rnd)
+               + flak(rnd, lat >= KANALFRONT_LAT)
+               + parked(by_field[field], rnd, len(by_field[field]))
+               + flock(rnd))
         # the same distance out, relative to the size of the aerodrome,
         # as the exemplar's own dispersal sat from its field
         reach = field_reach(fld)

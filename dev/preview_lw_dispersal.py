@@ -43,6 +43,9 @@ COLOUR = {
     # parked aeroplanes and livestock, added 11 September 2026
     19: (120, 200, 255), 20: (120, 200, 255), 22: (120, 200, 255), 32: (120, 200, 255),
     23: (255, 140, 190), 24: (255, 140, 190),
+    25: (255, 140, 190), 44: (255, 140, 190), 45: (120, 200, 255),
+    444: (150, 180, 240), 448: (150, 180, 240), 80: (150, 180, 240), 453: (150, 180, 240),
+    1423: (250, 250, 250), 480: (250, 250, 250),
     328: (200, 255, 160), 329: (200, 255, 160),
     442: (250, 250, 250), 443: (250, 250, 250), 347: (250, 250, 250),
 }
@@ -71,6 +74,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--game', default='/mnt/d/Battle of Britain II_Latest_test')
     ap.add_argument('--man',  default=os.path.join(ROOT, 'dispersal/lw-airfields.json'))
+    ap.add_argument('--raf',  default=os.path.join(ROOT, 'dispersal/raf-airfields.json'),
+                    help='RAF manifest; its fields are drawn after the German ones')
     ap.add_argument('--out',  default='/tmp/lw-fields.png')
     ap.add_argument('--span', type=float, default=1600.0, help='metres across a panel')
     a = ap.parse_args()
@@ -79,6 +84,15 @@ def main():
 
     man = json.load(open(a.man, encoding='utf-8'))
     fields = man['fields']
+    # The RAF fields ride on the same sheet. Theirs carry a runway
+    # centreline rather than a cloud of markers, so it is drawn as the
+    # line it actually is.
+    if a.raf and os.path.exists(a.raf):
+        for f in json.load(open(a.raf, encoding='utf-8'))['fields']:
+            fields.append({'field': f['field'].title(), 'shape': 'RAF ' + f['kind'],
+                           'exemplar': f['from'], 'clearance': f.get('runway_clear') or 0,
+                           'x': f['x'], 'z': f['z'], 'objects': f['objects'],
+                           'markers': [], 'centreline': f.get('runway')})
 
     oa_dir = os.path.join(a.game, 'ObjectAdds')
     stock = []
@@ -117,8 +131,11 @@ def main():
         cy = 46 + PAD + (i // COLS) * (P + HDR + PAD)
         d.rectangle([cx, cy, cx + P, cy + HDR + P], fill=INK['panel'], outline=INK['rule'])
         d.text((cx + 8, cy + 5), fl['field'][:26], font=f11, fill=INK['label'])
-        d.text((cx + 8, cy + 19), '%s  %d objects from %s  %d m clear of the markers'
-               % (fl['shape'], len(fl['objects']), fl['exemplar'], fl['clearance']),
+        clear = ('%d m clear of the runway' % fl['clearance']) if fl.get('centreline') \
+            else (('%d m clear of the markers' % fl['clearance']) if fl.get('markers')
+                  else 'no runway data, placed clear of the scenery')
+        d.text((cx + 8, cy + 19), '%s  %d objects from %s  %s'
+               % (fl['shape'], len(fl['objects']), fl['exemplar'], clear),
                font=f9, fill=INK['sub'])
         ox, oy = cx, cy + HDR
         scale = P / (a.span * U)          # pixels per game unit
@@ -133,6 +150,8 @@ def main():
         # dispersal 700 m down the axis is not half off the edge.
         pts = [(o['x'], o['z']) for o in fl['objects']] + [(fl['x'], fl['z'])]
         pts += [(m['x'], m['z']) for m in fl.get('markers', [])]
+        if fl.get('centreline'):
+            pts += [tuple(p) for p in fl['centreline']]
         mx = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2.0
         mz = (min(p[1] for p in pts) + max(p[1] for p in pts)) / 2.0
 
@@ -146,6 +165,13 @@ def main():
 
         L = a.span * U
         RING = 165 * U * scale
+        cl = fl.get('centreline')
+        if cl:
+            (ax, az), (bx, bz) = [tuple(p) for p in cl]
+            pd.line([px(ax, az), px(bx, bz)], fill=INK['runway'], width=3)
+            for (ex, ez) in ((ax, az), (bx, bz)):
+                sx, sy = px(ex, ez)
+                pd.ellipse([sx - 4, sy - 4, sx + 4, sy + 4], outline=INK['runway'])
         for m in fl.get('markers', []):
             mx_, my_ = px(m['x'], m['z'])
             pd.ellipse([mx_ - RING, my_ - RING, mx_ + RING, my_ + RING], outline=INK['ring'])
@@ -177,7 +203,8 @@ def main():
 
     img.save(a.out)
     print('%d panels -> %s  (%dx%d)' % (len(fields), a.out, W, H))
-    print('  gold crosses = runway markers, with the 165 m ring nothing may enter')
+    print('  gold crosses = German runway markers with their 165 m ring;')
+    print('  a gold line = an RAF runway centreline, which is real geometry')
     print('  red cross = the field reference point')
     print('  green = tents and revetments, blue = huts and hangars, brown = barns,')
     print('  red = flak, yellow = bomb dump, white = ground crew, grey = vehicles')

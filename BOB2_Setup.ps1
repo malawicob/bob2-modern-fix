@@ -2220,48 +2220,70 @@ function Step-RemoveDunkirkPack { param([string]$GameFolder)
 # copy and removing is a delete. Object count is the dominant CPU cost
 # in this engine, so if the frame rate suffers this is one file to bin.
 # ============================================================
+# Two files now, one per side, installed and removed together. Both are
+# new files dropped into ObjectAdds\, which the game globs, so nothing
+# shipped is modified either way.
+$LwDispersalFiles  = @('LW_Airfields.txt', 'RAF_Airfields.txt')
 $LwDispersalFile   = 'LW_Airfields.txt'
 $LwDispersalMarker = '# Luftwaffe dispersal'
+$RafDispersalMarker = '# Living dispersal'
 
 function Get-LwDispersalState { param([string]$GameFolder)
-    # 'on' | 'off' | 'foreign' (a file of that name that is not ours)
-    $p = Join-Path $GameFolder ('ObjectAdds\' + $LwDispersalFile)
-    if (-not (Test-Path $p)) { return 'off' }
-    $head = Get-Content $p -TotalCount 3 -ErrorAction SilentlyContinue
-    if ($head -and (($head -join "`n") -match [regex]::Escape($LwDispersalMarker))) { return 'on' }
-    return 'foreign'
+    # 'on' | 'off' | 'partial' | 'foreign' (a file of that name that is not ours)
+    $on = 0; $off = 0
+    foreach ($f in $LwDispersalFiles) {
+        $p = Join-Path $GameFolder ('ObjectAdds\' + $f)
+        if (-not (Test-Path $p)) { $off++; continue }
+        $head = Get-Content $p -TotalCount 3 -ErrorAction SilentlyContinue
+        $txt = if ($head) { $head -join "`n" } else { '' }
+        if ($txt -match [regex]::Escape($LwDispersalMarker) -or
+            $txt -match [regex]::Escape($RafDispersalMarker)) { $on++ }
+        else { return 'foreign' }
+    }
+    if ($on -eq $LwDispersalFiles.Count) { return 'on' }
+    if ($off -eq $LwDispersalFiles.Count) { return 'off' }
+    return 'partial'
 }
 
 function Step-InstallLwDispersal { param([string]$GameFolder)
-    Write-Step 'Dress the Luftwaffe airfields'
+    Write-Step 'Dress the airfields'
     if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
-    $payload = $null
-    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
-        $cand = Join-Path $base ('dispersal\' + $LwDispersalFile)
-        if (Test-Path $cand) { $payload = $cand; break }
-    }
-    if (-not $payload) { Write-Warn "dispersal\$LwDispersalFile payload not found."; return $false }
     $oa = Join-Path $GameFolder 'ObjectAdds'
     if (-not (Test-Path $oa)) { Write-Warn 'ObjectAdds folder not found in the game folder.'; return $false }
-    switch (Get-LwDispersalState $GameFolder) {
-        'on'      { Write-OK 'Luftwaffe airfields already dressed'; return $true }
-        'foreign' { Write-Warn "ObjectAdds\$LwDispersalFile exists and is not ours - leaving it strictly alone."; return $false }
+    if ((Get-LwDispersalState $GameFolder) -eq 'foreign') {
+        Write-Warn 'A file of one of those names exists and is not ours - leaving it strictly alone.'
+        return $false
     }
-    Copy-Item $payload (Join-Path $oa $LwDispersalFile) -Force
-    $n = @(Get-Content (Join-Path $oa $LwDispersalFile) | Where-Object { $_ -match '^OBJECT_ADD' }).Count
-    Write-OK "Dressed 40 German airfields ($n static objects, no trees)"
-    return $true
+    $any = $false
+    foreach ($f in $LwDispersalFiles) {
+        $payload = $null
+        foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+            $cand = Join-Path $base ('dispersal\' + $f)
+            if (Test-Path $cand) { $payload = $cand; break }
+        }
+        if (-not $payload) { Write-Warn "dispersal\$f payload not found."; continue }
+        $dst = Join-Path $oa $f
+        Copy-Item $payload $dst -Force
+        $n = @(Get-Content $dst | Where-Object { $_ -match '^OBJECT_ADD' }).Count
+        $side = if ($f -like 'RAF*') { 'RAF' } else { 'German' }
+        Write-OK "Dressed the $side airfields ($n static objects, no trees)"
+        $any = $true
+    }
+    return $any
 }
 
 function Step-RemoveLwDispersal { param([string]$GameFolder)
-    Write-Step 'Undress the Luftwaffe airfields'
+    Write-Step 'Undress the airfields'
     if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
     switch (Get-LwDispersalState $GameFolder) {
         'off'     { Write-OK 'Not installed'; return $true }
-        'foreign' { Write-Warn "ObjectAdds\$LwDispersalFile is not ours - leaving it strictly alone."; return $false }
+        'foreign' { Write-Warn 'One of those files is not ours - leaving it strictly alone.'; return $false }
     }
-    Remove-Item (Join-Path $GameFolder ('ObjectAdds\' + $LwDispersalFile)) -Force
-    Write-OK 'Removed the Luftwaffe dispersal; nothing else was ever touched'
+    foreach ($f in $LwDispersalFiles) {
+        $p = Join-Path $GameFolder ('ObjectAdds\' + $f)
+        if (Test-Path $p) { Remove-Item $p -Force; Write-OK "Removed $f" }
+    }
+    Write-OK 'Nothing else was ever touched'
     return $true
 }
 
@@ -3601,9 +3623,10 @@ function Do-IndividualSteps {
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
         $lw13 = Get-LwDispersalState $gameFolder
         Write-Host $(switch ($lw13) {
-            'on'      { " 13. Undress the Luftwaffe airfields (currently dressed)" }
-            'foreign' { " 13. Dress the Luftwaffe airfields (blocked: a file of that name is not ours)" }
-            default   { " 13. Dress the Luftwaffe airfields (optional, 40 German fields)" }
+            'on'      { " 13. Undress the airfields (currently dressed)" }
+            'partial' { " 13. Dress the airfields (half installed, press to finish)" }
+            'foreign' { " 13. Dress the airfields (blocked: a file of that name is not ours)" }
+            default   { " 13. Dress the airfields (optional, 40 German and 28 RAF fields)" }
         }) -ForegroundColor White
         $qf14 = Get-LwQuickFieldsState $gameFolder
         Write-Host $(switch ($qf14) {
