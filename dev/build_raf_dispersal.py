@@ -72,6 +72,41 @@ PARKED_FIGHTER = [25, 44]        # SPIT, HURR ("statc hurri")
 PARKED_BOMBER = [45, 25]         # BRISTO ("static blenheim"), SPIT
 PARK_SPACING = 55
 
+# THE STATIONS NOBODY FLIES FROM, and why they are dressed anyway.
+#
+# Ten RAF fields have no runway geometry of any kind. Two of them,
+# Hendon and Newcastle, carry Shape EMPTY in MAINWLD.BFI, have no B/C/D
+# building groups and appear in no squadron's bases: there is no
+# aerodrome there to dress, and they are left alone for good.
+#
+# The other eight are real bomber stations with a ground model and
+# buildings, and none is in the RAF order of battle, so no player ever
+# takes off from one. What they are is targets. Detling was bombed in
+# August 1940 and it should look like an airfield when you bomb it.
+#
+# The game shows where the safe ground is. M1ANDOVE.BFI and its five
+# siblings park static Blenheims using an idiom nothing else here uses:
+#
+#     Posn { Abs {UID_AF_ANDOVER}, Rel { Bearing ANGLES_35Deg,
+#                                        Range METRES50 } }
+#
+# 50 to 150 m from the reference point at 35, 90, 135 or 225 degrees. You
+# do not park a Blenheim on a runway, so that ground is apron, and the
+# reference point is on the station. The dressing goes out a little
+# further at a bearing clear of the aeroplanes already there.
+BOMBER_STATIONS = {
+    'ANDOVER':      [35, 135],
+    'BOSCOMBEDOWN': [35, 90],
+    'BRIZENORTON':  [35, 90, 135],
+    'FORD':         [225],
+    'ODIHAM':       [90, 135, 35],
+    'WORTHYDOWN':   [35, 90, 135],
+    'DETLING':      [],          # M1 file is a stub, so nothing is parked
+    'SHOREHAM':     [],
+}
+NO_AERODROME = {'HENDON', 'NEWCASTLE'}
+STATION_RADIUS = 240     # metres; the Blenheims sit at 50 to 150
+
 # For a field whose AF*.BF is a 33-byte stub there are no buildings at
 # all, so it gets some. Every one of these is in the catalogue with a
 # model on disk and has never been placed.
@@ -113,10 +148,43 @@ def read_world(path):
             continue
         ref[m.group(1)] = {'x': int(x.group(1)), 'z': int(z.group(1)),
                            'kind': 'bomber' if 'Bomber' in band.group(1) else 'fighter',
-                           'runway': None}
+                           'runway': None, 'runway_from': None}
+    # THE RUNWAY, and there are two ways it is written down.
+    #
+    # The one found first was the Intercept form, two absolute points with
+    # a Bearing and a Range either side, and fourteen RAF fields have it.
+    # The other is plainer and far commoner: a RunwaySBAND marker at one
+    # end and a RunwayEBAND marker at the other. Twenty nine RAF fields
+    # have that pair, including twelve that were being placed on the
+    # clash rule alone for want of any geometry, and including Pembrey,
+    # the only one of the eleven left-out fields that a squadron in the
+    # order of battle actually flies from.
+    #
+    # RunwayE is a dummy at most German fields, all parked on the same
+    # point out in the North Sea, so it is checked against that and
+    # discarded when it matches.
+    DUMMY = (17248256, 44859392)
     for chunk in re.split(r'\{\s*Target\s+UID_AF_', txt)[1:]:
         nm = re.match(r'(\w+)', chunk).group(1)
         if nm not in ref:
+            continue
+        fx, fz = ref[nm]['x'], ref[nm]['z']
+        starts, ends = [], []
+        for si in re.split(r'SimpleItem\s*\w*=?', chunk):
+            x = re.search(r'X\s+(-?\d+)', si)
+            z = re.search(r'Z\s*(?:\{Select\s+)?(-?\d+)', si)
+            if not (x and z):
+                continue
+            p = (int(x.group(1)), int(z.group(1)))
+            if p == DUMMY or math.hypot(p[0] - fx, p[1] - fz) / U > 3000:
+                continue
+            if 'RunwaySBAND' in si:
+                starts.append(p)
+            elif 'RunwayEBAND' in si:
+                ends.append(p)
+        if starts and ends:
+            ref[nm]['runway'] = (starts[0], ends[0])
+            ref[nm]['runway_from'] = 'start and end markers'
             continue
         ic = re.findall(r'Intercept\s*\{\s*Posn\s*\{\s*Abs\s*\{\s*X\s+(-?\d+),'
                         r'\s*Z\s+(-?\d+)\s*\}\s*\}\s*,?\s*Posn\s*\{\s*Abs\s*\{\s*X\s+(-?\d+),'
@@ -124,6 +192,7 @@ def read_world(path):
         if ic:
             a, b_, c, d = (int(v) for v in ic[0])
             ref[nm]['runway'] = ((a, b_), (c, d))
+            ref[nm]['runway_from'] = 'intercept pair'
     return ref
 
 
@@ -179,6 +248,29 @@ def place(kit, fld, near, rnd):
     if best is None:
         return None
     return {'bearing': best[1], 'runway': best[2], 'clash': best[3]}
+
+
+def place_station(kit, fld, near, parked_at, rnd):
+    """A bomber station: out past the aeroplanes the game already parks."""
+    best = None
+    for deg in range(0, 360, 2):
+        if parked_at and min(min(abs(deg - b), 360 - abs(deg - b))
+                             for b in parked_at) < 55:
+            continue                     # keep off the ones already there
+        th = math.radians(deg)
+        cx = fld['x'] + STATION_RADIUS * U * math.cos(th)
+        cz = fld['z'] + STATION_RADIUS * U * math.sin(th)
+        pts = [(cx + k['dx'] * U, cz + k['dz'] * U) for k in kit]
+        clash = min((math.hypot(p[0] - q[0], p[1] - q[1]) / U
+                     for p in pts for q in near), default=9e9)
+        if clash < CLASH:
+            continue
+        if best is None or clash > best[0]:
+            best = (clash, th)
+    if best is None:
+        return None
+    return {'bearing': best[1], 'radius': STATION_RADIUS,
+            'runway': 9e9, 'clash': best[0]}
 
 
 def extras(fld, rnd, stub):
@@ -264,22 +356,32 @@ def main():
         # slipped in on a 2.5 km count and had to be shut out again.
         close = sum(1 for x, z in near
                     if math.hypot(x - fld['x'], z - fld['z']) / U < 1000)
-        if not fld['runway'] and close < 10:
+        station = None
+        if name in NO_AERODROME:
+            skipped.append((name, 'Shape EMPTY, no buildings, in no squadron\'s bases'))
+            continue
+        if not fld['runway'] and name in BOMBER_STATIONS:
+            station = BOMBER_STATIONS[name]
+        elif not fld['runway'] and close < 10:
             skipped.append((name, 'no runway geometry and nothing near the field'))
             continue
         rnd = random.Random('bob2-raf-field-' + name)
         src = kits[hash(name) % len(kits)] if False else rnd.choice(kits)
         stub = name in stubs
         kit = [dict(k) for k in src['kit']] + extras(fld, rnd, stub)
-        got = place(kit, fld, near, rnd)
+        if station is not None:
+            got = place_station(kit, fld, near, station, rnd)
+        else:
+            got = place(kit, fld, near, rnd)
         if not got:
             problems.append('%s: nowhere at %d m clears the runway by %d m and the '
                             'scenery by %d m, so it is left alone'
                             % (name, RADIUS, MIN_RUNWAY, CLASH))
             continue
         th = got['bearing']
-        cx = fld['x'] + RADIUS * U * math.cos(th)
-        cz = fld['z'] + RADIUS * U * math.sin(th)
+        rad = got.get('radius', RADIUS)
+        cx = fld['x'] + rad * U * math.cos(th)
+        cz = fld['z'] + rad * U * math.sin(th)
         rows = [(int(round(cx + k['dx'] * U)), int(round(cz + k['dz'] * U)),
                  round(k['hdg']) % 360, k['id']) for k in kit]
         if any(x < 0 or z < 0 for x, z, _, _ in rows):
@@ -293,8 +395,10 @@ def main():
         total += len(rows)
         manifest.append({'field': name, 'kind': fld['kind'], 'from': src['from'],
                          'stub': stub, 'x': fld['x'], 'z': fld['z'],
+                         'station': station is not None,
                          'runway': [list(p) for p in fld['runway']] if fld['runway'] else None,
                          'runway_clear': round(got['runway']) if fld['runway'] else None,
+                         'runway_from': fld.get('runway_from'),
                          'nearest_stock': round(got['clash']) if got['clash'] < 9e8 else None,
                          'objects': [{'x': x, 'z': z, 'hdg': h, 'id': s} for x, z, h, s in rows]})
 

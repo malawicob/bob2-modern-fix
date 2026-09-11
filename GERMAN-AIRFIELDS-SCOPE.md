@@ -392,3 +392,64 @@ rule recovers it. It reported models missing that have shipped since 2005.
 The test now is that an id must be in the catalogue, and must either have a
 model findable by name or already be placed in a shipped file. Being in a file
 that ships and flies is the better evidence of the two.
+
+
+## The eleven that were left out
+
+Nine of them are now dressed, and the two that are not never will be.
+
+### The runway data was there all along, written a second way
+
+The first pass found runways in the `Intercept` form, two absolute points with
+a `Bearing` and a `Range`, and fourteen RAF fields have it. There is a plainer
+and far commoner form: a `RunwaySBAND` marker at one end and a `RunwayEBAND` at
+the other. **Twenty nine RAF fields carry that pair.** It was missed because
+`RunwayEBAND` is a dummy at most German fields, all parked on one point out in
+the North Sea, so it had been written off as useless.
+
+That single change took the RAF fields measured against a real centreline from
+11 to **24**, and it brought in **Pembrey**, which is the one that matters:
+Pembrey is the only one of the eleven that appears in the RAF order of battle,
+four squadron-periods, so it is the only one a player can be posted to. It has a
+645 m runway on an axis of 42.8 degrees, and its dispersal now clears it by
+340 m.
+
+### The eight bomber stations, dressed by the game's own idiom
+
+Andover, Boscombe Down, Brize Norton, Detling, Ford, Odiham, Shoreham and Worthy
+Down have no runway data of any kind, and none of them is in the order of
+battle, so nobody ever takes off from one. What they are is targets. Detling was
+bombed in August 1940 and it ought to look like an airfield when you bomb it.
+
+The game shows where the safe ground is. `M1ANDOVE.BFI` and five siblings park
+static Blenheims using an idiom nothing else here uses:
+
+```
+Posn { Abs {UID_AF_ANDOVER}, Rel { Bearing ANGLES_35Deg, Range METRES50 } }
+```
+
+50 to 150 m from the reference point at 35, 90, 135 or 225 degrees. You do not
+park a Blenheim on a runway, so that ground is apron and the reference point is
+on the station. The dressing goes at 240 m on a bearing at least 55 degrees
+clear of the aeroplanes already there.
+
+### Hendon and Newcastle are left alone for good
+
+Both carry `Shape EMPTY` in `MAINWLD.BFI`, neither has `B`/`C`/`D` building
+groups, and neither appears in any squadron's bases. There is no aerodrome
+there to dress. They are map labels.
+
+### Where the RAF side now stands
+
+| | |
+|---|---|
+| fields dressed | 37 |
+| objects | 719 |
+| measured against a real runway centreline | 24 |
+| bomber stations placed by the Blenheim idiom | 8 |
+| placed on clearance from stock scenery alone | 5 |
+| left alone | 2 |
+
+The five on scenery alone are Eastchurch, Farnborough, Gosport, Lee-on-Solent
+and Thorney Island, each with stock objects 400 m or so away and no runway
+written down anywhere.
