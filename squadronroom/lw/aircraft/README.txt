@@ -1,74 +1,59 @@
-ONE BARE Bf 109E, and everything else painted on.
+162 Bf 109E SKINS, AND THE GAME CHOOSES WHICH.
 
-bf109e.png is the only 109 plate. It replaced forty of them on
-10 September 2026, and the reason is worth keeping.
+Every plate here is named for the MultiSkin texture it was drawn from,
+with _sideview appended: M109ULF_IIIJG26_Camo_V2_sideview.png for
+M109ULF_IIIJG26_Camo_V2.DDS. That is what makes the lookup buildable
+from the game's own rules with nothing mapped by hand, and it is why
+Patrick redrew all of them on 11 September 2026.
 
-WHAT WAS WRONG WITH THE FORTY
+WHAT THEY REPLACED, AND WHY
 
-They were Bf 109Fs. The tailplane carried no bracing struts and the cowl
-and spinner were the F's rounded shape, where an E has struts and a
-flatter, more angular nose. The Battle of Britain was fought on the E.
-33lima spotted it.
+Forty plates named per Gruppe, picked by unit name with no reference to
+the campaign date at all. They were Bf 109Fs, which 33lima spotted, and
+they carried their unit markings and the yellow cowl already painted on,
+so a Gruppe on 10 July wore recognition markings it did not have for
+another month and went on wearing them whatever the date.
 
-They also carried their unit's markings and the yellow cowl already
-painted on, and Get-GruppeAircraftPath picked one by unit name with no
-reference to the campaign date at all, where a 110 goes through
-Get-Profile110 with the date. So a Gruppe on 10 July wore recognition
-markings it did not have for another month, and went on wearing them
-whatever the date.
+There was a brief stop on the way: one bare E with the markings painted
+on, which fixed the airframe and the yellow but showed every Gruppe the
+same aeroplane. These are better, because they are the aeroplanes the
+game will actually put him in.
 
-Matching the game would not have fixed that. Me109MainSkin.ms holds 126
-distinct base skins chosen by unit AND individual aircraft number, and
-only 5 of its 178 rules carry a date at all, against 113 of the 110's
-114. There is no rule anywhere that puts the yellow on by date; it is
-painted into each .DDS. Copying the 110's approach would have meant
-about 126 drawings and would still have shown a yellow nose in July.
+HOW ONE IS CHOSEN
 
-WHAT REPLACED THEM
+dev/build_lw_109_skins.py reads Me109MainSkin.ms into skins109.json:
+178 rules IN FILE ORDER, and the first match wins. A rule may name a
+unit, an aeroplane (planeid 1 to 36), and a date. 27 name no unit, one
+names nothing at all - Replacement.DDS, the catch-all. Get-Profile109
+walks them in that order.
 
-The way the RAF side always worked. spitfire.png and hurricane.png arrive
-bare and the Room paints the code, the letter and the serial on, so one
-drawing serves every squadron. This does the same: the number in the
-Staffel's colour, the Gruppe symbol, the Geschwader badge, and a Stab
-chevron where one is due, all placed from the game's own MultiSkin rules
-by dev/measure_markings.py.
+THE GAME COMPOSITES, AND SO DOES THE ROOM
 
-The drawing carries its Balkenkreuz, and that is deliberate. The cross is
-the RULER: measure_markings.py converts MultiSkin's texture coordinates
-onto a plate by finding the national marking in both and scaling x and y
-between them. A plate with no cross cannot be measured at all, and the
-first version supplied had none, which is why there was a second.
+A main skin is camouflage, the Balkenkreuz and the swastika, and nothing
+else. The number, the Gruppe symbol and the Geschwader badge are laid
+over it from Me109_PlaneID_1.ms, Me109_PlaneID_2.ms and Me109_Emblem.ms,
+and the Room does the same.
 
-THE RECOGNITION MARKINGS, AND THE DATE THAT SWITCHES THEM
+Where a skin already carries one, the game points that overlay at
+blank.dds, and so the Room must draw nothing. The case you would notice
+is Galland: planeid 1 of fifteen units is blanked because a Kommandeur's
+chevron is part of his skin, and drawing a number or a second chevron
+over it would be obvious. See Test-MarkBlank.
 
-There are two plates, and Get-GruppeAircraftPath chooses between them by
-the campaign date the way Get-Profile110 already did for the Zerstoerer:
+THE CROSS IS STILL THE RULER
 
-    bf109e.png       grey cowl, grey rudder      before 21 August 1940
-    bf109e_late.png  yellow cowl, yellow rudder  from 21 August 1940
+measure_markings.py converts MultiSkin's coordinates onto a plate by
+finding the Balkenkreuz in both and scaling x and y between them, so
+every one of these is measured separately.
 
-MultiSkin carries no rule that puts the yellow on, anywhere: it is
-painted into each individual .DDS, which is why matching the game would
-never have fixed this. So the rule is ours. The DATE is not invented
-though. 21 August is the game's own phase boundary, the one
-Me109MainSkin.ms uses for III./JG 52 and Me109_PlaneID_1.ms for
-III./JG 27, and Me109_PlaneID_1.ms uses 18 August for the other two.
+Across 162 paint schemes no single detector manages it. The white border
+finds 150 and reads 19 of those out of square; a darkness threshold
+finds all 162 but clips an arm wherever it runs into dark camouflage,
+which is what RLM70_71 does - its cross sits half on dark green and half
+on light blue and reads 87 x 68 instead of 86 x 86. find_cross_109 runs
+both and takes the squarest plausible answer.
 
-THE ONE THAT CAUGHT US OUT
-
-A marking's HEIGHT comes from the rule, not from the tile. MultiSkin
-scales x and y separately and measure_markings.py says so in as many
-words, works both out, and writes dw AND dh. Add-AcImage then sized
-everything from the tile's own pixel aspect and never read dh.
-
-Every tile is a square 128 x 128 canvas, so this was invisible wherever
-the rule was square too, which the number and the emblem are. The Gruppe
-symbol is not: its rule asks for 106 x 71 on these plates, so the bar was
-drawn 106 x 106 and came out half as tall again as it should be. Patrick
-spotted the white stripe. audit_markings.py now fails any Add-AcImage
-call that does not pass -DH.
-
-The cut is dev/build_lw_aircraft.py at its usual settings. The aerial
-wire comes out dashed where it crosses open sky, because in this drawing
-it is a single antialiased pixel that is nearly black against a black
-ground. At the 340px the Room draws these at, it is invisible.
+Nothing is compared against the other plates any more. That was right
+while they were forty copies of one drawing; these genuinely differ, and
+M109ULF_IIIJG26_Bartels_G really is painted with a bigger cross, 97 px
+against the usual 82.

@@ -323,6 +323,54 @@ def number_dates(ms_dir):
         out.append(row)
     return out
 
+
+def blank_rules(ms_dir):
+    """Where the skin already carries the marking, so nothing is drawn.
+
+    MultiSkin composites: the main skin is camouflage and national
+    markings, and the number, the Gruppe symbol and the Geschwader badge
+    are laid over it. Where a skin has one painted in already, the game
+    points the overlay at blank.dds instead.
+
+    The big one is the Stab aeroplane. planeid 1 of fifteen units is
+    blanked in Me109_PlaneID_1.ms, because a Kommandeur's chevron is part
+    of his skin, and Galland's is the obvious case: draw a number or a
+    chevron over it and he wears two.
+
+    Only rules naming BOTH a unit and an aeroplane are taken. The
+    unit-only blanks in Me109_PlaneID_2.ms already reach the Room through
+    gruppe_by_unit, and the trailing "if 1 == 1" in each file is just the
+    default of drawing nothing.
+    """
+    out = {}
+    for key, fname in (('number', 'Me109_PlaneID_1.ms'),
+                       ('emblem', 'Me109_Emblem.ms')):
+        path = os.path.join(ms_dir, fname)
+        if not os.path.exists(path):
+            continue
+        rows = []
+        for ln in open(path, encoding='latin-1', errors='ignore'):
+            t = ln.split('#')[0].strip()
+            if not t.lower().startswith('use') or ' if ' not in t:
+                continue
+            m = re.match(r'use\s+(.+?)\.dds\s*,', t, re.I)
+            tex = os.path.basename(m.group(1).replace('\\', '/')).lower()
+            if not m or tex != 'blank':
+                continue
+            cond = t.split(' if ', 1)[1]
+            pids = sorted({int(x) for x in re.findall(r'planeid\s*==\s*(\d+)', cond)})
+            units = []
+            for u in re.findall(r'unit\s*==\s*(\w+)', cond):
+                n, _ = ms_unit_to_room(u)
+                if n and n not in units:
+                    units.append(n)
+            if units and pids:
+                rows.append({'units': units, 'planeids': pids})
+        if rows:
+            out[key] = rows
+    return out
+
+
 def save(src, dst, maxpx=320, keep_canvas=True):
     """Copy one tile, KEEPING ITS CANVAS.
 
@@ -365,6 +413,7 @@ def main():
         return 2
     idx = index(a.src)
     nd = number_dates(a.ms)
+    bl = blank_rules(a.ms)
     if os.path.isdir(a.out):
         shutil.rmtree(a.out)
 
@@ -460,6 +509,7 @@ def main():
                             '7': 'white', '8': 'red', '9': 'yellow'},
         'numbers': made['numbers'],
         'number_dates': nd,
+        'blanks': bl,
         'gruppe': made['gruppe'],
         'stab': made['stab'],
         'emblems': made['emblems'],

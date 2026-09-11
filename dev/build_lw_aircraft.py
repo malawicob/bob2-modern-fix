@@ -48,13 +48,22 @@ import glob, os, sys
 from collections import deque
 from PIL import Image
 
-# Two sets, cut identically. The 109s are named per GRUPPE (I_JG26), so
-# the Room looks a unit's profile up by its own key. The 110s are named
-# per BASE SKIN (Bf110_70_71_1940, bf110_Shark), which is how the game
-# names them, and Me110_MainSkin.ms says which unit and date gets which -
-# so a Zerstoerer's aeroplane is chosen the way the game chooses it.
+# Both sets are now named per BASE SKIN, exactly as the game names its
+# textures, and the game's own rule files say which unit, which aeroplane
+# and which date gets which. So a 109 is chosen the way a 110 already
+# was, and the way the game itself chooses.
+#
+# The 109 side views arrived on 11 September 2026 named for the .DDS they
+# were drawn from, with _sideview appended: M109ULF_IIIJG26_Camo_V2 for
+# M109ULF_IIIJG26_Camo_V2.DDS. That is what makes the lookup buildable
+# from Me109MainSkin.ms with nothing mapped by hand. 162 of them cover
+# all 126 skins the rules name, with 35 spare.
+#
+# The forty per-Gruppe plates they replaced were Bf 109Fs with their unit
+# markings and the yellow cowl already painted on, chosen by unit name
+# with no reference to the date at all.
 SRCS = [
-    '/home/patrick_millin/bob2/Me109_Sideviews_GermanCross_Only/me109_sideviews',
+    '/home/patrick_millin/bob2/ME109_sideviews',
     '/home/patrick_millin/bob2/bf110_sideviews',
 ]
 OUT = 'squadronroom/lw/aircraft'

@@ -157,10 +157,30 @@ def main():
     profs = pos['lw']['profiles']
     widths = sorted(r['marking'][2] - r['marking'][0] for r in profs.values())
     mid = widths[len(widths) // 2]
+    # THIS NO LONGER COMPARES EVERY PLATE WITH EVERY OTHER.
+    #
+    # It used to: forty plates were forty copies of one drawing, so a
+    # cross that disagreed with the rest was a misreading and nothing
+    # else. From 11 September 2026 there are 162 different skins drawn
+    # from the game's own textures, and their crosses genuinely differ.
+    # M109ULF_IIIJG26_Bartels_G really is painted with a bigger one, 97 px
+    # against the usual 81, and the old rule failed it for being correct.
+    #
+    # What is still worth asserting about a reading on its own: a
+    # Balkenkreuz is square, and it is a sensible fraction of the
+    # aeroplane. Anything that is neither was not a cross. Whether the
+    # reading is any GOOD is settled by THE PLACEMENT below, which tests
+    # the positions it produces against the drawing's own alpha.
     for f, r in sorted(profs.items()):
         w = r['marking'][2] - r['marking'][0]
-        if abs(w - mid) > 0.15 * mid:
-            fail('%s: cross read as %d px, the rest agree on %d' % (f, w, mid))
+        h = r['marking'][3] - r['marking'][1]
+        W = r['size'][0]
+        if h <= 0 or not (0.80 <= w / float(h) <= 1.25):
+            fail('%s: cross read as %d x %d, which is not square enough to be one'
+                 % (f, w, h))
+        elif not (0.05 <= w / float(W) <= 0.16):
+            fail('%s: cross read as %d px on a %d px drawing, %.1f%% of it'
+                 % (f, w, W, 100.0 * w / W))
     # The 110s are measured separately, against their own reference skin
     # and their own cross: theirs is 67 px where a 109's is 99, and their
     # dark camouflage defeats the black-core detector altogether. Judged
@@ -171,8 +191,8 @@ def main():
                if os.path.basename(f) not in profs and os.path.basename(f) not in p110]
     for f in missing:
         warn('%s: no cross found, so it gets no markings' % f)
-    print('  %d 109 profiles measured, cross %d px; %d 110 profiles; %d unmeasured'
-          % (len(profs), mid, len(p110), len(missing)))
+    print('  %d 109 profiles measured, cross %d px median (%d..%d); %d 110 profiles; %d unmeasured'
+          % (len(profs), mid, widths[0], widths[-1], len(p110), len(missing)))
     if p110:
         w110 = sorted(r['marking'][2] - r['marking'][0] for r in p110.values())
         m110 = w110[len(w110) // 2]

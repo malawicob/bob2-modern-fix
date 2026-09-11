@@ -254,6 +254,62 @@ def convert(ms, tex_mark, prof_mark, prof_size):
             'kx': round(kx, 4), 'ky': round(ky, 4)}
 
 
+
+# The darkness ladder the 109 detector walks. A Balkenkreuz core is dark
+# on every skin, but "dark" is relative: on the pale mottled schemes the
+# camouflage is 150 and up so almost anything separates them, while on
+# RLM 70/71 the camouflage itself is 50 to 70 and only a tight threshold
+# will do. One fixed number cannot serve 162 different paint schemes.
+CROSS_LADDER = (30, 40, 50, 65, 80)
+
+
+def _dark(t):
+    return lambda r, g, b, a: a > 200 and r < t and g < t and b < t
+
+
+def find_cross_109(im, box):
+    """The Balkenkreuz on any of the 162 skins, by whichever way works.
+
+    Two detectors, because neither is enough on its own across this many
+    paint schemes. Measured over all 162:
+
+      the white border alone   150 found, 19 of them not square
+      the darkness ladder      162 found, a few clipped where an arm
+                               runs into dark camouflage
+
+    RLM70_71 is the case that needs the border: its cross sits half on
+    dark green and half on light blue, so at any threshold loose enough
+    to catch the top arm the camouflage joins in, and the reading comes
+    out 87 x 68. The border gives 86 x 86.
+
+    So both are tried and the squarest plausible answer wins. A
+    Balkenkreuz is square; anything that is not was something else.
+    """
+    W = im.size[0]
+    best = None
+    cands = []
+    c = find_cross_corners(im, box)
+    if c:
+        cands.append(c)
+    for t in CROSS_LADDER:
+        c = find_marking(im, box, _dark(t), want=(0.06, 0.16))
+        if c:
+            cands.append(c)
+    for pc in cands:
+        w, h = pc[2] - pc[0], pc[3] - pc[1]
+        if w <= 0 or h <= 0:
+            continue
+        aspect = w / float(h)
+        if not (0.80 <= aspect <= 1.25):
+            continue
+        if not (0.05 <= w / float(W) <= 0.16):
+            continue
+        s = abs(aspect - 1.0)
+        if best is None or s < best[0]:
+            best = (s, pc)
+    return best[1] if best else None
+
+
 def best_pos(ms_dir, files):
     """The commonest placement across one or more rule files.
 
@@ -460,8 +516,7 @@ def main():
         # 30, so at 80 the two run together and the cross was read as a
         # 77 x 63 patch of canopy. 50 separates them on that drawing and
         # changes the pale one by a pixel.
-        pc = find_marking(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)), CROSS_CORE,
-                          want=(0.06, 0.16))
+        pc = find_cross_109(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)))
         if not pc:
             print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr); continue
         rec = {'marking': list(pc), 'size': [W, H]}
@@ -477,24 +532,25 @@ def main():
             rec['gruppe_by_unit'][unit] = dict(convert(ms, tex_cross, pc, (W, H)),
                                                symbol=g['symbol'])
         out['lw']['profiles'][f] = rec
-    # These profiles are all the same base drawing, so every cross should
-    # come out the same size. Anything that does not is a detector miss,
-    # and a miss is silent: the whole conversion scales off this box, so
-    # one bad reading draws that aeroplane's markings at the wrong size
-    # somewhere off the tail. It has happened twice, so it is checked.
+    # A BAD READING IS SILENT, SO IT IS CHECKED. But not against the
+    # other plates any more.
+    #
+    # This used to drop any cross more than 15% off the median, and that
+    # was right while all forty plates were copies of one drawing. From
+    # 11 September 2026 they are 162 different skins drawn from the
+    # game's own textures and their crosses genuinely differ:
+    # M109ULF_IIIJG26_Bartels_G is painted with a bigger one, 97 px
+    # against the usual 82, and the rule threw away a correct reading and
+    # left that aeroplane with no markings at all.
+    #
+    # find_cross_109 already refuses anything that is not square and of a
+    # plausible size, which is what a misreading actually looks like, so
+    # the judgement belongs there and is not repeated here.
     widths = sorted(r['marking'][2] - r['marking'][0] for r in out['lw']['profiles'].values())
     if widths:
         mid = widths[len(widths) // 2]
-        off = {f: r['marking'] for f, r in out['lw']['profiles'].items()
-               if abs((r['marking'][2] - r['marking'][0]) - mid) > 0.15 * mid}
-        print('    %d of the 109 profiles measured, cross %d px wide'
-              % (len(out['lw']['profiles']), mid))
-        for f, bb in off.items():
-            print('  ! %s: cross read as %d x %d, well off the %d the rest agree on'
-                  % (f, bb[2] - bb[0], bb[3] - bb[1], mid), file=sys.stderr)
-            del out['lw']['profiles'][f]
-        if off:
-            print('    %d dropped as a bad reading; those get no markings' % len(off))
+        print('    %d of the 109 profiles measured, cross %d px median (%d to %d)'
+              % (len(out['lw']['profiles']), mid, widths[0], widths[-1]))
 
     # ---- the Bf 110 --------------------------------------------------
     #

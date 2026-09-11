@@ -138,6 +138,100 @@
    "after": "black"
   }
  ],
+ "blanks": {
+  "number": [
+   {
+    "units": [
+     "III./JG 26"
+    ],
+    "planeids": [
+     1
+    ]
+   },
+   {
+    "units": [
+     "III./JG 26"
+    ],
+    "planeids": [
+     4
+    ]
+   },
+   {
+    "units": [
+     "I./JG 2",
+     "II./JG 2",
+     "III./JG 2",
+     "I./JG 3",
+     "II./JG 3",
+     "I./JG 26",
+     "III./JG 26",
+     "I./JG 27",
+     "II./JG 27",
+     "III./JG 27",
+     "I./JG 51",
+     "I./JG 53",
+     "II./JG 53",
+     "I./JG 54",
+     "III./JG 54"
+    ],
+    "planeids": [
+     1
+    ]
+   },
+   {
+    "units": [
+     "I./JG 3"
+    ],
+    "planeids": [
+     13
+    ]
+   },
+   {
+    "units": [
+     "I./JG 2"
+    ],
+    "planeids": [
+     25
+    ]
+   },
+   {
+    "units": [
+     "III./JG 26"
+    ],
+    "planeids": [
+     2
+    ]
+   },
+   {
+    "units": [
+     "I./JG 3",
+     "II./JG 53",
+     "III./JG 54"
+    ],
+    "planeids": [
+     1
+    ]
+   }
+  ],
+  "emblem": [
+   {
+    "units": [
+     "II./JG 3"
+    ],
+    "planeids": [
+     36
+    ]
+   },
+   {
+    "units": [
+     "III./JG 3"
+    ],
+    "planeids": [
+     29
+    ]
+   }
+  ]
+ },
  "gruppe": {
   "II_white": "gruppe/II_white.png",
   "II_red": "gruppe/II_red.png",

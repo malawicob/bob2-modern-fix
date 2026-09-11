@@ -4455,6 +4455,76 @@ function Get-LwActivity { param($G) if ([int]$G.luftflotte -eq 2) { 3 } else { 2
 # rules are in FILE ORDER and the first that matches wins, because the
 # game's conditions overlap and that is how MultiSkin reads them.
 $Skins110Path = Join-Path (Join-Path $ModDir 'lw') 'skins110.json'
+$Skins109Path = Join-Path (Join-Path $ModDir 'lw') 'skins109.json'
+function Get-Skins109 {
+    if ($null -ne $script:Skins109) { return $script:Skins109 }
+    $m = $null
+    if (Test-Path $Skins109Path) {
+        try { $m = Get-Content $Skins109Path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:Skins109 = $m
+    $m
+}
+# WHICH AEROPLANE, OUT OF 126, AND THE GAME DECIDES
+#
+# Until 11 September 2026 this was forty plates named per Gruppe, chosen
+# by unit name with no reference to the date, and they were Bf 109Fs.
+# Patrick redrew all of them from the game's own textures, 162 side views
+# named for the .DDS each came from, which is what makes this possible:
+# Me109MainSkin.ms can be read straight through and the Room shows the
+# aeroplane the game will actually put him in.
+#
+# 178 rules, in file order, and THE FIRST MATCH WINS. The conditions
+# overlap on purpose - a unit-and-aeroplane rule above a planeid-only
+# rule above "if 1 == 1" - so the order is the evaluation model and must
+# not be sorted.
+function Get-Profile109 {
+    param($G, $Pilot, $Date)
+    $m = Get-Skins109
+    if (-not $m) { return $null }
+    $unit = "$($G.unit)"
+    # NOT $pid: that is PowerShell's own read-only process id, and
+    # assigning to it throws. The smoke test caught it.
+    $planeId = Get-PlaneId -Pilot $Pilot
+    foreach ($r in @($m.rules)) {
+        if ($r.PSObject.Properties.Name -contains 'units') {
+            if (@($r.units) -notcontains $unit) { continue }
+        }
+        if ($r.PSObject.Properties.Name -contains 'planeids' -and $planeId -gt 0) {
+            if (@($r.planeids) -notcontains $planeId) { continue }
+        }
+        if ($Date) {
+            $ok = $true
+            if ("$($r.from)") { try { if ($Date -lt [datetime]::ParseExact("$($r.from)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+            if ($ok -and "$($r.to)") { try { if ($Date -gt [datetime]::ParseExact("$($r.to)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+            if (-not $ok) { continue }
+        }
+        if (-not "$($r.file)") { continue }
+        $f = Join-Path $script:AircraftDir "$($r.file)"
+        if (Test-Path $f) { return $f }
+    }
+    $null
+}
+# The aeroplane's place in its Gruppe, 1 to 36, which is what the rules
+# key on. It is NOT the number painted on the side: planeid 25 wears "1",
+# 26 wears "2" and 36 wears "14". What the Room knows is the Staffel and
+# the number the man chose, so the two are put back together the way the
+# rules lay them out, twelve aeroplanes to a Staffel.
+#
+# The top of each band is not a clean run - 34, 35, 36 wear 10, 12, 14 -
+# so a number above 12 is clamped. It lands on the same Staffel's block
+# either way, which is what chooses the skin.
+function Get-PlaneId {
+    param($Pilot)
+    if (-not $Pilot) { return 0 }
+    $slot = Get-StaffelSlot $(if ($Pilot.staffel) { $Pilot.staffel } else { 1 })
+    if ($slot -lt 1) { $slot = 1 }
+    $within = (($slot - 1) % 3) + 1
+    $n = Get-AcNumber -Pilot $Pilot
+    if ($n -lt 1) { $n = 1 }
+    if ($n -gt 12) { $n = 12 }
+    ($within - 1) * 12 + $n
+}
 function Get-Skins110 {
     if ($null -ne $script:Skins110) { return $script:Skins110 }
     $m = $null
@@ -4520,25 +4590,15 @@ function Get-GruppeAircraftPath {
     if (-not $G) { return $null }
     if ("$($G.type)" -match '110') { return (Get-Profile110 -G $G -Pilot $Pilot -Date $script:CampaignDate) }
     if ("$($G.type)" -notmatch '109') { return $null }
-    # One bare Bf 109E for every Gruppe. What tells them apart is painted
-    # on: the number in the Staffel's colour, the Gruppe symbol, the
-    # Geschwader badge, and a Stab chevron where one is due.
-    #
-    # There are two of it, and the date chooses. The yellow cowl and
-    # rudder were not worn at the start of the battle and were general by
-    # the end of it, and MultiSkin carries no rule that puts them on,
-    # because they are painted into each individual .DDS. So the rule is
-    # ours. The date is not invented though: 21 August is the game's own
-    # phase boundary, the one Me109MainSkin.ms uses for III./JG 52 and
-    # Me109_PlaneID_1.ms for III./JG 27.
-    #
-    # 33lima raised this: MultiSkin "applies things like quick recognition
-    # yellow and white markings only in later phases", and the Room was
-    # showing a yellow nose on 10 July because the plate never changed.
-    $late = $script:CampaignDate -and $script:CampaignDate -ge $LwYellowFrom
-    foreach ($n in @($(if ($late) { 'bf109e_late.png' } else { 'bf109e.png' }), 'bf109e.png')) {
-        $f = Join-Path $script:AircraftDir $n
-        if (Test-Path $f) { return $f }
+    # The game's own choice, out of 126 skins, by unit, by which
+    # aeroplane of the Gruppe he has, and by the date. See Get-Profile109.
+    $f = Get-Profile109 -G $G -Pilot $Pilot -Date $script:CampaignDate
+    if ($f) { return $f }
+    # A career whose skins are not installed still gets an aeroplane
+    # rather than an empty frame.
+    foreach ($n in @('M109ULF_Replacement_sideview.png', 'bf109e.png')) {
+        $p = Join-Path $script:AircraftDir $n
+        if (Test-Path $p) { return $p }
     }
     $null
 }
@@ -5567,6 +5627,32 @@ function Get-MarkFile {
 # double-click to put it back. The wheel changes WIDTH here where the
 # text version changes FontSize, and the height follows the picture's
 # own shape so a chevron cannot be squashed into a square.
+# WHERE THE SKIN ALREADY CARRIES THE MARKING, DRAW NOTHING.
+#
+# MultiSkin composites: camouflage and national markings in the main
+# skin, then the number, the Gruppe symbol and the Geschwader badge laid
+# over it. Where a skin has one painted in, the game points the overlay
+# at blank.dds, and the Room has to do the same or it draws a second one
+# on top.
+#
+# The big case is the Stab aeroplane: planeid 1 of fifteen units is
+# blanked, because a Kommandeur's chevron is part of his skin. Galland's
+# is the one you would notice, since he would otherwise wear a chevron
+# and a number at once. Read from Me109_PlaneID_1.ms and Me109_Emblem.ms
+# by dev/build_lw_markings.py.
+function Test-MarkBlank {
+    param([string]$Kind, [string]$Unit, [int]$PlaneId)
+    if ($PlaneId -le 0) { return $false }
+    $m = Get-LwMarkings
+    if (-not $m) { return $false }
+    if ($m.PSObject.Properties.Name -notcontains 'blanks') { return $false }
+    if ($m.blanks.PSObject.Properties.Name -notcontains $Kind) { return $false }
+    foreach ($r in @($m.blanks.$Kind)) {
+        if (@($r.units) -notcontains $Unit) { continue }
+        if (@($r.planeids) -contains $PlaneId) { return $true }
+    }
+    $false
+}
 function Add-AcImage {
     param($Canvas, [string]$Key, [string]$File, [double]$DX, [double]$DY,
           [double]$DW, [double]$DH = 0, [double]$W, [double]$H, [string]$Tip)
@@ -5774,15 +5860,18 @@ function New-LwAircraft {
         $u = $m.units.$unit
         $col = Get-StaffelColour $Pilot
 
-        # the number, or a chevron in its place for a staff officer
-        $chev = Get-StabChevron -Pilot $Pilot -Career $Career
+        # the number, or a chevron in its place for a staff officer,
+        # unless his own skin already has one painted on
+        $pid109 = Get-PlaneId -Pilot $Pilot
+        $blankNum = Test-MarkBlank -Kind 'number' -Unit $unit -PlaneId $pid109
+        $chev = if ($blankNum) { $null } else { Get-StabChevron -Pilot $Pilot -Career $Career }
         if ($chev) {
             [void](Add-AcImage -Canvas $cv -Key "$key|chev" -File $chev `
                                -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
                                -DW ([double]$P.number.dw) -DH ([double]$P.number.dh) -W $AcW -H $acH `
                                -Tip 'The Stab chevron, worn in place of an individual number.')
         }
-        else {
+        elseif (-not $blankNum) {
             $n = Get-AcNumber $Pilot
             $nf = Get-MarkFile "$($m.numbers.$n.$col)"
             if ($nf) {
@@ -5817,11 +5906,12 @@ function New-LwAircraft {
                                    -Tip "The $($gu.symbol -replace 'IIIwavy','III') Gruppe symbol.")
             }
         }
-        # The Geschwader emblem, but ONLY on the plain factory scheme.
-        # Every Gruppe that has a profile of its own already wears its
-        # badge in the artwork, and drawing ours over the top gives
-        # II./JG 26 two Schlageter shields.
-        $ownArt = Test-GruppeOwnProfile $Gruppe
+        # The Geschwader emblem. The main skins carry camouflage and
+        # national markings and no badge, so it is drawn, except on the
+        # two aeroplanes whose own skin has one and whose overlay the
+        # game therefore blanks.
+        $ownArt = (Test-GruppeOwnProfile $Gruppe) -or
+                  (Test-MarkBlank -Kind 'emblem' -Unit $unit -PlaneId $pid109)
         if ((-not $ownArt) -and $u -and "$($u.emblem)") {
             $ef = Get-MarkFile "$($u.emblem)"
             if ($ef) {
