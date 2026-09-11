@@ -86,6 +86,31 @@ FIELD_RADIUS = 1500      # metres from the reference point; beyond this is lands
 KIT_RADIUS = 400         # metres from the kit's own centroid; beyond this is an outlier
 MARKER_RADIUS = 3000     # metres; a RunwayS marker further out belongs to another field
 MIN_CLEAR = 165          # metres from any runway marker; the least the BDG's own fields keep
+# HOW FAR OUT A DISPERSAL SITS, and the answer is mostly "about the same
+# distance, whatever the size of the field".
+#
+# Measured on the six the BDG dressed by hand:
+#
+#     Abbeville   548 m out, markers reach  291 m
+#     Cocquelles  693 m out, markers reach  487 m
+#     Peuplingues 724 m out, markers reach  722 m
+#     Marck       612 m out, markers reach  464 m
+#     Wissant     388 m out, markers reach 1030 m
+#
+# The absolute distances sit in a narrow band, 388 to 724 m, while the
+# ratio to the field's own reach runs from 0.38 to 1.88. So the size of
+# the aerodrome does NOT predict how far out its buildings went, and
+# scaling by it is the wrong model: trying that put Laval's 2767 m away,
+# because its markers reach 1469 m.
+#
+# What was wrong at Audembert is narrower than that. Its markers reach
+# 366 m and it was getting 691 m, Cocquelles' distance, because every
+# GLFTTNT2 field inherited one number. So the rule is the exemplar's own
+# distance, pulled IN when the field is too small to carry it, and held
+# inside the band either way.
+MIN_RADIUS = 400
+MAX_RADIUS = 700
+SMALL_FIELD = 1.4        # a dispersal may sit this far out relative to the field
 JITTER = 15              # metres, vehicles and figures only
 
 MARKER = '# Luftwaffe dispersal'
@@ -102,6 +127,22 @@ MOVEABLE = set(range(411, 428)) | {442, 443, 347}
 # Ground crew. Every field gets some, because they are what makes a field
 # look inhabited rather than merely built on.
 CREW = (442, 443)
+
+# PARKED AEROPLANES, which is the thing that makes a field look flown
+# from. Not invented either: ObjectAdds\Ju52s.txt parks Ju 52s at Marck,
+# Abbeville, Wissant and Le Havre, so aircraft placed this way are
+# already shipped and already work. Every one of these shapes has a .bin
+# on disk.
+PARKED = {'Bf 109E': 23, 'Bf 110': 24, 'He 111': 20, 'Ju 88': 22,
+          'Do 17': 19, 'Ju 87': 32}
+PARK_MAX = 6            # per field, however many Gruppen are based there
+PARK_SPACING = 55       # metres between them, as the shipped Ju 52s sit
+
+# SHEEP AND COWS. Also shipped: ObjectAdds\TM SOE2.txt grazes six sheep
+# and nine cows near Marck. A grass aerodrome was kept down by somebody's
+# flock, and it costs a handful of objects.
+SHEEP, COW = 328, 329
+FLOCK = 7
 
 # What is based at a field changes what is standing about on it. These
 # swap shape ids in place, never positions, so the geometry that was
@@ -184,26 +225,44 @@ def clearance(pts, markers):
     return min(math.hypot(x - m[0], z - m[1]) / U for x, z in pts for m in markers)
 
 
-def best_bearing(kit, fld, markers):
-    """The bearing that puts this kit furthest from every marker.
+def field_reach(fld):
+    """How far this field's own runway markers get from its centre."""
+    if not fld.get('runway'):
+        return 0.0
+    return max(math.hypot(m[0] - fld['x'], m[1] - fld['z']) / U for m in fld['runway'])
 
-    A whole turn at one degree, which is 360 cheap evaluations and needs
-    no assumption about what the markers mean beyond "aeroplanes go
-    there". Ties break toward the exemplar's own bearing so a field with
-    no markers worth avoiding still looks like the field it came from.
+
+def place_kit(kit, fld, markers, want_r):
+    """Bearing and radius: as close in as the runways allow.
+
+    The first version used one radius per template and only searched the
+    bearing, and that was wrong on a small field. Audembert's own runway
+    markers reach 366 m from its centre and its dispersal was being put
+    691 m out, nearly twice as far from the middle as the aerodrome
+    itself extends, because Cocquelles happens to sit 696 m out and every
+    GLFTTNT2 field inherited that number. Patrick flew it and said the
+    buildings were too far away, and he was right.
+
+    So the radius is scaled to the field: the same distance out, relative
+    to the size of the aerodrome, as the exemplar had. That is checked
+    against clearance and pushed out step by step if it has to be, which
+    is the one direction it is safe to move.
     """
-    r = math.hypot(fld['kit_dx'], fld['kit_dz'])
-    best, best_at = None, 0.0
-    for deg in range(0, 360):
-        th = math.radians(deg)
-        cx, cz = fld['x'] + r * math.cos(th), fld['z'] + r * math.sin(th)
-        pts = [(cx + k['dx'] * U, cz + k['dz'] * U) for k in kit]
-        c = clearance(pts, markers)
-        if c is None:
-            return 0.0
-        if best is None or c > best:
-            best, best_at = c, th
-    return best_at
+    lo = min(MAX_RADIUS, max(MIN_RADIUS, want_r))
+    for r in [lo + step for step in range(0, 600, 25)]:
+        best, best_at = None, None
+        for deg in range(0, 360, 2):
+            th = math.radians(deg)
+            cx, cz = fld['x'] + r * U * math.cos(th), fld['z'] + r * U * math.sin(th)
+            pts = [(cx + k['dx'] * U, cz + k['dz'] * U) for k in kit]
+            c = clearance(pts, markers)
+            if c is None:
+                return 0.0, r
+            if best is None or c > best:
+                best, best_at = c, th
+        if best is not None and best >= MIN_CLEAR:
+            return best_at, r
+    return (best_at or 0.0), lo
 
 
 def read_objectadds(path):
@@ -299,6 +358,41 @@ def dress(kit, types, rnd):
     return out
 
 
+def parked(types, rnd, n_gruppen):
+    """A line of aeroplanes, in kit coordinates, beside the dispersal."""
+    want = min(PARK_MAX, max(2, n_gruppen * 2))
+    shapes = []
+    for t in types:
+        sid = PARKED.get(t)
+        if sid:
+            shapes.append(sid)
+    if not shapes:
+        return []
+    out = []
+    # a shallow arc rather than a dead straight row, the way a Staffel
+    # actually stood about on a field
+    base = rnd.uniform(0, 360)
+    for i in range(want):
+        a = math.radians(base + i * 4)
+        d = (i - (want - 1) / 2.0) * PARK_SPACING
+        out.append({'dx': d * math.cos(a) - 120 * math.sin(a) + rnd.uniform(-8, 8),
+                    'dz': d * math.sin(a) + 120 * math.cos(a) + rnd.uniform(-8, 8),
+                    'hdg': (base + i * 4 + rnd.uniform(-12, 12)) % 360,
+                    'id': shapes[i % len(shapes)]})
+    return out
+
+
+def flock(rnd):
+    """A few sheep and cows, off to one side and well away from anything."""
+    out = []
+    cx, cz = rnd.uniform(-320, 320), rnd.uniform(-320, -180)
+    for i in range(FLOCK):
+        out.append({'dx': cx + rnd.uniform(-26, 26), 'dz': cz + rnd.uniform(-20, 20),
+                    'hdg': rnd.choice([0, 45, 90, 135, 180, 225, 270, 315]),
+                    'id': SHEEP if i % 3 else COW})
+    return out
+
+
 def plant(kit, fld, bearing, radius):
     """The kit's centroid at that bearing and radius from the reference."""
     cx = fld['x'] + radius * U * math.cos(bearing)
@@ -344,8 +438,10 @@ def main():
     templates = {}
     for shape, (nm, fn) in EXEMPLARS.items():
         kit, radius = lift(ref, nm, os.path.join(oa_dir, fn))
-        templates[shape] = {'kit': trim(kit, nm), 'from': nm,
-                            'radius': radius, 'raw': len(kit)}
+        reach = field_reach(ref[nm])
+        templates[shape] = {'kit': trim(kit, nm), 'from': nm, 'radius': radius,
+                            'ratio': (radius / reach) if reach > 0 else 1.4,
+                            'raw': len(kit)}
 
     oob = json.load(open(a.oob, encoding='utf-8'))
     by_field = {}
@@ -373,10 +469,18 @@ def main():
         tpl = templates.get(fld['shape']) or templates['EMPTY']
         rnd = random.Random('bob2-lw-field-' + key)
         kit = dress(tpl['kit'], by_field[field], rnd)
-        fld['kit_dx'] = tpl['radius'] * U
-        fld['kit_dz'] = 0.0
-        bearing = best_bearing(kit, fld, fld['runway'])
-        rows = plant(kit, fld, bearing, tpl['radius'])
+        # A bigger station gets more on it: two aeroplanes per Gruppe
+        # based there, which is the only thing that scales with how busy
+        # the field was. Plus somebody's flock keeping the grass down.
+        kit = kit + parked(by_field[field], rnd, len(by_field[field])) + flock(rnd)
+        # the same distance out, relative to the size of the aerodrome,
+        # as the exemplar's own dispersal sat from its field
+        reach = field_reach(fld)
+        want_r = tpl['radius']
+        if reach > 0:
+            want_r = min(want_r, max(reach * SMALL_FIELD, MIN_RADIUS))
+        bearing, radius = place_kit(kit, fld, fld['runway'], want_r)
+        rows = plant(kit, fld, bearing, radius)
         clear = clearance([(x, z) for x, z, _, _ in rows], fld['runway'])
         if clear is None or clear < MIN_CLEAR:
             problems.append('%s: the best bearing still leaves only %.0f m from a runway '
@@ -386,7 +490,8 @@ def main():
         if any(x < 0 or z < 0 for x, z, _, _ in rows):
             problems.append('%s: a negative coordinate, which the exe reads as unsigned' % field)
             continue
-        lines = ['%s - %s (BOB2 Modern Fix). Static only.' % (MARKER, field)]
+        lines = ['%s - %s (BOB2 Modern Fix). Static only. %d Gruppe(n) based.'
+                 % (MARKER, field, len(by_field[field]))]
         for x, z, hdg, sid in rows:
             lines.append('OBJECT_ADD %d,%d,%.6f,%d #%s' % (x, z, float(hdg), sid, cat.get(sid, '?')))
         blocks.append('\r\n'.join(lines))
@@ -394,7 +499,8 @@ def main():
         manifest.append({'field': field, 'uid': key, 'shape': fld['shape'],
                          'exemplar': tpl['from'],
                          'bearing': round(math.degrees(bearing) % 360.0, 1),
-                         'radius': round(tpl['radius']), 'clearance': round(clear),
+                         'radius': round(radius), 'reach': round(reach),
+                         'clearance': round(clear),
                          'x': fld['x'], 'z': fld['z'],
                          'markers': [{'x': m[0], 'z': m[1]} for m in fld['runway']],
                          'objects': [{'x': x, 'z': z, 'hdg': round(h, 3), 'id': s}
@@ -419,8 +525,8 @@ def main():
         fh.write('\n')
 
     for shape, t in sorted(templates.items()):
-        print('  %-9s from %-11s %2d of %3d objects kept, %3.0f m out from the reference'
-              % (shape, t['from'], len(t['kit']), t['raw'], t['radius']))
+        print('  %-9s from %-11s %2d of %3d objects kept, %3.0f m out, %.2f x its field'
+              % (shape, t['from'], len(t['kit']), t['raw'], t['radius'], t['ratio']))
     clears = sorted(f['clearance'] for f in manifest)
     print('%d fields dressed, %d objects -> %s' % (len(blocks), total, a.out))
     if clears:

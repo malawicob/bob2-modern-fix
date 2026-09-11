@@ -40,6 +40,10 @@ COLOUR = {
     419: (232, 120, 100), 420: (232, 120, 100), 421: (232, 120, 100),
     427: (232, 120, 100), 429: (232, 120, 100), 430: (232, 120, 100),
     324: (240, 200, 90),
+    # parked aeroplanes and livestock, added 11 September 2026
+    19: (120, 200, 255), 20: (120, 200, 255), 22: (120, 200, 255), 32: (120, 200, 255),
+    23: (255, 140, 190), 24: (255, 140, 190),
+    328: (200, 255, 160), 329: (200, 255, 160),
     442: (250, 250, 250), 443: (250, 250, 250), 347: (250, 250, 250),
 }
 DEFAULT = (170, 178, 186)      # vehicles
@@ -177,6 +181,7 @@ def main():
     print('  red cross = the field reference point')
     print('  green = tents and revetments, blue = huts and hangars, brown = barns,')
     print('  red = flak, yellow = bomb dump, white = ground crew, grey = vehicles')
+    print('  pink = parked fighters, pale blue = parked bombers, pale green = sheep and cows')
     print('  dark grey dots = scenery already in ObjectAdds')
     return 0
 

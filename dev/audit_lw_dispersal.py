@@ -34,7 +34,12 @@ GAME = '/mnt/d/Battle of Britain II_Latest_test'
 U = 90.0
 MIN_CLEAR = 165       # metres from any runway marker; the least the BDG's own fields keep
 FIELD_RADIUS = 1500   # metres from the field reference point
-CEILING = 24
+# The ceiling went from 24 to 40 on 11 September 2026, when parked
+# aeroplanes and a flock were added. A field is now the dressing (up to
+# 24), two aeroplanes per Gruppe based there (up to 6), and seven sheep
+# and cows. 1,324 objects over 40 fields against 87,272 already loading
+# is about 1.5%, and only the field you are standing at is ever near you.
+CEILING = 40
 FLOOR = 14
 CLASH = 25            # metres; closer than this to a stock object is a stack
 

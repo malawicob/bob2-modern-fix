@@ -266,3 +266,61 @@ before a byte is written, `quick.dat` is copied to
 byte for byte.
 
     python3 dev/build_lw_quickfields.py    works out the quartets
+
+
+## Second pass, 11 September 2026
+
+Patrick flew it and found Audembert's buildings too far from the field.
+He was right, and the reason was narrow: the radius was one number per
+template, so every `GLFTTNT2` field inherited Cocquelles' 696 m whether
+its aerodrome was that size or not. Audembert's runway markers reach only
+366 m from its centre, and it was getting its dispersal 691 m out.
+
+Scaling the distance to the size of the field looked like the fix and is
+not. Measured on the six dressed by hand, the absolute distance sits in a
+narrow band while the ratio to the field's own reach runs from 0.38 to
+1.88:
+
+| | Abbeville | Cocquelles | Peuplingues | Marck | Wissant |
+|---|---|---|---|---|---|
+| kit from the centre | 548 m | 693 m | 724 m | 612 m | 388 m |
+| markers reach | 291 m | 487 m | 722 m | 464 m | 1030 m |
+| ratio | 1.88 | 1.42 | 1.00 | 1.32 | 0.38 |
+
+So the size of an aerodrome does not predict how far out its buildings
+went. Scaling by it put Laval's 2,767 m away, which is worse than the
+fault it was meant to cure. The rule is now the exemplar's own distance,
+pulled IN where the field is too small to carry it, held between 400 and
+700 m either way. Audembert is 512 m, and all forty sit at 400 to 696 m
+against the hand-dressed 388 to 724.
+
+### Parked aeroplanes, and a flock
+
+Both were already shipped, which is the only reason they are here.
+
+`ObjectAdds\Ju52s.txt` parks Ju 52s at Marck, Abbeville, Wissant and Le
+Havre, 565 to 718 m from each field's centre. So aircraft placed through
+ObjectAdds work. Every field now gets two per Gruppe based on it, up to
+six, of the type actually based there: Bf 109E is shape 23, Bf 110 is 24,
+He 111 20, Ju 88 22, Do 17 19, Ju 87 32. This is the only thing that
+scales with how busy a station was.
+
+`ObjectAdds\TM SOE2.txt` grazes six sheep (328) and nine cows (329) near
+Marck. Each field now gets seven, off to one side, because a grass
+aerodrome was kept down by somebody's flock.
+
+That takes it from 928 objects to **1,324**, about 33 a field, and the
+ceiling in the audit from 24 to 40. Against the 87,272 already loading
+that is about 1.5%.
+
+### What cannot be done this way
+
+**Nothing moves.** ObjectAdds places static objects only, which is why
+the RAF blocks say "Static only" at the top. Vehicles that drive come
+from the battlefield files: a `GroundGroup` with a `Route` of `WayPoint`s,
+as `SRC/BFIELDS/RAFAF/M1WITTER.BFI` has. `BFIELDS/LUFAF` holds nothing
+but `GF` files, all 33-byte stubs, with no `M1`/`M2`/`M3` mobile groups
+and no `TX` taxi points at all, and there is no compiler in this install
+for the `.BFI` source they would be written in. The exe does support a
+second record type, `CHAR_ANIM_ADD`, for animated figures, but not one of
+the 295 shipped files uses it, so it is unproven.
