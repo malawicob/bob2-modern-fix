@@ -328,18 +328,36 @@ GROUP_OF[328] = GROUP_OF[329] = 'flock'
 # How far out each group wants to sit, and how tight it is. The dispersal
 # is the thing you are meant to see on the way in, so it is the closest
 # in that the runway markers allow.
-# What sits closest is the dispersal, because tents and a hangar are what
-# you want beside you. The vehicles go out: Patrick found a Blitz and a
-# Kuebelwagen on his wingtip twice, and a lorry is the wrong thing to be
-# nearest whatever the spawn point turns out to be.
+# A DISPERSAL GOES EAST OF THE FIELD, and that is measured, not chosen.
+#
+# The bearing of the kit's centre from the reference point, on all five
+# German fields the BDG dressed by hand:
+#
+#     Abbeville 99   Cocquelles 82   Peuplingues 111
+#     Marck     81   Wissant    87
+#
+# Five out of five between 81 and 111 degrees, and it has nothing to do
+# with where the runway markers are: those run from 12 to 191 degrees and
+# sit 4 to 69 degrees off the kit in every case. So east is a convention
+# the authors followed, and since Patrick reports Abbeville's vehicles a
+# few metres off his STARBOARD WING at the spawn, east of the reference
+# is where the aeroplane ends up looking.
+#
+# This is why every earlier attempt read as "far away". The objects were
+# not too distant, Abbeville's sit at 548 m and he calls that much
+# better: they were on the wrong side. Spreading the groups evenly round
+# the compass, which fixed the pile-up, guaranteed most of them faced
+# away from him.
+DISPERSAL_EAST = 92      # degrees, the mean of the five
+EAST_ARC = 45            # groups sit within this of it
 GROUP_PLAN = {
-    'dispersal': (90, 55),
-    'aircraft':  (180, 50),
-    'transport': (230, 45),
-    'flak':      (260, 70),
-    'bombs':     (280, 30),
-    'farm':      (300, 55),
-    'flock':     (330, 40),
+    'dispersal': (540, 55),
+    'aircraft':  (580, 50),
+    'transport': (640, 45),
+    'flak':      (520, 70),
+    'bombs':     (670, 30),
+    'farm':      (620, 55),
+    'flock':     (700, 40),
 }
 
 
@@ -708,8 +726,13 @@ def main():
             groups.setdefault(group_of(k), []).append(k)
         rows, taken, placed = [], [], []
         order = ('dispersal', 'transport', 'aircraft', 'flak', 'bombs', 'farm', 'flock')
-        turn = rnd.uniform(0, 360)
-        aims = {g: (turn + i * (360.0 / len(order))) % 360 for i, g in enumerate(order)}
+        # fanned across the eastern arc rather than round the whole
+        # compass, so the field faces the aeroplane instead of hiding
+        # behind it
+        step = (2.0 * EAST_ARC) / (len(order) - 1)
+        turn = rnd.uniform(-8, 8)
+        aims = {g: (DISPERSAL_EAST - EAST_ARC + i * step + turn) % 360
+                for i, g in enumerate(order)}
         for gname in order:
             items = groups.pop(gname, [])
             if not items:
@@ -717,8 +740,12 @@ def main():
             want, span = GROUP_PLAN.get(gname, (300, 60))
             tighten(items, span)
             got = anchor_group(items, fld, fld['runway'], max(want, MIN_RADIUS_G),
-                               taken, aim=aims[gname])
-            if not got:                      # nowhere in its own arc will do
+                               taken, aim=aims[gname], spread=18)
+            if not got:                      # nowhere in its own narrow arc
+                got = anchor_group(items, fld, fld['runway'],
+                                   max(want, MIN_RADIUS_G), taken,
+                                   aim=DISPERSAL_EAST, spread=EAST_ARC)
+            if not got:                      # and only then anywhere at all
                 got = anchor_group(items, fld, fld['runway'],
                                    max(want, MIN_RADIUS_G), taken)
             if not got:
