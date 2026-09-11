@@ -66,10 +66,19 @@ DONE = {'CROYDON', 'BIGGINHILL', 'DEBDEN', 'KENLEY', 'HORNCHURCH'}
 SOURCES = {'Croydon': 'CROYDON', 'Biggin_Hill': 'BIGGINHILL', 'Debden': 'DEBDEN',
            'Kenley': 'KENLEY', 'Hornchurch': 'HORNCHURCH'}
 
-# Parked British aeroplanes. None of these has ever been placed anywhere
-# in the game, though 21 JU52 proves aircraft through ObjectAdds work.
-PARKED_FIGHTER = [25, 44]        # SPIT, HURR ("statc hurri")
-PARKED_BOMBER = [45, 25]         # BRISTO ("static blenheim"), SPIT
+# THE STATIC BLENHEIM, because it is the only British one that works.
+#
+# 25 SPIT, 44 HURR and 45 BRISTO are in the catalogue with models on disk
+# and are placed by nobody, anywhere. Across the 295 shipped ObjectAdds
+# files and the whole battlefield source, exactly two aircraft shapes are
+# ever placed as ground objects: 21 JU52 and 187 GBRIST. Patrick flew to
+# Caffiers, where a 109 had been parked on the same reasoning, and there
+# were no aeroplanes on it.
+#
+# 187 is the one the game itself uses: M1ANDOVE.BFI and its siblings park
+# static Blenheims at six RAF stations with it.
+PARKED_FIGHTER = [187]
+PARKED_BOMBER = [187]
 PARK_SPACING = 55
 
 # THE STATIONS NOBODY FLIES FROM, and why they are dressed anyway.

@@ -109,6 +109,9 @@ MIN_CLEAR = 165          # metres from any runway marker; the least the BDG's ow
 # distance, pulled IN when the field is too small to carry it, and held
 # inside the band either way.
 MIN_RADIUS = 400
+# The closest a GROUP may sit to the reference point. The nearest thing
+# the BDG put at Cocquelles is 221 m out, so 190 is not a liberty.
+MIN_RADIUS_G = 190
 MAX_RADIUS = 700
 SMALL_FIELD = 1.4        # a dispersal may sit this far out relative to the field
 JITTER = 15              # metres, vehicles and figures only
@@ -133,10 +136,24 @@ CREW = (442, 443)
 # Abbeville, Wissant and Le Havre, so aircraft placed this way are
 # already shipped and already work. Every one of these shapes has a .bin
 # on disk.
-PARKED = {'Bf 109E': 23, 'Bf 110': 24, 'He 111': 20, 'Ju 88': 22,
-          'Do 17': 19, 'Ju 87': 32}
-PARK_MAX = 6            # per field, however many Gruppen are based there
-PARK_SPACING = 55       # metres between them, as the shipped Ju 52s sit
+# ONLY THE Ju 52, because it is the only one that works.
+#
+# The first version parked a 109 at every fighter field, a 110 at the
+# Zerstoerer fields and bombers elsewhere, on the reasoning that 21 JU52
+# is placed by Ju52s.txt so the neighbouring aircraft ids must work too.
+# Patrick flew to Caffiers and there were no aeroplanes on it.
+#
+# Counted across the 295 shipped files and the whole battlefield source,
+# exactly two aircraft shapes are ever placed as ground objects: 21 JU52,
+# thirteen times in ObjectAdds, and 187 GBRIST, the static Blenheim,
+# nineteen times in the battlefield files. Everything in 19 to 25, 32, 44
+# and 45 is placed by nobody, anywhere, and 23 ME109 is one of them.
+#
+# A Ju 52 at a fighter field is not a consolation prize either: it was
+# the Luftwaffe's workhorse and turned up at every field it had.
+PARKED_ANY = 21         # Ju 52, the one aircraft proven to place
+PARK_MAX = 2
+PARK_SPACING = 55
 
 # SHEEP AND COWS. Also shipped: ObjectAdds\TM SOE2.txt grazes six sheep
 # and nine cows near Marck. A grass aerodrome was kept down by somebody's
@@ -256,6 +273,86 @@ def field_reach(fld):
     if not fld.get('runway'):
         return 0.0
     return max(math.hypot(m[0] - fld['x'], m[1] - fld['z']) / U for m in fld['runway'])
+
+
+# WHICH GROUP EACH THING BELONGS TO.
+#
+# The scope document worked this out at the very start and it never got
+# built: the BDG's author "worked cluster by cluster: consecutive lines
+# 7-50 m apart in runs (a dispersal, then the MT lines, then a farm
+# group), separated by 200-600 m jumps."
+#
+# What shipped instead was one clump 692 m from the middle of Caffiers,
+# spanning 683 m, and Patrick flew to it and said it was sparse and far
+# away. It was both, and for the same reason: a single loose scatter at
+# one bearing reads as neither a dispersal nor anything else. Cocquelles,
+# dressed by hand, has objects from 221 m out to 3.3 km in groups.
+GROUP_OF = {}
+for _s in (440, 439, 438, 503, 436, 437, 441, 442, 443, 347):
+    GROUP_OF[_s] = 'dispersal'          # tents, revetments, huts, hangar, crew
+for _s in range(411, 428):
+    GROUP_OF[_s] = 'transport'          # the MT lines
+for _s in (419, 420, 421, 427, 428, 429, 430, 434):
+    GROUP_OF[_s] = 'flak'
+for _s in (431, 432, 433, 435):
+    GROUP_OF[_s] = 'farm'               # the requisitioned buildings
+GROUP_OF[324] = 'bombs'
+GROUP_OF[328] = GROUP_OF[329] = 'flock'
+
+# How far out each group wants to sit, and how tight it is. The dispersal
+# is the thing you are meant to see on the way in, so it is the closest
+# in that the runway markers allow.
+GROUP_PLAN = {
+    'dispersal': (200, 60),
+    'transport': (260, 45),
+    'flak':      (300, 70),
+    'farm':      (420, 55),
+    'bombs':     (330, 30),
+    'aircraft':  (240, 50),
+    'flock':     (480, 40),
+}
+
+
+def group_of(k):
+    return k.get('grp') or GROUP_OF.get(k['id'], 'dispersal')
+
+
+def tighten(items, span):
+    """Pull a group in around its own centre so it reads as one thing."""
+    if not items:
+        return items
+    cx = sorted(k['dx'] for k in items)[len(items) // 2]
+    cz = sorted(k['dz'] for k in items)[len(items) // 2]
+    reach = max((math.hypot(k['dx'] - cx, k['dz'] - cz) for k in items), default=0.0)
+    f = 1.0 if reach <= span else span / reach
+    for k in items:
+        k['dx'] = (k['dx'] - cx) * f
+        k['dz'] = (k['dz'] - cz) * f
+    return items
+
+
+def anchor_group(items, fld, markers, want_r, taken):
+    """Bearing and radius for one group: as close in as is safe, and clear
+    of the groups already placed so they do not pile up."""
+    for r in [want_r + step for step in range(0, 520, 20)]:
+        best = None
+        for deg in range(0, 360, 4):
+            th = math.radians(deg)
+            cx = fld['x'] + r * U * math.cos(th)
+            cz = fld['z'] + r * U * math.sin(th)
+            pts = [(cx + k['dx'] * U, cz + k['dz'] * U) for k in items]
+            c = clearance(pts, markers)
+            if c is None or c < MIN_CLEAR:
+                continue
+            apart = min((math.hypot(cx - tx, cz - tz) / U for tx, tz in taken), default=9e9)
+            if apart < 120:
+                continue
+            score = min(c, 400.0) + min(apart, 400.0) * 0.4
+            if best is None or score > best[0]:
+                best = (score, cx, cz, c)
+        if best:
+            return best[1], best[2], best[3]
+    return None
 
 
 def place_kit(kit, fld, markers, want_r):
@@ -424,15 +521,9 @@ def flak(rnd, kanalfront):
 
 
 def parked(types, rnd, n_gruppen):
-    """A line of aeroplanes, in kit coordinates, beside the dispersal."""
-    want = min(PARK_MAX, max(2, n_gruppen * 2))
-    shapes = []
-    for t in types:
-        sid = PARKED.get(t)
-        if sid:
-            shapes.append(sid)
-    if not shapes:
-        return []
+    """A Ju 52 or two, in kit coordinates, beside the dispersal."""
+    want = PARK_MAX
+    shapes = [PARKED_ANY]
     out = []
     # a shallow arc rather than a dead straight row, the way a Staffel
     # actually stood about on a field
@@ -443,7 +534,7 @@ def parked(types, rnd, n_gruppen):
         out.append({'dx': d * math.cos(a) - 120 * math.sin(a) + rnd.uniform(-8, 8),
                     'dz': d * math.sin(a) + 120 * math.cos(a) + rnd.uniform(-8, 8),
                     'hdg': (base + i * 4 + rnd.uniform(-12, 12)) % 360,
-                    'id': shapes[i % len(shapes)]})
+                    'id': shapes[i % len(shapes)], 'grp': 'aircraft'})
     return out
 
 
@@ -553,14 +644,43 @@ def main():
         want_r = tpl['radius']
         if reach > 0:
             want_r = min(want_r, max(reach * SMALL_FIELD, MIN_RADIUS))
-        bearing, radius = place_kit(kit, fld, fld['runway'], want_r)
-        rows = plant(kit, fld, bearing, radius)
+        # Group by group, each one tight and each at its own bearing, the
+        # way the fields dressed by hand are laid out.
+        groups = {}
+        for k in kit:
+            groups.setdefault(group_of(k), []).append(k)
+        rows, taken, placed = [], [], []
+        for gname in ('dispersal', 'transport', 'aircraft', 'flak', 'bombs', 'farm', 'flock'):
+            items = groups.pop(gname, [])
+            if not items:
+                continue
+            want, span = GROUP_PLAN.get(gname, (300, 60))
+            tighten(items, span)
+            got = anchor_group(items, fld, fld['runway'], max(want, MIN_RADIUS_G), taken)
+            if not got:
+                continue
+            cx, cz, clr = got
+            taken.append((cx, cz))
+            placed.append((gname, math.hypot(cx - fld['x'], cz - fld['z']) / U, clr))
+            for k in items:
+                rows.append((int(round(cx + k['dx'] * U)), int(round(cz + k['dz'] * U)),
+                             round(k['hdg']) % 360, k['id']))
+        for leftover in groups.values():          # anything unclassified
+            for k in leftover:
+                rows.append((int(round(fld['x'] + (want_r + 60) * U + k['dx'] * U)),
+                             int(round(fld['z'] + k['dz'] * U)),
+                             round(k['hdg']) % 360, k['id']))
+        if not rows:
+            problems.append('%s: no group could be placed clear of the runway markers'
+                            % field)
+            continue
         clear = clearance([(x, z) for x, z, _, _ in rows], fld['runway'])
         if clear is None or clear < MIN_CLEAR:
-            problems.append('%s: the best bearing still leaves only %.0f m from a runway '
-                            'marker, under the %d m the BDG\'s own fields keep, so it is '
-                            'left alone' % (field, clear or 0, MIN_CLEAR))
+            problems.append('%s: %.0f m from a runway marker, under the %d m floor'
+                            % (field, clear or 0, MIN_CLEAR))
             continue
+        radius = min(d for _g, d, _c in placed)
+        bearing = 0.0
         if any(x < 0 or z < 0 for x, z, _, _ in rows):
             problems.append('%s: a negative coordinate, which the exe reads as unsigned' % field)
             continue
@@ -574,6 +694,8 @@ def main():
                          'exemplar': tpl['from'],
                          'bearing': round(math.degrees(bearing) % 360.0, 1),
                          'radius': round(radius), 'reach': round(reach),
+                         'groups': [{'name': g, 'radius': round(d), 'clear': round(c)}
+                                    for g, d, c in placed],
                          'clearance': round(clear),
                          'x': fld['x'], 'z': fld['z'],
                          'markers': [{'x': m[0], 'z': m[1]} for m in fld['runway']],

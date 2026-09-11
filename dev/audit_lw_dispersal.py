@@ -233,6 +233,27 @@ def main():
     if not far:
         print('  every object within %d m of its own field' % FIELD_RADIUS)
 
+    # ---- only shapes the game itself ever places -----------------------
+    # Patrick flew to Caffiers and found no aeroplanes on it. 23 ME109 had
+    # been parked there on the reasoning that 21 JU52 works, and 21 does,
+    # but 23 is placed by nobody anywhere. Aircraft are the one class of
+    # shape where "it is in the catalogue and has a model" is not enough,
+    # so they are checked against what is actually placed.
+    print('THE AEROPLANES')
+    AIRCRAFT = set(range(19, 26)) | {32, 44, 45, 187, 393} | set(range(368, 378))
+    proven = {s for s in shipped if s in AIRCRAFT}
+    used_ac = {o['id'] for f in man['fields'] for o in f['objects'] if o['id'] in AIRCRAFT}
+    if os.path.exists(os.path.join(ROOT, 'dispersal/raf-airfields.json')):
+        for f in json.load(open(os.path.join(ROOT, 'dispersal/raf-airfields.json'),
+                                encoding='utf-8'))['fields']:
+            used_ac |= {o['id'] for o in f['objects'] if o['id'] in AIRCRAFT}
+    for sid in sorted(used_ac):
+        if sid not in proven:
+            fail('aircraft shape %d (%s) is placed by nothing that ships, so it will '
+                 'not appear' % (sid, cat.get(sid, '?')))
+    print('  %d aircraft shape(s) used, all of them ones the game itself places (%s)'
+          % (len(used_ac), ', '.join('%d %s' % (s, cat.get(s, '?')) for s in sorted(used_ac))))
+
     # ---- the RAF side, which has a real runway to measure against ----
     raf_path = os.path.join(ROOT, 'dispersal/raf-airfields.json')
     raf_txt = os.path.join(ROOT, 'dispersal/RAF_Airfields.txt')
