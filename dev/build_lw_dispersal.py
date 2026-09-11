@@ -111,7 +111,18 @@ MIN_CLEAR = 165          # metres from any runway marker; the least the BDG's ow
 MIN_RADIUS = 400
 # The closest a GROUP may sit to the reference point. The nearest thing
 # the BDG put at Cocquelles is 221 m out, so 190 is not a liberty.
-MIN_RADIUS_G = 190
+# 110, down from 190. The 190 was a number I chose and nothing else, and
+# it was the only thing keeping the dispersal out: measured across all
+# forty fields, every one of them can put a group 60 m from its reference
+# point and still be 165 m from every runway marker, because the markers
+# are scattered points and there is always a bearing away from them.
+#
+# The hand-dressed fields bear it out at both ends. Abbeville, Cocquelles,
+# Peuplingues and Marck keep their nearest object 440 to 528 m out, but
+# WISSANT PUTS ONE 88 m FROM ITS REFERENCE and Le Havre 82 m. So going in
+# close is not a liberty, it is one of the two ways it was actually done,
+# and what governs is distance from the markers, which is unchanged.
+MIN_RADIUS_G = 110
 MAX_RADIUS = 700
 SMALL_FIELD = 1.4        # a dispersal may sit this far out relative to the field
 JITTER = 15              # metres, vehicles and figures only
@@ -303,13 +314,13 @@ GROUP_OF[328] = GROUP_OF[329] = 'flock'
 # is the thing you are meant to see on the way in, so it is the closest
 # in that the runway markers allow.
 GROUP_PLAN = {
-    'dispersal': (200, 60),
-    'transport': (260, 45),
-    'flak':      (300, 70),
-    'farm':      (420, 55),
-    'bombs':     (330, 30),
-    'aircraft':  (240, 50),
-    'flock':     (480, 40),
+    'dispersal': (130, 55),
+    'aircraft':  (170, 50),
+    'transport': (200, 45),
+    'flak':      (260, 70),
+    'bombs':     (300, 30),
+    'farm':      (330, 55),
+    'flock':     (380, 40),
 }
 
 
@@ -345,7 +356,7 @@ def anchor_group(items, fld, markers, want_r, taken):
             if c is None or c < MIN_CLEAR:
                 continue
             apart = min((math.hypot(cx - tx, cz - tz) / U for tx, tz in taken), default=9e9)
-            if apart < 120:
+            if apart < 95:
                 continue
             score = min(c, 400.0) + min(apart, 400.0) * 0.4
             if best is None or score > best[0]:
