@@ -85,7 +85,14 @@ CEILING = 24             # hard cap on objects per field
 FIELD_RADIUS = 1500      # metres from the reference point; beyond this is landscape
 KIT_RADIUS = 400         # metres from the kit's own centroid; beyond this is an outlier
 MARKER_RADIUS = 3000     # metres; a RunwayS marker further out belongs to another field
-MIN_CLEAR = 165          # metres from any runway marker; the least the BDG's own fields keep
+# 220, up from 165. 165 was the least the BDG's own fields keep, and it
+# is enough to stay off a runway, but it is not enough to stay away from
+# where you SPAWN: Patrick found a Blitz and a Kuebelwagen parked on his
+# wingtip. The markers are the takeoff points, so they are the best proxy
+# for the spawn there is, and everything now stands further back from
+# them. The groups stay as close to the field as they were, because what
+# governs that is the radius from the reference point, not this.
+MIN_CLEAR = 220
 # HOW FAR OUT A DISPERSAL SITS, and the answer is mostly "about the same
 # distance, whatever the size of the field".
 #
@@ -186,6 +193,14 @@ FLOCK = 5
 HANGAR = {'GLFTFUL1': 436, 'GLFTFUL2': 437, 'GLFTTNT1': 503,
           'GLFTTNT2': 503, 'EMPTY': 503}
 LWHUT = 438             # the Luftwaffe hut, also never placed anywhere
+
+# A ROW OF TENTS, because that is what a Luftwaffe field looked like and
+# Caffiers had exactly one. The exemplars are no help: Cocquelles carries
+# a single lwtent and every GLFTTNT2 field inherited it, so the tent line
+# is built rather than lifted. Eight in a shallow row, the way the ones
+# at Abbeville sit.
+TENT_LINE = 8
+TENT_SPACING = 26
 
 # AIR DEFENCE. Five guns across forty fields was not a defended aerodrome.
 # The 88 and the large revetment that goes with it, the Flakvierling, and
@@ -510,6 +525,19 @@ def buildings(fld, rnd):
     return out
 
 
+def tent_line(rnd):
+    """The row of tents that makes a field read as a Luftwaffe one."""
+    out = []
+    a = math.radians(rnd.uniform(0, 360))
+    for i in range(TENT_LINE):
+        d = (i - (TENT_LINE - 1) / 2.0) * TENT_SPACING
+        out.append({'dx': d * math.cos(a) + rnd.uniform(-5, 5),
+                    'dz': d * math.sin(a) + rnd.uniform(-5, 5),
+                    'hdg': (math.degrees(a) + 90 + rnd.uniform(-8, 8)) % 360,
+                    'id': 440, 'grp': 'dispersal'})
+    return out
+
+
 def flak(rnd, kanalfront):
     """Two guns, three at the Kanalfront, and a revetment for the 88."""
     out = []
@@ -646,6 +674,7 @@ def main():
         lat = (geo.get(field) or [0, 0])[0]
         kit = (kit
                + buildings(fld, rnd)
+               + tent_line(rnd)
                + flak(rnd, lat >= KANALFRONT_LAT)
                + parked(by_field[field], rnd, len(by_field[field]))
                + flock(rnd))

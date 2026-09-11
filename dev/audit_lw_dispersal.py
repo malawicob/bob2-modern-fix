@@ -47,7 +47,15 @@ FIELD_RADIUS = 1500   # metres from the field reference point
 # For scale: the six fields the BDG dressed by hand carry 60 to 115
 # objects each, and Marck 224. 44 is still well under the lightest of
 # them, and 1,460 objects against the 87,272 already loading is 1.7%.
-CEILING = 44
+# 52, raised from 44 on 11 September 2026 when the tent line went in.
+# Caffiers had exactly one tent, because Cocquelles carries one and every
+# GLFTTNT2 field inherited it, and Patrick asked for more at both sides.
+# Eight in a row is what an Abbeville looks like.
+#
+# For scale, still: the six fields the BDG dressed by hand carry 60 to
+# 115 objects each and Marck 224, so 52 remains well under the lightest
+# of them, and this is the setting a 200 FPS machine can plainly afford.
+CEILING = 52
 FLOOR = 14
 CLASH = 25            # metres; closer than this to a stock object is a stack
 
