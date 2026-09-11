@@ -328,14 +328,18 @@ GROUP_OF[328] = GROUP_OF[329] = 'flock'
 # How far out each group wants to sit, and how tight it is. The dispersal
 # is the thing you are meant to see on the way in, so it is the closest
 # in that the runway markers allow.
+# What sits closest is the dispersal, because tents and a hangar are what
+# you want beside you. The vehicles go out: Patrick found a Blitz and a
+# Kuebelwagen on his wingtip twice, and a lorry is the wrong thing to be
+# nearest whatever the spawn point turns out to be.
 GROUP_PLAN = {
     'dispersal': (90, 55),
-    'aircraft':  (120, 50),
-    'transport': (150, 45),
-    'flak':      (200, 70),
-    'bombs':     (230, 30),
-    'farm':      (260, 55),
-    'flock':     (300, 40),
+    'aircraft':  (180, 50),
+    'transport': (230, 45),
+    'flak':      (260, 70),
+    'bombs':     (280, 30),
+    'farm':      (300, 55),
+    'flock':     (330, 40),
 }
 
 
@@ -357,12 +361,25 @@ def tighten(items, span):
     return items
 
 
-def anchor_group(items, fld, markers, want_r, taken):
-    """Bearing and radius for one group: as close in as is safe, and clear
-    of the groups already placed so they do not pile up."""
+def anchor_group(items, fld, markers, want_r, taken, aim=None, spread=40):
+    """Bearing and radius for one group.
+
+    THE GROUPS ARE SPREAD ROUND THE FIELD, and they were not before.
+    Every group searched the whole compass for the best clearance, so
+    they all found the same best bearing and piled up on one side: at
+    Caffiers 29 of 37 objects sat in a single 45 degree sector. That is
+    one bug producing both of Patrick's complaints at once. Spawn on the
+    far side and the whole base is away in the distance; spawn near that
+    sector and there is a lorry on your wingtip.
+
+    A real aerodrome put its dispersals round the perimeter, so each
+    group now gets its own arc to sit in and only searches within it.
+    """
     for r in [want_r + step for step in range(0, 520, 20)]:
         best = None
-        for deg in range(0, 360, 4):
+        degs = range(0, 360, 4) if aim is None else \
+            [int(aim + o) % 360 for o in range(-spread, spread + 1, 4)]
+        for deg in degs:
             th = math.radians(deg)
             cx = fld['x'] + r * U * math.cos(th)
             cz = fld['z'] + r * U * math.sin(th)
@@ -690,13 +707,20 @@ def main():
         for k in kit:
             groups.setdefault(group_of(k), []).append(k)
         rows, taken, placed = [], [], []
-        for gname in ('dispersal', 'transport', 'aircraft', 'flak', 'bombs', 'farm', 'flock'):
+        order = ('dispersal', 'transport', 'aircraft', 'flak', 'bombs', 'farm', 'flock')
+        turn = rnd.uniform(0, 360)
+        aims = {g: (turn + i * (360.0 / len(order))) % 360 for i, g in enumerate(order)}
+        for gname in order:
             items = groups.pop(gname, [])
             if not items:
                 continue
             want, span = GROUP_PLAN.get(gname, (300, 60))
             tighten(items, span)
-            got = anchor_group(items, fld, fld['runway'], max(want, MIN_RADIUS_G), taken)
+            got = anchor_group(items, fld, fld['runway'], max(want, MIN_RADIUS_G),
+                               taken, aim=aims[gname])
+            if not got:                      # nowhere in its own arc will do
+                got = anchor_group(items, fld, fld['runway'],
+                                   max(want, MIN_RADIUS_G), taken)
             if not got:
                 continue
             cx, cz, clr = got
