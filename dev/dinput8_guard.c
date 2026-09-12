@@ -450,6 +450,17 @@ static int __attribute__((thiscall)) AutostartHook(void *self, void **next) {
     if (!r) { LogMsg("autostart: CheckLobby vetoed the intro exit"); AsDone("lobby-veto"); return 0; }
     if (InterlockedExchange(&g_as.armed, 0) == 0) return r;
     g_asFullpane = self;
+    /* What the title page would have done on the way past: TitleInit resets
+     * the replay flags, in3d, incomms, gamestate and the window caption.
+     * The side and phase pages only build their panels. Running the title
+     * page's own InitProc here (read from the page struct, a thiscall with
+     * no arguments) keeps that housekeeping exactly as the game does it;
+     * gamestate is set again below. */
+    {
+        DWORD tip = *(DWORD *)(AS_TITLE + FS_INITPROC);
+        if (tip >= AS_TEXT_LO && tip < AS_TEXT_HI) { ((int (__attribute__((thiscall)) *)(void *))tip)(self); LogMsg("autostart: ran TitleInit (0x%08X)", tip); }
+        else LogMsg("autostart: title InitProc 0x%08X not in .text, skipped", tip);
+    }
     *(DWORD *)AS_GAMESIDE = (DWORD)g_as.side;
     *(DWORD *)AS_GAMESTATE = (DWORD)g_as.role;
     *(DWORD *)((char *)self + RF_WHICHCAMP) = (DWORD)g_as.phase;
