@@ -109,7 +109,14 @@ try {
 
     "3  a Luftwaffe save is found, and preferred"
     $bsl = Join-Path $GameDir 'SAVEGAME\Auto Save.BSL'
-    Copy-Item $realSave $bsl -Force
+    # somebody else's war, by name: the borrowed real save now carries
+    # whatever pilot last flew the dev install, and section 8 needs this
+    # file NOT to be Millin's
+    $lb = [System.IO.File]::ReadAllBytes($realSave)
+    $ln = [System.Text.Encoding]::ASCII.GetBytes('Bob')
+    for ($i = 0; $i -lt 21; $i++) { $lb[100 + $i] = 0 }
+    [Array]::Copy($ln, 0, $lb, 100, $ln.Length)
+    [System.IO.File]::WriteAllBytes($bsl, $lb)
     (Get-Item $bsl).LastWriteTime = (Get-Item $save).LastWriteTime
     Set-StateSide 'lw'
     $files = @(Get-SaveFiles)

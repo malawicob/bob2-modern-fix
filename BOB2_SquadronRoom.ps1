@@ -1836,6 +1836,7 @@ function Finalize-Flight {
     $after = Get-CampaignDate -Path $savePath
     $outcome = 'Campaign progressed'
     try {
+        if (-not $mk.dateBefore -and $after) { $outcome = 'Campaign begun' }
         if ($mk.dateBefore) {
             $dAfter = if ($after) { $after.ToString('yyyy-MM-dd') } else { '' }
             if ($dAfter -and ($dAfter -gt "$($mk.dateBefore)")) { $outcome = 'Campaign day flown' }
@@ -1886,7 +1887,10 @@ function Finalize-Flight {
         minutes    = $mins
         dateBefore = "$($mk.dateBefore)"
         dateAfter  = if ($after) { $after.ToString('yyyy-MM-dd') } else { "$($mk.dateBefore)" }
-        mode       = if ($mk.dateBefore) { 'campaign' } else { 'instant' }
+        # a campaign sortie is one that left a dated campaign save behind,
+        # whether or not there was a save to date BEFORE it (a first sortie
+        # from PLAY CAMPAIGN has none, and used to be filed as 'instant')
+        mode       = if ($mk.dateBefore -or $after) { 'campaign' } else { 'instant' }
         outcome    = $outcome
         claims     = $autoAdded
         flewWith   = $(if ($flown) { "$($flown.Label)" } else { '' })
