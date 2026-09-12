@@ -203,6 +203,34 @@ try {
     $st = Read-AutostartResult
     Check 'the last status line is read back'      ($st -eq 'mismatch') "$st"
     Check 'and the report is consumed'             (-not (Test-Path $done))
+    "8  who the game flew him with, and what fresh means"
+    $ub = [System.IO.File]::ReadAllBytes($realSave)
+    $mn = [System.Text.Encoding]::ASCII.GetBytes('Millin')
+    for ($i = 0; $i -lt 21; $i++) { $ub[100 + $i] = 0 }
+    [Array]::Copy($mn, 0, $ub, 100, $mn.Length)
+    $ub[11344] = 163; $ub[11345] = 0; $ub[11346] = 6; $ub[11347] = 0        # I./JG 26, seventh aircraft
+    $unitSave = Join-Path $GameDir 'SAVEGAME\Unit.bsL'
+    [System.IO.File]::WriteAllBytes($unitSave, $ub)
+    $pu = Get-SavePlayerUnit -Path $unitSave
+    Check 'playersquadron and playeracnum read back' ($pu -and $pu.SqIdx -eq 163 -and $pu.AcNum -eq 6) "$($pu | ConvertTo-Json -Compress)"
+    $u = Get-UnitBySqIdx -Idx 163
+    Check '163 is I./JG 26'                           ($u.Side -eq 'lw' -and $u.Unit -eq 'I./JG 26') "$($u.Label)"
+    $u2 = Get-UnitBySqIdx -Idx 160
+    Check '160 is I./JG 3, as the real save said'      ($u2.Unit -eq 'I./JG 3') "$($u2.Label)"
+    $u3 = Get-UnitBySqIdx -Idx 66
+    Check '66 is No. 501 Squadron (provisional base)'  ($u3.Side -eq 'raf' -and $u3.Num -eq 501) "$($u3.Label)"
+    $ub[11344] = 0; $ub[11346] = 0
+    [System.IO.File]::WriteAllBytes((Join-Path $GameDir 'SAVEGAME\Nobody.bsL'), $ub)
+    Check 'nobody flown yet reads as nothing'          ($null -eq (Get-SavePlayerUnit -Path (Join-Path $GameDir 'SAVEGAME\Nobody.bsL')))
+    Set-StateSide 'lw'
+    Check 'a Luftwaffe Kohler with only Millin saves on disk is fresh' (Test-FreshPilot -Pilot (Get-Pilot))
+    $kp = Get-Pilot; $kp.pilot = 'Millin'; Save-Pilot -Pilot $kp
+    Check 'a Luftwaffe Millin with a Millin .BSL on disk is not fresh' (-not (Test-FreshPilot -Pilot (Get-Pilot)))
+    Remove-Item $unitSave, (Join-Path $GameDir 'SAVEGAME\Nobody.bsL') -Force
+    Check 'and fresh again once that .BSL is gone'      (Test-FreshPilot -Pilot (Get-Pilot))
+    Set-StateSide 'raf'
+    Check 'an RAF Millin whose name is on a .BSR is not fresh' (-not (Test-FreshPilot -Pilot (Get-Pilot)))
+    Check 'own Gruppe test'                            ((Test-FlownIsOwn -Pilot ([pscustomobject]@{ unit='I./JG 26'; sqn=0 }) -Flown $u) -and -not (Test-FlownIsOwn -Pilot ([pscustomobject]@{ unit='I./JG 26'; sqn=0 }) -Flown $u2))
     foreach ($side in 'raf', 'lw') { Set-StateSide $side; Remove-PilotCareer -Force }
 }
 finally {

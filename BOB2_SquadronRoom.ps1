@@ -737,8 +737,7 @@ if ($rp) {
         # with that separately.
         try {
             $p0 = Get-Pilot
-            $fresh = $p0 -and -not "$($p0.savePath)" -and (@(Get-Sessions).Count -eq 0)
-            if ($fresh) { $script:AutostartArmed = Write-AutostartRequest -Pilot $p0 }
+            if (Test-FreshPilot -Pilot $p0) { $script:AutostartArmed = Write-AutostartRequest -Pilot $p0 }
             else { [void](Write-AutostartRequest -Pilot $null) }
         } catch { }
         $script:LaunchCard = New-LaunchCardData
@@ -1373,6 +1372,28 @@ function Read-AutostartResult {
     $st
 }
 $script:AutostartNote = $null
+# The unit the game actually put him in on his last sortie, off the save.
+# The game cannot be told his Gruppe or squadron at start-up: it offers
+# the raid's units in the Frag screen and defaults to its own highlight.
+# So the board says what happened and what to press next time.
+function New-FlownNote {
+    param($Pilot)
+    if (-not $Pilot -or -not ($Pilot.PSObject.Properties.Name -contains 'lastFlown') -or -not $Pilot.lastFlown) { return $null }
+    $lf = $Pilot.lastFlown
+    $lw = ($script:Side -eq 'lw')
+    $own = if ($lw) { "$($Pilot.unit)" } else { "No. $($Pilot.sqn) Squadron" }
+    $ac = [int]$lf.acnum + 1
+    $txt = if ($lf.own) {
+        "Your last sortie was with your own $(if ($lw) { 'Gruppe' } else { 'squadron' }), $($lf.label), aircraft $ac."
+    } elseif ($lw) {
+        "On your last sortie the game put you in $($lf.label), aircraft $ac, not $own. The game picks the Gruppe for each sortie from the raid's escort and highlights its own choice: when the raid is planned, choose $own in the Frag screen's squadron list, and pick your position in the Schwarm there too, which is what sets the number on the fuselage."
+    } else {
+        "On your last sortie the game put you with $($lf.label), aircraft $ac, not $own. The game picks the squadron for each sortie from those scrambled and highlights its own choice: when the scramble comes, choose $own in the squadron list, and pick your position in the flight there too, which is what sets the letter on the fuselage."
+    }
+    $t = New-TB -Text $txt -Family 'Segoe UI' -Size 12.5 -Colour $(if ($lf.own) { '#9FB0B8' } else { '#D08A2E' }) -Wrap
+    $t.Margin = '0,0,0,14'; $t.MaxWidth = 940
+    $t
+}
 
 function New-LaunchCardData {
     $p = Get-Pilot
@@ -1807,6 +1828,23 @@ function Finalize-Flight {
             if ($dAfter -and ($dAfter -gt "$($mk.dateBefore)")) { $outcome = 'Campaign day flown' }
         }
     } catch { }
+    # who the game put him with, and in which aeroplane, off the save
+    $flown = $null
+    try {
+        $pu = Get-SavePlayerUnit -Path $savePath
+        if ($pu) {
+            $flown = Get-UnitBySqIdx -Idx $pu.SqIdx
+            $flown | Add-Member -NotePropertyName AcNum -NotePropertyValue $pu.AcNum -Force
+            $outcome += ", with $($flown.Label), aircraft $($pu.AcNum + 1)"
+            $pf = Get-Pilot
+            if ($pf) {
+                $pf | Add-Member -NotePropertyName lastFlown -NotePropertyValue ([ordered]@{
+                    label = "$($flown.Label)"; unit = "$($flown.Unit)"; num = [int]$flown.Num; sqidx = [int]$pu.SqIdx
+                    acnum = [int]$pu.AcNum; own = [bool](Test-FlownIsOwn -Pilot $pf -Flown $flown); date = $end.ToString('yyyy-MM-dd') }) -Force
+                Save-Pilot -Pilot $pf
+            }
+        }
+    } catch { }
     # ---- automatic claims -------------------------------------------
     # Level the record with the campaign's Log Book (see Sync-CampaignClaims);
     # the snapshot only records how many rows the flight added.
@@ -1838,6 +1876,8 @@ function Finalize-Flight {
         mode       = if ($mk.dateBefore) { 'campaign' } else { 'instant' }
         outcome    = $outcome
         claims     = $autoAdded
+        flewWith   = $(if ($flown) { "$($flown.Label)" } else { '' })
+        flewAc     = $(if ($flown) { [int]$flown.AcNum } else { -1 })
     }
     # A marker is written at every Play, including the ones where nobody
     # flew. Only a flight is a sortie: time in the air, a new Log Book row,
@@ -2761,6 +2801,69 @@ function Get-CampaignIdentity {
 }
 # Is this the pilot's own war? Side must agree, and the surname must, and
 # that is all that can be checked until the squadron offset is pinned.
+# ---------------------------------------------------------------------
+#  WHO THE GAME PUT HIM WITH. Campaign::playersquadron and playeracnum,
+#  int16 at file offsets 11344 and 11346 of the save (pinned 2026-09-12
+#  from the pilot-mode accel block LaunchMapFirstTime writes just after
+#  them; BSR_FORMAT.md). The game chooses the unit per sortie from the
+#  raid's package, with its own highlighted squadron as the default, so
+#  this is the only record of which Gruppe or squadron a man actually flew
+#  with, and which aeroplane. Luftwaffe units are 160 upward in the order
+#  of NODEBOB.H (oob.json carries that as sqidx; I./JG 3 = 160, read from
+#  a real save). RAF squadrons are the same enum's order from SQ_BR_32,
+#  and the one RAF data point to hand puts No. 32 at 64; that base is
+#  provisional until a save from another squadron confirms it.
+# ---------------------------------------------------------------------
+$RafSqOrder = @(32,610,501,56,151,85,64,615,111,1,54,65,74,266,43,601,145,17,85,1,257,303,87,213,238,609,152,234,92,310,19,66,242,222,611,46,229,72,249,253,605,603,41,607,602,73,504,79,302,616,3,232,245)
+$RafSqBase = 64
+function Get-SavePlayerUnit {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return $null }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($Path)
+        if ($b.Length -lt 11348) { return $null }
+        if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
+        $sq = [BitConverter]::ToInt16($b, 11344)
+        $ac = [BitConverter]::ToInt16($b, 11346)
+        if ($sq -le 0) { return $null }          # 0: nobody has flown yet
+        return [pscustomobject]@{ SqIdx = [int]$sq; AcNum = [int]$ac }
+    } catch { return $null }
+}
+function Get-UnitBySqIdx {
+    param([int]$Idx)
+    if ($Idx -ge 160) {
+        $g = @(Get-LwGruppen) | Where-Object { "$($_.sqidx)" -eq "$Idx" } | Select-Object -First 1
+        if ($g) { return [pscustomobject]@{ Side = 'lw'; Label = "$($g.unit)"; Unit = "$($g.unit)"; Num = 0; Idx = $Idx } }
+        return [pscustomobject]@{ Side = 'lw'; Label = "Luftwaffe unit $Idx"; Unit = ''; Num = 0; Idx = $Idx }
+    }
+    $pos = $Idx - $RafSqBase
+    if ($pos -ge 0 -and $pos -lt $RafSqOrder.Count) {
+        $n = [int]$RafSqOrder[$pos]
+        return [pscustomobject]@{ Side = 'raf'; Label = "No. $n Squadron"; Unit = ''; Num = $n; Idx = $Idx }
+    }
+    [pscustomobject]@{ Side = 'raf'; Label = "squadron $Idx"; Unit = ''; Num = 0; Idx = $Idx }
+}
+# Does this man belong with the unit the game flew him in?
+function Test-FlownIsOwn {
+    param($Pilot, $Flown)
+    if (-not $Pilot -or -not $Flown) { return $true }
+    if ($Flown.Side -eq 'lw') { return ("$($Flown.Unit)" -eq "$($Pilot.unit)") }
+    ([int]$Flown.Num -eq [int]$Pilot.sqn)
+}
+# A man with no war of his own yet: no save on record, nothing in his log,
+# and no save of his side that carries his name. The newest save on the
+# disk is whoever flew last, which is why "a save exists" was wrong.
+function Test-FreshPilot {
+    param($Pilot)
+    if (-not $Pilot) { return $false }
+    if ("$($Pilot.savePath)") { return $false }
+    if (@(Get-Sessions).Count -gt 0) { return $false }
+    foreach ($f in @(Get-SaveFiles)) {
+        $id = Get-CampaignIdentity -Path $f.FullName
+        if ($id -and $id.Name -and (Test-CampaignMatch -Pilot $Pilot -Identity $id)) { return $false }
+    }
+    $true
+}
 function Test-CampaignMatch {
     param($Pilot, $Identity)
     if (-not $Pilot -or -not $Identity) { return $false }
@@ -3386,6 +3489,8 @@ function Show-Roster {
             $an.Margin = '0,0,0,14'; $an.MaxWidth = 940
             [void]$script:Stage.Children.Add($an)
         }
+        $fn = New-FlownNote -Pilot $Pilot
+        if ($fn) { [void]$script:Stage.Children.Add($fn) }
         if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
         # The letter is the game's, not ours, so say which aeroplane it
@@ -6887,6 +6992,8 @@ function Show-ReadyRoom {
             $an.Margin = '0,0,0,14'; $an.MaxWidth = 940
             [void]$script:Stage.Children.Add($an)
         }
+        $fn = New-FlownNote -Pilot $Pilot
+        if ($fn) { [void]$script:Stage.Children.Add($fn) }
         if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
         $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch.`n`n" +
