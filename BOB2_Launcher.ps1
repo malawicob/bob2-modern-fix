@@ -2361,6 +2361,21 @@ function Update-State {
     }
 
     # surface Install and repair on the main menu ONLY when something needs it
+    #
+    # THE CACHE IS RE-TESTED HERE, not trusted from startup. It was set
+    # once when the launcher opened and cleared in exactly one place, the
+    # Play path, so repairing the file through Install and repair never
+    # cleared it: 33lima fixed his settings.cfg, came back, and the
+    # launcher still said it looked damaged. Install and repair runs in
+    # its own process, so there is nothing to call back; the only honest
+    # answer is to look at the file again. It is a 1,786-byte read on a
+    # two-second timer and costs nothing.
+    if (-not $running) {
+        try {
+            $chkNow = Test-SettingsCfgHealthy $GameDir
+            $script:CfgHealthyCache = [bool]$chkNow.Healthy
+        } catch { }
+    }
     $needsRepair = (-not $w.Ok) -or (-not $script:CfgHealthyCache)
     if ($needsRepair -and -not $running) {
         (C 'BtnRepairAlert').Visibility = 'Visible'

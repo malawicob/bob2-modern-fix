@@ -3091,7 +3091,19 @@ function Show-Roster {
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
-        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign and fly the day. When you come back here your first sortie will be in the logbook, and your aircraft, with your code letter and serial, will be waiting on the board." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        # The letter is the game's, not ours, so say which aeroplane it
+        # belongs to. 33lima was told SD-R and flew SD-T, because the
+        # Room used to invent one; it now reads the game's own rules for
+        # aeroplane 0, which is what a man leading the squadron flies. If
+        # the game puts him further down the flight he gets that
+        # aeroplane's letter instead, and nothing here can know in
+        # advance which it will be.
+        $ot = New-TB -Text ("Press PLAY (top right). In the game, start or continue the Campaign and fly the day. " +
+                            "When you come back here your first sortie will be in the logbook, and your aircraft, with " +
+                            "your code letter and serial, will be waiting on the board.`n`n" +
+                            "The letter above is the one the game paints on the leader's aeroplane. Fly further down " +
+                            "the flight and you will wear a different one; the game decides that when it makes up the " +
+                            "squadron, and it changes from sortie to sortie.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
         $ord.Child = $os2
@@ -3330,7 +3342,11 @@ function Invoke-Submit {
     Complete-NewCareer
     $isCmdr = $false
     $rank = if ($script:SelRank) { "$($script:SelRank)" } else { 'Sergeant' }
-    $letter = ('A','B','D','E','F','G','H','J','K','L','N','P','R','S','T','U','V','W','X','Y','Z' | Get-Random)
+    # A new man leads the squadron on his first sortie, which makes him
+    # aeroplane 0, and the game's own rules say what 0 wears. Random was
+    # what put 33lima in SD-R on the board and SD-T in the air.
+    $letter = Get-RafLetter -Code "$($script:SelSq.Code)" -Type "$($script:SelSq.Type)" -PlaneId 0
+    if (-not $letter) { $letter = 'T' }
     $serial = New-Serial -Type ("$($script:SelSq.Type)")
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
@@ -5384,6 +5400,41 @@ $MarkPath = Join-Path (Join-Path $ModDir 'lw') 'markings.json'
 # place.
 # When the yellow recognition markings go on. See Get-GruppeAircraftPath.
 $LwYellowFrom = [datetime]'1940-08-21'
+# WHICH LETTER AN AEROPLANE WEARS, and the game decides it.
+#
+# 33lima created a pilot in 501 Squadron, the Room told him SD-R, and he
+# took off in SD-T. The Room was picking the letter with Get-Random, so
+# it was never going to agree with the game about anything.
+#
+# Hurri_PlaneID_Letter.ms and Spit_PlaneID_Letter.ms map an aeroplane's
+# PLANEID to a letter, the same way Me109_PlaneID_1.ms does for the 109s.
+# 21 Hurricane and 11 Spitfire squadrons have their own table; the rest
+# fall through to a generic one where aeroplane 0 is T. 501's code is SD
+# and it is not among them, and 33lima was leading the squadron, which
+# makes him aeroplane 0. T is exactly what the game gave him.
+$RafLetterPath = Join-Path $ModDir 'raf-letters.json'
+function Get-RafLetters {
+    if ($null -ne $script:RafLetters) { return $script:RafLetters }
+    $m = $null
+    if (Test-Path $RafLetterPath) {
+        try { $m = Get-Content $RafLetterPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:RafLetters = $m
+    $m
+}
+# The letter for one aeroplane of a squadron. PlaneId 0 is the leader.
+function Get-RafLetter {
+    param([string]$Code, [string]$Type, [int]$PlaneId = 0)
+    $m = Get-RafLetters
+    if (-not $m) { return $null }
+    $kind = if ("$Type" -match 'Spit') { 'spitfire' } else { 'hurricane' }
+    foreach ($tbl in @($m.$kind, $m.generic)) {
+        if (-not $tbl) { continue }
+        $t = if ($tbl.PSObject.Properties.Name -contains $Code) { $tbl.$Code } else { $tbl }
+        if ($t -and $t.PSObject.Properties.Name -contains "$PlaneId") { return "$($t.$PlaneId)" }
+    }
+    $null
+}
 $MarkPosPath = Join-Path $ModDir 'marking-positions.json'
 function Get-MarkPositions {
     if ($null -ne $script:MarkPos) { return $script:MarkPos }
