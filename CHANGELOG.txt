@@ -15,6 +15,24 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.9.0  (2026-09-12)
+--------------------
+  - NEW: PLAY CAMPAIGN in the Squadron Room opens the game straight onto
+    the campaign map, with the pilot's side, role, war phase and name
+    already set. The crash guard (dinput8.dll) reads
+    SquadronRoom\autostart.txt once and steers the game's own front end
+    through its own Begin path; it checks the exe byte for byte first and
+    stands down on any doubt, leaving the player at a menu with the
+    Room's click card. Nothing changes for the launcher's PLAY or for
+    anyone without the Room. A pilot with a campaign save keeps the
+    guided card for now (Load Game is the next stage). AUTOSTART.md.
+  - NEW: the launcher notices a changed joystick (a config still bound to
+    a stick that is not plugged in, or a stick with no axis layout) and
+    offers to set it up; Setup does it once at install. The Settings
+    live test polls the stick that was found, not device 0.
+  - The Luftwaffe map tab is the pilot's own map, and the PLAY CAMPAIGN
+    card names the game's campaign tab (CONVOYS, EAGLE ATTACK...).
+
 v1.8.4  (2026-09-09)
 --------------------
   - FIXED: Install and repair could bring back the giant cockpit. Windows

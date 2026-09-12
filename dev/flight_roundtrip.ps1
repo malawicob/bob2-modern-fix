@@ -22,6 +22,9 @@
 #   6  DELETE THIS PILOT clears everything the Room holds for a side,
 #      keeps a copy under archive\deleted-, brings up that side's
 #      enrollment board, and leaves the game's saves alone, RAF and LW
+#   7  PLAY CAMPAIGN's autostart request carries the pilot's side, role,
+#      phase and name for a new campaign and nothing for a pilot with a
+#      save; the guard's report is read back once and consumed
 param([string]$Room, [string]$SourceSave)
 if (-not $Room) {
     $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
@@ -168,6 +171,39 @@ try {
         Check "$side`: the launch card is cleared"   ($null -eq $script:LaunchCard)
     }
     Check 'the game''s saves were not touched'      (@(Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -File).Count -eq $saveCount) "$saveCount"
+
+    "7  the autostart request and the guard's report"
+    Set-StateSide 'lw'
+    $ap = [ordered]@{ pilot = 'Kohler'; rank = 'Leutnant'; side = 'lw'; status = 'On strength'; cmode = 'pilot'; sqn = 0
+                      unit = 'I./JG 3'; gesch = 'JG 3'; gruppe = 'I'; staffel = 1; luftflotte = 2; actype = 'Bf 109E'; base = 'Colombert'
+                      period = 'P3'; historical = $false; portrait = 'pilot01.jpg'; acnum = 3; created = '1940-08-24'
+                      campaignSorties = 0; campaignKills = @(0,0,0,0,0,0,0) }
+    Save-Pilot -Pilot $ap -Shrink
+    $req = Join-Path $script:StateRootOverride 'autostart.txt'
+    $done = Join-Path $script:StateRootOverride 'autostart.done'
+    Set-Content -Path $done -Value 'status=ok' -Encoding ASCII
+    $wrote = Write-AutostartRequest -Pilot (Get-Pilot)
+    $txt = if (Test-Path $req) { Get-Content $req -Raw } else { '' }
+    Check 'a new Luftwaffe campaign is asked for'  ($wrote -and (Test-Path $req))
+    Check 'mode=begin, side=1, role=4, phase=2'   ($txt -match 'mode=begin' -and $txt -match 'side=1' -and $txt -match 'role=4' -and $txt -match 'phase=2') ($txt -replace "`r?`n", ' | ')
+    Check 'the name is his'                        ($txt -match 'name=Kohler')
+    Check 'a stale report was cleared first'       (-not (Test-Path $done))
+    Set-StateSide 'raf'
+    $bp = [ordered]@{ pilot = 'Millin'; rank = 'Pilot Officer'; status = 'On strength'; cmode = 'commander'; sqn = 32
+                      actype = 'Hurricane'; base = 'Biggin Hill'; period = 'P1'; historical = $false; portrait = 'pilot01.jpg'
+                      created = '1940-07-10'; campaignSorties = 0; campaignKills = @(0,0,0,0,0,0,0) }
+    Save-Pilot -Pilot $bp -Shrink
+    [void](Write-AutostartRequest -Pilot (Get-Pilot))
+    $txt = Get-Content $req -Raw
+    Check 'RAF commander, Convoys: side=0, role=5, phase=0' ($txt -match 'side=0' -and $txt -match 'role=5' -and $txt -match 'phase=0' -and $txt -match 'name=Millin') ($txt -replace "`r?`n", ' | ')
+    [void](Write-AutostartRequest -Pilot $null)
+    Check 'a pilot with a save asks for nothing'   (-not (Test-Path $req))
+    Check 'no report means no note'                ($null -eq (Read-AutostartResult))
+    Set-Content -Path $done -Value "status=armed`nstatus=mismatch" -Encoding ASCII
+    $st = Read-AutostartResult
+    Check 'the last status line is read back'      ($st -eq 'mismatch') "$st"
+    Check 'and the report is consumed'             (-not (Test-Path $done))
+    foreach ($side in 'raf', 'lw') { Set-StateSide $side; Remove-PilotCareer -Force }
 }
 finally {
     Remove-Item $script:StateRootOverride -Recurse -Force -ErrorAction SilentlyContinue

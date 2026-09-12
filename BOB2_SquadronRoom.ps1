@@ -696,6 +696,8 @@ $Win.Add_Activated({
     if (-not (Test-Path $FlightOpen)) { return }
     $script:Activating = $true
     try {
+        $st = Read-AutostartResult
+        $script:AutostartNote = $(if ($st -and $st -ne 'ok' -and $st -ne 'armed' -and $st -ne 'begin') { "The game did not open the campaign by itself ($st); the launcher log bob2guard.log says why. The clicks on the card still work." } else { $null })
         Finalize-Flight
         if (-not (Invoke-AdoptionCheck)) { Show-Tab $script:CurrentTab }
     } catch { } finally { $script:Activating = $false }
@@ -721,11 +723,18 @@ if ($rp) {
                 ConvertTo-Json | Set-Content -Path $FlightOpen -Encoding UTF8
             if ($sp0 -and (Test-Path $sp0)) { Copy-Item $sp0 (Join-Path $StateDir 'before.bsr') -Force }
         } catch { }
-        # THE CARD. The game cannot be told to open on a campaign: Bob.exe
-        # parses eight switches and none is about startup, bdg.txt has no
-        # autostart key, and the front end is hardcoded to the intro. So
-        # the Room says exactly what to click for THIS man, and the card
-        # stays on the board while the game runs behind it.
+        # THE REQUEST AND THE CARD. Bob.exe has no switch and bdg.txt no
+        # key to open on a campaign, but the crash guard can steer the
+        # front end there (AUTOSTART.md). A new campaign is asked for by
+        # the request file; a pilot with a save is not, until mode=load is
+        # built. The card says the clicks either way, because the guard
+        # stands down on any doubt and leaves the player at a menu.
+        $script:AutostartNote = $null
+        $script:AutostartArmed = $false
+        try {
+            if ($sp0 -and (Test-Path $sp0)) { [void](Write-AutostartRequest -Pilot $null) }
+            else { $script:AutostartArmed = Write-AutostartRequest -Pilot (Get-Pilot) }
+        } catch { }
         $script:LaunchCard = New-LaunchCardData
         try { Show-Tab $script:CurrentTab } catch { }
         $bat = Join-Path $ScriptDir 'BOB2_Launch.bat'
@@ -1308,6 +1317,57 @@ function Show-ChromeButtons {
 # THE LAUNCH CARD: the clicks for this man, worked out from what the Room
 # knows. Shown on the board from PLAY CAMPAIGN until the flight is closed.
 $script:LaunchCard = $null
+# ---------------------------------------------------------------------
+#  AUTOSTART. The crash guard (dinput8.dll) reads SquadronRoom\autostart.txt
+#  once, renames it to autostart.done, and steers the game's front end
+#  straight into a new campaign with this pilot's side, role, phase and
+#  name. AUTOSTART.md says how. The Room is the only thing that writes the
+#  request, and only from PLAY CAMPAIGN, so the launcher's PLAY, quick
+#  missions and everyone else's game are untouched. Stage one is a NEW
+#  campaign; a pilot with a save keeps the guided card until mode=load is
+#  built.
+# ---------------------------------------------------------------------
+function Get-AutostartRoot {
+    if ($script:StateRootOverride) { return $script:StateRootOverride }
+    $StateRoot
+}
+function Write-AutostartRequest {
+    param($Pilot)
+    $root = Get-AutostartRoot
+    if (-not $root) { return $false }
+    $req = Join-Path $root 'autostart.txt'; $done = Join-Path $root 'autostart.done'
+    Remove-Item $done -Force -ErrorAction SilentlyContinue
+    if (-not $Pilot) { Remove-Item $req -Force -ErrorAction SilentlyContinue; return $false }
+    $phase = 0
+    switch ("$($Pilot.period)") { 'P2' { $phase = 1 } 'P3' { $phase = 2 } 'P4' { $phase = 3 } }
+    $lines = @(
+        'mode=begin'
+        'side=' + $(if ($script:Side -eq 'lw') { '1' } else { '0' })
+        'role=' + $(if ("$($Pilot.cmode)" -eq 'commander') { '5' } else { '4' })
+        "phase=$phase"
+        'name=' + ("$($Pilot.pilot)".Trim())
+    )
+    try {
+        if (-not (Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+        [System.IO.File]::WriteAllText($req, ($lines -join "`r`n") + "`r`n", [System.Text.Encoding]::GetEncoding(1252))
+        return $true
+    } catch { return $false }
+}
+# What the guard reported, read once the game has gone. The last status
+# line wins: armed, begin, ok on a good run; fallback, mismatch or the
+# like when the player was left at a menu.
+function Read-AutostartResult {
+    $root = Get-AutostartRoot
+    if (-not $root) { return $null }
+    $done = Join-Path $root 'autostart.done'
+    if (-not (Test-Path $done)) { return $null }
+    $st = ''
+    try { foreach ($l in (Get-Content $done -ErrorAction Stop)) { if ("$l" -match '^status=(.+)$') { $st = $matches[1].Trim() } } } catch { }
+    Remove-Item $done -Force -ErrorAction SilentlyContinue
+    $st
+}
+$script:AutostartNote = $null
+
 function New-LaunchCardData {
     $p = Get-Pilot
     if (-not $p) { return $null }
@@ -1327,7 +1387,7 @@ function New-LaunchCardData {
                     else { 'Choose the period along the top of the campaign screen, then BEGIN' })
         $steps += 'Enter the name ' + "$($p.pilot)" + ' and press BEGIN'
     }
-    [pscustomobject]@{ Name = "$($p.pilot)"; Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps }
+    [pscustomobject]@{ Name = "$($p.pilot)"; Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps; Auto = [bool]$script:AutostartArmed }
 }
 function New-LaunchCard {
     $c = $script:LaunchCard
@@ -1337,7 +1397,7 @@ function New-LaunchCard {
     $bd.BorderThickness = '3,0,0,0'; $bd.CornerRadius = '0,3,3,0'
     $bd.Padding = '16,12'; $bd.Margin = '0,0,0,20'; $bd.HorizontalAlignment = 'Left'; $bd.MaxWidth = 940
     $sp = New-Object Windows.Controls.StackPanel
-    [void]$sp.Children.Add((New-TB -Text 'THE GAME IS OPEN. YOUR CLICKS:' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    [void]$sp.Children.Add((New-TB -Text $(if ($c.Auto) { 'THE GAME IS OPENING YOUR CAMPAIGN BY ITSELF. IF IT STOPS AT A MENU, YOUR CLICKS:' } else { 'THE GAME IS OPEN. YOUR CLICKS:' }) -Family $CondFam -Size 12 -Colour '#C8973F' -Bold -Wrap))
     $i = 0
     foreach ($st in $c.Steps) {
         $i++
@@ -3315,6 +3375,11 @@ function Show-Roster {
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
         $lc = New-LaunchCard
+        if ($script:AutostartNote) {
+            $an = New-TB -Text $script:AutostartNote -Family 'Segoe UI' -Size 12.5 -Colour '#D08A2E' -Wrap
+            $an.Margin = '0,0,0,14'; $an.MaxWidth = 940
+            [void]$script:Stage.Children.Add($an)
+        }
         if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
         # The letter is the game's, not ours, so say which aeroplane it
@@ -6811,6 +6876,11 @@ function Show-ReadyRoom {
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
         $lc = New-LaunchCard
+        if ($script:AutostartNote) {
+            $an = New-TB -Text $script:AutostartNote -Family 'Segoe UI' -Size 12.5 -Colour '#D08A2E' -Wrap
+            $an.Margin = '0,0,0,14'; $an.MaxWidth = 940
+            [void]$script:Stage.Children.Add($an)
+        }
         if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
         $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch.`n`n" +
