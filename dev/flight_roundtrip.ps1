@@ -235,6 +235,10 @@ try {
     Check 'a Luftwaffe Kohler with only Millin saves on disk is fresh' (Test-FreshPilot -Pilot (Get-Pilot))
     $kp = Get-Pilot; $kp.pilot = 'Millin'; Save-Pilot -Pilot $kp
     Check 'a Luftwaffe Millin with a Millin .BSL on disk is not fresh' (-not (Test-FreshPilot -Pilot (Get-Pilot)))
+    $kp = Get-Pilot; $kp | Add-Member -NotePropertyName createdAt -NotePropertyValue ((Get-Date).AddMinutes(5).ToString('s')) -Force; Save-Pilot -Pilot $kp
+    Check 'but a Millin enrolled AFTER that save was written is fresh' (Test-FreshPilot -Pilot (Get-Pilot))
+    $kp = Get-Pilot; $kp.createdAt = (Get-Date).AddDays(-1).ToString('s'); Save-Pilot -Pilot $kp
+    Check 'and one enrolled before it is not'          (-not (Test-FreshPilot -Pilot (Get-Pilot)))
     Remove-Item $unitSave, (Join-Path $GameDir 'SAVEGAME\Nobody.bsL') -Force
     Check 'and fresh again once that .BSL is gone'      (Test-FreshPilot -Pilot (Get-Pilot))
     Set-StateSide 'raf'

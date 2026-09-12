@@ -2875,7 +2875,14 @@ function Test-FreshPilot {
     if (-not $Pilot) { return $false }
     if ("$($Pilot.savePath)") { return $false }
     if (@(Get-Sessions).Count -gt 0) { return $false }
+    # A save written BEFORE this man was enrolled cannot be his war, whatever
+    # name it carries: a deleted career of the same name left it behind.
+    # Records made since 12 September 2026 carry the moment of enrollment;
+    # older ones fall back to the name alone.
+    $since = $null
+    if (($Pilot.PSObject.Properties.Name -contains 'createdAt') -and "$($Pilot.createdAt)") { try { $since = [datetime]$Pilot.createdAt } catch { } }
     foreach ($f in @(Get-SaveFiles)) {
+        if ($since -and $f.LastWriteTime -lt $since) { continue }
         $id = Get-CampaignIdentity -Path $f.FullName
         if ($id -and $id.Name -and (Test-CampaignMatch -Pilot $Pilot -Identity $id)) { return $false }
     }
@@ -3784,6 +3791,7 @@ function Invoke-Submit {
         historical = $false
         portrait = $script:SelPortrait
         created = (Get-Date).ToString('yyyy-MM-dd')
+        createdAt = (Get-Date).ToString('s')
     }
     # Where the campaign stood the day he was posted. Everything already in
     # the Log Book belongs to the man before him; this pilot's own record
@@ -5569,6 +5577,7 @@ function Invoke-GruppeSubmit {
         portrait = $script:SelPortrait
         acnum   = [int]$script:SelAcNum
         created = (Get-Date).ToString('yyyy-MM-dd')
+        createdAt = (Get-Date).ToString('s')
     }
     # THE REST OF THE CREW, for a type that carries one. A 109 gets an
     # empty array and the record is what it has always been.
