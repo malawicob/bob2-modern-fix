@@ -187,6 +187,7 @@ try {
     Check 'a new Luftwaffe campaign is asked for'  ($wrote -and (Test-Path $req))
     Check 'mode=begin, side=1, role=4, phase=2'   ($txt -match 'mode=begin' -and $txt -match 'side=1' -and $txt -match 'role=4' -and $txt -match 'phase=2') ($txt -replace "`r?`n", ' | ')
     Check 'the name is his'                        ($txt -match 'name=Kohler')
+    Check 'his Gruppe as the game numbers it'      ($txt -match 'unit=160') ($txt -replace "`r?`n", ' | ')
     Check 'a stale report was cleared first'       (-not (Test-Path $done))
     Set-StateSide 'raf'
     $bp = [ordered]@{ pilot = 'Millin'; rank = 'Pilot Officer'; status = 'On strength'; cmode = 'commander'; sqn = 32
@@ -196,6 +197,7 @@ try {
     [void](Write-AutostartRequest -Pilot (Get-Pilot))
     $txt = Get-Content $req -Raw
     Check 'RAF commander, Convoys: side=0, role=5, phase=0' ($txt -match 'side=0' -and $txt -match 'role=5' -and $txt -match 'phase=0' -and $txt -match 'name=Millin') ($txt -replace "`r?`n", ' | ')
+    Check 'No. 32 Squadron is unit 64'              ($txt -match 'unit=64')
     [void](Write-AutostartRequest -Pilot $null)
     Check 'a pilot with a save asks for nothing'   (-not (Test-Path $req))
     Check 'no report means no note'                ($null -eq (Read-AutostartResult))

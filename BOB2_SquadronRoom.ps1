@@ -1345,11 +1345,24 @@ function Write-AutostartRequest {
     if (-not $Pilot) { Remove-Item $req -Force -ErrorAction SilentlyContinue; return $false }
     $phase = 0
     switch ("$($Pilot.period)") { 'P2' { $phase = 1 } 'P3' { $phase = 2 } 'P4' { $phase = 3 } }
+    # his own unit as the game numbers it (SquadNum): the Gruppe's sqidx
+    # from oob.json, or the squadron's place in the RAF order from No. 32
+    # at 64. The guard writes it into the Begin page's favourite-unit
+    # panel, which is what choosing it there does. 0 leaves the default.
+    $unit = 0
+    if ($script:Side -eq 'lw') {
+        $g = @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq "$($Pilot.unit)" } | Select-Object -First 1
+        if ($g -and $g.sqidx) { $unit = [int]$g.sqidx }
+    } else {
+        $pos = [array]::IndexOf($RafSqOrder, [int]$Pilot.sqn)
+        if ($pos -ge 0) { $unit = $RafSqBase + $pos }
+    }
     $lines = @(
         'mode=begin'
         'side=' + $(if ($script:Side -eq 'lw') { '1' } else { '0' })
         'role=' + $(if ("$($Pilot.cmode)" -eq 'commander') { '5' } else { '4' })
         "phase=$phase"
+        "unit=$unit"
         'name=' + ("$($Pilot.pilot)".Trim())
     )
     try {

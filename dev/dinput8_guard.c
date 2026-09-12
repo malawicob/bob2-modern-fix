@@ -293,6 +293,16 @@ __declspec(dllexport) HRESULT WINAPI DllUnregisterServer(void) {
 #define AS_GAMESIDE          0x04f4b32cu   /* RFullPanelDial::gameside   0 RAF 1 LW */
 #define AS_PLAYERNAME        0x04f1e753u   /* Save_Data + 0xE3, char[21] */
 #define AS_SKIPVIDEOS        0x06158a03u   /* BDG_Values + 1651 */
+#define AS_FAV               0x04efb050u   /* Miss_Man.camp.fav, CampaignZero::Fav, 46 bytes */
+#define FAV_GROUP            6             /* int: RAF group filter, 0 any */
+#define FAV_AC               10            /* int: RAF aircraft TYPE filter, 0 any */
+#define FAV_SECTOR           14            /* int: RAF sector filter, 0 any */
+#define FAV_SQUADRON         18            /* int: RAF SquadNum, the pilot's squadron */
+#define FAV_FLOTTE           26            /* int: LW Luftflotte filter, 0 any */
+#define FAV_GESCHTYPE        30            /* int: LW Geschwader type filter, 4 any */
+#define FAV_GESCHWADER       34            /* int: LW index into Node_Data.geschwader, -1 any */
+#define FAV_GRUPPE           38            /* int: LW 0 I, 1 II, 2 III, -1 any */
+#define AS_LW_FIRST_UNIT     160           /* SquadNum of the first Luftwaffe unit, I./JG 3 */
 #define AS_ONSELECTRLISTBOX  0x00412fe8u   /* RFullPanelDial::OnSelectRlistbox(int,int) thiscall */
 #define AS_LAUNCHSCREEN      0x00412f2eu   /* RFullPanelDial::LaunchScreen(FullScreen*) */
 #define FS_TEXTLISTS         364           /* FullScreen::textlists[10], 24 bytes each */
@@ -318,6 +328,7 @@ static struct {
     int  side;
     int  role;
     int  phase;
+    int  unit;      /* SquadNum of his own squadron or Gruppe, 0 = leave the game's default */
     char name[32];
     char save[MAX_PATH];
     volatile LONG armed;
@@ -353,6 +364,7 @@ static int AsReadRequest(void) {
         else if (!strcmp(line, "side"))  g_as.side  = atoi(v);
         else if (!strcmp(line, "role"))  g_as.role  = atoi(v);
         else if (!strcmp(line, "phase")) g_as.phase = atoi(v);
+        else if (!strcmp(line, "unit"))  g_as.unit  = atoi(v);
         else if (!strcmp(line, "name"))  { strncpy(g_as.name, v, 20); g_as.name[20] = '\0'; }
         else if (!strcmp(line, "save"))  { strncpy(g_as.save, v, MAX_PATH - 1); }
     }
@@ -360,7 +372,7 @@ static int AsReadRequest(void) {
     /* one shot: the request becomes the report, so a plain Play never sees it */
     DeleteFileA(g_asDonePath);
     if (!MoveFileExA(req, g_asDonePath, MOVEFILE_REPLACE_EXISTING)) DeleteFileA(req);
-    LogMsg("autostart: request mode=%d side=%d role=%d phase=%d name=\"%s\"", g_as.mode, g_as.side, g_as.role, g_as.phase, g_as.name);
+    LogMsg("autostart: request mode=%d side=%d role=%d phase=%d unit=%d name=\"%s\"", g_as.mode, g_as.side, g_as.role, g_as.phase, g_as.unit, g_as.name);
     return 1;
 }
 
@@ -394,6 +406,35 @@ static VOID CALLBACK AsBeginTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
         return;
     }
     KillTimer(NULL, id);
+    /* HIS OWN UNIT. In pilot mode the Begin page carries the ControlFly
+     * panel, three combos whose handlers write Miss_Man.camp.fav: on the
+     * RAF side fav.squadron is the SquadNum, on the Luftwaffe side
+     * fav.geschwader indexes Node_Data.geschwader and fav.gruppe is 0..2,
+     * and the campaign then works from that unit. Left at the panel's
+     * defaults the game took the first unit in its list, I./JG 3, which
+     * is how Patrick flew a Kommandeur's 109 of a Gruppe he never chose.
+     * LaunchMapFirstTime saves and restores the Fav block around its copy
+     * of the campaign table in pilot mode, so writing it here, after the
+     * panel is built and before BEGIN, is exactly what choosing it does.
+     * Luftwaffe units sit three to a Geschwader in the game's tables, in
+     * SquadNum order from 160, so the index pair is arithmetic. */
+    if (g_as.role == 4 && g_as.unit > 0) {
+        char *fav = (char *)AS_FAV;
+        if (g_as.side == 1) {
+            int g = (g_as.unit - AS_LW_FIRST_UNIT) / 3, k = (g_as.unit - AS_LW_FIRST_UNIT) % 3;
+            if (g_as.unit >= AS_LW_FIRST_UNIT && g < 32) {
+                *(int *)(fav + FAV_FLOTTE) = 0; *(int *)(fav + FAV_GESCHTYPE) = 4;
+                *(int *)(fav + FAV_GESCHWADER) = g; *(int *)(fav + FAV_GRUPPE) = k;
+                LogMsg("autostart: favourite unit %d -> geschwader %d gruppe %d", g_as.unit, g, k);
+            } else LogMsg("autostart: unit %d is not a Luftwaffe SquadNum, leaving the game's default", g_as.unit);
+        } else {
+            if (g_as.unit < AS_LW_FIRST_UNIT) {
+                *(int *)(fav + FAV_GROUP) = 0; *(int *)(fav + FAV_AC) = 0; *(int *)(fav + FAV_SECTOR) = 0;
+                *(int *)(fav + FAV_SQUADRON) = g_as.unit;
+                LogMsg("autostart: favourite squadron SquadNum %d", g_as.unit);
+            } else LogMsg("autostart: unit %d is not an RAF SquadNum, leaving the game's default", g_as.unit);
+        }
+    }
     LogMsg("autostart: pressing BEGIN (OnSelectRlistbox row 1 on 0x%08X)", (DWORD)(DWORD_PTR)g_asFullpane);
     AsDone("begin");
     ((PFN_OnSelectRlistbox)AS_ONSELECTRLISTBOX)(g_asFullpane, 1, 1);

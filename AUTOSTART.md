@@ -39,8 +39,9 @@ BEGIN. BEGIN is row 1 of campaignentername, whose handler is
 node tree and the target table, so that page is launched for real rather
 than skipped.
 
-Squadron is not a start-up choice: the game picks it per sortie, and
-`playersquadron` in the save records the last one.
+The unit IS a start-up choice in pilot mode, made on the Begin page's
+ControlFly panel (see "His own unit" below); `playersquadron` in the save
+records the unit of the last sortie flown.
 
 ## What the DLL does
 
@@ -74,8 +75,35 @@ mode=begin      begin | name (stop at the Begin page) | load (not built yet)
 side=0          0 RAF, 1 Luftwaffe
 role=4          4 pilot, 5 commander
 phase=0         0 Convoys, 1 Eagle Attack, 2 Critical Period, 3 Blitz
+unit=163        his unit as the game numbers it (SquadNum): Luftwaffe from
+                oob.json sqidx (I./JG 3 = 160), RAF from the NODEBOB.H order
+                with No. 32 = 64. 0 leaves the game's default.
 name=Millin     up to 20 characters
 ```
+
+### His own unit
+
+In pilot mode the Begin page also carries the ControlFly panel: three combos
+(group/Luftflotte, sector/Geschwader, squadron/Gruppe, plus an aircraft type
+filter) whose handlers write `Miss_Man.camp.fav` (`CampaignZero::Fav`, 46 bytes
+at `0x04efb050` in 2.13, `Campaign + 11384`, file offset 11412 in the save):
+`squadron` (+18, RAF SquadNum), `geschwader` (+34, index into
+`Node_Data.geschwader`, three Gruppen each, -1 any), `gruppe` (+38, 0..2, -1
+any), `flotte` (+26, 0 any), `geschwadertype` (+30, 4 any), `group` (+6),
+`ac` (+10, an aircraft TYPE filter on the RAF side), `sector` (+14).
+`PackageList::IsPlayerUsedInDirectives` resolves those to a SquadNum, and the
+campaign works from that unit. The panel's default is the first unit in the
+list, which is how a Luftwaffe pilot who never touched it flew I./JG 3.
+`LaunchMapFirstTime` saves and restores the block around its copy of the
+campaign table in pilot mode, so the guard writes it in the BEGIN timer,
+after the panel exists and before the press. Luftwaffe: `geschwader =
+(unit-160)/3`, `gruppe = (unit-160)%3`, on the assumption that
+`Node_Data.geschwader` runs in SquadNum order; the first Luftwaffe run with
+a unit set will confirm or correct that, by reading the save's `fav` block
+and `playersquadron` (file 11344) afterwards.
+
+The aircraft number or letter is not a start-up choice on either side:
+`playeracnum` (file 11346) is the position taken in the flight on each sortie.
 
 ## Addresses, Bob.exe 2.13 (18 Oct 2015, 4,460,544 bytes, .text md5 d73ebbc2…)
 
