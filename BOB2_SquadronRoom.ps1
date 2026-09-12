@@ -731,9 +731,15 @@ if ($rp) {
         # stands down on any doubt and leaves the player at a menu.
         $script:AutostartNote = $null
         $script:AutostartArmed = $false
+        # A NEW campaign means a man with no war of his own yet: no save of
+        # his on record and nothing in his log. The newest save on the disk
+        # is not his; it is whoever flew last, and the adoption check deals
+        # with that separately.
         try {
-            if ($sp0 -and (Test-Path $sp0)) { [void](Write-AutostartRequest -Pilot $null) }
-            else { $script:AutostartArmed = Write-AutostartRequest -Pilot (Get-Pilot) }
+            $p0 = Get-Pilot
+            $fresh = $p0 -and -not "$($p0.savePath)" -and (@(Get-Sessions).Count -eq 0)
+            if ($fresh) { $script:AutostartArmed = Write-AutostartRequest -Pilot $p0 }
+            else { [void](Write-AutostartRequest -Pilot $null) }
         } catch { }
         $script:LaunchCard = New-LaunchCardData
         try { Show-Tab $script:CurrentTab } catch { }
