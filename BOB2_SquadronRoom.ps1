@@ -616,7 +616,7 @@ $Xaml = @'
                      FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
         </Border>
         <Border x:Name="RoomPlay" Background="#C8973F" CornerRadius="3" Cursor="Hand" Padding="26,10">
-          <TextBlock Text="PLAY" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
+          <TextBlock Text="PLAY CAMPAIGN" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
                      FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
         </Border>
         <Border x:Name="RoomNewCareer" Background="#A6252F" CornerRadius="3" Cursor="Hand" Padding="20,10" Margin="14,0,0,0">
@@ -689,7 +689,10 @@ $Win.Add_Activated({
     if (Test-GameRunning) { return }
     if (-not (Test-Path $FlightOpen)) { return }
     $script:Activating = $true
-    try { Finalize-Flight; Show-Tab $script:CurrentTab } catch { } finally { $script:Activating = $false }
+    try {
+        Finalize-Flight
+        if (-not (Invoke-AdoptionCheck)) { Show-Tab $script:CurrentTab }
+    } catch { } finally { $script:Activating = $false }
 })
 # PLAY from inside the Room: same flight-marker pipeline as the launcher,
 # so the sortie logs itself; then the game starts via the pinning bat.
@@ -700,17 +703,25 @@ if ($rp) {
         if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { [System.Windows.MessageBox]::Show('The game is already running.', 'Squadron Room') | Out-Null; return }
         try {
             if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
+            # THE PILOT'S OWN SAVE, not the newest. The newest was a guess
+            # that read a man's date off somebody else's war.
+            $sp0 = Get-CampaignSavePath
             $before = ''
-            $cd0 = Get-CampaignDate
+            $cd0 = Get-CampaignDate -Path $sp0
             if ($cd0) { $before = $cd0.ToString('yyyy-MM-dd') }
-            $sav0 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
             # record WHICH save was snapshotted: byte offsets only line up
-            # against the same slot, and "newest" can be a different file
-            # after the flight (Auto Save vs a named save)
-            @{ start = (Get-Date).ToString('s'); dateBefore = $before; savePath = $(if ($sav0) { $sav0.FullName } else { '' }) } |
+            # against the same slot, and Finalize-Flight reads this back
+            @{ start = (Get-Date).ToString('s'); dateBefore = $before; savePath = $(if ($sp0) { "$sp0" } else { '' }) } |
                 ConvertTo-Json | Set-Content -Path $FlightOpen -Encoding UTF8
-            if ($sav0) { Copy-Item $sav0.FullName (Join-Path $StateDir 'before.bsr') -Force }
+            if ($sp0 -and (Test-Path $sp0)) { Copy-Item $sp0 (Join-Path $StateDir 'before.bsr') -Force }
         } catch { }
+        # THE CARD. The game cannot be told to open on a campaign: Bob.exe
+        # parses eight switches and none is about startup, bdg.txt has no
+        # autostart key, and the front end is hardcoded to the intro. So
+        # the Room says exactly what to click for THIS man, and the card
+        # stays on the board while the game runs behind it.
+        $script:LaunchCard = New-LaunchCardData
+        try { Show-Tab $script:CurrentTab } catch { }
         $bat = Join-Path $ScriptDir 'BOB2_Launch.bat'
         if (Test-Path $bat) { Start-Process -FilePath $bat -WorkingDirectory $GameDir }
         else { Start-Process -FilePath (Join-Path $GameDir 'Bob.exe') -WorkingDirectory $GameDir }
@@ -930,13 +941,15 @@ function Fate-Colour { param([string]$s)
 # and Combat Report: across one sortie offset 57 moved 10 -> 11 July while
 # 61 sat still at 11 August. $null when no campaign.
 function Get-CampaignDate {
+    param($Path)
     if (-not $GameDir) { return $null }
-    $dir = Join-Path $GameDir 'SAVEGAME'
-    if (-not (Test-Path $dir)) { return $null }
-    $sav = Get-ChildItem $dir -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $sav) { return $null }
+    # ONE SAVE, CHOSEN ONCE. This used to take the newest .BSR regardless,
+    # so a man who had said which file was his campaign saw its Log Book
+    # and somebody else's date on the same board.
+    $p = if ($Path) { "$Path" } else { Get-CampaignSavePath }
+    if (-not $p -or -not (Test-Path $p)) { return $null }
     try {
-        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        $b = [System.IO.File]::ReadAllBytes($p)
         if ($b.Length -lt 70) { return $null }
         $hdr = [System.Text.Encoding]::ASCII.GetString($b, 1, 20)
         if ($hdr -notmatch '^Rowan Savegame: V 0') { return $null }
@@ -997,13 +1010,12 @@ function Get-SquadronBase {
 # surname at file offset 100 and the aircraft name at 121 (char[21], NUL
 # padded) inside the campaign block - see modernization/BSR_FORMAT.md.
 function Get-CampaignPilot {
+    param($Path)
     if (-not $GameDir) { return $null }
-    $dir = Join-Path $GameDir 'SAVEGAME'
-    if (-not (Test-Path $dir)) { return $null }
-    $sav = Get-ChildItem $dir -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $sav) { return $null }
+    $p = if ($Path) { "$Path" } else { Get-CampaignSavePath }
+    if (-not $p -or -not (Test-Path $p)) { return $null }
     try {
-        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        $b = [System.IO.File]::ReadAllBytes($p)
         if ($b.Length -lt 160) { return $null }
         if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
         $name  = [System.Text.Encoding]::ASCII.GetString($b, 100, 21).TrimEnd([char]0)
@@ -1280,6 +1292,50 @@ function Show-ChromeButtons {
         if ($el) { $el.Visibility = $(if ($Show) { 'Visible' } else { 'Collapsed' }) }
     }
     if ($Show) { Set-ChromeAction -Text ''; Set-ChromeBack -Text '' }
+}
+# THE LAUNCH CARD: the clicks for this man, worked out from what the Room
+# knows. Shown on the board from PLAY CAMPAIGN until the flight is closed.
+$script:LaunchCard = $null
+function New-LaunchCardData {
+    $p = Get-Pilot
+    if (-not $p) { return $null }
+    $lw = ($script:Side -eq 'lw')
+    $sp = Get-CampaignSavePath -Pilot $p
+    $unit = if ($lw) { "$($p.unit)" } else { "No. $($p.sqn) Squadron" }
+    $steps = @('From the game''s main menu choose CAMPAIGNS', $(if ($lw) { 'Choose LUFTWAFFE' } else { 'Choose RAF' }))
+    if ($sp -and (Test-Path $sp)) {
+        $steps += 'Choose LOAD GAME, then ' + (Split-Path $sp -Leaf) + ', then LOAD'
+    } else {
+        $per = $null
+        foreach ($d in $Periods) { if ("$($d.Id)" -eq "$($p.period)") { $per = $d } }
+        $steps += 'Choose the period' + $(if ($per) { ': ' + $per.Label } else { '' }) + ', then BEGIN'
+        $steps += 'Enter the name ' + "$($p.pilot)" + ' and press BEGIN'
+    }
+    [pscustomobject]@{ Name = "$($p.pilot)"; Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps }
+}
+function New-LaunchCard {
+    $c = $script:LaunchCard
+    if (-not $c) { return $null }
+    $bd = New-Object Windows.Controls.Border
+    $bd.Background = B '#1A1710'; $bd.BorderBrush = $script:BrassBrush
+    $bd.BorderThickness = '3,0,0,0'; $bd.CornerRadius = '0,3,3,0'
+    $bd.Padding = '16,12'; $bd.Margin = '0,0,0,20'; $bd.HorizontalAlignment = 'Left'; $bd.MaxWidth = 940
+    $sp = New-Object Windows.Controls.StackPanel
+    [void]$sp.Children.Add((New-TB -Text 'THE GAME IS OPEN. YOUR CLICKS:' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $i = 0
+    foreach ($st in $c.Steps) {
+        $i++
+        $t = New-TB -Text ("$i.  $st") -Family 'Segoe UI' -Size 13.5 -Colour '#E9E3D4' -Wrap
+        $t.Margin = '0,5,0,0'
+        [void]$sp.Children.Add($t)
+    }
+    $w = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
+        "$($c.Name), $($c.Unit), $($c.Side). Quick missions and training are not recorded; " +
+        'your aeroplane and your logbook are for the campaign only. This card clears when you come back.')
+    $w.Margin = '0,10,0,0'
+    [void]$sp.Children.Add($w)
+    $bd.Child = $sp
+    $bd
 }
 # the way out of a screen, in the header for the same reason
 $script:ChromeBackDo = $null
@@ -1627,33 +1683,47 @@ function Finalize-Flight {
     try { $mk = Get-Content $FlightOpen -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
     if (-not $mk) { Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue; return }
     $start = $null; try { $start = [datetime]$mk.start } catch { }
-    $end = $null
-    if ($GameDir) {
-        $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if ($sav) { $end = $sav.LastWriteTime }
+    # THE SAVE THE MARKER NAMES. It was recorded at Play and then never
+    # read; "newest" was re-derived here and could be a different file.
+    $savePath = "$($mk.savePath)"
+    if (-not $savePath -or -not (Test-Path $savePath)) { $savePath = Get-CampaignSavePath }
+    $beforeSnap = Join-Path $StateDir 'before.bsr'
+    $script:LaunchCard = $null
+    # DID THE CAMPAIGN SAVE CHANGE. That is the whole test for "was this a
+    # campaign sortie", and it is byte for byte, not every 97th byte.
+    #
+    # A quick mission never touches the campaign save. On 11 September
+    # 2026 a string of Basic Training take-offs changed exactly two files
+    # in SAVEGAME, settings.cfg and blank_nt.dat, and left both .BSR files
+    # dated the 8th. So an unchanged save means nothing happened to the
+    # campaign, whatever the clock says, and the old test - any minutes
+    # between Play and the newest save's timestamp - logged quick missions
+    # as campaign sorties.
+    $changed = $true
+    try {
+        if ((Test-Path $beforeSnap) -and $savePath -and (Test-Path $savePath)) {
+            $a = [System.IO.File]::ReadAllBytes($beforeSnap)
+            $b2 = [System.IO.File]::ReadAllBytes($savePath)
+            $changed = -not (($a.Length -eq $b2.Length) -and ([System.Linq.Enumerable]::SequenceEqual($a, $b2)))
+        }
+    } catch { }
+    if (-not $changed) {
+        Remove-Item $beforeSnap -Force -ErrorAction SilentlyContinue
+        Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue
+        return
     }
+    $end = $null
+    if ($savePath -and (Test-Path $savePath)) { $end = (Get-Item $savePath).LastWriteTime }
     if (-not $end) { $end = Get-Date }
     $mins = 0
     if ($start) { $mins = [int][math]::Max(0, ($end - $start).TotalMinutes) }
-    $after = Get-CampaignDate
-    # outcome: did the campaign move on while you flew? Compare the save the
-    # launcher snapshotted at Play against the newest one now.
-    $outcome = ''
-    $beforeSnap = Join-Path $StateDir 'before.bsr'
+    $after = Get-CampaignDate -Path $savePath
+    $outcome = 'Campaign progressed'
     try {
-        $newest = $null
-        if ($GameDir) { $newest = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1 }
         if ($mk.dateBefore) {
             $dAfter = if ($after) { $after.ToString('yyyy-MM-dd') } else { '' }
             if ($dAfter -and ($dAfter -gt "$($mk.dateBefore)")) { $outcome = 'Campaign day flown' }
-            elseif ((Test-Path $beforeSnap) -and $newest) {
-                $a = [System.IO.File]::ReadAllBytes($beforeSnap)
-                $b2 = [System.IO.File]::ReadAllBytes($newest.FullName)
-                $same = ($a.Length -eq $b2.Length)
-                if ($same) { for ($i = 0; $i -lt $a.Length; $i += 97) { if ($a[$i] -ne $b2[$i]) { $same = $false; break } } }
-                $outcome = if ($same) { 'No campaign progress' } else { 'Campaign progressed' }
-            }
-        } else { $outcome = 'Practice flight' }
+        }
     } catch { }
     # ---- automatic claims -------------------------------------------
     # Level the record with the campaign's Log Book (see Sync-CampaignClaims);
@@ -1691,7 +1761,9 @@ function Finalize-Flight {
     # flew. Only a flight is a sortie: time in the air, a new Log Book row,
     # or the campaign moved on. Everything else is dropped silently, which
     # is what used to fill the table with 0-minute duplicates.
-    $flew = ($mins -gt 0) -or ($autoAdded -gt 0) -or ($outcome -eq 'Campaign day flown')
+    # The save changed, or this function returned before here. That IS
+    # the sortie; the clock is only how long it took.
+    $flew = $true
     # A new row in the game's own Log Book is a flight - but only when
     # there WAS a before-count to compare against. rowsBefore is -1 when no
     # snapshot was taken, and "0 rows now is more than -1 rows then" used
@@ -2562,9 +2634,107 @@ function Get-CareerDiary {
 }
 # The newest campaign save's Log Book, for the logbook screen.
 # Every .BSR in the game's SAVEGAME folder, newest first.
+# BOTH EXTENSIONS. A Luftwaffe campaign autosaves as "Auto Save.BSL"
+# (MAINTBAR.CPP:678), and until 12 September 2026 nothing in this file had
+# ever looked for one: every reader globbed *.BSR. No .BSL had ever been
+# saved on the development machine either, so the German read path was
+# untested end to end, which is what the Flugbuch's warning was about.
+# Newest first, and when a RAF and a Luftwaffe save are equally new the
+# one for the side he is on wins.
 function Get-SaveFiles {
     if (-not $GameDir) { return @() }
-    @(Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+    $dir = Join-Path $GameDir 'SAVEGAME'
+    if (-not (Test-Path $dir)) { return @() }
+    $want = if ($script:Side -eq 'lw') { '.bsl' } else { '.bsr' }
+    @(Get-ChildItem $dir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in @('.bsr', '.bsl', '.BSR', '.BSL') } |
+        Sort-Object @{ Expression = 'LastWriteTime'; Descending = $true },
+                    @{ Expression = { if ($_.Extension.ToLower() -eq $want) { 0 } else { 1 } } })
+}
+# Every campaign save the game has, for the adoption check, which must
+# look past the one this pilot has chosen.
+function Get-CampaignSaves {
+    @(Get-SaveFiles)
+}
+# WHAT A SAVE SAYS ABOUT ITSELF: who, when, which side. The side is the
+# extension, .BSR for the RAF and .BSL for the Luftwaffe. The squadron is
+# in the file too - Campaign::playersquadron, inside Miss_Man.camp, which
+# CFiling::SaveGame writes whole - but its offset is not pinned yet, so it
+# is not read. dev/bsr_probe.py is how it gets pinned, from one save of a
+# different squadron than 32.
+function Get-CampaignIdentity {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return $null }
+    $cp = Get-CampaignPilot -Path $Path
+    $cd = Get-CampaignDate -Path $Path
+    $ext = [IO.Path]::GetExtension($Path).ToLower()
+    [pscustomobject]@{
+        Path    = $Path
+        Name    = $(if ($cp) { "$($cp.Name)" } else { '' })
+        Date    = $cd
+        Side    = $(if ($ext -eq '.bsl') { 'lw' } else { 'raf' })
+        Saved   = (Get-Item $Path).LastWriteTimeUtc
+        Key     = ((Split-Path $Path -Leaf) + '|' + (Get-Item $Path).Length + '|' + $(if ($cp) { $cp.Name } else { '' }))
+    }
+}
+# Is this the pilot's own war? Side must agree, and the surname must, and
+# that is all that can be checked until the squadron offset is pinned.
+function Test-CampaignMatch {
+    param($Pilot, $Identity)
+    if (-not $Pilot -or -not $Identity) { return $false }
+    $pside = if ($Pilot.PSObject.Properties.Name -contains 'side' -and "$($Pilot.side)") { "$($Pilot.side)" } else { 'raf' }
+    if ($pside -ne $Identity.Side) { return $false }
+    if (-not $Identity.Name) { return $true }        # nothing to disagree with
+    ("$($Pilot.pilot)".Trim() -ieq "$($Identity.Name)".Trim())
+}
+# THE OTHER DOOR. A player who starts a campaign from the game's own menus
+# instead of the Room's PLAY CAMPAIGN comes back to a Room that knows
+# nothing about it. So on opening, and on coming back from the game, the
+# newest campaign save is compared with the pilot: if it is not his war,
+# he is asked whether to adopt it, and adopting posts him from the save.
+# He is asked, never moved silently: a man with two campaigns on the go
+# is exactly who the save chooser was built for. Never under a test
+# harness, which is what StateRootOverride means.
+$script:AdoptFrom = $null
+function Invoke-AdoptionCheck {
+    if ($script:StateRootOverride) { return }
+    if (-not $GameDir) { return }
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { return }
+    $saves = @(Get-CampaignSaves)
+    if ($saves.Count -eq 0) { return }
+    $pilot = Get-Pilot
+    $id = Get-CampaignIdentity -Path $saves[0].FullName
+    if (-not $id -or -not $id.Name) { return }
+    if ($pilot) {
+        if (Test-CampaignMatch -Pilot $pilot -Identity $id) { return }
+        # asked and declined before, for this same file: leave him be
+        if ($pilot.PSObject.Properties.Name -contains 'declinedSaves' -and (@($pilot.declinedSaves) -contains $id.Key)) { return }
+        # older than his record: it is not news
+        if (Test-Path $PilotPath) {
+            if ($id.Saved -le (Get-Item $PilotPath).LastWriteTimeUtc) { return }
+        }
+    }
+    $sideName = if ($id.Side -eq 'lw') { 'a Luftwaffe' } else { 'an RAF' }
+    $when = if ($id.Date) { $id.Date.ToString('d MMMM yyyy') } else { 'an unknown date' }
+    $msg = "The game has $sideName campaign in play: pilot $($id.Name), $when, in " + (Split-Path $id.Path -Leaf) + "."
+    $msg += if ($pilot) { "`n`nThat is not $($pilot.pilot). Adopt it, and a new man is posted from that save, with its name, on its side; your current pilot is archived, not deleted. Keep yours, and the Room will not ask again about that file." }
+            else { "`n`nThere is no pilot in the Room yet. Adopt it, and he is posted from that save with its name and on its side." }
+    $ans = [System.Windows.MessageBox]::Show($Win, $msg, 'A campaign is under way', 'YesNo', 'Question')
+    if ($ans -eq 'Yes') {
+        $script:AdoptFrom = $id
+        $script:NewCareerPending = [bool]$pilot
+        if ($id.Side -ne $script:Side) { Set-StateSide $id.Side; Update-SideSwitch }
+        if ($id.Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
+        return $true
+    }
+    if ($pilot) {
+        $o = @{}
+        foreach ($pp in $pilot.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
+        $o['declinedSaves'] = @(@($pilot.declinedSaves) + $id.Key | Where-Object { $_ })
+        $o['saveAsked'] = $true
+        try { Save-Pilot ([pscustomobject]$o) } catch { }
+    }
+    $false
 }
 # WHICH save is this career's campaign. Newest-wins is only a guess: a man
 # with two campaigns on the go, or who saves under his own names, would
@@ -3005,7 +3175,10 @@ function Show-Roster {
     # Every screen counts sorties from the same place: the campaign's own
     # Log Book. The dispersal used to count the launcher's timed sessions,
     # so the hero card and the roster row could disagree about your rank.
-    $ld0 = Get-LatestSaveDiary
+    # ADOPTED from a campaign the game already had: bind him to that file
+    # so every reader looks at the war he was posted from.
+    if ($script:AdoptFrom) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     $sessions0 = Get-Sessions
     $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0 -Pilot $Pilot
     $career0 = Get-Career $Pilot $sessions0 -Sorties $flownCount
@@ -3090,6 +3263,8 @@ function Show-Roster {
         $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
+        $lc = New-LaunchCard
+        if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
         # The letter is the game's, not ours, so say which aeroplane it
         # belongs to. 33lima was told SD-R and flew SD-T, because the
@@ -3098,12 +3273,13 @@ function Show-Roster {
         # the game puts him further down the flight he gets that
         # aeroplane's letter instead, and nothing here can know in
         # advance which it will be.
-        $ot = New-TB -Text ("Press PLAY (top right). In the game, start or continue the Campaign and fly the day. " +
+        $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign and fly the day. " +
                             "When you come back here your first sortie will be in the logbook, and your aircraft, with " +
                             "your code letter and serial, will be waiting on the board.`n`n" +
                             "The letter above is the one the game paints on the leader's aeroplane. Fly further down " +
                             "the flight and you will wear a different one; the game decides that when it makes up the " +
-                            "squadron, and it changes from sortie to sortie.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+                            "squadron, and it changes from sortie to sortie.`n`n" +
+                            "Quick missions and training are not recorded here. Your aeroplane and your logbook are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
         $ord.Child = $os2
@@ -3368,7 +3544,10 @@ function Invoke-Submit {
     # Where the campaign stood the day he was posted. Everything already in
     # the Log Book belongs to the man before him; this pilot's own record
     # is what happens from here.
-    $ld0 = Get-LatestSaveDiary
+    # ADOPTED from a campaign the game already had: bind him to that file
+    # so every reader looks at the war he was posted from.
+    if ($script:AdoptFrom) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
         $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
@@ -3381,6 +3560,7 @@ function Invoke-Submit {
     # Complete-NewCareer has already put the previous pilot away, so there
     # should be nothing here to lose, but say so rather than relying on it.
     Save-Pilot -Pilot $pilot -Shrink
+    $script:AdoptFrom = $null
     Show-Roster -Pilot (Get-Pilot)
 }
 
@@ -5133,7 +5313,10 @@ function Invoke-GruppeSubmit {
     $pilot['crew'] = @(New-CrewFor -Unit "$($q.Unit)" -Type "$($q.Type)" `
                                    -Date $script:CampaignDate `
                                    -Seed "$($script:NameBox.Text)$($q.Unit)" -SortiesBase 0)
-    $ld0 = Get-LatestSaveDiary
+    # ADOPTED from a campaign the game already had: bind him to that file
+    # so every reader looks at the war he was posted from.
+    if ($script:AdoptFrom) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
         $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
@@ -5142,6 +5325,7 @@ function Invoke-GruppeSubmit {
         $pilot['campaignKills'] = @(0,0,0,0,0,0,0)
     }
     Save-Pilot -Pilot $pilot -Shrink
+    $script:AdoptFrom = $null
     Show-ReadyRoom -Pilot (Get-Pilot)
 }
 
@@ -6557,8 +6741,11 @@ function Show-ReadyRoom {
         $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
+        $lc = New-LaunchCard
+        if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
-        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch.`n`n" +
+                            "Quick missions and training are not recorded here. Your aeroplane and your Flugbuch are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
         $ord.Child = $os2
@@ -6903,7 +7090,7 @@ function Show-Create {
     $script:NameBox = New-Object Windows.Controls.TextBox
     $script:NameBox.Width = 320; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 40
     # one man, one name: if a campaign is under way, offer its pilot's name
-    $cp0 = Get-CampaignPilot
+    $cp0 = Get-CampaignPilot -Path $(if ($script:AdoptFrom) { $script:AdoptFrom.Path } else { $null })
     if ($cp0 -and $cp0.Name) { $script:NameBox.Text = "$($cp0.Name)" }
     [void]$nameCol.Children.Add($script:NameBox)
     [void]$row.Children.Add($nameCol)
@@ -6996,6 +7183,9 @@ function Start-Room {
     # Open on the side he was last flying, not always on the RAF.
     Set-StateSide (Get-LastSide)
     Update-SideSwitch
+    # A campaign started from the game's own menus is offered for adoption
+    # before anything is drawn; if he takes it, the board is already up.
+    if (Invoke-AdoptionCheck) { return }
     $existing = Get-Pilot
     if ($script:Side -eq 'lw') {
         if ($existing) { Show-ReadyRoom -Pilot $existing } else { Show-GruppeSelect }

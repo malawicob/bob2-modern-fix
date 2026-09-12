@@ -1239,14 +1239,42 @@ function Invoke-DriftCheck {
 
     # Squadron Room: if a pilot exists, drop a flight marker so this sortie
     # logs itself. Best-effort and fully guarded - it must never affect Play.
+    #
+    # THE SIDE'S OWN FOLDER, not the flat one. The Room keeps its state in
+    # SquadronRoom\raf\ and SquadronRoom\lw\ and derives flight.open from
+    # there; this wrote to SquadronRoom\ and gated on a flat pilot.json that
+    # the Room had migrated away, so on every migrated install the guard
+    # failed silently and a sortie started from here was never logged.
+    # Get-LastRoomSide already knew about the subfolders; this did not.
     try {
-        $srDir = Join-Path $GameDir 'SquadronRoom'
-        if (Test-Path (Join-Path $srDir 'pilot.json')) {
+        $srSide = Get-LastRoomSide
+        $srDir = Join-Path (Join-Path $GameDir 'SquadronRoom') $srSide
+        $srPilot = Join-Path $srDir 'pilot.json'
+        if (Test-Path $srPilot) {
+            # the save this pilot has said is his, else the newest of either
+            # side's extension; a Luftwaffe campaign saves as .BSL
+            $savePath2 = ''
+            try {
+                $pj = Get-Content $srPilot -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($pj -and ($pj.PSObject.Properties.Name -contains 'savePath') -and "$($pj.savePath)" -and (Test-Path "$($pj.savePath)")) {
+                    $savePath2 = "$($pj.savePath)"
+                }
+            } catch { }
+            if (-not $savePath2) {
+                try {
+                    $want = if ($srSide -eq 'lw') { '.bsl' } else { '.bsr' }
+                    $sav2 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -File -ErrorAction SilentlyContinue |
+                        Where-Object { $_.Extension.ToLower() -in @('.bsr', '.bsl') } |
+                        Sort-Object @{ Expression = 'LastWriteTime'; Descending = $true },
+                                    @{ Expression = { if ($_.Extension.ToLower() -eq $want) { 0 } else { 1 } } } |
+                        Select-Object -First 1
+                    if ($sav2) { $savePath2 = $sav2.FullName }
+                } catch { }
+            }
             $before = ''
             try {
-                $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-                if ($sav) {
-                    $bb = [System.IO.File]::ReadAllBytes($sav.FullName)
+                if ($savePath2) {
+                    $bb = [System.IO.File]::ReadAllBytes($savePath2)
                     if (($bb.Length -ge 70) -and ([System.Text.Encoding]::ASCII.GetString($bb,1,20) -match '^Rowan Savegame: V 0')) {
                         # offset 57 = the campaign's CURRENT day (61 is a later
                         # date and put this a month ahead of the game)
@@ -1258,15 +1286,9 @@ function Invoke-DriftCheck {
                     }
                 }
             } catch { }
-            # snapshot the newest save so the Squadron Room can diff the
-            # outcome of this flight (day advanced, campaign progressed,
-            # victories scored). The save's PATH goes in the marker too:
-            # byte offsets only line up against the same slot.
-            $savePath2 = ''
-            try {
-                $sav2 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-                if ($sav2) { Copy-Item $sav2.FullName (Join-Path $srDir 'before.bsr') -Force; $savePath2 = $sav2.FullName }
-            } catch { }
+            # snapshot THAT save so the Room can tell whether the campaign
+            # changed at all; the path goes in the marker and is read back
+            try { if ($savePath2) { Copy-Item $savePath2 (Join-Path $srDir 'before.bsr') -Force } } catch { }
             @{ start = (Get-Date).ToString('s'); dateBefore = $before; savePath = $savePath2 } |
                 ConvertTo-Json | Set-Content -Path (Join-Path $srDir 'flight.open') -Encoding UTF8
         }
@@ -2325,7 +2347,10 @@ function Update-State {
         (C 'LblState').Text = 'Running'
     }
     else {
-        (C 'SubPlay').Text     = $(if ($wizDone) { 'start the game with the performance fixes applied' }
+        # Say what this door is for. The Squadron Room's PLAY CAMPAIGN is the
+        # other one, and a player has to know that flying a quick mission
+        # from here records nothing against his pilot.
+        (C 'SubPlay').Text     = $(if ($wizDone) { 'start the game as normal. Quick missions and training are not recorded; your Squadron Room pilot flies only in a campaign' }
                                    else { 'complete the Setup wizard first' })
         (C 'SubPlay').Foreground = $(if ($wizDone) { Brush '#FF9A958C' } else { Brush '#FFE8394F' })
         (C 'TitleWizard').Text = $(if ($wizDone) { 'SETUP WIZARD' } else { '!  SETUP WIZARD' })
