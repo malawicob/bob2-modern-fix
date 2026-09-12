@@ -3587,6 +3587,11 @@ public static class BOB2CfgJoy {
         $d = '{0:X4}' -f $c.wPid          # not $pid, which PowerShell owns
         $key = "VID_$v&PID_$d"
         $out += [pscustomobject]@{
+            # winmm's id for it, which is what joyGetPosEx wants. It is
+            # NOT 0 for the first stick found: on Patrick's machine the CH
+            # kit answers on 1 and 2 and nothing on 0, so a live test that
+            # polled 0 sat dead while the sticks moved.
+            Index   = $i
             Name    = $(if ($oem.ContainsKey($key.ToUpper())) { $oem[$key.ToUpper()] } else { $c.szPname })
             Guid    = ('{{{0}{1}-0000-0000-0000-504944564944}}' -f $d, $v)
             Buttons = [int]$c.wNumButtons
@@ -3801,6 +3806,26 @@ function Build-JoystickPage {
     if ($devs.Count -gt 0) {
         [void]$p.Children.Add((New-SectionHeader 'LIVE TEST' 'Move the stick and press its buttons - this updates as you do.'))
 
+        # Which device the bars watch. The first one found unless the
+        # player has picked another; a stick and a throttle are two
+        # devices and each has its own bars and buttons.
+        $live = $devs | Where-Object { $_.Index -eq $script:JoyLive.Dev } | Select-Object -First 1
+        if (-not $live) { $live = $devs[0]; $script:JoyLive.Dev = $live.Index }
+        if ($devs.Count -gt 1) {
+            $pick = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,0,0,8))
+            foreach ($d in $devs) {
+                $b = New-Btn $d.Name $(if ($d.Index -eq $live.Index) { 'BtnPrimary' } else { 'BtnGhost' }) $d.Index {
+                    param($s, $e)
+                    $script:JoyLive.Dev = [int]$s.Tag
+                    Invalidate-Page 'Joystick and axes'
+                    Select-Nav 'Joystick and axes'
+                }
+                $b.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+                [void]$pick.Children.Add($b)
+            }
+            [void]$p.Children.Add($pick)
+        }
+
         if ($joy.Count -eq 0) {
             [void]$p.Children.Add((New-Note ('The bars below show raw hardware. Nothing is mapped in the game yet - ' +
                 'press "Set up my stick" further down, then start the game once.') 'perf'))
@@ -3822,7 +3847,7 @@ function Build-JoystickPage {
             @{ N = 'U'; H = 'fifth axis' }
             @{ N = 'V'; H = 'sixth axis' }
         )
-        $nAx = $(if ($devs.Count -gt 0) { [math]::Min(6, [math]::Max(2, $devs[0].Axes)) } else { 4 })
+        $nAx = [math]::Min(6, [math]::Max(2, $live.Axes))
         for ($i = 0; $i -lt $nAx; $i++) {
             [void]$p.Children.Add((New-AxisBar ("{0}   {1}" -f $axisNames[$i].N, $axisNames[$i].H) $i))
         }
@@ -3843,7 +3868,7 @@ function Build-JoystickPage {
         $bl.Margin = [System.Windows.Thickness]::new(0,14,0,6)
         [void]$p.Children.Add($bl)
         $wrap = New-Object System.Windows.Controls.WrapPanel
-        $count = $(if ($devs.Count -gt 0) { [math]::Min(32, $devs[0].Buttons) } else { 16 })
+        $count = [math]::Min(32, $live.Buttons)
         for ($i = 0; $i -lt $count; $i++) {
             $b = New-Object System.Windows.Controls.Border
             $b.Width = 30; $b.Height = 26; $b.Margin = [System.Windows.Thickness]::new(0,0,5,5)
@@ -3962,7 +3987,7 @@ function Build-JoystickPage {
     [void]$p.Children.Add((New-SectionHeader 'SET UP' 'Detect the stick and write a sensible starting point.'))
     $b1 = New-Stack -Orientation 'Horizontal'
     [void]$b1.Children.Add((New-Btn 'Set up my stick' 'BtnPrimary' $null {
-        if (Invoke-JoyTool 'BOB2_Controls.ps1' @('-Apply')) {
+        if (Invoke-JoyTool 'BOB2_Controls.ps1' @('-Apply','-GameDir',"`"$($script:GameFolder)`"")) {
             Invalidate-Page 'Joystick and axes'
             Select-Nav 'Joystick and axes'
         }
