@@ -275,10 +275,12 @@ $SquadronCodes = @{
 # The campaign's four starting points, and the order of battle date each
 # one reads. These are the game's own dates, not ours.
 $Periods = @(
-    @{ Id='P1'; Key='1940-07-10'; Label='10 JULY - THE CHANNEL';    Desc='convoy battles over the Channel' }
-    @{ Id='P2'; Key='1940-08-12'; Label='12 AUGUST - EAGLE DAY';    Desc='the assault on the airfields' }
-    @{ Id='P3'; Key='1940-08-24'; Label='24 AUGUST - THE AIRFIELDS'; Desc='the attack on the sector stations' }
-    @{ Id='P4'; Key='1940-09-07'; Label='7 SEPTEMBER - LONDON';     Desc='the great daylight raids on London' }
+    # Game is the tab the campaign screen shows along its top, so the
+    # launch card can say which one to press in the game's own words.
+    @{ Id='P1'; Key='1940-07-10'; Label='10 JULY - THE CHANNEL';    Desc='convoy battles over the Channel';      Game='CONVOYS';         GameDates='10th July - August 11th' }
+    @{ Id='P2'; Key='1940-08-12'; Label='12 AUGUST - EAGLE DAY';    Desc='the assault on the airfields';        Game='EAGLE ATTACK';    GameDates='12th August - 23rd August' }
+    @{ Id='P3'; Key='1940-08-24'; Label='24 AUGUST - THE AIRFIELDS'; Desc='the attack on the sector stations';   Game='CRITICAL PERIOD'; GameDates='24th August - 6th September' }
+    @{ Id='P4'; Key='1940-09-07'; Label='7 SEPTEMBER - LONDON';     Desc='the great daylight raids on London';  Game='BLITZ';           GameDates='7th September - 15th September' }
 )
 # Every squadron in Fighter Command's order of battle, built from the
 # game's own oob.json rather than a hand-kept list of the two dozen we
@@ -684,7 +686,7 @@ function Show-Tab {
         'logbook' { if ($script:Side -eq 'lw') { Show-Flugbuch -Pilot $pl } else { Show-Logbook -Pilot $pl } }
         'map'     { if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-Map -Pilot $pl } }
         'paper'   { if ($script:Side -eq 'lw') { Show-Morgenmeldung -Pilot $pl } else { Show-Paper -Pilot $pl } }
-        'gruppen' { Show-GruppeSelect }
+        'gruppen' { $script:SelPeriod = $null; $script:SelSq = $null; Show-GruppeSelect }
         default   { if ($script:Side -eq 'lw') { Show-ReadyRoom -Pilot $pl } else { Show-Roster -Pilot $pl } }
     }
 }
@@ -1318,7 +1320,11 @@ function New-LaunchCardData {
     } else {
         $per = $null
         foreach ($d in $Periods) { if ("$($d.Id)" -eq "$($p.period)") { $per = $d } }
-        $steps += 'Choose the period' + $(if ($per) { ': ' + $per.Label } else { '' }) + ', then BEGIN'
+        # The four tabs along the top of the campaign screen are named
+        # CONVOYS, EAGLE ATTACK, CRITICAL PERIOD and BLITZ, not by date, so
+        # the card says which tab, and what dates the game shows under it.
+        $steps += $(if ($per) { "Press the $($per.Game) tab along the top of the campaign screen; it shows $($per.GameDates). That is your period, $($per.Desc). Then BEGIN" }
+                    else { 'Choose the period along the top of the campaign screen, then BEGIN' })
         $steps += 'Enter the name ' + "$($p.pilot)" + ' and press BEGIN'
     }
     [pscustomobject]@{ Name = "$($p.pilot)"; Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps }
@@ -4897,15 +4903,45 @@ function New-GruppeCard {
 }
 
 function Show-GruppeSelect {
+    # Two jobs on one sheet. With no pilot, or a new career under way, this
+    # is the enrollment board: choose a Gruppe and report to it. With a
+    # pilot it is THE GRUPPEN tab of his ready room: the same order of
+    # battle, opened at the date his campaign stands at, his own Gruppe in
+    # gold and no REPORT button, because he already belongs to one. It
+    # used to draw the enrollment board either way, so a man with a career
+    # was asked to choose a Gruppe every time he opened the map.
+    $me = $null
+    if (-not $script:NewCareerPending) { $me = Get-Pilot }
+    $script:GruppeView = [bool]$me
+    if ($me -and -not $script:SelPeriod) {
+        $script:CampaignDate = Get-CampaignDate
+        $script:SelPeriod = "$($me.period)"
+        if ($script:CampaignDate) {
+            foreach ($per in $Periods) {
+                try { if ([datetime]::ParseExact($per.Key,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) -le $script:CampaignDate) { $script:SelPeriod = $per.Id } } catch { }
+            }
+        }
+    }
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
-    Show-ChromeButtons $false
-    Set-ChromeAction -Text 'REPORT TO THIS GRUPPE' -Enabled ([bool]$script:SelSq) -OnClick { if ($script:SelSq) { Show-GruppeCreate } }
-    $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Jagdwaffe' }
-    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTEN 2 UND 3" }
-    if (Get-Pilot) { Set-ChromeBack 'BACK TO THE READY ROOM' { Show-Tab 'dispersal' } }
-    else { Set-ChromeBack -Text '' }
-    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE CHANNEL FRONT' -Title 'The fighter Gruppen'))
+    if ($me) {
+        [void]$script:Stage.Children.Add((New-Nav 'gruppen'))
+        Show-ChromeButtons $true
+        Set-ChromeAction -Text ''
+        Set-ChromeBack -Text ''
+        $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($me.unit)" }
+        $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTE $($me.luftflotte)" }
+        $eyebrow = if ($script:CampaignDate) { "THE CHANNEL FRONT  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { 'THE CHANNEL FRONT' }
+        [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "$($me.unit) at $($me.base)"))
+    } else {
+        Show-ChromeButtons $false
+        Set-ChromeAction -Text 'REPORT TO THIS GRUPPE' -Enabled ([bool]$script:SelSq) -OnClick { if ($script:SelSq) { Show-GruppeCreate } }
+        $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Jagdwaffe' }
+        $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTEN 2 UND 3" }
+        if (Get-Pilot) { Set-ChromeBack 'BACK TO THE READY ROOM' { $script:NewCareerPending = $false; Show-Tab 'dispersal' } }
+        else { Set-ChromeBack -Text '' }
+        [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE CHANNEL FRONT' -Title 'The fighter Gruppen'))
+    }
 
     $segRow = New-Object Windows.Controls.StackPanel; $segRow.Orientation = 'Horizontal'; $segRow.Margin = '0,-10,0,10'
     foreach ($per in $Periods) {
@@ -4931,8 +4967,9 @@ function Show-GruppeSelect {
         "$($inLine.Count) of the $($all.Count) fighter Gruppen are on the Kanalfront by this date; " +
         'the rest have not been moved up yet. Luftflotte 2 flew from the Pas de Calais against London ' +
         'and the south east, Luftflotte 3 from Normandy and Brittany against the west. ' +
-        'Click a Gruppe on the table to choose it, then report to it. The wheel zooms, a drag moves ' +
-        'the sheet and a double-click puts it back.')
+        $(if ($me) { 'Your own Gruppe is in gold. Click any other for its particulars. ' }
+          else { 'Click a Gruppe on the table to choose it, then report to it. ' }) +
+        'The wheel zooms, a drag moves the sheet and a double-click puts it back.')
     $lead.Margin = '0,0,0,16'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lead)
 
@@ -4955,7 +4992,8 @@ function Show-GruppeSelect {
     Enable-MapZoom -Frame $mapWrap -Content $grid
 
     $script:MapTiles = @()
-    $script:GruppeDetail = New-TB -Text $(if ($script:SelSq) { "$($script:SelSq.Unit), $($script:SelSq.Type), at $($script:SelSq.Base)." } else { 'No Gruppe selected.' }) `
+    $script:GruppeDetail = New-TB -Text $(if ($me) { "Your Gruppe: $($me.unit), $($me.actype), at $($me.base). Luftflotte $($me.luftflotte)." }
+                                          elseif ($script:SelSq) { "$($script:SelSq.Unit), $($script:SelSq.Type), at $($script:SelSq.Base)." } else { 'No Gruppe selected.' }) `
                      -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
     $script:GruppeDetail.Margin = '2,0,0,12'; $script:GruppeDetail.MaxWidth = 1100; $script:GruppeDetail.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($script:GruppeDetail)
@@ -4985,15 +5023,17 @@ function Show-GruppeSelect {
         if ($script:GruppeDetail) {
             $script:GruppeDetail.Text = "$($q2.Label), $($q2.Type), at $($q2.Base). Luftflotte $($q2.Luftflotte), rated $("$($q2.Skill)".ToLower())."
         }
-        Set-ChromeActionEnabled $true
+        if (-not $script:GruppeView) { Set-ChromeActionEnabled $true }
     }
 
     # gather the Gruppen by field, the way the RAF board gathers squadrons
     $byField = @{}
     $offTable = @()
     $num = 0
+    $mine = 0
     foreach ($g in ($inLine | Sort-Object { "$($_.geschwader)" }, { @('I','II','III','IV','V').IndexOf("$($_.gruppe)") })) {
         $num++
+        if ($me -and "$($g.unit)" -eq "$($me.unit)") { $mine = $num }
         # Num is a unique integer the plaque machinery sorts and compares
         # on; Label is what it prints. A Gruppe has no number of its own.
         $qt = @{ Num = $num; Label = "$($g.unit)"; Type = "$($g.type)"; Base = "$($g.field)"
@@ -5008,7 +5048,7 @@ function Show-GruppeSelect {
         $byField[$k].Sqns = @($byField[$k].Sqns) + @($qt)
     }
     $fields = @($byField.Values | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
-    Add-SquadronPlaques -Canvas $cv -Fields $fields -W $W -H $H -Mine 0 -Date $pd `
+    Add-SquadronPlaques -Canvas $cv -Fields $fields -W $W -H $H -Mine $mine -Date $pd `
                         -OnSelect $true -AlwaysName
     [void]$script:Stage.Children.Add($mapWrap)
 
@@ -5029,22 +5069,6 @@ function Show-GruppeSelect {
         [void]$script:Stage.Children.Add($chips)
     }
 
-    # Say plainly what is not built yet, rather than offering a button that
-    # goes nowhere.
-    $note = New-Object Windows.Controls.Border
-    $note.Background = B '#1A1710'; $note.BorderBrush = $script:BrassBrush
-    $note.BorderThickness = '3,0,0,0'; $note.CornerRadius = '0,3,3,0'
-    $note.Padding = '16,12'; $note.Margin = '0,16,0,0'; $note.HorizontalAlignment = 'Left'; $note.MaxWidth = 940
-    $ns = New-Object Windows.Controls.StackPanel
-    [void]$ns.Children.Add((New-TB -Text 'NOT FINISHED' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
-    $nt = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
-        'The board, the ready room and the Iron Cross are in. The Flugbuch and the men of the ' +
-        'Staffel are not: a German career keeps its own record, so nothing here touches your RAF ' +
-        'pilot. The switch by the name at the top takes you back to him.')
-    $nt.Margin = '0,5,0,0'
-    [void]$ns.Children.Add($nt)
-    $note.Child = $ns
-    [void]$script:Stage.Children.Add($note)
 }
 
 # ---------------------------------------------------------------------
