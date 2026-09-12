@@ -623,6 +623,10 @@ $Xaml = @'
           <TextBlock Text="START A NEW CAREER" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="15"
                      FontWeight="Bold" Foreground="#F7ECE6" VerticalAlignment="Center"/>
         </Border>
+        <Border x:Name="RoomDeletePilot" Background="#2A2D31" BorderBrush="#5A3236" BorderThickness="1" CornerRadius="3" Cursor="Hand" Padding="16,10" Margin="10,0,0,0">
+          <TextBlock Text="DELETE THIS PILOT" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="13"
+                     FontWeight="Bold" Foreground="#C99A9E" VerticalAlignment="Center"/>
+        </Border>
       </StackPanel>
       <Border x:Name="ChromeClose" Width="52" Height="52" Background="Transparent"
               HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Hand" Margin="0,0,10,0">
@@ -795,6 +799,12 @@ if ($rnc) {
     $rnc.Add_MouseLeftButtonUp({ Start-NewCareer })
     $rnc.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C23440') })
     $rnc.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#A6252F') })
+}
+$rdp = C 'RoomDeletePilot'
+if ($rdp) {
+    $rdp.Add_MouseLeftButtonUp({ Remove-PilotCareer })
+    $rdp.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#4A2A2E') })
+    $rdp.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#2A2D31') })
 }
 $cx = C 'ChromeClose'
 if ($cx) {
@@ -1287,7 +1297,7 @@ $SquadronMottoes = @{
 # start over, and the board's own button is the only thing to press.
 function Show-ChromeButtons {
     param([bool]$Show)
-    foreach ($n in @('RoomPlay', 'RoomNewCareer')) {
+    foreach ($n in @('RoomPlay', 'RoomNewCareer', 'RoomDeletePilot')) {
         $el = C $n
         if ($el) { $el.Visibility = $(if ($Show) { 'Visible' } else { 'Collapsed' }) }
     }
@@ -2903,6 +2913,41 @@ function Start-NewCareer {
     $script:NewCareerPending = $true
     # the board for HIS air force. This sent a German pilot to the Fighter
     # Command plotting table, where he could have reported to No. 32 Squadron.
+    if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
+}
+# DELETE THIS PILOT. Everything the Room holds for the side he is on is
+# moved out of the way and the enrollment board comes up, so the next man
+# starts from nothing. Moved, not destroyed: it goes to
+# archive\deleted-<stamp>\ beside the autobackups, because a career was
+# destroyed on 9 September and nothing in this file deletes a record
+# outright since. The game's own campaign saves are NOT touched; those
+# are the game's, and the Room does not reach into SAVEGAME to remove
+# anything. -Force skips the question, for a harness.
+function Remove-PilotCareer {
+    param([switch]$Force)
+    $p = Get-Pilot
+    if (-not $p) { return }
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+        [System.Windows.MessageBox]::Show($Win, 'Close the game first.', 'Delete this pilot') | Out-Null
+        return
+    }
+    $sideName = if ($script:Side -eq 'lw') { 'Luftwaffe' } else { 'RAF' }
+    if (-not $Force) {
+        $ans = [System.Windows.MessageBox]::Show($Win,
+            "Delete $($p.pilot), your $sideName pilot?`n`nHis record, logbook, claims and flight marker are removed from the Room and a copy is kept under archive\deleted-. The game's own campaign saves are left exactly as they are; delete or replace those in the game.`n`nThe $sideName enrollment board comes up next so you can post a new man.",
+            'Delete this pilot', 'YesNo', 'Warning')
+        if ($ans -ne 'Yes') { return }
+    }
+    try {
+        $arch = Join-Path $StateDir ('archive\deleted-' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
+        New-Item -ItemType Directory -Path $arch -Force | Out-Null
+        foreach ($f in @($PilotPath, $SessionsPath, $AutoClaimPath, $FlightOpen, (Join-Path $StateDir 'before.bsr'))) {
+            if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
+        }
+    } catch { }
+    $script:AdoptFrom = $null
+    $script:NewCareerPending = $false
+    $script:LaunchCard = $null
     if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
 }
 # Put the previous pilot away. Called at the moment a new man is posted.

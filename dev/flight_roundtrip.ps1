@@ -19,6 +19,9 @@
 #   4  a save whose surname is not the pilot's is not his war, and its
 #      identity carries that name for the adoption prompt
 #   5  the launch card names the pilot's own save when he has one
+#   6  DELETE THIS PILOT clears everything the Room holds for a side,
+#      keeps a copy under archive\deleted-, brings up that side's
+#      enrollment board, and leaves the game's saves alone, RAF and LW
 param([string]$Room, [string]$SourceSave)
 if (-not $Room) {
     $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
@@ -140,6 +143,31 @@ try {
     Check 'the card exists'                     ($null -ne $card)
     Check 'it names the save to load'           (($card.Steps -join ' ') -match 'LOAD GAME.*Auto Save\.BSR') "$($card.Steps -join ' | ')"
     Check 'it names the man'                    ($card.Name -eq 'Millin') "$($card.Name)"
+
+    "6  DELETE THIS PILOT, both sides"
+    $saveCount = @(Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -File).Count
+    foreach ($side in 'raf', 'lw') {
+        Set-StateSide $side
+        if (-not (Test-Path $script:StateDir)) { New-Item -ItemType Directory -Path $script:StateDir -Force | Out-Null }
+        $dp = [ordered]@{ pilot = 'Testman'; rank = $(if ($side -eq 'lw') { 'Leutnant' } else { 'Sergeant' })
+                          status = 'On strength'; cmode = 'pilot'; sqn = $(if ($side -eq 'lw') { 0 } else { 32 })
+                          actype = 'x'; base = 'y'; period = 'P1'; historical = $false; portrait = 'pilot01.jpg'
+                          created = '1940-07-10'; campaignSorties = 0; campaignKills = @(0,0,0,0,0,0,0) }
+        if ($side -eq 'lw') { $dp['side'] = 'lw'; $dp['unit'] = 'I./JG 3'; $dp['gesch'] = 'JG 3'; $dp['gruppe'] = 'I'; $dp['staffel'] = 1; $dp['luftflotte'] = 2; $dp['acnum'] = 3 }
+        Save-Pilot -Pilot $dp -Shrink
+        Set-Content -Path $SessionsPath -Value '[]' -Encoding UTF8
+        Set-Content -Path $FlightOpen -Value '{}' -Encoding UTF8
+        Set-Content -Path (Join-Path $StateDir 'before.bsr') -Value 'x' -Encoding ASCII
+        $script:LaunchCard = [pscustomobject]@{ Steps = @('x') }
+        Remove-PilotCareer -Force
+        Check "$side`: no pilot afterwards"          ($null -eq (Get-Pilot))
+        Check "$side`: sessions, marker and snapshot gone" (-not (Test-Path $SessionsPath) -and -not (Test-Path $FlightOpen) -and -not (Test-Path (Join-Path $StateDir 'before.bsr')))
+        $arch = @(Get-ChildItem (Join-Path $StateDir 'archive') -Directory -Filter 'deleted-*' -ErrorAction SilentlyContinue)
+        Check "$side`: a copy was kept under archive\deleted-" ($arch.Count -eq 1 -and (Test-Path (Join-Path $arch[0].FullName 'pilot.json')))
+        Check "$side`: the enrollment board is up"   ($script:Stage.Children.Count -gt 0)
+        Check "$side`: the launch card is cleared"   ($null -eq $script:LaunchCard)
+    }
+    Check 'the game''s saves were not touched'      (@(Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -File).Count -eq $saveCount) "$saveCount"
 }
 finally {
     Remove-Item $script:StateRootOverride -Recurse -Force -ErrorAction SilentlyContinue
