@@ -1098,6 +1098,185 @@ function Show-Ask {
     return ([System.Windows.MessageBox]::Show($win, $Text, $Title, 'YesNo', $Icon) -eq 'Yes')
 }
 
+# ---------------------------------------------------------------------
+# A CHANGED STICK
+#
+#   The drift check above catches the game resetting the axis records. It
+#   cannot catch the other thing that happens to inputcfg.dat: the player
+#   buys a new stick. The records keep naming the old one, every axis in
+#   the game's setup screen points at a device that is not there, and the
+#   new stick does nothing. Patrick's CH kit sat dead beside a config still
+#   bound to a T.16000M for exactly that reason, and the drift check then
+#   offered to restore the T.16000M layout on top.
+#
+#   So before the drift check runs, this compares the devices the config
+#   names with the devices actually plugged in, and checks that every one
+#   of those has an axis layout in DeviceDefaults.txt. If either fails it
+#   offers to run BOB2_Controls.ps1 for the install, move the stale config
+#   aside so the game rebuilds it, and retire a reference profile that
+#   names a stick no longer present.
+# ---------------------------------------------------------------------
+function Get-PresentSticks {
+    # OEM names by VID/PID from the registry, presence from PnP. A device
+    # with no OEM entry is not a game controller Windows has ever set up,
+    # so it is left out rather than guessed at.
+    $oem = @{}
+    foreach ($root in @('HKLM:\SYSTEM\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM',
+                        'HKCU:\System\CurrentControlSet\Control\MediaProperties\PrivateProperties\Joystick\OEM')) {
+        if (-not (Test-Path $root)) { continue }
+        foreach ($k in (Get-ChildItem $root -ErrorAction SilentlyContinue)) {
+            $n = (Get-ItemProperty $k.PSPath -ErrorAction SilentlyContinue).OEMName
+            if ($n) { $oem[$k.PSChildName.ToUpper()] = "$n" }
+        }
+    }
+    $out = @{}
+    try {
+        foreach ($d in (Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue)) {
+            if ("$($d.DeviceID)" -notmatch '^HID\\VID_([0-9A-F]{4})&PID_([0-9A-F]{4})') { continue }
+            $key = "VID_$($Matches[1])&PID_$($Matches[2])"
+            if (-not $oem.ContainsKey($key)) { continue }
+            if ($out.ContainsKey($key)) { continue }
+            # a DirectInput product GUID is PID then VID, then "PIDVID" in bytes
+            $out[$key] = [pscustomobject]@{ Key = $key; Name = $oem[$key]; Guid = ('{{{0}{1}-0000-0000-0000-504944564944}}' -f $Matches[2], $Matches[1]) }
+        }
+    } catch { }
+    # Plain array out, callers wrap it in @(). With a leading comma the two
+    # sticks came back as ONE element and the GUID check read them as one
+    # device with two GUIDs.
+    @($out.Values | Sort-Object Key)
+}
+
+function Get-ConfigDevices {
+    # Every distinct device the joystick records of inputcfg.dat name.
+    param([string]$Path)
+    # Plain array out; callers wrap it in @(). A ",$names" here went down a
+    # pipeline as ONE object and the stale list came back holding an array.
+    $names = @()
+    if (-not $Path -or -not (Test-Path $Path)) { return $names }
+    try { $b = [System.IO.File]::ReadAllBytes($Path) } catch { return $names }
+    $REC = 278
+    $max = [Math]::Min(18, [int][Math]::Floor($b.Length / $REC))
+    for ($i = 0; $i -lt $max; $i++) {
+        $o = $i * $REC
+        if ([BitConverter]::ToInt32($b, $o + 8) -ne 2) { continue }
+        $nm = ''
+        for ($j = $o + 25; $j -lt ($o + 65) -and $b[$j] -ne 0; $j++) { $nm += [char]$b[$j] }
+        if ($nm -match '^(.*?):') { $nm = $matches[1].Trim() }
+        if ($nm -and $names -notcontains $nm) { $names += $nm }
+    }
+    $names
+}
+
+function Test-StickNamed {
+    # "T.16000M" against "T.16000M", "CH FIGHTERSTICK USB" against what
+    # DirectInput reported for it. Compared with everything but letters
+    # and digits stripped, either way round, because the game writes the
+    # DirectInput instance name and the registry holds the OEM name and
+    # the two are not always spelled the same.
+    param([string]$Config, $Present)
+    $c = ($Config -replace '[^A-Za-z0-9]', '').ToUpper()
+    if (-not $c) { return $true }
+    foreach ($p in $Present) {
+        $n = ("$($p.Name)" -replace '[^A-Za-z0-9]', '').ToUpper()
+        if ($n -and ($n -like "*$c*" -or $c -like "*$n*")) { return $true }
+    }
+    $false
+}
+
+function Get-StickState {
+    # 'nosticks' | 'ok' | 'stale' | 'unmapped'
+    $present = @(Get-PresentSticks)
+    $r = [pscustomobject]@{ State = 'ok'; Present = $present; Stale = @(); Missing = @(); RefStale = $false; Fingerprint = '' }
+    if ($present.Count -eq 0) { $r.State = 'nosticks'; return $r }
+    $r.Fingerprint = (($present | ForEach-Object { $_.Guid }) -join ';')
+    $r.Stale = @(@(Get-ConfigDevices $script:InputCfg) | Where-Object { -not (Test-StickNamed $_ $present) })
+    $r.RefStale = [bool](@(@(Get-ConfigDevices $script:AxisRef) | Where-Object { -not (Test-StickNamed $_ $present) }).Count)
+    $dd = Join-Path $GameDir 'DeviceDefaults.txt'
+    $text = ''
+    if (Test-Path $dd) { try { $text = [System.IO.File]::ReadAllText($dd) } catch { } }
+    $r.Missing = @($present | Where-Object { $text.ToUpper().IndexOf($_.Guid.ToUpper()) -lt 0 })
+    if ($r.Stale.Count) { $r.State = 'stale' }
+    elseif ($r.Missing.Count) { $r.State = 'unmapped' }
+    $r
+}
+
+function Invoke-StickCheck {
+    # Returns $true if it is safe to carry on. Runs BEFORE the drift check
+    # so a retired reference is out of the way before that check looks.
+    $st = Get-StickState
+    if ($st.State -eq 'nosticks') { return $true }
+    if ($st.State -eq 'ok') {
+        # The config and the layouts are right for the stick in hand, but
+        # the reference profile still names the old one. Left there, the
+        # drift check would offer to put the old stick's settings back on
+        # top of the new one. Retired quietly, so that check asks for a
+        # fresh reference instead. It is the state Patrick's install was in
+        # after he set the CH kit up by hand.
+        if ($st.RefStale -and (Test-Path $script:AxisRef) -and -not (Test-GameRunning)) {
+            try {
+                $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+                Move-Item $script:AxisRef (Join-Path $script:AxisDir "reference_$stamp.old") -Force
+                Write-LauncherLog 'Joystick setup: retired the reference profile because it named a stick that is not plugged in.'
+            } catch { }
+        }
+        return $true
+    }
+    # Asked once per set of plugged-in devices. Plug in something new and
+    # the question comes back; say no and it stays away.
+    $declined = Join-Path $script:AxisDir 'stick-declined.txt'
+    if (Test-Path $declined) {
+        try { if ((Get-Content $declined -Raw -ErrorAction Stop).Trim() -eq $st.Fingerprint) { return $true } } catch { }
+    }
+    if (Test-GameRunning) { return $true }
+    $now = ($st.Present | ForEach-Object { $_.Name }) -join ', '
+    $msg = if ($st.State -eq 'stale') {
+        "Your joystick has changed.`n`n" +
+        "the game is set up for:  $($st.Stale -join ', ')`n" +
+        "plugged in now:          $now`n`n" +
+        "Every axis in the game's setup screen still points at the old device, so the new one does nothing. " +
+        "Set the game up for what is plugged in?`n`n" +
+        "That writes an axis layout for each device into DeviceDefaults.txt (the old file is backed up), " +
+        "moves the old joystick settings aside so the game rebuilds them, and forgets the old reference profile. " +
+        "Fine tuning is still done in the game's own controls screen."
+    } else {
+        "The game has no axis layout for:  $(($st.Missing | ForEach-Object { $_.Name }) -join ', ')`n`n" +
+        "Without one it does not know which axis is pitch and which is throttle. Write one now?`n`n" +
+        "It goes into DeviceDefaults.txt, the old file is backed up, and fine tuning is still done in the game's own controls screen."
+    }
+    if (-not (Show-Ask $msg 'Joystick setup' 'Question')) {
+        try {
+            if (-not (Test-Path $script:AxisDir)) { New-Item -ItemType Directory -Path $script:AxisDir -Force | Out-Null }
+            Set-Content -Path $declined -Value $st.Fingerprint -Encoding ASCII
+        } catch { }
+        return $true
+    }
+    $tool = Join-Path $ScriptDir 'BOB2_Controls.ps1'
+    if (-not (Test-Path $tool)) { Show-Note "BOB2_Controls.ps1 is missing from $ScriptDir." 'Joystick setup' 'Warning'; return $true }
+    $done = @()
+    try {
+        $p = Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -Wait -PassThru `
+                -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File',"`"$tool`"",'-Apply','-Axes','-GameDir',"`"$GameDir`""
+        if ($p.ExitCode -ne 0) { Show-Note "The controls tool did not finish (exit code $($p.ExitCode)). Nothing else was changed." 'Joystick setup' 'Warning'; return $true }
+        $done += "wrote an axis layout for $now"
+        if (-not (Test-Path $script:AxisDir)) { New-Item -ItemType Directory -Path $script:AxisDir -Force | Out-Null }
+        $stamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
+        if ($st.Stale.Count -and (Test-Path $script:InputCfg)) {
+            Move-Item $script:InputCfg (Join-Path $script:AxisDir "inputcfg_$stamp.dat") -Force
+            $done += 'moved the old joystick settings to _AxisProfiles so the game rebuilds them for the new stick'
+        }
+        if ($st.RefStale -and (Test-Path $script:AxisRef)) {
+            Move-Item $script:AxisRef (Join-Path $script:AxisDir "reference_$stamp.old") -Force
+            $done += 'retired the reference profile that named the old stick; save a new one once the controls feel right'
+        }
+        if (Test-Path $declined) { Remove-Item $declined -Force -ErrorAction SilentlyContinue }
+        Write-LauncherLog ("Joystick setup: " + ($done -join '; ') + '.')
+        Show-Note ("Done.`n`n" + (($done | ForEach-Object { "- $_" }) -join "`n") + "`n`nStart the game and check the controls screen.") 'Joystick setup'
+    } catch {
+        Show-Note "Could not finish the joystick setup.`n`n$($_.Exception.Message)" 'Joystick setup' 'Warning'
+    }
+    $true
+}
+
 function Invoke-DriftCheck {
     # Returns $true if it is safe to carry on. Called on startup and again
     # immediately before Play, because the drift happens when the GAME exits
@@ -1144,6 +1323,7 @@ function Invoke-DriftCheck {
     # Check the axis settings here too, not just at startup: the reset happens
     # when the GAME exits, so a launcher left open across a session would
     # otherwise still be showing the state from before.
+    if (-not (Invoke-StickCheck)) { return }
     if (-not (Invoke-DriftCheck)) { return }
     # Aircraft variants: re-apply active ones before every start. Value
     # variants self-heal; the Jabo behaviour edit is wiped by the engine on
@@ -2363,7 +2543,13 @@ function Update-State {
         (C 'SubSetup').Text    = 'apply the patches and put anything broken back'
         (C 'SubScale').Text    = "in-game menu and text size — currently $(Get-MenuScaleState)$(if ($script:DpiFixed) { '  ·  removed a DPI flag that was hiding it' })"
         $drift = Get-InputDrift
+        $stick = Get-StickState
+        if ($stick.State -eq 'stale') { $drift = [pscustomobject]@{ State = 'stale'; Stale = $stick.Stale } }
         switch ($drift.State) {
+            'stale' {
+                (C 'SubAxes').Text = "set up for $($drift.Stale -join ', ') — that stick is not plugged in"
+                (C 'SubAxes').Foreground = Brush '#FFD08A2E'
+            }
             'drifted' {
                 (C 'SubAxes').Text = "$($drift.Current.Summary) — settings were RESET, click to put them back"
                 (C 'SubAxes').Foreground = Brush '#FFD08A2E'
@@ -2499,6 +2685,7 @@ $win.Add_ContentRendered({
         try { Set-Content -Path $firstRunMark -Value (Get-Date -Format 's') -Encoding ASCII } catch { }
         if ($ans -eq 'Yes') { Start-Wizard; return }
     }
+    [void](Invoke-StickCheck)
     [void](Invoke-DriftCheck)
 })
 $win.Add_Closed({ $timer.Stop(); $pulseTimer.Stop() })

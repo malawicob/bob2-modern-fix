@@ -1591,6 +1591,26 @@ function Step-Win11Tweaks {
     }
 }
 
+function Step-SetupControls {
+    param([string]$GameFolder)
+    Write-Step "Joystick axis layout"
+    # The game ships axis layouts for three sticks from 2005. Anything
+    # else lands in its setup screen with nothing mapped. BOB2_Controls.ps1
+    # writes a layout for whatever is plugged in; this runs it once so a
+    # new player never has to know it exists. The launcher does the same
+    # check every time it opens, for the day the stick changes.
+    $tool = Join-Path $ScriptDir 'BOB2_Controls.ps1'
+    if (-not (Test-Path $tool)) { Write-Warn "BOB2_Controls.ps1 is not in the fix package, skipping."; return $false }
+    # In its own process: the tool says "exit 1" when no stick is plugged
+    # in, and dot-sourced or called with & that would end Setup itself.
+    try {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tool -Apply -Axes -GameDir $GameFolder 2>&1 | ForEach-Object { Write-Info "    $_" }
+        if ($LASTEXITCODE -ne 0) { Write-Warn "No game controller found. Plug one in and run this step again, or the launcher will offer it."; return $false }
+    } catch { Write-Warn "Could not write the axis layout: $($_.Exception.Message)"; return $false }
+    Write-OK "Axis layout written for the connected controllers."
+    return $true
+}
+
 function Step-InstallLauncher {
     param([string]$GameFolder)
     Write-Step "Launcher and desktop shortcut"
@@ -3578,6 +3598,9 @@ function Do-FullInstall {
     # Step 8: Launcher + desktop shortcut
     Step-InstallLauncher $gameFolder
 
+    # Step 8b: an axis layout for the stick that is plugged in
+    Step-SetupControls $gameFolder
+
     # Step 9: Validate
     Step-Validate $gameFolder
 
@@ -3634,12 +3657,13 @@ function Do-IndividualSteps {
             'unknown' { " 14. Reach the dressed airfields from Basic Training (quick.dat not recognised)" }
             default   { " 14. Reach the dressed airfields from Basic Training (optional)" }
         }) -ForegroundColor White
-        Write-Host " 15. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        Write-Host " 15. Set up the joystick that is plugged in (axis layout)" -ForegroundColor White
+        Write-Host " 16. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
         Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
-        Write-Host " 16. Back to main menu" -ForegroundColor White
+        Write-Host " 17. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-16): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-17): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -3673,7 +3697,8 @@ function Do-IndividualSteps {
                 else { Step-InstallLwQuickFields $gameFolder }
                 Pause-Continue
             }
-            "15" {
+            "15" { Step-SetupControls $gameFolder; Pause-Continue }
+            "16" {
                 # One key for the whole look, and a way back off it. It turns
                 # OFF only when the whole look is already on. Judging that on
                 # the antialiasing alone was wrong once Settings could set the
@@ -3687,8 +3712,8 @@ function Do-IndividualSteps {
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
             }
-            "16" { return }
-            default { Write-Warn "Invalid option. Please enter 1-16." }
+            "17" { return }
+            default { Write-Warn "Invalid option. Please enter 1-17." }
         }
     }
 }
