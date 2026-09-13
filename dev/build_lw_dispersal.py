@@ -170,7 +170,7 @@ CREW = (442, 443)
 # A Ju 52 at a fighter field is not a consolation prize either: it was
 # the Luftwaffe's workhorse and turned up at every field it had.
 PARKED_ANY = 21         # Ju 52, the one aircraft proven to place
-PARK_MAX = 2
+PARK_MAX = 2            # at a bomber field; a fighter field gets one
 PARK_SPACING = 55
 
 # SHEEP AND COWS. Also shipped: ObjectAdds\TM SOE2.txt grazes six sheep
@@ -613,7 +613,11 @@ def flak(rnd, kanalfront):
 
 def parked(types, rnd, n_gruppen):
     """A Ju 52 or two, in kit coordinates, beside the dispersal."""
-    want = PARK_MAX
+    # TRIMMED 2026-09-13: the parked aeroplanes were measured as nearly
+    # the whole cost of the dressing (see build_raf_dispersal.py). One at
+    # a fighter field, two where the bombers and their transports lived.
+    bomber = any(t.split()[0] in ('He', 'Ju', 'Do') for t in types)
+    want = PARK_MAX if bomber else 1
     shapes = [PARKED_ANY]
     out = []
     # a shallow arc rather than a dead straight row, the way a Staffel

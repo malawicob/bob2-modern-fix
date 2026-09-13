@@ -285,9 +285,16 @@ def place_station(kit, fld, near, parked_at, rnd):
 def extras(fld, rnd, stub):
     """Parked aeroplanes, and buildings where the field has none."""
     out = []
+    # TRIMMED 2026-09-13. Three Blenheims at every field cost a measured
+    # ten per cent over Biggin Hill (131 fps dressed against 145 bare, and
+    # the 1% low from 74 to 66): the 191 parked aeroplanes across both
+    # sides were nearly the whole cost, the huts and lorries next to
+    # nothing. A fighter station had no Blenheims on it anyway, so it now
+    # has none; a bomber station keeps two.
     shapes = PARKED_BOMBER if fld['kind'] == 'bomber' else PARKED_FIGHTER
+    n_park = 2 if fld['kind'] == 'bomber' else 0
     base = rnd.uniform(0, 360)
-    for i in range(3):
+    for i in range(n_park):
         a = math.radians(base + i * 5)
         d = (i - 1) * PARK_SPACING
         out.append({'dx': d * math.cos(a) - 110 * math.sin(a) + rnd.uniform(-7, 7),
