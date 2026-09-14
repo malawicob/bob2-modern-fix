@@ -24,10 +24,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <emmintrin.h>
 
 /* Must match $FixVersion in BOB2_Setup.ps1 - the log line is how you tell
  * which build is actually deployed in the game folder. */
-#define BOB2FIX_VERSION "1.9.0"
+#define BOB2FIX_VERSION "1.9.1"
 
 /* ==================== LOGGING ==================== */
 
@@ -510,6 +511,172 @@ static void AutostartInit(void) {
     if (t) CloseHandle(t); else { LogMsg("autostart: CreateThread failed (err=%u)", GetLastError()); AsDone("mismatch"); }
 }
 
+/* ==================== PERFORMANCE PATCHES (bob2guard.ini) ====================
+ *
+ * Two measured hotspots, from the August CPU profile of a real flight
+ * (profiling/README.md): Lib3D::AddTransformedLine 23% of all process
+ * time, WeatherClass::IlluminateCloudLo/Hi 16%. Neither is reachable by a
+ * wrapper or a setting, both are reachable from here. Both are OFF unless
+ * bob2guard.ini beside this DLL says otherwise:
+ *
+ *     cloudstep=32     texels of the cloud light map lit per frame (game: 256)
+ *     lines=1          replace the line copy
+ *
+ * CLOUD STEP. The cloud light map is 512x512 texels; each texel is a ray
+ * march of up to 512 steps through a 2048x2048 height map, twice (Lo and
+ * Hi). WeatherClass::InitClouds sets CloudXStep = 256 texels per frame and
+ * UpdateCloudLightMap does that many every frame, camera or no camera,
+ * cloud on screen or not. A smaller step does less per frame and only
+ * slows how fast the light map follows the sun (256: the whole map every
+ * ~1024 frames; 32: every ~8192). A thread watches the field and writes the
+ * configured value whenever the game has put 256 back, so a mission
+ * re-init is covered too. A data write, nothing patched.
+ *
+ * LINES. The game already batches its lines: every one goes through
+ * Renderer::AddPrimitive into one dynamic vertex buffer and out as one
+ * DrawPrimitive per 1024 lines. What costs 23% is HOW each line is
+ * written: two rep movsd into static scratch buffers, then twenty
+ * fld/fstp pairs, one float at a time with an add between, into the
+ * vertex buffer, which is mapped WRITE_DISCARD, i.e. write-combined
+ * uncached memory. The replacement does the same three things and nothing
+ * else: SetRenderState(0x404), AddPrimitive(2, PT_LINE_LIST, 0), then the
+ * 80 bytes (SLine+4 for 40, SLine+0x40 for 40; that is exactly what the
+ * original's twenty stores carry, verified from the bytes) as five 16-byte
+ * stores from an aligned copy. The GetViewPort call the original makes is
+ * dropped: its outputs are never used. Installed as a 5-byte jmp at the
+ * function entry after the first 16 bytes are checked; the original bytes
+ * go back on detach. Lines share one render state, no texture, their own
+ * buffer, and are radix-sorted before drawing, so nothing about order or
+ * state changes.
+ *
+ * Addresses are Bob.exe 2.13 (AUTOSTART.md has the exe identity check;
+ * each patch also checks its own bytes). 2.12 for re-pinning: Weather
+ * instance by the same thiscall scan, AddTransformedLine 0x005427e0,
+ * SetRenderState/AddPrimitive via names213.json.
+ */
+#define PF_WEATHER           0x0556b690u   /* the WeatherClass instance (35 refs in .text) */
+#define PF_CLOUDXSTEP        (PF_WEATHER + 13941)
+#define PF_CLOUDXSTEP_GAME   256
+#define PF_ADDTRANSFORMEDLINE 0x00541380u  /* Lib3D::AddTransformedLine, thiscall(SLine**) */
+#define PF_SETRENDERSTATE    0x005274d0u   /* Renderer::SetRenderState, thiscall(ulong) */
+#define PF_ADDPRIMITIVE      0x00529fe0u   /* Renderer::AddPrimitive, thiscall(int nverts, int primtype, int flags) -> vertex ptr */
+#define PF_THERENDERER       0x00861d68u
+static const unsigned char PF_SIG_ATL[16] = { 0x83,0xec,0x10,0xf6,0x05,0x90,0xbb,0xa4,0x00,0x01,0x75,0x1e,0x83,0x0d,0x90,0xbb };
+static const unsigned char PF_SIG_SRS[8]  = { 0x8b,0x44,0x24,0x04,0x83,0xca,0xff,0x3b };
+static const unsigned char PF_SIG_AP[8]   = { 0x8b,0x54,0x24,0x08,0x83,0xfa,0x02,0x53 };
+static const unsigned char PF_SIG_UCLM[8] = { 0x53,0x55,0x56,0x57,0x8b,0xf1,0x33,0xdb };  /* UpdateCloudLightMap reads [esi+0x3675] */
+
+typedef void (__attribute__((thiscall)) *PFN_SetRenderState)(void *self, unsigned flags);
+typedef unsigned char *(__attribute__((thiscall)) *PFN_AddPrimitive)(void *self, int nverts, int primtype, int flags);
+
+static int  g_pfCloudStep = 0;          /* 0: off */
+static int  g_pfLines = 0;
+static unsigned char g_pfAtlOriginal[5];
+static int  g_pfAtlPatched = 0;
+static volatile unsigned long g_pfLineCalls = 0;
+static volatile unsigned long g_pfCloudWrites = 0;
+
+static void __attribute__((thiscall)) PfLineFast(void *self, unsigned char **pline) {
+    const unsigned char *ln = *pline;
+    unsigned char tmp[80] __attribute__((aligned(16)));
+    unsigned char *dst;
+    (void)self;
+    ((PFN_SetRenderState)PF_SETRENDERSTATE)((void *)PF_THERENDERER, 0x404);
+    dst = ((PFN_AddPrimitive)PF_ADDPRIMITIVE)((void *)PF_THERENDERER, 2, 1, 0);
+    memcpy(tmp, ln + 4, 40);
+    memcpy(tmp + 40, ln + 0x40, 40);
+    _mm_storeu_si128((__m128i *)(dst +  0), _mm_load_si128((const __m128i *)(tmp +  0)));
+    _mm_storeu_si128((__m128i *)(dst + 16), _mm_load_si128((const __m128i *)(tmp + 16)));
+    _mm_storeu_si128((__m128i *)(dst + 32), _mm_load_si128((const __m128i *)(tmp + 32)));
+    _mm_storeu_si128((__m128i *)(dst + 48), _mm_load_si128((const __m128i *)(tmp + 48)));
+    _mm_storeu_si128((__m128i *)(dst + 64), _mm_load_si128((const __m128i *)(tmp + 64)));
+    g_pfLineCalls++;
+}
+
+static int PfReadIni(void) {
+    char dllPath[MAX_PATH], ini[MAX_PATH], line[256], *slash;
+    FILE *f;
+    if (!GetModuleFileNameA(g_ourDLL, dllPath, MAX_PATH)) return 0;
+    slash = strrchr(dllPath, '\\'); if (!slash) return 0;
+    slash[1] = '\0';
+    wsprintfA(ini, "%sbob2guard.ini", dllPath);
+    f = fopen(ini, "r");
+    if (!f) return 0;
+    while (fgets(line, sizeof(line), f)) {
+        char *eq = strchr(line, '=');
+        if (!eq || line[0] == '#' || line[0] == ';') continue;
+        *eq = '\0';
+        if      (!strcmp(line, "cloudstep")) g_pfCloudStep = atoi(eq + 1);
+        else if (!strcmp(line, "lines"))     g_pfLines = atoi(eq + 1);
+    }
+    fclose(f);
+    return 1;
+}
+
+static int PfInstallLineHook(void) {
+    unsigned char *entry = (unsigned char *)PF_ADDTRANSFORMEDLINE;
+    unsigned char jmp[5];
+    DWORD old, rel;
+    if (memcmp(entry, PF_SIG_ATL, 16) || memcmp((void *)PF_SETRENDERSTATE, PF_SIG_SRS, 8) || memcmp((void *)PF_ADDPRIMITIVE, PF_SIG_AP, 8)) {
+        LogMsg("perf: line hook NOT installed, code signature differs");
+        return 0;
+    }
+    memcpy(g_pfAtlOriginal, entry, 5);
+    rel = (DWORD)(DWORD_PTR)PfLineFast - (PF_ADDTRANSFORMEDLINE + 5);
+    jmp[0] = 0xe9; memcpy(jmp + 1, &rel, 4);
+    if (!VirtualProtect(entry, 16, PAGE_EXECUTE_READWRITE, &old)) { LogMsg("perf: VirtualProtect failed (err=%u)", GetLastError()); return 0; }
+    memcpy(entry, jmp, 5);
+    VirtualProtect(entry, 16, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), entry, 16);
+    g_pfAtlPatched = 1;
+    LogMsg("perf: line copy replaced (AddTransformedLine 0x%08X -> 0x%08X)", PF_ADDTRANSFORMEDLINE, (DWORD)(DWORD_PTR)PfLineFast);
+    return 1;
+}
+
+static void PfRemoveLineHook(void) {
+    unsigned char *entry = (unsigned char *)PF_ADDTRANSFORMEDLINE;
+    DWORD old;
+    if (!g_pfAtlPatched) return;
+    if (VirtualProtect(entry, 16, PAGE_EXECUTE_READWRITE, &old)) {
+        memcpy(entry, g_pfAtlOriginal, 5);
+        VirtualProtect(entry, 16, old, &old);
+        FlushInstructionCache(GetCurrentProcess(), entry, 16);
+    }
+    g_pfAtlPatched = 0;
+}
+
+/* Watches CloudXStep and keeps it at the configured value; logs the line
+ * count every five seconds while either patch is on. */
+static DWORD WINAPI PfThread(LPVOID p) {
+    DWORD last = GetTickCount();
+    unsigned long lastLines = 0;
+    (void)p;
+    for (;;) {
+        Sleep(100);
+        if (g_pfCloudStep > 0) {
+            volatile int *step = (volatile int *)PF_CLOUDXSTEP;
+            if (*step == PF_CLOUDXSTEP_GAME) { *step = g_pfCloudStep; g_pfCloudWrites++; LogMsg("perf: CloudXStep %d -> %d", PF_CLOUDXSTEP_GAME, g_pfCloudStep); }
+        }
+        if (GetTickCount() - last >= 5000) {
+            unsigned long n = g_pfLineCalls;
+            if (g_pfLines && n != lastLines) LogMsg("perf: %lu lines in the last 5 s (%lu/s)", n - lastLines, (n - lastLines) / 5);
+            lastLines = n; last = GetTickCount();
+        }
+    }
+    return 0;
+}
+
+static void PfInit(void) {
+    HANDLE t;
+    if (!PfReadIni()) { LogMsg("perf: no bob2guard.ini, patches off"); return; }
+    if (g_pfCloudStep < 0 || g_pfCloudStep > 256) g_pfCloudStep = 0;
+    LogMsg("perf: bob2guard.ini cloudstep=%d lines=%d", g_pfCloudStep, g_pfLines);
+    if (!g_pfCloudStep && !g_pfLines) return;
+    if (g_pfCloudStep && memcmp((void *)0x00631746u, PF_SIG_UCLM, 8)) { LogMsg("perf: cloud step NOT applied, UpdateCloudLightMap signature differs"); g_pfCloudStep = 0; }
+    if (g_pfLines) { if (!PfInstallLineHook()) g_pfLines = 0; }
+    if (g_pfCloudStep || g_pfLines) { t = CreateThread(NULL, 0, PfThread, NULL, 0, NULL); if (t) CloseHandle(t); }
+}
+
 /* ==================== DLLMAIN ==================== */
 
 BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
@@ -529,8 +696,10 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
         LogMsg("VEH installed: %s (breakpoint + SxS guard)", handler ? "YES" : "NO");
         LogMsg("Crash guard ACTIVE");
         AutostartInit();
+        PfInit();
     }
     else if (fdwReason == DLL_PROCESS_DETACH) {
+        PfRemoveLineHook();
         if (g_logFile) {
             LogMsg("=== Unloading (skipped %u breakpoints, %u SxS errors, %u RCombo AV) ===", g_bpCount, g_sxsCount, g_avCount);
             fclose(g_logFile);
