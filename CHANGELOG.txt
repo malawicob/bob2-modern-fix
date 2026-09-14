@@ -15,6 +15,19 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.9.1  (2026-09-14)
+--------------------
+  - NEW (measured, off by default): two performance patches in the crash
+    guard, switched on by bob2guard.ini beside it. cloudstep=N sets how
+    many texels of the cloud light map the game lights per frame (the
+    game's 256 is 16% of all CPU time; 32 does an eighth of the work and
+    only slows how fast the light map follows the sun). lines=1 replaces
+    the game's line copy, which writes each of tens of thousands of lines
+    a frame into the graphics buffer one float at a time and was 23% of
+    all CPU time, with five 16-byte stores of the same bytes. Both check
+    the exe's bytes first and do nothing otherwise. dev/perf/RUNLOG.md
+    carries the measurements.
+
 v1.9.0  (2026-09-12)
 --------------------
   - NEW: PLAY CAMPAIGN in the Squadron Room opens the game straight onto
