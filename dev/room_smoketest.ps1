@@ -163,6 +163,18 @@ try {
             "    110 ready room : the crewman's name is drawn $seen time(s)"
             if ($seen -lt 1) { $fails += 'zerstoerer : the crewman is in the record and not on the ready room' }
         }
+        # A NUDGE MADE ON AN OLD DRAWING IS DROPPED, one made on this one kept.
+        $ck = 'lw110|' + ("$($zp.unit)" -replace '[^A-Za-z0-9]','') + '|code'
+        $script:AcPos[$ck] = @{ x = 0.10; y = 0.10 }                       # no base: predates the painted side views
+        Save-AcPos $script:AcPos                                          # the screen reloads the file, so it must be in it
+        Show-Tab 'dispersal'
+        if ($script:AcPos.ContainsKey($ck)) { $fails += 'a stale nudge survived a redrawn side view'; "    stale nudge : KEPT (wrong)" } else { "    stale nudge : dropped" }
+        $mpz = (Get-MarkPositions).lw.profiles110.((Split-Path (Get-Profile110 -G (Get-LwGruppen | Where-Object { "$($_.unit)" -eq "$($zp.unit)" } | Select-Object -First 1) -Pilot $zp -Date $script:CampaignDate) -Leaf))
+        $script:AcPos[$ck] = @{ x = 0.30; y = 0.30; bx = [math]::Round([double]$mpz.code.dx, 4); by = [math]::Round([double]$mpz.code.dy, 4) }
+        Save-AcPos $script:AcPos
+        Show-Tab 'dispersal'
+        if ($script:AcPos.ContainsKey($ck)) { "    fresh nudge : kept" } else { $fails += 'a nudge made on the present side view was thrown away'; "    fresh nudge : DROPPED (wrong)" }
+        $script:AcPos.Remove($ck); Save-AcPos $script:AcPos
         # every tab again, this time with two men in the aeroplane
         foreach ($tab in 'dispersal','logbook','gruppen','paper') {
             try { Show-Tab $tab; "    110 tab $tab : drew $($script:Stage.Children.Count) blocks" }

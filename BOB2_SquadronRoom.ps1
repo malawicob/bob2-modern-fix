@@ -1531,6 +1531,9 @@ function Get-AcPos {
                 if ($x -ge -0.05 -and $x -le 1.05 -and $y -ge -0.05 -and $y -le 1.05) {
                     $rec = @{ x = $x; y = $y }
                     if ($sz -gt 0) { $rec['s'] = $sz }
+                    foreach ($bk in 'bx', 'by') {
+                        if ($p.Value.PSObject.Properties.Name -contains $bk) { $rec[$bk] = [double]$p.Value.$bk }
+                    }
                     $t[$p.Name] = $rec
                 }
             }
@@ -6262,8 +6265,22 @@ function Add-AcImage {
     $fx = $DX; $fy = $DY; $wf = $DW
     if ($script:AcPos.ContainsKey($Key)) {
         $rec = $script:AcPos[$Key]
-        $fx = [double]$rec.x; $fy = [double]$rec.y
-        if ($rec.ContainsKey('s') -and [double]$rec.s -gt 0) { $wf = [double]$rec.s }
+        # A NUDGE BELONGS TO THE PICTURE IT WAS MADE ON. Each saved nudge now
+        # carries the measured position it started from (bx, by). When the
+        # side view is redrawn the measured position moves, and a nudge made
+        # against the old drawing is thrown away rather than obeyed: on 20
+        # September 2026 the 110s were repainted with the cross 10 px higher
+        # and Patrick's code letters stayed where the old picture had them.
+        # A record with no base predates every painted side view, so on this
+        # side it is stale by definition.
+        $fresh = $rec.ContainsKey('bx') -and $rec.ContainsKey('by') -and
+                 ([math]::Abs([double]$rec.bx - $DX) -lt 0.002) -and ([math]::Abs([double]$rec.by - $DY) -lt 0.002)
+        if ($fresh) {
+            $fx = [double]$rec.x; $fy = [double]$rec.y
+            if ($rec.ContainsKey('s') -and [double]$rec.s -gt 0) { $wf = [double]$rec.s }
+        } else {
+            $script:AcPos.Remove($Key); Save-AcPos $script:AcPos
+        }
     }
     $img = New-Object Windows.Controls.Image
     $img.Source = $bmp; $img.Stretch = 'Fill'
@@ -6335,6 +6352,8 @@ function Save-AcImage {
         x = [math]::Round([Windows.Controls.Canvas]::GetLeft($Mark) / $t.W, 4)
         y = [math]::Round([Windows.Controls.Canvas]::GetTop($Mark)  / $t.H, 4)
         s = [math]::Round($Mark.Width / $t.W, 4)
+        bx = [math]::Round([double]$t.DX, 4)
+        by = [math]::Round([double]$t.DY, 4)
     }
     Save-AcPos $script:AcPos
 }
