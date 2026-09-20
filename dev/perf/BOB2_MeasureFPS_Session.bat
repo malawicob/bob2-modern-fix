@@ -20,6 +20,6 @@ echo ============================================================
 echo  ARMED for label %LABEL%. Start the game, fly, quit as normal.
 echo  Recording stops by itself when the game closes.
 echo ============================================================
-"%TOOL%" --process_name Bob.exe --output_file "%OUT%" --timed 1800 --terminate_after_timed --terminate_on_proc_exit --stop_existing_session
+"%TOOL%" --process_name Bob.exe --output_file "%OUT%" --terminate_on_proc_exit --stop_existing_session
 echo Done: %OUT%
 timeout /t 5 >nul
