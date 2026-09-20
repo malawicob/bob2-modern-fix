@@ -75,3 +75,12 @@ that position from the mapping rather than searching for it.
 
 The hand-made versions are in git history, last at commit de08f84. The
 other 37 plates here (skins no rule names) are still the hand-made ones.
+
+THE SAME DAY, THE TWELVE Bf 110s
+
+Painted the same way by dev/build_lw_sideviews110.py from Patrick's blank
+110 plate (dev/art/bf110_blank.jpg). The 110 sheet is laid out in slabs
+(top face, port side, belly face, the other side mirrored), and the side
+face is the middle 64% of the silhouette: that figure comes from making
+the Balkenkreuz square. No swastika on the fin. The hand-made twelve are
+in git history, last at the commit before this one.

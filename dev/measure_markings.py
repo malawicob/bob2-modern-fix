@@ -595,12 +595,28 @@ def main():
             print('110 skin: Balkenkreuz at %s  (%d x %d), rules on a 4048 canvas '
                   'scaled by %.4f' % (sk, sk[2] - sk[0], sk[3] - sk[1], K110))
             out['lw']['profiles110'] = {}
+            painted110, painted110_size = None, None
+            try:
+                sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+                import build_lw_sideviews110 as g110
+                painted110 = g110.tex_box_to_profile(sk)
+                painted110_size = (1000, int((g110.CROP[3] - g110.CROP[1]) * g110.OUT_W / float(g110.CROP[2] - g110.CROP[0])) + 4)
+                print('    painted 110 side views: cross at %s, size %s' % (painted110, painted110_size))
+            except ImportError:
+                pass
             for f in sorted(os.listdir(a.lw_art)):
                 if not f.lower().startswith(('bf110', 'bf110-')) and '110' not in f.lower():
                     continue
                 im = Image.open(os.path.join(a.lw_art, f))
                 W, H = im.size
-                pc = find_cross_corners(im, (int(W * 0.30), 0, int(W * 0.90), H))
+                # painted from the skin by dev/build_lw_sideviews110.py since
+                # 20 September 2026: one plate, one mapping, so the cross is
+                # where the mapping puts it. The search stays for any 110
+                # drawing that is not the painted size.
+                if painted110 and (W, H) == painted110_size:
+                    pc = tuple(painted110)
+                else:
+                    pc = find_cross_corners(im, (int(W * 0.30), 0, int(W * 0.90), H))
                 if not pc:
                     print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr)
                     continue
