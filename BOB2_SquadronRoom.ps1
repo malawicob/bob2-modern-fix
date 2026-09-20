@@ -2867,6 +2867,22 @@ function Get-UnitBySqIdx {
     }
     [pscustomobject]@{ Side = 'raf'; Label = "squadron $Idx"; Unit = ''; Num = 0; Idx = $Idx }
 }
+# ADOPTING A SAVE ONLY BINDS A MAN OF THE SAME UNIT. Patrick said Yes to
+# "adopt the campaign in play" (a II./JG 26 war), then posted himself to
+# III./ZG 26: the Zerstoerer pilot was bound to a 109 campaign, counted as
+# a man with a war already, and PLAY CAMPAIGN asked the game for nothing.
+# The save says which unit it was flown with, so that is checked: another
+# unit means a new man and a new campaign, and the old save is left alone.
+# A save nobody has flown in yet names no unit and binds as before.
+function Test-AdoptFits {
+    param($Pilot)
+    if (-not $script:AdoptFrom) { return $false }
+    $fu = Get-SavePlayerUnit -Path "$($script:AdoptFrom.Path)"
+    if (-not $fu) { return $true }
+    $flown = Get-UnitBySqIdx -Idx ([int]$fu.SqIdx)
+    $pl = $Pilot; if ($pl -is [System.Collections.IDictionary]) { $pl = [pscustomobject]$pl }
+    [bool](Test-FlownIsOwn -Pilot $pl -Flown $flown)
+}
 # Does this man belong with the unit the game flew him in?
 function Test-FlownIsOwn {
     param($Pilot, $Flown)
@@ -2932,9 +2948,12 @@ function Invoke-AdoptionCheck {
     }
     $sideName = if ($id.Side -eq 'lw') { 'a Luftwaffe' } else { 'an RAF' }
     $when = if ($id.Date) { $id.Date.ToString('d MMMM yyyy') } else { 'an unknown date' }
-    $msg = "The game has $sideName campaign in play: pilot $($id.Name), $when, in " + (Split-Path $id.Path -Leaf) + "."
+    $with = ''
+    $fu0 = Get-SavePlayerUnit -Path "$($id.Path)"
+    if ($fu0) { $with = ", flying with $((Get-UnitBySqIdx -Idx ([int]$fu0.SqIdx)).Label)" }
+    $msg = "The game has $sideName campaign in play: pilot $($id.Name)$with, $when, in " + (Split-Path $id.Path -Leaf) + "."
     $msg += if ($pilot) { "`n`nThat is not $($pilot.pilot). Adopt it, and a new man is posted from that save, with its name, on its side; your current pilot is archived, not deleted. Keep yours, and the Room will not ask again about that file." }
-            else { "`n`nThere is no pilot in the Room yet. Adopt it, and he is posted from that save with its name and on its side." }
+            else { "`n`nThere is no pilot in the Room yet. Adopt it, and he is posted from that save with its name and on its side. Say No to start a new man and a new campaign of your own." }
     $ans = [System.Windows.MessageBox]::Show($Win, $msg, 'A campaign is under way', 'YesNo', 'Question')
     if ($ans -eq 'Yes') {
         $script:AdoptFrom = $id
@@ -3426,9 +3445,6 @@ function Show-Roster {
     # Every screen counts sorties from the same place: the campaign's own
     # Log Book. The dispersal used to count the launcher's timed sessions,
     # so the hero card and the roster row could disagree about your rank.
-    # ADOPTED from a campaign the game already had: bind him to that file
-    # so every reader looks at the war he was posted from.
-    if ($script:AdoptFrom) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
     $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     $sessions0 = Get-Sessions
     $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0 -Pilot $Pilot
@@ -3805,7 +3821,7 @@ function Invoke-Submit {
     # is what happens from here.
     # ADOPTED from a campaign the game already had: bind him to that file
     # so every reader looks at the war he was posted from.
-    if ($script:AdoptFrom) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    if (Test-AdoptFits -Pilot $pilot) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
     $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
@@ -5646,7 +5662,7 @@ function Invoke-GruppeSubmit {
                                    -Seed "$($script:NameBox.Text)$($q.Unit)" -SortiesBase 0)
     # ADOPTED from a campaign the game already had: bind him to that file
     # so every reader looks at the war he was posted from.
-    if ($script:AdoptFrom) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    if (Test-AdoptFits -Pilot $pilot) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
     $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count

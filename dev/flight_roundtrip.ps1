@@ -1,4 +1,4 @@
-# Is a quick mission left out of the logbook, and a campaign sortie put in?
+﻿# Is a quick mission left out of the logbook, and a campaign sortie put in?
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -STA -File dev\flight_roundtrip.ps1
 #
@@ -265,6 +265,22 @@ try {
     $kp2.lastFlown.own = $false
     Check 'another unit''s aeroplane is not mirrored'  ($null -eq (Get-FlownMark -Pilot $kp2))
     Check 'and his own number stands'                  ((Get-PlaneId -Pilot $kp2) -eq 7) "$(Get-PlaneId -Pilot $kp2)"
+    "10 adopting a save binds only a man of the save's own unit"
+    Set-StateSide 'lw'
+    $ad = Join-Path $GameDir 'SAVEGAME\Adopt.bsL'
+    $ab = New-Object byte[] 12000
+    [System.Text.Encoding]::ASCII.GetBytes('Rowan Savegame: V 0') | ForEach-Object -Begin { $i = 1 } -Process { $ab[$i] = $_; $i++ }
+    [BitConverter]::GetBytes([int16]164).CopyTo($ab, 11344)          # II./JG 26
+    [System.IO.File]::WriteAllBytes($ad, $ab)
+    $script:AdoptFrom = [pscustomobject]@{ Path = $ad; Side = 'lw'; Name = 'Milllin' }
+    Check 'a II./JG 26 man is bound to a II./JG 26 save'   (Test-AdoptFits -Pilot ([ordered]@{ pilot='Millin'; side='lw'; unit='II./JG 26' }))
+    Check 'a III./ZG 26 man is NOT bound to it'            (-not (Test-AdoptFits -Pilot ([ordered]@{ pilot='Millin'; side='lw'; unit='III./ZG 26' })))
+    [BitConverter]::GetBytes([int16]0).CopyTo($ab, 11344)
+    [System.IO.File]::WriteAllBytes($ad, $ab)
+    Check 'a save nobody has flown in binds as before'     (Test-AdoptFits -Pilot ([ordered]@{ pilot='Millin'; side='lw'; unit='III./ZG 26' }))
+    $script:AdoptFrom = $null
+    Check 'and with nothing adopted nothing is bound'      (-not (Test-AdoptFits -Pilot ([ordered]@{ pilot='Millin'; side='lw'; unit='III./ZG 26' })))
+    Remove-Item $ad -Force -ErrorAction SilentlyContinue
     foreach ($side in 'raf', 'lw') { Set-StateSide $side; Remove-PilotCareer -Force }
 }
 finally {
