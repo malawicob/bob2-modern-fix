@@ -28,3 +28,13 @@ Reading so far: run to run the same scene moves by about 15% (bare 145, trimmed 
 **2026-09-20, `aa0`: no panel lines.** With `[DirectX] Antialiasing = appdriven` and filtering 16x the tile grid is gone (Patrick, flown with a climb). Forced multisampling is the cause, at 2x and 4x as well as the 8x already known. The package no longer recommends it: Settings marks Off as recommended and Off keeps 16x filtering; Setup's "everything at once" is 16x filtering plus ReShade, whose SMAA smooths edges on the finished picture. `both` capture: 200.3 avg against cloud32's 201.4, i.e. the line patch is neutral in a scene that draws no lines, as expected; one 125 ms frame, cause unknown.
 
 **2026-09-20, `london_on`: heavy battle over London, cloud step 32 and the line patch ON.** 210 s session, no crash, nothing reported drawn wrong. The guard counted **1,343,587 lines** in about 165 s of flying: typically 8,000 to 20,000 a second in the fight, peak 38,742 a second, i.e. roughly 70 to 300 lines a frame against about 17 in a training circuit. Frame rate through the battle 75 to 170 fps in ten-second buckets, mostly 100 to 125; CPU time equals frame time throughout (8 to 13 ms), GPU about 4 ms. The `london_off` run of the same mission, line patch off, is the comparison.
+
+**2026-09-20, London battle, line patch OFF against ON (same mission, cloud step 32 in both).**
+
+| run | flying | avg | median | 1% low | worst | CPU per frame | GPU |
+|---|---|---|---|---|---|---|---|
+| london_off | 231 s | 108.1 | 110.1 | 46.3 | 121 ms | 8.95 ms | 4.44 ms |
+| london_on | 142 s | 112.7 | 121.2 | 44.1 | 97 ms | 8.11 ms | 4.01 ms |
+
+Patch on: avg +4%, median +10%, CPU time -9%, 1% low -5%. The two fights were not the same length and the same scene moves about 15% run to run, so this is a modest gain at best, nowhere near the 23% the August profile gave the function. Either the profile overstated it or the cost is in writing to write-combined memory at all rather than in how the original wrote it. It ran clean through 1.3 million lines. Stays OFF by default in the package; left ON on dev as a soak test. The honest way to settle its worth is the CPU profiler before and after in a fight, not frame rate.
+**Also:** terrain blur reported in both battles. `LANDSCAPE_TEXTURE_SIZE` was 1024 on both installs (BDG default 2048; 1024 is the weak-GPU remedy); dev set to 2048. The 1707x1067 render stretched to 2560x1600 is soft by nature and the package's answer, ReShade's sharpening, is not installed on dev.
