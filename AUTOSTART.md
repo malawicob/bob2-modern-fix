@@ -88,8 +88,8 @@ In pilot mode the Begin page also carries the ControlFly panel: three combos
 filter) whose handlers write `Miss_Man.camp.fav` (`CampaignZero::Fav`, 46 bytes
 at `0x04efb050` in 2.13, `Campaign + 11384`, file offset 11412 in the save):
 `squadron` (+18, RAF SquadNum), `geschwader` (+34, index into
-`Node_Data.geschwader`, three Gruppen each, -1 any), `gruppe` (+38, 0..2, -1
-any), `flotte` (+26, 0 any), `geschwadertype` (+30, 4 any), `group` (+6),
+`Node_Data.geschwader`, three Gruppen each, -1 any), `gruppe` (+38, **1..3,
+0 any**: `ChangeAccelOn` tests `gruppe - 1`), `flotte` (+26, 0 any), `geschwadertype` (+30, 4 any), `group` (+6),
 `ac` (+10, an aircraft TYPE filter on the RAF side), `sector` (+14).
 `PackageList::IsPlayerUsedInDirectives` resolves those to a SquadNum, and the
 campaign works from that unit. The panel's default is the first unit in the
@@ -97,10 +97,14 @@ list, which is how a Luftwaffe pilot who never touched it flew I./JG 3.
 `LaunchMapFirstTime` saves and restores the block around its copy of the
 campaign table in pilot mode, so the guard writes it in the BEGIN timer,
 after the panel exists and before the press. Luftwaffe: `geschwader =
-(unit-160)/3`, `gruppe = (unit-160)%3`, on the assumption that
-`Node_Data.geschwader` runs in SquadNum order; the first Luftwaffe run with
-a unit set will confirm or correct that, by reading the save's `fav` block
-and `playersquadron` (file 11344) afterwards.
+(unit-160)/3`, `gruppe = (unit-160)%3 + 1`. Settled by flight on 20 September
+2026: a II./JG 26 pilot (unit 164) written as geschwader 1, gruppe 1 flew as
+I./JG 26 (`playersquadron` 163), so the Geschwader index is zero based and in
+SquadNum order, and the Gruppe field is one based with 0 meaning any, which
+is what `NodeData::ChangeAccelOn` tests (`fav.gruppe == 0 || unit's gruppe ==
+fav.gruppe - 1`). `IsPlayerUsedInDirectives` reads the same field zero based;
+the game is inconsistent with itself and `ChangeAccelOn` is the one that
+decides what the player flies.
 
 The aircraft number or letter is not a start-up choice on either side:
 `playeracnum` (file 11346) is the position taken in the flight on each sortie.

@@ -302,7 +302,7 @@ __declspec(dllexport) HRESULT WINAPI DllUnregisterServer(void) {
 #define FAV_FLOTTE           26            /* int: LW Luftflotte filter, 0 any */
 #define FAV_GESCHTYPE        30            /* int: LW Geschwader type filter, 4 any */
 #define FAV_GESCHWADER       34            /* int: LW index into Node_Data.geschwader, -1 any */
-#define FAV_GRUPPE           38            /* int: LW 0 I, 1 II, 2 III, -1 any */
+#define FAV_GRUPPE           38            /* int: LW 0 any, 1 I, 2 II, 3 III (ChangeAccelOn tests gruppe-1) */
 #define AS_LW_FIRST_UNIT     160           /* SquadNum of the first Luftwaffe unit, I./JG 3 */
 #define AS_ONSELECTRLISTBOX  0x00412fe8u   /* RFullPanelDial::OnSelectRlistbox(int,int) thiscall */
 #define AS_LAUNCHSCREEN      0x00412f2eu   /* RFullPanelDial::LaunchScreen(FullScreen*) */
@@ -418,15 +418,22 @@ static VOID CALLBACK AsBeginTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
      * of the campaign table in pilot mode, so writing it here, after the
      * panel is built and before BEGIN, is exactly what choosing it does.
      * Luftwaffe units sit three to a Geschwader in the game's tables, in
-     * SquadNum order from 160, so the index pair is arithmetic. */
+     * SquadNum order from 160, so the index pair is arithmetic (confirmed
+     * by flight: geschwader zero based, gruppe one based with 0 = any). */
     if (g_as.role == 4 && g_as.unit > 0) {
         char *fav = (char *)AS_FAV;
         if (g_as.side == 1) {
             int g = (g_as.unit - AS_LW_FIRST_UNIT) / 3, k = (g_as.unit - AS_LW_FIRST_UNIT) % 3;
             if (g_as.unit >= AS_LW_FIRST_UNIT && g < 32) {
                 *(int *)(fav + FAV_FLOTTE) = 0; *(int *)(fav + FAV_GESCHTYPE) = 4;
-                *(int *)(fav + FAV_GESCHWADER) = g; *(int *)(fav + FAV_GRUPPE) = k;
-                LogMsg("autostart: favourite unit %d -> geschwader %d gruppe %d", g_as.unit, g, k);
+                /* gruppe is ONE based here, 0 meaning any: NodeData's ChangeAccelOn,
+                 * the code that actually puts the player in the air, tests
+                 * "fav.gruppe == 0 || unit's gruppe == fav.gruppe - 1". Written
+                 * zero based, II./JG 26 flew as I./JG 26 (save read 163 for 164,
+                 * 20 September 2026). The Geschwader index IS zero based and in
+                 * SquadNum order: that same flight put him in JG 26 for index 1. */
+                *(int *)(fav + FAV_GESCHWADER) = g; *(int *)(fav + FAV_GRUPPE) = k + 1;
+                LogMsg("autostart: favourite unit %d -> geschwader %d gruppe %d (field %d)", g_as.unit, g, k, k + 1);
             } else LogMsg("autostart: unit %d is not a Luftwaffe SquadNum, leaving the game's default", g_as.unit);
         } else {
             if (g_as.unit < AS_LW_FIRST_UNIT) {
