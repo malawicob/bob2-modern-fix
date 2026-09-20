@@ -1855,6 +1855,13 @@ function Finalize-Flight {
                 $pf | Add-Member -NotePropertyName lastFlown -NotePropertyValue ([ordered]@{
                     label = "$($flown.Label)"; unit = "$($flown.Unit)"; num = [int]$flown.Num; sqidx = [int]$pu.SqIdx
                     acnum = [int]$pu.AcNum; own = [bool](Test-FlownIsOwn -Pilot $pf -Flown $flown); date = $end.ToString('yyyy-MM-dd') }) -Force
+                # RAF: the code letter is the game's to choose, by the same
+                # position. With his own squadron, the record takes the
+                # letter the game painted on that aeroplane.
+                if ($flown.Side -eq 'raf' -and $pf.lastFlown.own -and "$($pf.sqcode)") {
+                    $ltr = Get-RafLetter -Code "$($pf.sqcode)" -Type "$($pf.actype)" -PlaneId ([int]$pu.AcNum)
+                    if ($ltr) { $pf | Add-Member -NotePropertyName codes -NotePropertyValue "$($pf.sqcode)-$ltr" -Force }
+                }
                 Save-Pilot -Pilot $pf
             }
         }
@@ -4962,9 +4969,62 @@ function Get-Profile109 {
 # The top of each band is not a clean run - 34, 35, 36 wear 10, 12, 14 -
 # so a number above 12 is clamped. It lands on the same Staffel's block
 # either way, which is what chooses the skin.
+# ---------------------------------------------------------------------
+#  THE AEROPLANE THE GAME GAVE HIM. The game has no notion of a man's own
+#  aeroplane: each sortie it takes some of the Gruppe's 36 aircraft,
+#  counted from 1, and puts him in one. The save records which
+#  (playeracnum, zero based; the rules' planeid is that plus one, and
+#  planeid 1 is the Kommandeur's machine, whose number tile is blank
+#  because the chevron is in the skin). A raid that takes twelve
+#  aircraft can only ever give him one of the first Staffel's, so a
+#  number chosen at enrollment is a wish the game often cannot grant.
+#  Patrick chose the Room mirroring the game: once he has flown with his
+#  own Gruppe, the aeroplane on the board is the one he was given, in
+#  the skin, number and colour the game's own rules paint on it
+#  (planeid-numbers.json, from Me109_PlaneID_1.ms).
+# ---------------------------------------------------------------------
+$LwNumbersPath = Join-Path (Join-Path $ModDir 'lw') 'planeid-numbers.json'
+function Get-LwNumberRules {
+    if ($null -ne $script:LwNumberRules) { return $script:LwNumberRules }
+    $r = @()
+    if (Test-Path $LwNumbersPath) {
+        try { $r = @((Get-Content $LwNumbersPath -Raw -Encoding UTF8 | ConvertFrom-Json).rules) } catch { }
+    }
+    $script:LwNumberRules = $r
+    $r
+}
+function Get-FlownMark {
+    param($Pilot)
+    if (-not $Pilot -or -not ($Pilot.PSObject.Properties.Name -contains 'lastFlown') -or -not $Pilot.lastFlown) { return $null }
+    $lf = $Pilot.lastFlown
+    if (-not $lf.own -or "$($Pilot.side)" -ne 'lw' -or "$($Pilot.actype)" -notmatch '109') { return $null }
+    $planeId = [int]$lf.acnum + 1
+    if ($planeId -lt 1 -or $planeId -gt 36) { return $null }
+    $d = ''
+    if ($script:CampaignDate) { $d = $script:CampaignDate.ToString('yyyy-MM-dd') } elseif ("$($lf.date)") { $d = "$($lf.date)" }
+    $unit = "$($Pilot.unit)"
+    $hit = $null
+    foreach ($r in (Get-LwNumberRules)) {
+        if ($r.PSObject.Properties.Name -contains 'units') { if (@($r.units) -notcontains $unit) { continue } }
+        if ($r.PSObject.Properties.Name -contains 'planeids') { if (@($r.planeids | ForEach-Object { [int]$_ }) -notcontains $planeId) { continue } }
+        if ($d) {
+            if (($r.PSObject.Properties.Name -contains 'from') -and $d -lt "$($r.from)") { continue }
+            if (($r.PSObject.Properties.Name -contains 'to') -and $d -gt "$($r.to)") { continue }
+        } elseif (($r.PSObject.Properties.Name -contains 'from') -or ($r.PSObject.Properties.Name -contains 'to')) { continue }
+        $hit = $r; break
+    }
+    [pscustomobject]@{
+        PlaneId = $planeId
+        Blank   = [bool]($hit -and ($hit.PSObject.Properties.Name -contains 'blank') -and $hit.blank)
+        Number  = $(if ($hit -and ($hit.PSObject.Properties.Name -contains 'number')) { [int]$hit.number } else { 0 })
+        Colour  = $(if ($hit -and ($hit.PSObject.Properties.Name -contains 'colour')) { "$($hit.colour)" } else { '' })
+    }
+}
 function Get-PlaneId {
     param($Pilot)
     if (-not $Pilot) { return 0 }
+    $fm = Get-FlownMark -Pilot $Pilot
+    if ($fm) { return $fm.PlaneId }
     $slot = Get-StaffelSlot $(if ($Pilot.staffel) { $Pilot.staffel } else { 1 })
     if ($slot -lt 1) { $slot = 1 }
     $within = (($slot - 1) % 3) + 1
@@ -6369,8 +6429,11 @@ function New-LwAircraft {
         # the number, or a chevron in its place for a staff officer,
         # unless his own skin already has one painted on
         $pid109 = Get-PlaneId -Pilot $Pilot
-        $blankNum = Test-MarkBlank -Kind 'number' -Unit $unit -PlaneId $pid109
-        $chev = if ($blankNum) { $null } else { Get-StabChevron -Pilot $Pilot -Career $Career }
+        $fm = Get-FlownMark -Pilot $Pilot
+        $blankNum = (Test-MarkBlank -Kind 'number' -Unit $unit -PlaneId $pid109) -or ($fm -and $fm.Blank)
+        # a mirrored aeroplane wears what the game painted, so the Room
+        # adds no chevron of its own to it
+        $chev = if ($blankNum -or $fm) { $null } else { Get-StabChevron -Pilot $Pilot -Career $Career }
         if ($chev) {
             [void](Add-AcImage -Canvas $cv -Key "$key|chev" -File $chev `
                                -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
@@ -6379,6 +6442,10 @@ function New-LwAircraft {
         }
         elseif (-not $blankNum) {
             $n = Get-AcNumber $Pilot
+            if ($fm -and $fm.Number -gt 0) {
+                $n = $fm.Number
+                if ($fm.Colour -and "$($m.numbers.$n.$($fm.Colour))") { $col = $fm.Colour }
+            }
             $nf = Get-MarkFile "$($m.numbers.$n.$col)"
             if ($nf) {
                 [void](Add-AcImage -Canvas $cv -Key "$key|num" -File $nf `
@@ -7041,7 +7108,10 @@ function Show-ReadyRoom {
         $col = Get-StaffelColour $Pilot
         $parts = @()
         $chev = Get-StabChevron -Pilot $Pilot -Career $career
-        if ($chev) { $parts += 'your Stab chevron, worn in place of a number' }
+        $fmCap = Get-FlownMark -Pilot $Pilot
+        if ($fmCap -and $fmCap.Blank) { $parts += "the aeroplane the game gave you on your last sortie, aircraft $($fmCap.PlaneId) of the Gruppe: the leader's machine, its chevron part of the skin" }
+        elseif ($fmCap -and $fmCap.Number -gt 0) { $parts += "the aeroplane the game gave you on your last sortie, aircraft $($fmCap.PlaneId) of the Gruppe: number $($fmCap.Number)$(if ($fmCap.Colour) { " in $($fmCap.Colour)" })" }
+        elseif ($chev) { $parts += 'your Stab chevron, worn in place of a number' }
         else { $parts += "your number $(Get-AcNumber $Pilot) in the $col of the $($Pilot.staffel). Staffel" }
         $mk = Get-LwMarkings
         $u = if ($mk) { $mk.units."$($Pilot.unit)" } else { $null }

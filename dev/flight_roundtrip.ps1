@@ -25,6 +25,9 @@
 #   7  PLAY CAMPAIGN's autostart request carries the pilot's side, role,
 #      phase and name for a new campaign and nothing for a pilot with a
 #      save; the guard's report is read back once and consumed
+#   8  who the game flew him with, and what a fresh pilot is
+#   9  the Room mirrors the aeroplane the game gave him: plane id, number
+#      and colour from the game's own rules, by date
 param([string]$Room, [string]$SourceSave)
 if (-not $Room) {
     $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
@@ -244,6 +247,24 @@ try {
     Set-StateSide 'raf'
     Check 'an RAF Millin whose name is on a .BSR is not fresh' (-not (Test-FreshPilot -Pilot (Get-Pilot)))
     Check 'own Gruppe test'                            ((Test-FlownIsOwn -Pilot ([pscustomobject]@{ unit='I./JG 26'; sqn=0 }) -Flown $u) -and -not (Test-FlownIsOwn -Pilot ([pscustomobject]@{ unit='I./JG 26'; sqn=0 }) -Flown $u2))
+    "9  the Room mirrors the aeroplane the game gave him"
+    $script:CampaignDate = [datetime]'1940-09-07'
+    $mp = [pscustomobject]@{ pilot='Millin'; side='lw'; unit='II./JG 26'; actype='Bf 109E'; staffel=6; acnum=7
+                             lastFlown=[pscustomobject]@{ own=$true; acnum=11; sqidx=164; unit='II./JG 26'; date='1940-09-07' } }
+    $fm = Get-FlownMark -Pilot $mp
+    Check 'aircraft 12 of II./JG 26 wears white 12'   ($fm -and $fm.PlaneId -eq 12 -and $fm.Number -eq 12 -and $fm.Colour -eq 'white') "$($fm | ConvertTo-Json -Compress)"
+    Check 'the plane id follows the flown aeroplane'  ((Get-PlaneId -Pilot $mp) -eq 12)
+    $mp.lastFlown.acnum = 30
+    $fm = Get-FlownMark -Pilot $mp
+    Check 'aircraft 31 is yellow 7 in September'       ($fm.Number -eq 7 -and $fm.Colour -eq 'yellow') "$($fm | ConvertTo-Json -Compress)"
+    $script:CampaignDate = [datetime]'1940-08-01'
+    Check 'and brown 7 before the repaint'             ((Get-FlownMark -Pilot $mp).Colour -eq 'brown')
+    $kp2 = [pscustomobject]@{ pilot='Millin'; side='lw'; unit='I./JG 26'; actype='Bf 109E'; staffel=1; acnum=7
+                              lastFlown=[pscustomobject]@{ own=$true; acnum=0; sqidx=163; unit='I./JG 26'; date='1940-09-07' } }
+    Check 'aircraft 1 of I./JG 26 is the blank-numbered leader' ((Get-FlownMark -Pilot $kp2).Blank)
+    $kp2.lastFlown.own = $false
+    Check 'another unit''s aeroplane is not mirrored'  ($null -eq (Get-FlownMark -Pilot $kp2))
+    Check 'and his own number stands'                  ((Get-PlaneId -Pilot $kp2) -eq 7) "$(Get-PlaneId -Pilot $kp2)"
     foreach ($side in 'raf', 'lw') { Set-StateSide $side; Remove-PilotCareer -Force }
 }
 finally {
