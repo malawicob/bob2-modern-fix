@@ -2996,12 +2996,13 @@ function Build-GfxPage {
     #  setting to put back if it costs too much.
     # ------------------------------------------------------------------
     [void]$list.Children.Add((New-SectionHeader 'Antialiasing' (
-        'Smooths the jagged edges on wings and along the horizon. Each button also sets the ground texture ' +
-        'filtering to match, which is what stops the ground going to mush when you look along it. 4x is the ' +
-        'setting to use: 8x costs more and puts visible seams along the edges of the terrain tiles. This is ' +
-        'the graphics translator doing the work, so it costs frame rate on an older card. Turn it on, fly a ' +
-        'mission, and you will know what it costs before you add anything else. Takes effect next time the ' +
-        'game starts.')))
+        'Leave this OFF. Forced antialiasing draws bright straight lines along the terrain tile grid, more ' +
+        'of them the higher you fly: on a pixel a tile only partly covers, the texture is sampled just past ' +
+        'the tile''s edge. Flown and photographed on 20 September 2026 at 2x and at 4x; with it off the ' +
+        'lines are gone. 8x was already known to do it. For smooth edges use ReShade below instead: its ' +
+        'SMAA pass (Balanced preset and above) works on the finished picture and cannot touch the terrain. ' +
+        'Every button keeps the ground texture filtering at 16x, which is what stops the ground going to ' +
+        'mush when you look along it and has nothing to do with the lines. Takes effect next time the game starts.')))
 
     $aaConf = Join-Path $script:GameFolder 'dgVoodoo.conf'
     $aaRead = {
@@ -3045,14 +3046,16 @@ function Build-GfxPage {
     # the button itself. Offering 8x and warning against it in prose only is
     # how you get a player who picks 8x.
     $aaRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
-    foreach ($aaChoice in @(@('Off','Off'), @('2x','2x'), @('4x','4x  recommended'), @('8x','8x'))) {
+    foreach ($aaChoice in @(@('Off','Off  recommended'), @('2x','2x  (terrain lines)'), @('4x','4x  (terrain lines)'), @('8x','8x  (terrain lines)'))) {
         $aaThis = $aaChoice[0]
         $b = New-Btn $aaChoice[1] 'BtnGhost' $null {
             try {
                 if (-not (Test-Path -LiteralPath $aaConf)) {
                     [System.Windows.MessageBox]::Show('dgVoodoo.conf was not found. Install the graphics translator first.','Antialiasing') | Out-Null; return
                 }
-                if ($aaThis -eq 'Off') { & $aaWrite 'appdriven' 'appdriven' }
+                # Off keeps the 16x filtering: the two were tied together and
+                # turning the antialiasing off blurred the distance as well
+                if ($aaThis -eq 'Off') { & $aaWrite 'appdriven' '16' }
                 else { & $aaWrite $aaThis '16' }
                 $aaState.Text = (& $aaDescribe)
                 & $aaMarkActive $aaThis

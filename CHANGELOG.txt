@@ -26,7 +26,19 @@ v1.9.1  (2026-09-14)
     a frame into the graphics buffer one float at a time and was 23% of
     all CPU time, with five 16-byte stores of the same bytes. Both check
     the exe's bytes first and do nothing otherwise. dev/perf/RUNLOG.md
-    carries the measurements.
+    carries the measurements. Cloud step 32 measured on the Biggin Hill
+    circuit: average 173 to 201 fps, median 169 to 223, CPU time per
+    frame 5.8 to 4.4 ms.
+  - FIXED: bright straight lines along the terrain tile grid, worse with
+    height. They were the forced antialiasing this package recommended:
+    flown at 2x and at 4x they are there, with it off they are gone.
+    Settings now recommends Off (and Off keeps the 16x ground filtering,
+    which it used to switch off as well), and "Everything at once" in
+    Setup is 16x filtering plus ReShade, whose SMAA pass smooths edges
+    without touching the terrain. If you turned 4x on, press Off in
+    Settings, Graphics.
+  - The airfield dressing parks far fewer aircraft (95, was 191): measured
+    ten per cent over Biggin Hill, nearly all of it the parked aeroplanes.
 
 v1.9.0  (2026-09-12)
 --------------------

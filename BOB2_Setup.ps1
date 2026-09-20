@@ -2893,10 +2893,15 @@ function Get-ReShadePreset {
 # runs before the upscale and puts back most of what it costs.
 #
 # 8x multisampling was tried first and produced visible seams along the
-# terrain tile edges plus an occasional hitch; 4x has neither.
+# terrain tile edges plus an occasional hitch; 4x was thought to have
+# neither. It has: flown on 20 September 2026, forced multisampling at 2x
+# and at 4x both draw bright lines along the tile grid, worse with height,
+# and with it off they are gone (dev/perf/RUNLOG.md). So this step no
+# longer forces antialiasing. The edge smoothing is ReShade's SMAA pass in
+# the Balanced preset, which works on the finished picture.
 function Step-VisualEnhancements {
     param([string]$GameFolder, [switch]$Off)
-    Write-Step $(if ($Off) { 'Turn the visual enhancements off' } else { 'Visual enhancements (antialiasing, filtering, ReShade)' })
+    Write-Step $(if ($Off) { 'Turn the visual enhancements off' } else { 'Visual enhancements (16x filtering, ReShade with SMAA)' })
     $conf = Join-Path $GameFolder 'dgVoodoo.conf'
     if (-not (Test-Path $conf)) { Write-Warn 'dgVoodoo.conf not found. Install the graphics translator first.'; return $false }
     if ($Off) {
@@ -2906,12 +2911,11 @@ function Step-VisualEnhancements {
         if ((Get-ReShadeState $GameFolder) -eq 'on') { [void](Step-DisableReShade $GameFolder) }
         return $true
     }
-    Set-IniValue $conf 'Antialiasing' '4x' 'DirectX'
+    Set-IniValue $conf 'Antialiasing' 'appdriven' 'DirectX'
     Set-IniValue $conf 'Filtering'    '16' 'DirectX'
-    Write-OK 'Antialiasing 4x, filtering 16x.'
-    Write-Info '  4x is the tested setting. Menu 13 again turns the whole lot back off.'
-    Write-Info '  This switches all three on together. To try the antialiasing on its own,'
-    Write-Info '  and see what it costs before ReShade is involved, use Settings, Graphics.'
+    Write-OK 'Filtering 16x. Forced antialiasing is left OFF: it draws lines along the terrain tiles.'
+    Write-Info '  The edge smoothing comes from ReShade''s SMAA pass instead (Balanced preset).'
+    Write-Info '  This menu entry again turns the whole lot back off.'
     [void](Step-InstallReShade -GameFolder $GameFolder)
     Write-Info '  In game: DEL opens the ReShade overlay, PgUp/PgDn change preset.'
     $true
@@ -3390,9 +3394,9 @@ function Do-Settings {
                         # options menu; flown at 4x on a 2560x1600 panel with the
                         # options page checked and it was fine. Keeping a note
                         # rather than a threat, since 8x did show terrain seams.
-                        Write-Info "  Forced antialiasing has been reported to upset the in-game options page."
-                        Write-Info "  4x is the tested setting; 8x showed seams along the terrain tiles."
-                        Write-Info "  Set this back to appdriven if anything looks wrong."
+                        Write-Warn "  Forced antialiasing draws bright lines along the terrain tile grid, worse with height."
+                        Write-Info "  Flown at 2x and 4x on 20 September 2026; with appdriven they are gone."
+                        Write-Info "  For smooth edges use ReShade's SMAA (Balanced preset) and set this back to appdriven."
                     }
                 }
             }
@@ -3658,7 +3662,7 @@ function Do-IndividualSteps {
             default   { " 14. Reach the dressed airfields from Basic Training (optional)" }
         }) -ForegroundColor White
         Write-Host " 15. Set up the joystick that is plugged in (axis layout)" -ForegroundColor White
-        Write-Host " 16. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        Write-Host " 16. Everything at once: 16x filtering and ReShade with SMAA" -ForegroundColor White
         Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
         Write-Host " 17. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
@@ -3706,8 +3710,10 @@ function Do-IndividualSteps {
                 # and then pressed this expecting to add ReShade had his
                 # antialiasing taken away instead.
                 $conf = Join-Path $gameFolder 'dgVoodoo.conf'
-                $aaNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Antialiasing' } else { '' }
-                $allOn = ($aaNow -and $aaNow -ne 'appdriven') -and ((Get-ReShadeState $gameFolder) -eq 'on')
+                # The look is now 16x filtering plus ReShade; forced
+                # antialiasing is no longer part of it (terrain lines).
+                $filtNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Filtering' } else { '' }
+                $allOn = ("$filtNow" -eq '16') -and ((Get-ReShadeState $gameFolder) -eq 'on')
                 if ($allOn) { Step-VisualEnhancements $gameFolder -Off }
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
