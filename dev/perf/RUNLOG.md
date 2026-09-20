@@ -14,3 +14,5 @@ label is the baseline for the deltas.
 | 2026-09-20 | stable | stable | reference, untouched game | 3444 (20 s) | 168.9 | 151.9 | 115.4 | 14.8 ms | 1.2 ms | CPU 6.5 ms, GPU 3.3 ms; short capture; SyncInterval 0 |
 
 Reading so far: run to run the same scene moves by about 15% (bare 145, trimmed 173 on the same install), so dev trimmed and stable are level. The dressing as first built cost about a tenth; trimmed it costs nothing measurable. Vsync is off on both installs.
+
+**Seam lines, 2026-09-20.** Patrick: many tile seam lines on dev (trimmed run), one or two on stable. Every graphics setting compared: `bdg.txt` identical apart from water colours, `Weather.cfg` identical, the decoded `settings.cfg` graphics bytes identical. Two differences only: dgVoodoo antialiasing **2x on dev, 4x on stable**, and **ReShade on stable, none on dev**. Dev set to 4x (backup `dgVoodoo.conf.before-aa4x`) before the `cloud32` run; if the lines stay, the remaining suspect is ReShade's post-process antialiasing masking them on stable.
