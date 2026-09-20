@@ -57,3 +57,21 @@ Nothing is compared against the other plates any more. That was right
 while they were forty copies of one drawing; these genuinely differ, and
 M109ULF_IIIJG26_Bartels_G really is painted with a bigger cross, 97 px
 against the usual 82.
+
+
+20 SEPTEMBER 2026: 125 OF THEM ARE NOW PAINTED FROM THE SKIN ITSELF
+
+Patrick flew II./JG 26, the Room showed the right number and the wrong
+camouflage: the hand-made side views were drawn by eye and had drifted
+from the textures. The 125 that skins109.json names are now made by
+dev/build_lw_sideviews.py: one blank Bf 109E plate (dev/art/
+bf109e_blank.jpg) gives the shape and the shading, and the colour of
+every pixel is sampled from the game's own .DDS through the skin's UV
+layout, so the side view is the skin. No swastika on any of them,
+Patrick's instruction: it is taken out of the fin before the fin is
+mapped. Because they are one plate through one mapping, the Balkenkreuz
+sits at the same place on every one, and dev/measure_markings.py takes
+that position from the mapping rather than searching for it.
+
+The hand-made versions are in git history, last at commit de08f84. The
+other 37 plates here (skins no rule names) are still the hand-made ones.

@@ -33,6 +33,37 @@ def t_low(xt):                                                # bottom of the si
     return np.where(xt < 610, 203.0, np.interp(xt, [610, 865], [195.0, 150.0]))
 FIN_BLANK = (1540, 250, 1848, 556)                            # x0,y0,x1,y1 of fin, rudder and tail cone on the blank
 
+def tex_box_to_profile(box2048):
+    """A box on the fuselage side of the 2048 skin sheet, as it lands on a
+    generated 1000x295 side view. Every generated side view is the same
+    plate through the same mapping, so this is exact and the same for all
+    of them; dev/measure_markings.py uses it rather than hunting for the
+    cross in 125 different paint schemes, which found it within 3 px on 87
+    of them and somewhere else entirely on the rest."""
+    l, t, r, b = [v / 2.0 for v in box2048]
+    xc = (l + r) / 2.0
+    low = float(t_low(np.array(xc)))
+    s = 993.0 / (1844 - 51)
+    def X(xt): return X_NOSE + (xt - T_NOSE) * SCALE_X
+    Xc = X(xc)
+    top, bot = float(np.interp(Xc, *zip(*TOP))), float(np.interp(Xc, *zip(*BOT)))
+    def Y(yt): return top + (yt - T_SPINE) / (low - T_SPINE) * (bot - top)
+    return [int(round((X(l) - 51) * s + 2)), int(round((Y(t) - 250) * s + 1)),
+            int(round((X(r) - 51) * s + 2)), int(round((Y(b) - 250) * s + 1))]
+
+FIN_REF = 'M109ULF_IIJG54_6_Joachim_Schypek_7U'              # pale fin on the olive sheet: its outline is everybody's
+_fin_shape = None
+def fin_shape():
+    global _fin_shape
+    if _fin_shape is None:
+        cand = [f for f in glob.glob(TEX + '/*') if os.path.splitext(os.path.basename(f))[0].lower() == FIN_REF.lower()]
+        R = np.asarray(Image.open(cand[0]).convert('RGB').resize((1024, 1024), Image.LANCZOS)).astype(np.float32)
+        m = np.abs(R - R[300, 140]).sum(axis=2) > 60
+        m[:, :868] = False; m[150:, :] = False
+        from scipy import ndimage as ndi
+        _fin_shape = ndi.binary_fill_holes(m)
+    return _fin_shape
+
 def build(a):
     cand = [f for f in glob.glob(TEX + '/*') if os.path.splitext(os.path.basename(f))[0].lower() == a.skin.lower()]
     if not cand:
@@ -45,15 +76,52 @@ def build(a):
     # is filled from the fin's own colours round about, so the camouflage
     # carries across where the marking was.
     from PIL import ImageFilter
+    # A FIXED BOX, not a search for black. The first version masked only
+    # what was darker than 50 and grew it: on a dark green fin that missed
+    # grey or outline-only swastikas and left white corners on others, and
+    # Patrick could still see them. Every skin shares one UV layout, so the
+    # marking always sits in the same place on the fin, forward of the
+    # rudder hinge (x 958): the whole box goes, and is filled from the fin's
+    # own paint around it, never from the sheet's olive background.
+    bg0 = T[300, 140]
+    notbg = np.abs(T - bg0).sum(axis=2) > 60
+    # FIND IT, because it is not always in the same place: on most skins it
+    # sits on the fin forward of the hinge, on some across the hinge and on
+    # a few on the rudder itself, so a fixed box left it standing on those.
+    # It is the one squarish, high-contrast shape of its size on the fin;
+    # the rudder hinge is a long thin line and victory bars are small, so
+    # neither qualifies. Where nothing qualifies the usual box is cleared.
+    from scipy import ndimage as ndi
     lumT = T.mean(axis=2)
-    mark = np.zeros(lumT.shape, bool)
-    mark[0:135, 880:1005] = lumT[0:135, 880:1005] < 50
-    mk = Image.fromarray((mark * 255).astype(np.uint8)).filter(ImageFilter.MaxFilter(9))
-    mark = np.asarray(mk) > 0
-    valid = (~mark).astype(np.float32)
-    def blur(arr, r=9):
-        # Pillow will not Gaussian-blur a float image, so scale through 16 bits... it will not do that
-        # either; a separable box blur in numpy, three passes, is near enough a Gaussian
+    y0, y1, x0, x1 = 0, 150, 876, 1020
+    reg = lumT[y0:y1, x0:x1]
+    contrast = np.abs(reg - ndi.uniform_filter(reg, 21)) > 34
+    contrast &= ndi.binary_erosion(notbg[y0:y1, x0:x1], iterations=4)      # not the island's own edge
+    # TWO PLACES, always cleared, plus anything black and squarish of the
+    # right size. Looked at across all 126 fins: the marking is either on
+    # the fin forward of the hinge or across the top of the hinge onto the
+    # rudder, and those second ones defeated every shape test because they
+    # run into the hinge line and read as one long object. Contrast
+    # detection was dropped: it took victory bars and camouflage edges.
+    mark = np.zeros(T.shape[:2], bool)
+    mark[8:94, 891:956] = True
+    # The second place, across the hinge onto the rudder, is cleared only
+    # when the fin itself carries no marking: victory bars live on the
+    # rudder at the same height and a box laid over them left half a tally.
+    on_fin = int((lumT[20:90, 893:935] < 46).sum())
+    if on_fin < 150:
+        mark[8:82, 936:986] = True
+    # Masked by the SHAPE of the fin, not by "differs from the sheet colour":
+    # an all-green fin IS the sheet colour, that mask came back empty and the
+    # marking stood untouched on every dark skin. Every skin shares one UV
+    # layout, so the shape is read once from a pale-finned skin. Going the
+    # other way and clearing the sheet above the fin as well dragged the
+    # yellow rudder tip down over the fin.
+    paint = notbg | fin_shape()
+    mark &= paint
+    # Filled SEPARATELY either side of the rudder hinge (x 957), so a yellow
+    # rudder does not bleed onto the fin nor the fin's blue onto the rudder.
+    def blur(arr, r=16):
         a = arr.astype(np.float32)
         k = 2 * r + 1
         for _ in range(3):
@@ -61,10 +129,28 @@ def build(a):
                 c = np.cumsum(np.pad(a, [(r + 1, r) if i == ax else (0, 0) for i in range(2)], mode='edge'), axis=ax)
                 a = (np.take(c, range(k, c.shape[ax]), axis=ax) - np.take(c, range(0, c.shape[ax] - k), axis=ax)) / k
         return a
-    wsum = np.maximum(blur(valid), 1e-3)
-    for c in range(3):
-        fill = blur(T[..., c] * valid) / wsum
-        T[..., c] = np.where(mark, fill, T[..., c])
+    xs_all = np.arange(T.shape[1])[None, :].repeat(T.shape[0], 0)
+    for side in (xs_all < 957, xs_all >= 957):
+        todo = mark & side
+        known = paint & ~mark & side
+        # worked inward in passes: the middle of the box is further from any
+        # real paint than one blur reaches, and a single pass left the centre
+        # of the marking standing
+        for _ in range(12):
+            if not todo.any():
+                break
+            valid = known.astype(np.float32)
+            wsum = blur(valid, 8)
+            ok = todo & (wsum > 0.08)
+            if not ok.any():
+                ok = todo & (wsum > 0.0)
+                if not ok.any():
+                    break
+            for c in range(3):
+                fill = blur(T[..., c] * valid, 8) / np.maximum(wsum, 1e-4)
+                T[..., c] = np.where(ok, fill, T[..., c])
+            known = known | ok
+            todo = todo & ~ok
     B = np.asarray(Image.open(a.blank).convert('RGB')).astype(np.float32)
     H, W, _ = B.shape
     lum = B.mean(axis=2); sat = B.max(axis=2) - B.min(axis=2)
@@ -146,7 +232,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--skin'); ap.add_argument('--out')
     ap.add_argument('--all', action='store_true', help='every skin in skins109.json, into --outdir under its side view file name')
-    ap.add_argument('--outdir', default=os.path.join(ROOT, 'squadronroom/lw/aircraft_gen'))
+    ap.add_argument('--outdir', default=os.path.join(ROOT, 'squadronroom/lw/aircraft'))
     ap.add_argument('--blank', default=os.path.join(ROOT, 'dev/art/bf109e_blank.jpg'))
     a = ap.parse_args()
     if not a.all:

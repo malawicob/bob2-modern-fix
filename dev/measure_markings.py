@@ -497,6 +497,17 @@ def main():
           % (fromrules, inferred, ', '.join(named)))
 
     out['lw']['profiles'] = {}
+    # the painted ones are exactly the side views skins109.json names
+    s109 = os.path.join(os.path.dirname(os.path.abspath(a.lw_art)), 'skins109.json')
+    painted = set()
+    if os.path.exists(s109):
+        painted = {r['file'] for r in json.load(open(s109, encoding='utf-8-sig'))['rules'] if r.get('file')}
+    painted_cross = None
+    if painted:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import build_lw_sideviews
+        painted_cross = build_lw_sideviews.tex_box_to_profile(tex_cross)
+        print('    painted side views: cross at %s on all %d' % (painted_cross, len(painted)))
     for f in sorted(os.listdir(a.lw_art)):
         if not f.endswith('.png'):
             continue
@@ -516,7 +527,12 @@ def main():
         # 30, so at 80 the two run together and the cross was read as a
         # 77 x 63 patch of canopy. 50 separates them on that drawing and
         # changes the pale one by a pixel.
-        pc = find_cross_109(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)))
+        if f in painted:
+            # painted from the skin by dev/build_lw_sideviews.py: one plate,
+            # one mapping, so the cross is where the mapping puts it
+            pc = tuple(painted_cross)
+        else:
+            pc = find_cross_109(im, (int(W * 0.5), 0, int(W * 0.85), int(H * 0.75)))
         if not pc:
             print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr); continue
         rec = {'marking': list(pc), 'size': [W, H]}
