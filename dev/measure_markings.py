@@ -578,9 +578,12 @@ def main():
     # letter twice as far aft as it belongs.
     K110 = 2048.0 / 4048.0
     MS110 = {
-        'code':       (2474, 3200, 0.080),   # Me110_Geshwader_Code.ms
-        'individual': (3025, 3196, 0.043),   # Me110_Aircraft_Code.ms
-        'staffel':    (3175, 3196, 0.043),   # Me110_Staffel_Code.ms
+        # x, y, scale x, scale y. The Geschwader code is a 2:1 tile and the
+        # game scales it 0.08 by 0.042; read as 0.08 both ways it stood twice
+        # the height of the letters aft of the cross and hung below the belly.
+        'code':       (2474, 3200, 0.080, 0.042),   # Me110_Geshwader_Code.ms
+        'individual': (3025, 3196, 0.043, 0.043),   # Me110_Aircraft_Code.ms
+        'staffel':    (3175, 3196, 0.043, 0.043),   # Me110_Staffel_Code.ms
     }
     ref110 = os.path.join(a.tex, 'Bf110_70_71_1940.png')
     if os.path.exists(ref110):
@@ -621,10 +624,9 @@ def main():
                     print('  ? %s: no Balkenkreuz found, skipped' % f, file=sys.stderr)
                     continue
                 rec = {'marking': list(pc), 'size': [W, H]}
-                for k, (x, y, sx) in MS110.items():
-                    ms = (4048, 4048, sx, sx, x, y)
+                for k, (x, y, sx, sy) in MS110.items():
                     # convert() works in the SHEET's pixels, so scale first
-                    ms = (int(4048 * K110), int(4048 * K110), sx, sx,
+                    ms = (int(4048 * K110), int(4048 * K110), sx, sy,
                           int(round(x * K110)), int(round(y * K110)))
                     rec[k] = convert(ms, sk, pc, (W, H))
                 out['lw']['profiles110'][f] = rec

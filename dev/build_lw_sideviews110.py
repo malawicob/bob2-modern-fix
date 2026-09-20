@@ -160,7 +160,11 @@ def build(skin, out, blank):
     v = np.clip((YY - top) / np.maximum(bot - top, 1), 0, 1)
     xt = T_NOSE + (XX - X_NOSE) / SCALE_X
     low = t_low(xt)
-    yt = np.where(v < V_SIDE0, (T_SIDE_TOP - T_DECK) + v / V_SIDE0 * T_DECK,
+    # The shoulder above the side face carries the side's own top edge up to
+    # the spine (mirrored a few texels), NOT the sheet above y 793: that is
+    # a different island, and sampling it drew pale streaks along the spine
+    # of every pale skin.
+    yt = np.where(v < V_SIDE0, T_SIDE_TOP + (V_SIDE0 - v) / V_SIDE0 * 8.0,
          np.where(v < V_SIDE1, T_SIDE_TOP + (v - V_SIDE0) / (V_SIDE1 - V_SIDE0) * (low - T_SIDE_TOP),
                   low + (v - V_SIDE1) / (1 - V_SIDE1) * T_DECK))
 
