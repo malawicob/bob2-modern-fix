@@ -37,6 +37,12 @@ v1.9.1  (2026-09-14)
     Setup is 16x filtering plus ReShade, whose SMAA pass smooths edges
     without touching the terrain. If you turned 4x on, press Off in
     Settings, Graphics.
+  - FIXED: "attention needed - the graphics settings file looks damaged"
+    after saving a campaign under your own name. settings.cfg ends with
+    the name of the last saved game, so its length changes with that name;
+    the check demanded exactly 1786 bytes, which is only true while the
+    save is called "Bob". Nothing was ever damaged. (Pressing Install and
+    repair in that state replaced a healthy file; it no longer offers to.)
   - Settings recommends the full 2048 terrain texture size. 1024 blurs the
     ground and gains nothing on a modern graphics card: the game is
     limited by the processor, the card is idle half of every frame.

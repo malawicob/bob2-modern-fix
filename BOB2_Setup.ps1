@@ -2660,7 +2660,16 @@ function Test-SettingsCfgHealthy {
     if (-not (Test-Path $p)) { return @{ Exists = $false; Healthy = $true; Reason = 'no file' } }
     try {
         $b = [System.IO.File]::ReadAllBytes($p)
-        if ($b.Length -ne 1786) { return @{ Exists = $true; Healthy = $false; Reason = "unexpected size $($b.Length) bytes" } }
+        # NOT a fixed size. The file ends with three names from offset 1766:
+        # the last saved game, then Bob.cam and Bob.prf. It is 1786 bytes
+        # only while that save is called "Bob"; "British.bsR" made it 1794
+        # and "Bob_german.bsL" 1797, and an exact-size test called both
+        # damaged. That is the message 33lima and Patrick kept getting after
+        # saving a campaign under a name of their own. Everything this
+        # package reads or writes sits below 1766, so the fixed part is what
+        # has to be there, and the banner says it is the right kind of file.
+        if ($b.Length -lt 1770 -or $b.Length -gt 2048) { return @{ Exists = $true; Healthy = $false; Reason = "unexpected size $($b.Length) bytes" } }
+        if ([System.Text.Encoding]::ASCII.GetString($b, 0, 20) -notmatch '^Rowan Savegame: V 0') { return @{ Exists = $true; Healthy = $false; Reason = 'no savegame banner' } }
         $w = [BitConverter]::ToInt32($b, 1416); $h = [BitConverter]::ToInt32($b, 1480)
         if ($w -lt 800 -or $w -gt 7680 -or $h -lt 600 -or $h -gt 4320) {
             return @{ Exists = $true; Healthy = $false; Reason = "stored mode reads ${w}x${h}" }

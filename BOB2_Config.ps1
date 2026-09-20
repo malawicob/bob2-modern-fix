@@ -13,7 +13,7 @@
 #                            comment, which is the best documentation there is.
 #    KEYBOARD\keys.txt       236 actions (190 bound, 46 unbound on this install)
 #    KEYBOARD\default.txt    269 actions - read-only, used for "reset"
-#    SAVEGAME\settings.cfg   1786-byte binary, four known offsets
+#    SAVEGAME\settings.cfg   binary, 1766 fixed bytes then three names (so 1786 only while the last save is "Bob"), four known offsets
 #    Weather\Weather.cfg     3 plain-text lines
 #
 #  RULES OBSERVED WHEN WRITING
@@ -961,7 +961,7 @@ function Read-Weather {
 }
 
 # -----------------------------------------------------------------------------
-#  settings.cfg - 1786 bytes, banner "Rowan Savegame: V 002".
+#  settings.cfg - 1766 fixed bytes plus the last save's name, Bob.cam and Bob.prf; banner "Rowan Savegame: V 002".
 #  Offsets established by differential analysis (change one option in game,
 #  quit cleanly, diff the file).  Recorded in mod92/tools/SETTINGS_CFG_MAP.md.
 #  Everything not listed here is copied through untouched.
@@ -2780,7 +2780,7 @@ function Build-GfxPage {
     }
 
     [void]$list.Children.Add((New-SectionHeader 'Decoded GFX options' (
-        'settings.cfg is a 1786-byte binary with no field names in it. These four offsets were established by ' +
+        'settings.cfg is a binary with no field names in it (1766 fixed bytes, then the name of the last saved game). These four offsets were established by ' +
         'differential analysis: change one option in game, quit cleanly, then compare the file byte for byte. ' +
         'Every other byte is written back exactly as found.')))
 
