@@ -1,4 +1,4 @@
-# Smoke test: BUILD every screen of the Squadron Room, offscreen.
+﻿# Smoke test: BUILD every screen of the Squadron Room, offscreen.
 #
 # Why it exists: on 8 September 2026 the Room would not open at all. One
 # line still read a roster record's victories as a number after they had
@@ -145,6 +145,24 @@ try {
         $zc = @(Get-Crew $zp)
         "    $($zg.unit) : $($zp.rank), crew of $($zc.Count + 1)$(if ($zc.Count) { " with $($zc[0].rank) $($zc[0].pilot), $($zc[0].role)" })"
         if (-not $zc.Count) { $fails += "zerstoerer : posted with no crew"; "    zerstoerer : NO CREW" }
+        # THE SECOND MAN MUST BE ON THE SCREEN, not only in the record.
+        # Counting the record proved nothing about what was drawn.
+        function Find-Text { param($Node, [string]$Text)
+            $n = 0
+            if ($Node -is [Windows.Controls.TextBlock]) { if ("$($Node.Text)" -eq $Text) { $n++ } }
+            $kids = @()
+            if ($Node -is [Windows.Controls.Panel]) { $kids = @($Node.Children) }
+            elseif ($Node -is [Windows.Controls.Decorator]) { $kids = @($Node.Child) }
+            elseif ($Node -is [Windows.Controls.ContentControl]) { $kids = @($Node.Content) }
+            foreach ($k in $kids) { if ($k -is [Windows.DependencyObject]) { $n += Find-Text $k $Text } }
+            $n
+        }
+        if ($zc.Count) {
+            Show-Tab 'dispersal'
+            $seen = Find-Text $script:Stage "$($zc[0].pilot)"
+            "    110 ready room : the crewman's name is drawn $seen time(s)"
+            if ($seen -lt 1) { $fails += 'zerstoerer : the crewman is in the record and not on the ready room' }
+        }
         # every tab again, this time with two men in the aeroplane
         foreach ($tab in 'dispersal','logbook','gruppen','paper') {
             try { Show-Tab $tab; "    110 tab $tab : drew $($script:Stage.Children.Count) blocks" }
