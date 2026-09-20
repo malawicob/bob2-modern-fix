@@ -63,22 +63,34 @@ def interp(x, pts):
     return np.interp(x, xs, ys)
 
 
-# The 110's fuselage is slab sided and the sheet treats it so: a top face,
-# the port side, a separate belly face (the pale band centred on y 907)
-# and the other side mirrored below that. A side view shows the SIDE face
-# only, y 793 down to its lower edge, which rises toward the tail as the
-# fuselage tapers. The Balkenkreuz, centred on y 831, sits mid-side, which
-# is where a 110 wears it. Read as one continuous unwrap (spine to belly
-# centreline) the first attempt drew half the belly onto the side.
-T_SIDE_TOP = 793.0
-# The side face is not the whole height of the side view. Mapped over all of
-# it the Balkenkreuz came out half as tall again as it was wide; a cross is
-# square, and that fixes the scale: the side face is the middle 64% of the
-# silhouette, and the rounded shoulders above and below it show the edge of
-# the top decking and of the belly, 23 texels of each.
-V_SIDE0, V_SIDE1, T_DECK = 0.18, 0.82, 23.0
+# THE FUSELAGE ON THE SHEET, read off Bf110_WN_Late where pale sides under a
+# dark top make every edge plain:
+#
+#   top decking   its own strip, y 766..782 from x 540 aft
+#   port side     y 810 down to the seam at y 874 (both edges close in a
+#                 little toward the tail); the Balkenkreuz is y 805..857 on it
+#   belly         carries on below the seam, pale
+#   between the decking strip and the side, y 785..808, is SHEET BACKGROUND
+#
+# Two earlier readings were wrong and Patrick saw both: taking the side from
+# y 793 sampled that strip of background along the whole upper fuselage (the
+# green blotches on a pale aeroplane), and telling background from paint by
+# COLOUR swapped real dark green camouflage for the pale side colour, because
+# the sheet is olive and so is the paint. Nothing here is decided by colour
+# any more; every sample is kept inside its island by geometry.
+#
+# The side face is not the whole silhouette either. The cross is square on
+# the aeroplane and 43.5 x 51.5 texels on the sheet, which fixes the vertical
+# scale: the side face is the middle 52% of the side view, with the rounded
+# top decking above it and the turn of the belly below.
+V_SIDE0, V_SIDE1 = 0.24, 0.76
+DECK0, DECK1, BELLY = 766.0, 782.0, 16.0
+def t_top(xt):
+    return np.interp(xt, [192, 575, 1024], [810.0, 810.0, 822.0])
 def t_low(xt):
-    return np.interp(xt, [192, 600, 704, 1024], [878.0, 876.0, 872.0, 850.0])
+    # aft of x 870 a grey strip of another island lies along y 865..873; the
+    # side stops short of it and the belly is read from below the seam
+    return np.interp(xt, [192, 712, 870, 1024], [874.0, 874.0, 862.0, 860.0])
 
 
 def tex_box_to_profile(box2048):
@@ -91,7 +103,8 @@ def tex_box_to_profile(box2048):
     Xc = X((l + r) / 2.0)
     top, bot = float(interp(Xc, TOP)), float(interp(Xc, BOT))
     low = float(t_low((l + r) / 2.0))
-    def Y(yt): return top + (V_SIDE0 + (V_SIDE1 - V_SIDE0) * (yt - T_SIDE_TOP) / (low - T_SIDE_TOP)) * (bot - top)
+    hi = float(t_top((l + r) / 2.0))
+    def Y(yt): return top + (V_SIDE0 + (V_SIDE1 - V_SIDE0) * (yt - hi) / (low - hi)) * (bot - top)
     return [int(round((X(l) - CROP[0]) * s + 2)), int(round((Y(t) - CROP[1]) * s + 2)),
             int(round((X(r) - CROP[0]) * s + 2)), int(round((Y(b) - CROP[1]) * s + 2))]
 
@@ -159,14 +172,19 @@ def build(skin, out, blank):
     top = interp(XX[0], TOP)[None, :].repeat(H, 0); bot = interp(XX[0], BOT)[None, :].repeat(H, 0)
     v = np.clip((YY - top) / np.maximum(bot - top, 1), 0, 1)
     xt = T_NOSE + (XX - X_NOSE) / SCALE_X
-    low = t_low(xt)
-    # The shoulder above the side face carries the side's own top edge up to
-    # the spine (mirrored a few texels), NOT the sheet above y 793: that is
-    # a different island, and sampling it drew pale streaks along the spine
-    # of every pale skin.
-    yt = np.where(v < V_SIDE0, T_SIDE_TOP + (V_SIDE0 - v) / V_SIDE0 * 8.0,
-         np.where(v < V_SIDE1, T_SIDE_TOP + (v - V_SIDE0) / (V_SIDE1 - V_SIDE0) * (low - T_SIDE_TOP),
-                  low + (v - V_SIDE1) / (1 - V_SIDE1) * T_DECK))
+    low = t_low(xt); hi = t_top(xt)
+    side_y = hi + (v - V_SIDE0) / (V_SIDE1 - V_SIDE0) * (low - hi)
+    # the wing root is a hole in the side island (x 345..605, y 830 down):
+    # almost all of it is behind the nacelle, and what is not takes the side
+    # just above the hole
+    side_y = np.where((xt > 345) & (xt < 605) & (side_y > 828), 826.0, side_y)
+    yt = np.where(v < V_SIDE0, DECK0 + v / V_SIDE0 * (DECK1 - DECK0),
+         np.where(v < V_SIDE1, side_y, 880.0 + (v - V_SIDE1) / (1 - V_SIDE1) * BELLY))
+    # the decking strip starts at x 540 (forward of that the sheet holds the
+    # cockpit framing); the nose ahead of the canopy takes the decking's colour
+    # from its front end
+    deck = v < V_SIDE0
+    xt = np.where(deck, np.maximum(xt, 545.0), xt)
 
     nac = skin_m & poly_mask((W, H), NACELLE)
     wing = skin_m & poly_mask((W, H), WING)
@@ -181,27 +199,25 @@ def build(skin, out, blank):
     nv = np.clip((YY - nt) / np.maximum(nb - nt, 1), 0, 1)
     n_x = np.interp(nv, [0, 0.59, 1.0], [165.0, 98.0, 10.0])
     n_y = 442 + np.clip((XX - 340) / (1180 - 340), 0, 1) * (748 - 442)
+    # the island has a notch cut out of it beside the exhaust slot at the front
+    n_x = np.where((n_y < 476) & (n_x > 56) & (n_x < 97), 50.0, n_x)
     xt = np.where(nac, n_x, xt); yt = np.where(nac, n_y, yt)
     # wing: what shows in a side view is the tip end-on and the upper skin
     uu = np.clip((XX - 625) / (1295 - 625), 0, 1); ss = np.clip((YY - 318) / (470 - 318), 0, 1)
     xt = np.where(wing, 430 - ss * 200, xt); yt = np.where(wing, 272 + uu * (392 - 272), yt)
     # fin and rudder: box to box
     bx0, by0, bx1, by1 = FIN_BLANK
-    xt = np.where(fin, fx0 + (XX - bx0) / (bx1 - bx0) * (fx1 - fx0), xt)
-    yt = np.where(fin, fy0 + (YY - by0) / (by1 - by0) * (fy1 - fy0), yt)
+    f_x = fx0 + (XX - bx0) / (bx1 - bx0) * (fx1 - fx0); f_y = fy0 + (YY - by0) / (by1 - by0) * (fy1 - fy0)
+    # the fin island is an oval in its box; a sample outside it is pulled in
+    # along the line to the centre, so the corners never read the sheet
+    fcx, fcy, frx, fry = (fx0 + fx1) / 2.0, (fy0 + fy1) / 2.0, (fx1 - fx0) / 2.0 * 0.90, (fy1 - fy0) / 2.0 * 0.90
+    rr = np.sqrt(((f_x - fcx) / frx) ** 2 + ((f_y - fcy) / fry) ** 2)
+    k = np.where(rr > 1, 1 / np.maximum(rr, 1e-6), 1.0)
+    f_x = fcx + (f_x - fcx) * k; f_y = fcy + (f_y - fcy) * k
+    xt = np.where(fin, f_x, xt); yt = np.where(fin, f_y, yt)
 
     xi = np.clip(xt, 0, 1023).astype(int); yi = np.clip(yt, 0, 1023).astype(int)
     col = T[yi, xi]
-    # a sample that fell on the sheet's background is not paint
-    bgc = T[700, 520]
-    sidec = np.median(T[810:860, 620:700].reshape(-1, 3), axis=0)
-    finc = np.median(T[440:470, 600:640].reshape(-1, 3), axis=0)
-    topc = np.median(T[300:380, 250:420].reshape(-1, 3), axis=0)
-    onbg = np.abs(col - bgc).sum(axis=2) < 14
-    col[onbg & (body | nac)] = sidec
-    col[onbg & fin] = finc
-    col[onbg & wing] = topc
-
     outp = B.copy()
     m = body | nac | wing | fin
     outp[m] = np.clip(col[m] * shade[m], 0, 255)
