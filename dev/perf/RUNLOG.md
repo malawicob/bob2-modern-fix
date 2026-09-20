@@ -16,3 +16,9 @@ label is the baseline for the deltas.
 Reading so far: run to run the same scene moves by about 15% (bare 145, trimmed 173 on the same install), so dev trimmed and stable are level. The dressing as first built cost about a tenth; trimmed it costs nothing measurable. Vsync is off on both installs.
 
 **Seam lines, 2026-09-20.** Patrick: many tile seam lines on dev (trimmed run), one or two on stable. Every graphics setting compared: `bdg.txt` identical apart from water colours, `Weather.cfg` identical, the decoded `settings.cfg` graphics bytes identical. Two differences only: dgVoodoo antialiasing **2x on dev, 4x on stable**, and **ReShade on stable, none on dev**. Dev set to 4x (backup `dgVoodoo.conf.before-aa4x`) before the `cloud32` run; if the lines stay, the remaining suspect is ReShade's post-process antialiasing masking them on stable.
+
+| date | label | install | change | frames | avg | median | 1% low | worst | jitter | notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 2026-09-20 | cloud32 | dev | guard `cloudstep=32` (game 256), AA now 4x | 12085 (60 s) | 201.4 | 222.6 | 110.6 | 24.7 ms | 1.0 ms | CPU 4.36 ms against 5.80 (trimmed): -25%. avg +16%, median +32%, 1% low +18%. An earlier 19 s capture of the same setting read 207 / 228 / 105. Clouds looked normal to Patrick. |
+
+**Seam lines, continued.** 4x made no difference; Patrick: the higher he flies the worse they get. That is the signature of texture sampling at tile edges on the lower mip levels, and dgVoodoo is forcing 16x anisotropic filtering (`[DirectX] Filtering = 16`) on a 2005 terrain that was never built for it. Stable has the same setting but runs ReShade's Cinematic preset (SMAA, bloom, grain), which hides them. Next flight: `Filtering = appdriven` on dev.
