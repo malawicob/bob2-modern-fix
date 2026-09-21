@@ -72,3 +72,11 @@ can stand still and then jump two steps: the likely reason it got worse as the
 frame rate rose. A frame rate that is a multiple of 25 gives every step the same
 number of frames. The proper cure is drawing aircraft between their two latest
 simulated positions (render interpolation); nothing in the game does that.
+
+## 21 September 2026: offline trace of the drawing (after smooth=1 shimmered)
+
+- Position is already predicted by the game. `ThreeDee::SetFrameTime`: `view_dt = timeGetTime() - ViewPoint.move_time_ms`, where `move_time_ms` goes up by exactly 40 each simulation step (`DoMoveCycle`), and `fView_dt_frac = view_dt / 100000`. `GetVisibleObjects` and `AddToObjectRec` then add `(velocity + wind) * fView_dt_frac` to every moving item. `ViewFudge` does the same for the camera's own aircraft.
+- Attitude is never predicted. Heading, pitch and roll (+0x20/+0x22/+0x24) are read from the item while drawing, after `BlockTick(FALSE)`, and they change only at the 40 ms step. At 200+ fps that means about 8 frames on one attitude, then a snap; at 28 fps it could not be seen. This is the likely cause of both the close aircraft judder and the cockpit autopilot snapping.
+- Why smooth=1 shimmered: it moved positions on top of the game's own prediction. It also put its values back at `BlockTick(FALSE)`, before the drawing, so its attitude never reached the screen.
+- The simulation runs on the winmm timer thread (`StaticTimeProc`) whenever the drawing does not hold `BlockTick`, including while objects are drawn.
+- New guard: attitude only. It is written at `BlockTick(TRUE)` and left in place through the drawing. It is put back at the start of every step (only where the field is unchanged), under a critical section, and t = 0 is rewritten after the step. `smooth=1`: other aircraft; `smooth=2`: the player's own too. The log also measures timeGetTime's step, and for aircraft within 3 km how far the velocity prediction misses the true move.
