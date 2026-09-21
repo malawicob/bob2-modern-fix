@@ -1201,7 +1201,9 @@ function Get-Awards {
 
 # --- a framed photograph on the wall ------------------------------------
 function New-Frame {
-    param($Pilot, [switch]$IsPlayer)
+    # -CrewIndex: -1 the player, 0 and up his crew; either makes the photograph
+    # a door to the man's background. Left at -2 the frame is only a picture.
+    param($Pilot, [switch]$IsPlayer, [int]$CrewIndex = -2)
     $col = New-Object Windows.Controls.StackPanel
     $col.Width = 196; $col.Margin = '0,0,22,26'
 
@@ -1232,8 +1234,294 @@ function New-Frame {
         $photo.Child = $ini
     }
     $frame.Child = $photo
+    if ($CrewIndex -ge -1) {
+        $frame.Tag = $CrewIndex; $frame.Cursor = 'Hand'
+        $frame.ToolTip = 'Who he was before the war. Click to read it, or to write your own.'
+        $frame.Add_MouseLeftButtonUp({ param($sender, $e) Show-Background -CrewIndex ([int]$sender.Tag); $e.Handled = $true })
+    }
     [void]$col.Children.Add($frame)
     $col
+}
+
+# =====================================================================
+#  WHO HE WAS BEFORE THE WAR: a background behind every portrait
+# =====================================================================
+#  Patrick asked for it on 21 September 2026: click the photograph and
+#  read where the man was born, when, and how he came to be sitting in
+#  this aeroplane; and let the player rewrite any of it, or all of it.
+#
+#  The man is invented. The road he came by is not: every route in
+#  squadronroom/backgrounds.json is a real way into a fighter cockpit by
+#  the summer of 1940 (the Volunteer Reserve, a Halton apprenticeship, a
+#  short service commission, Cranwell, a University Air Squadron; glider
+#  clubs, labour service, the A/B schools, the Luftkriegsschulen, the
+#  fighter and Zerstoerer schools), and every school and unit named was
+#  doing that job then. The route follows his rank and his aeroplane, so
+#  a Sergeant is not given Cranwell and a Bf 110 pilot gets the C school
+#  and the blind flying course a 109 pilot never saw.
+#
+#  Made from a number taken from his own name, so he has the same past
+#  every time until somebody changes it. Once opened it is WRITTEN INTO
+#  HIS RECORD, so a later edit of the lists cannot quietly give a man who
+#  has flown forty sorties a different father.
+$BackgroundsPath = Join-Path $ModDir 'backgrounds.json'
+function Get-BackgroundData {
+    if ($null -ne $script:BackgroundData) { return $script:BackgroundData }
+    $d = $null
+    if (Test-Path $BackgroundsPath) {
+        try { $d = Get-Content $BackgroundsPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:BackgroundData = $d
+    $d
+}
+function New-PilotBackground {
+    param($Man, $Pilot, [int]$Salt = 0)
+    $data = Get-BackgroundData
+    if (-not $data -or -not $Man) { return $null }
+    if (-not $Pilot) { $Pilot = $Man }
+    $isLw = (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -eq 'lw'))
+    $side = if ($isLw) { $data.lw } else { $data.raf }
+    $actype = "$($Pilot.actype)"
+    $isCrew = (($Man.PSObject.Properties.Name -contains 'role') -and "$($Man.role)" -and ("$($Man.role)" -ne 'Flugzeugfuehrer'))
+    $rank = "$($Man.rank)"
+    $who = 'officer'
+    if ($isCrew) { $who = 'crew' }
+    elseif ($isLw) { if ($LwRankOfficer -notcontains $rank) { $who = 'nco' } }
+    elseif ($rank -match 'Sergeant') { $who = 'nco' }
+    $tkey = if ($actype -match '110') { '110' } else { '109' }
+
+    # one stream of numbers from his name, so every pick is his and repeatable
+    $seed = 7
+    foreach ($c in ("$($Man.pilot)|$($Pilot.unit)|$($Pilot.sqn)|$Salt").ToCharArray()) { $seed = ($seed * 31 + [int]$c) % 2147483647 }
+    $state = @{ n = [long]$seed }
+    $next = {
+        param([int]$Mod)
+        $state.n = ($state.n * 1103515245 + 12345) % 2147483648
+        if ($Mod -le 0) { return 0 }
+        [int](([long][math]::Floor($state.n / 65536)) % $Mod)
+    }
+    $pick = { param($List) $l = @($List); if (-not $l.Count) { return '' }; "$($l[(& $next $l.Count)])" }
+
+    $routes = @($side.routes | Where-Object {
+        ("$($_.who)" -eq $who) -and (-not $isLw -or "$($_.type)" -eq $tkey)
+    })
+    if (-not $routes.Count) { $routes = @($side.routes | Where-Object { "$($_.who)" -eq $who }) }
+    if (-not $routes.Count) { return $null }
+    $bag = @()
+    foreach ($r in $routes) { $w = 1; if ($r.PSObject.Properties.Name -contains 'weight') { $w = [int]$r.weight }; for ($i = 0; $i -lt $w; $i++) { $bag += $r } }
+    $route = $bag[(& $next $bag.Count)]
+
+    $bornKey = if ($who -eq 'officer') { 'officer' } else { 'nco' }
+    $by = @($side.born.$bornKey)
+    $year = [int]$by[0] + (& $next ([int]$by[1] - [int]$by[0] + 1))
+    $jr = @($route.joined)
+    $joined = [int]$jr[0] + (& $next ([int]$jr[1] - [int]$jr[0] + 1))
+    # old enough on the day he joined, and not a man of thirty either
+    $minage = [int]$route.minage
+    if ($year -gt ($joined - $minage)) { $year = $joined - $minage }
+    if ($year -lt ($joined - 24)) { $year = $joined - 24 }
+    $month = 1 + (& $next 12)
+    $day = 1 + (& $next ([datetime]::DaysInMonth($year, $month)))
+    $born = ([datetime]::new($year, $month, $day)).ToString('d MMMM yyyy', [Globalization.CultureInfo]::InvariantCulture)
+    $place = & $pick $side.places
+
+    $type = if ($isLw) { if ($tkey -eq '110') { 'Bf 110' } else { 'Bf 109 E' } }
+            elseif ($actype -match 'Hurricane') { 'Hurricane' } else { 'Spitfire' }
+    $unit = if ($isLw) { "$($Pilot.unit)" } else { "No. $([int]$Pilot.sqn) Squadron" }
+    $base = "$($Pilot.base)"; if (-not $base) { $base = 'its station' }
+    $posted = 'July 1940'
+    if ($script:CampaignDate) { $posted = $script:CampaignDate.ToString('MMMM yyyy', [Globalization.CultureInfo]::InvariantCulture) }
+    $tok = @{
+        place = $place; joined = "$joined"; type = $type; unit = $unit; base = $base; posted = $posted
+        hours = "$(150 + (& $next 61))"; ontype = "$(10 + (& $next 16))"
+    }
+    if (-not $isLw) { $tok['otu'] = & $pick $side.otu.$type }
+    $fill = {
+        param([string]$Text)
+        [regex]::Replace($Text, '\{(\w+)\}', {
+            param($m)
+            $k = $m.Groups[1].Value
+            if ($tok.ContainsKey($k)) { return "$($tok[$k])" }
+            if ($side.lists.PSObject.Properties.Name -contains $k) { $v = & $pick $side.lists.$k; $tok[$k] = $v; return $v }
+            ''
+        })
+    }
+    $paras = @()
+    foreach ($t in @($route.text)) { $paras += (& $fill "$t") }
+    $closing = "$($side.closing)"
+    if ($isCrew -and ($side.PSObject.Properties.Name -contains 'closing_crew')) { $closing = "$($side.closing_crew)" }
+    if ($closing) { $paras += (& $fill $closing) }
+    $story = (($paras | ForEach-Object { ($_ -replace '\s{2,}', ' ').Trim() }) -join "`r`n`r`n")
+    # a sentence that begins with a school's number must still begin with a capital
+    $story = [regex]::Replace($story, '(^|\n)the ', { param($m) $m.Groups[1].Value + 'The ' })
+    [pscustomobject]@{ born = $born; place = $place; story = $story; custom = $false; joined = $joined; year = $year }
+}
+# The man behind a frame: -1 is the player, 0 and up his crew.
+function Get-BackgroundMan {
+    param($Pilot, [int]$CrewIndex)
+    if (-not $Pilot) { return $null }
+    if ($CrewIndex -lt 0) { return $Pilot }
+    $crew = @(Get-Crew $Pilot)
+    if ($CrewIndex -ge $crew.Count) { return $null }
+    $crew[$CrewIndex]
+}
+function Get-PilotBackground {
+    param($Pilot, [int]$CrewIndex = -1)
+    $man = Get-BackgroundMan -Pilot $Pilot -CrewIndex $CrewIndex
+    if (-not $man) { return $null }
+    if (($man.PSObject.Properties.Name -contains 'background') -and $man.background -and "$($man.background.story)") { return $man.background }
+    New-PilotBackground -Man $man -Pilot $Pilot
+}
+function Save-PilotBackground {
+    param($Pilot, [int]$CrewIndex = -1, [string]$Born, [string]$Place, [string]$Story, [bool]$Custom = $true)
+    if (-not $Pilot) { return $null }
+    $rec = [ordered]@{ born = "$Born".Trim(); place = "$Place".Trim(); story = "$Story".Trim(); custom = [bool]$Custom }
+    $o = [ordered]@{}
+    foreach ($pp in $Pilot.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
+    if ($CrewIndex -lt 0) { $o['background'] = $rec }
+    else {
+        $crew = @()
+        $i = 0
+        foreach ($m in @(Get-Crew $Pilot)) {
+            $mo = [ordered]@{}
+            foreach ($pp in $m.PSObject.Properties) { $mo[$pp.Name] = $pp.Value }
+            if ($i -eq $CrewIndex) { $mo['background'] = $rec }
+            $crew += $mo; $i++
+        }
+        $o['crew'] = @($crew)
+    }
+    Save-Pilot -Pilot $o
+    Get-Pilot
+}
+# The window. Built apart from being shown, so the smoke test can build it
+# and press its buttons without a modal dialog stopping the run.
+function New-BackgroundWindow {
+    param($Pilot, [int]$CrewIndex = -1)
+    $man = Get-BackgroundMan -Pilot $Pilot -CrewIndex $CrewIndex
+    if (-not $man) { return $null }
+    $bg = Get-PilotBackground -Pilot $Pilot -CrewIndex $CrewIndex
+    if (-not $bg) { return $null }
+    $w = New-Object Windows.Window
+    $w.WindowStyle = 'None'; $w.ResizeMode = 'NoResize'; $w.ShowInTaskbar = $false
+    $w.Width = 820; $w.SizeToContent = 'Height'; $w.WindowStartupLocation = 'CenterOwner'
+    $w.Background = B '#0F171D'
+    $outer = New-Object Windows.Controls.Border
+    $outer.BorderBrush = $script:BrassBrush; $outer.BorderThickness = '1.5'; $outer.Padding = '28,24,28,22'
+    $sp = New-Object Windows.Controls.StackPanel
+    $outer.Child = $sp; $w.Content = $outer
+
+    $head = New-Object Windows.Controls.StackPanel; $head.Orientation = 'Horizontal'; $head.Margin = '0,0,0,18'
+    $ph = New-Object Windows.Controls.Border
+    $ph.Width = 92; $ph.Height = 104; $ph.Background = B '#0B1116'; $ph.BorderBrush = $script:BrassBrush; $ph.BorderThickness = '2'; $ph.ClipToBounds = $true
+    if (($man.PSObject.Properties.Name -contains 'portrait') -and "$($man.portrait)") {
+        $bmp = Load-Portrait -File "$($man.portrait)" -DecodeHeight 220
+        if ($bmp) { $im = New-Object Windows.Controls.Image; $im.Source = $bmp; $im.Stretch = 'UniformToFill'; $ph.Child = $im }
+    }
+    [void]$head.Children.Add($ph)
+    $ht = New-Object Windows.Controls.StackPanel; $ht.Margin = '20,2,0,0'; $ht.VerticalAlignment = 'Center'
+    [void]$ht.Children.Add((New-TB -Text 'PERSONAL RECORD' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    [void]$ht.Children.Add((New-TB -Text "$($man.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    $isLw = (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -eq 'lw'))
+    $unitLine = if ($isLw) { "$($Pilot.unit)" } else { "No. $([int]$Pilot.sqn) Squadron" }
+    $seat = if (($man.PSObject.Properties.Name -contains 'role') -and "$($man.role)") { "$($man.role)" } else { "$($Pilot.actype)" }
+    [void]$ht.Children.Add((New-TB -Text "$($man.rank)   $([char]0x2022)   $unitLine   $([char]0x2022)   $seat" -Family $CondFam -Size 13 -Colour '#9FB0B8'))
+    [void]$head.Children.Add($ht)
+    [void]$sp.Children.Add($head)
+
+    $mkBox = {
+        param([string]$Text, [double]$Width)
+        $tb = New-Object Windows.Controls.TextBox
+        $tb.Text = $Text; $tb.Width = $Width; $tb.FontFamily = 'Georgia, serif'; $tb.FontSize = 15
+        $tb.Background = B '#101B22'; $tb.Foreground = B '#E9E3D4'; $tb.CaretBrush = B '#FFC24A'
+        $tb.BorderBrush = B '#2B3B47'; $tb.BorderThickness = '1'; $tb.Padding = '8,6'
+        $tb.SelectionBrush = B '#C8973F'
+        $tb
+    }
+    $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,16'
+    $c1 = New-Object Windows.Controls.StackPanel; $c1.Margin = '0,0,22,0'
+    [void]$c1.Children.Add((New-TB -Text 'BORN' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $bornBox = & $mkBox "$($bg.born)" 230; $bornBox.Margin = '0,5,0,0'
+    [void]$c1.Children.Add($bornBox)
+    $c2 = New-Object Windows.Controls.StackPanel
+    [void]$c2.Children.Add((New-TB -Text 'AT' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $placeBox = & $mkBox "$($bg.place)" 508; $placeBox.Margin = '0,5,0,0'
+    [void]$c2.Children.Add($placeBox)
+    [void]$row.Children.Add($c1); [void]$row.Children.Add($c2)
+    [void]$sp.Children.Add($row)
+
+    [void]$sp.Children.Add((New-TB -Text 'HOW HE CAME HERE' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $storyBox = & $mkBox "$($bg.story)" 760
+    $storyBox.Margin = '0,5,0,12'; $storyBox.Height = 330; $storyBox.HorizontalAlignment = 'Left'
+    $storyBox.TextWrapping = 'Wrap'; $storyBox.AcceptsReturn = $true; $storyBox.VerticalScrollBarVisibility = 'Auto'
+    $storyBox.FontSize = 14.5
+    [void]$sp.Children.Add($storyBox)
+
+    $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+        'The man is invented by the Room; the road he came by is a real one for his rank and his aeroplane in 1940. ' +
+        'It is yours to change: type over any of it and press SAVE, or press WRITE ANOTHER for a different past.')
+    $note.Margin = '0,0,0,16'
+    [void]$sp.Children.Add($note)
+
+    $btns = New-Object Windows.Controls.StackPanel; $btns.Orientation = 'Horizontal'; $btns.HorizontalAlignment = 'Right'
+    $mkBtn = {
+        param([string]$Label, [string]$Fill, [string]$Ink, [string]$Do)
+        $b = New-Object Windows.Controls.Border
+        $b.Background = B $Fill; $b.CornerRadius = '2'; $b.Padding = '18,9'; $b.Margin = '10,0,0,0'; $b.Cursor = 'Hand'
+        $b.BorderBrush = B '#2B3B47'; $b.BorderThickness = '1'; $b.Tag = $Do; $b.Focusable = $true
+        $b.Child = (New-TB -Text $Label -Family $CondFam -Size 13 -Colour $Ink -Bold)
+        $b.Add_MouseLeftButtonUp({ param($sender, $e) Invoke-BackgroundAction "$($sender.Tag)"; $e.Handled = $true })
+        $b
+    }
+    [void]$btns.Children.Add((& $mkBtn 'WRITE ANOTHER' '#16222B' '#E9E3D4' 'another'))
+    [void]$btns.Children.Add((& $mkBtn 'CLOSE' '#16222B' '#E9E3D4' 'close'))
+    [void]$btns.Children.Add((& $mkBtn 'SAVE' '#C8973F' '#14100A' 'save'))
+    [void]$sp.Children.Add($btns)
+
+    $w.Add_KeyDown({ param($sender, $e) if ($e.Key -eq 'Escape') { Invoke-BackgroundAction 'close' } })
+    $w.Add_MouseLeftButtonDown({ param($sender, $e) if ($e.OriginalSource -isnot [Windows.Controls.TextBox]) { try { $sender.DragMove() } catch { } } })
+    # State the buttons read. Script scope and no closures: a closure in this
+    # file gets a module scope of its own and its writes never reach the Room.
+    $script:BgDlg = @{ Win = $w; Born = $bornBox; Place = $placeBox; Story = $storyBox; CrewIndex = $CrewIndex; Salt = 0; Saved = $false }
+    $w
+}
+function Invoke-BackgroundAction {
+    param([string]$What)
+    $d = $script:BgDlg
+    if (-not $d) { return }
+    switch ($What) {
+        'close' { try { $d.Win.Close() } catch { } }
+        'another' {
+            $d.Salt = [int]$d.Salt + 1
+            $p = Get-Pilot
+            $man = Get-BackgroundMan -Pilot $p -CrewIndex ([int]$d.CrewIndex)
+            $n = New-PilotBackground -Man $man -Pilot $p -Salt ([int]$d.Salt)
+            if ($n) { $d.Born.Text = "$($n.born)"; $d.Place.Text = "$($n.place)"; $d.Story.Text = "$($n.story)" }
+        }
+        'save' {
+            $p = Get-Pilot
+            if ($p) {
+                [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $true)
+                $d.Saved = $true
+            }
+            try { $d.Win.Close() } catch { }
+        }
+    }
+}
+function Show-Background {
+    param([int]$CrewIndex = -1)
+    $p = Get-Pilot
+    if (-not $p) { return }
+    # the first look fixes his past in his record, so it cannot shift under him
+    $man = Get-BackgroundMan -Pilot $p -CrewIndex $CrewIndex
+    if ($man -and -not (($man.PSObject.Properties.Name -contains 'background') -and $man.background -and "$($man.background.story)")) {
+        $g = New-PilotBackground -Man $man -Pilot $p
+        if ($g) { $p = Save-PilotBackground -Pilot $p -CrewIndex $CrewIndex -Born $g.born -Place $g.place -Story $g.story -Custom $false }
+    }
+    $w = New-BackgroundWindow -Pilot $p -CrewIndex $CrewIndex
+    if (-not $w) { return }
+    try { $w.Owner = $Win } catch { }
+    [void]$w.ShowDialog()
+    $script:BgDlg = $null
 }
 
 # --- the player's aircraft: a Spitfire profile with live codes and serial --
@@ -3494,7 +3782,7 @@ function Show-Roster {
 
     # the only photograph on the wall is yours
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,32'
-    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
+    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
     [void]$d.Children.Add((New-TB -Text ("$($Pilot.pilot)") -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
     $line = if ($flownCount -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
@@ -7012,7 +7300,7 @@ function Show-ReadyRoom {
     # for the roster grid it was built for, and left alone it opens a hole
     # between the photograph and the counters
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,-22'
-    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
+    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
     [void]$d.Children.Add((New-TB -Text "$($Pilot.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
     $appt = Get-Appointment -Pilot $Pilot -Career $career
@@ -7050,9 +7338,11 @@ function Show-ReadyRoom {
     # serves the player, his crew and every man on the Staffel roster.
     # Without -IsPlayer the frame comes out dark rather than brass, which
     # says who the screen is about without a label doing it.
+    $crewIx = -1
     foreach ($m in (Get-Crew $Pilot)) {
+        $crewIx++
         $cc = Get-CrewCareer -Member $m -Pilot $Pilot -Sorties ([int]$career.sorties) -Hours ([double]$career.hours)
-        [void]$hero.Children.Add((New-Frame -Pilot $m))
+        [void]$hero.Children.Add((New-Frame -Pilot $m -CrewIndex $crewIx))
         $cd = New-Object Windows.Controls.StackPanel; $cd.Margin = '30,4,0,0'; $cd.VerticalAlignment = 'Top'
         [void]$cd.Children.Add((New-TB -Text "$($m.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
         $cl = "$($cc.rank)   $([char]0x2022)   $(Get-CrewAppointment -Member $m -Career $cc)"

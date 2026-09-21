@@ -281,6 +281,58 @@ try {
     $script:AdoptFrom = $null
     Check 'and with nothing adopted nothing is bound'      (-not (Test-AdoptFits -Pilot ([ordered]@{ pilot='Millin'; side='lw'; unit='III./ZG 26' })))
     Remove-Item $ad -Force -ErrorAction SilentlyContinue
+    "11 a background behind the portrait"
+    $script:CampaignDate = [datetime]'1940-08-12'
+    $cases = @(
+        [pscustomobject]@{ pilot='Millin'; rank='Sergeant'; sqn=610; actype='Spitfire I'; base='Biggin Hill' },
+        [pscustomobject]@{ pilot='Millin'; rank='Pilot Officer'; sqn=32; actype='Hurricane I'; base='Biggin Hill' },
+        [pscustomobject]@{ pilot='Millin'; rank='Unteroffizier'; side='lw'; unit='II./JG 26'; actype='Bf 109E'; base='Marquise' },
+        [pscustomobject]@{ pilot='Millin'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley' }
+    )
+    foreach ($c in $cases) {
+        $seenRoutes = @{}
+        $bad = @()
+        foreach ($salt in 0..39) {
+            $b = New-PilotBackground -Man $c -Pilot $c -Salt $salt
+            if (-not $b) { $bad += "salt $salt : nothing"; continue }
+            if ("$($b.story)" -match '[{}]') { $bad += "salt $salt : an unfilled token" }
+            if ("$($b.story)" -match [char]0x2014 -or "$($b.story)" -match [char]0x2013 -or "$($b.story)" -match ' - ') { $bad += "salt $salt : a dash" }
+            $y = [int]("$($b.born)".Substring("$($b.born)".Length - 4))
+            $j = [int]$b.joined
+            if ("$($b.story)" -notmatch " in $j") { $bad += "salt $salt : the year he joined is not in the story" }
+            if ($y -lt 1911 -or $y -gt 1921) { $bad += "salt $salt : born $y" }
+            if ($j -and (($j - $y) -lt 17 -or ($j - $y) -gt 25)) { $bad += "salt $salt : joined at $($j - $y)" }
+            $seenRoutes["$("$($b.story)".Substring(0, 40))"] = 1
+        }
+        Check "$($c.rank), $($c.actype): forty pasts, all sound" ($bad.Count -eq 0) (($bad | Select-Object -First 3) -join '; ')
+    }
+    $sgt = New-PilotBackground -Man $cases[0] -Pilot $cases[0]
+    Check 'a Sergeant is not given Cranwell or a commission'   ("$($sgt.story)" -notmatch 'Cranwell|short service|University Air')
+    Check 'the same man gets the same past twice'              ((New-PilotBackground -Man $cases[0] -Pilot $cases[0]).story -eq $sgt.story)
+    $z = New-PilotBackground -Man $cases[3] -Pilot $cases[3]
+    Check 'a 110 pilot went through the Zerstoerer school'     ("$($z.story)" -match 'Zerst' -and "$($z.story)" -match 'blind flying')
+    $bf = [pscustomobject]@{ pilot='Lehmann, P'; rank='Unteroffizier'; role='Bordfunker' }
+    $bfb = New-PilotBackground -Man $bf -Pilot $cases[3]
+    Check 'his Bordfunker is a wireless man, not a pilot'      ("$($bfb.story)" -match 'wireless operator' -and "$($bfb.story)" -notmatch 'pilot.s badge')
+    Set-StateSide 'lw'
+    $zp = [ordered]@{ pilot='Millin'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley'; status='On strength'
+                      staffel=7; acnum=4; portrait='pilot01.jpg'; created='1940-07-10'; campaignSorties=0; campaignKills=@(0,0,0,0,0,0,0)
+                      crew=@([ordered]@{ role='Bordfunker'; pilot='Lehmann, P'; rank='Unteroffizier'; portrait=''; honours=@(); sortiesBase=0; joined='1940-07-10'; src='invented' }) }
+    Save-Pilot -Pilot $zp -Shrink
+    $p1 = Save-PilotBackground -Pilot (Get-Pilot) -CrewIndex -1 -Born '3 May 1917' -Place 'Ulm' -Story 'My own words.'
+    Check 'the player''s own words are kept'                   ("$((Get-PilotBackground -Pilot (Get-Pilot)).story)" -eq 'My own words.' -and [bool](Get-Pilot).background.custom)
+    [void](Save-PilotBackground -Pilot (Get-Pilot) -CrewIndex 0 -Born '1 June 1918' -Place 'Kiel' -Story 'The man in the back.')
+    $p2 = Get-Pilot
+    Check 'and the crewman''s, without touching the pilot''s'  ("$(@(Get-Crew $p2)[0].background.story)" -eq 'The man in the back.' -and "$($p2.background.story)" -eq 'My own words.' -and "$(@(Get-Crew $p2)[0].pilot)" -eq 'Lehmann, P')
+    $bw = New-BackgroundWindow -Pilot $p2 -CrewIndex -1
+    Check 'the window builds with his record in it'            ($bw -and "$($script:BgDlg.Story.Text)" -eq 'My own words.' -and "$($script:BgDlg.Born.Text)" -eq '3 May 1917')
+    Invoke-BackgroundAction 'another'
+    Check 'WRITE ANOTHER writes another'                       ("$($script:BgDlg.Story.Text)" -ne 'My own words.' -and "$($script:BgDlg.Story.Text)".Length -gt 300)
+    $script:BgDlg = $null
+    ''
+    '--- samples, to be read by a person ---'
+    foreach ($c in $cases) { $b = New-PilotBackground -Man $c -Pilot $c; ''; "[$($c.rank), $($c.actype)]  born $($b.born), $($b.place)"; $b.story }
+    ''; "[Bordfunker]  born $($bfb.born), $($bfb.place)"; $bfb.story; ''
     foreach ($side in 'raf', 'lw') { Set-StateSide $side; Remove-PilotCareer -Force }
 }
 finally {

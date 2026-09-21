@@ -1,0 +1,494 @@
+{
+ "note": "Invented pilot histories for the Squadron Room. Every route below is a real way a man reached a fighter cockpit by the summer of 1940, and every school, unit and place named is real and was doing that job at that time. The men are invented. Tokens in {braces} are filled from the lists beside them, by a number made from the pilot's name, so the same man gets the same past every time. Read by Get-PilotBackground in BOB2_SquadronRoom.ps1.",
+ "raf": {
+  "born": {
+   "nco": [
+    1914,
+    1921
+   ],
+   "officer": [
+    1913,
+    1920
+   ]
+  },
+  "places": [
+   "Guildford, Surrey",
+   "Croydon, Surrey",
+   "Maidstone, Kent",
+   "Canterbury, Kent",
+   "Brighton, Sussex",
+   "Portsmouth, Hampshire",
+   "Southampton, Hampshire",
+   "Reading, Berkshire",
+   "Oxford",
+   "Bristol",
+   "Exeter, Devon",
+   "Plymouth, Devon",
+   "Truro, Cornwall",
+   "Gloucester",
+   "Cheltenham, Gloucestershire",
+   "Worcester",
+   "Birmingham",
+   "Coventry, Warwickshire",
+   "Leicester",
+   "Nottingham",
+   "Derby",
+   "Lincoln",
+   "Norwich, Norfolk",
+   "Ipswich, Suffolk",
+   "Cambridge",
+   "Bedford",
+   "Northampton",
+   "Chelmsford, Essex",
+   "Ilford, Essex",
+   "Harrow, Middlesex",
+   "Ealing, Middlesex",
+   "Wimbledon, Surrey",
+   "Lewisham, London",
+   "Hampstead, London",
+   "Sheffield, Yorkshire",
+   "Leeds, Yorkshire",
+   "Bradford, Yorkshire",
+   "York",
+   "Hull, Yorkshire",
+   "Harrogate, Yorkshire",
+   "Manchester",
+   "Stockport, Cheshire",
+   "Liverpool",
+   "Preston, Lancashire",
+   "Blackpool, Lancashire",
+   "Carlisle, Cumberland",
+   "Newcastle upon Tyne",
+   "Sunderland, County Durham",
+   "Darlington, County Durham",
+   "Edinburgh",
+   "Glasgow",
+   "Dundee",
+   "Aberdeen",
+   "Perth",
+   "Inverness",
+   "Cardiff",
+   "Swansea",
+   "Newport, Monmouthshire",
+   "Wrexham, Denbighshire",
+   "Belfast",
+   "Londonderry"
+  ],
+  "lists": {
+   "job": [
+    "a clerk in a branch of the Midland Bank",
+    "a junior draughtsman in an engineering works",
+    "an apprentice with a firm of motor engineers",
+    "an insurance clerk",
+    "a clerk in the borough treasurer's office",
+    "an articled clerk to a firm of solicitors",
+    "a trainee surveyor",
+    "a laboratory assistant at a chemical works",
+    "a booking clerk on the railway",
+    "a salesman in his uncle's ironmongery",
+    "a reporter on the local weekly paper",
+    "an apprentice electrician",
+    "a junior in a shipping office",
+    "a student teacher"
+   ],
+   "school": [
+    "the local grammar school",
+    "the county secondary school",
+    "a technical school",
+    "the town's grammar school, on a scholarship"
+   ],
+   "pubschool": [
+    "a minor public school in the Midlands",
+    "a day school of some reputation",
+    "a boarding school on the south coast",
+    "his father's old school"
+   ],
+   "erfts": [
+    "No. 3 E&RFTS at Hamble",
+    "No. 15 E&RFTS at Redhill",
+    "No. 6 E&RFTS at Sywell",
+    "No. 4 E&RFTS at Brough",
+    "No. 5 E&RFTS at Hanworth",
+    "No. 11 E&RFTS at Perth",
+    "No. 12 E&RFTS at Prestwick",
+    "No. 2 E&RFTS at Filton",
+    "No. 7 E&RFTS at Desford",
+    "No. 9 E&RFTS at Ansty",
+    "No. 1 E&RFTS at Hatfield",
+    "No. 13 E&RFTS at White Waltham",
+    "No. 18 E&RFTS at Fair Oaks",
+    "No. 22 E&RFTS at Cambridge"
+   ],
+   "civschool": [
+    "the de Havilland School of Flying at Hatfield",
+    "the Reid and Sigrist school at Desford",
+    "Air Service Training at Hamble",
+    "the Airwork school at Perth",
+    "the Bristol company's school at Filton",
+    "the Brooklands Aviation school at Sywell"
+   ],
+   "itw": [
+    "No. 1 Initial Training Wing at Cambridge",
+    "No. 3 Initial Training Wing at Hastings",
+    "No. 4 Initial Training Wing at Bexhill",
+    "No. 5 Initial Training Wing at Hastings"
+   ],
+   "sfts": [
+    "No. 5 Flying Training School at Sealand",
+    "No. 6 Flying Training School at Little Rissington",
+    "No. 2 Flying Training School at Brize Norton",
+    "No. 3 Flying Training School at South Cerney",
+    "No. 8 Flying Training School at Montrose",
+    "No. 10 Flying Training School at Tern Hill",
+    "No. 9 Flying Training School at Hullavington",
+    "No. 15 Flying Training School at Lossiemouth"
+   ],
+   "trainer": [
+    "Harvards",
+    "Miles Masters",
+    "Hawker Harts and then Harvards"
+   ],
+   "trade": [
+    "fitter, aero engines",
+    "fitter, airframes",
+    "wireless operator mechanic",
+    "instrument maker"
+   ],
+   "pastime": [
+    "He played rugby for the station when he could and cricket when he could not.",
+    "He had built wireless sets as a boy and still takes them to pieces.",
+    "He rode a second-hand motor cycle far too fast, by his own account.",
+    "He sang in the church choir until his voice broke and has not sung since.",
+    "He sailed a dinghy on the estuary every summer until the war stopped it.",
+    "He kept the scorebook for the village cricket club from the age of twelve.",
+    "He had never been abroad, and had been in an aeroplane exactly once before he joined, five shillings' worth with a flying circus.",
+    "He writes home every Sunday and says very little in the letters."
+   ],
+   "father": [
+    "His father served in the infantry on the Western Front and does not speak of it.",
+    "His father was a railwayman and his mother kept a small shop.",
+    "His father, a schoolmaster, had hoped he would go to university.",
+    "His father was in the Royal Flying Corps as a mechanic in 1917, which is where the idea came from.",
+    "His father is a doctor in general practice; an elder brother is in the Navy.",
+    "His father farmed, and he grew up driving anything with an engine.",
+    "His father works in the shipyard. He is the first of the family to hold a pilot's brevet."
+   ]
+  },
+  "otu": {
+   "Spitfire": [
+    "No. 7 Operational Training Unit at Hawarden",
+    "No. 5 Operational Training Unit at Aston Down"
+   ],
+   "Hurricane": [
+    "No. 6 Operational Training Unit at Sutton Bridge",
+    "No. 5 Operational Training Unit at Aston Down"
+   ]
+  },
+  "routes": [
+   {
+    "id": "rafvr",
+    "who": "nco",
+    "weight": 5,
+    "text": [
+     "Born in {place} and educated at {school}. He left at sixteen and became {job}. {father}",
+     "He joined the Royal Air Force Volunteer Reserve in {joined} as an airman under training, pilot, and learned to fly at weekends and on summer camps with {erfts}, on Tiger Moths and later the Hart. Like every man in the Reserve he was called up on 1 September 1939, two days before war was declared, and spent the first months of it waiting for a course.",
+     "{itw} gave him drill and ground subjects. {sfts} gave him his wings, on {trainer}, and the rank of Sergeant with them. He converted to the {type} at {otu}: a fortnight, a handful of hours on type, and very little firing of the guns. {pastime}"
+    ],
+    "joined": [
+     1937,
+     1939
+    ],
+    "minage": 18
+   },
+   {
+    "id": "halton",
+    "who": "nco",
+    "weight": 2,
+    "text": [
+     "Born in {place}. He sat the examination for an RAF aircraft apprenticeship at fifteen and went to No. 1 School of Technical Training at Halton, passing out three years later as a {trade}. {father}",
+     "He worked on the aeroplanes before he flew them. Recommended for pilot training from the ranks, as a few ex-apprentices were each year, he was accepted in {joined} and sent to {sfts}, where he earned his wings on {trainer}.",
+     "He knows what is under the cowling better than most of the officers and is listened to by the ground crew because of it. He converted to the {type} at {otu}. {pastime}"
+    ],
+    "joined": [
+     1937,
+     1939
+    ],
+    "minage": 20
+   },
+   {
+    "id": "ssc",
+    "who": "officer",
+    "weight": 5,
+    "text": [
+     "Born in {place} and educated at {pubschool}. {father}",
+     "He answered one of the Air Ministry's advertisements for short service commissions in {joined}: four years on the active list and six on the reserve. Ab initio flying was at a civil school under contract, {civschool}, then a fortnight of drill and uniform fitting at the RAF Depot, Uxbridge, where he was gazetted Acting Pilot Officer on probation.",
+     "He took his wings at {sfts} on {trainer}, and was posted to fighters. He converted to the {type} at {otu}. {pastime}"
+    ],
+    "joined": [
+     1936,
+     1939
+    ],
+    "minage": 18
+   },
+   {
+    "id": "cranwell",
+    "who": "officer",
+    "weight": 2,
+    "text": [
+     "Born in {place} and educated at {pubschool}. {father}",
+     "He entered the Royal Air Force College, Cranwell, as a flight cadet in {joined}: a two year course, flying on the Tutor and the Hart, with as much time on the parade ground and the sports field as in the air. He passed out with a permanent commission, one of the last courses to complete the full peacetime syllabus before the College closed to cadets at the outbreak of war.",
+     "A regular officer among men who mostly are not, he is expected to know the book, and does. He converted to the {type} at {otu}. {pastime}"
+    ],
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 18
+   },
+   {
+    "id": "uas",
+    "who": "officer",
+    "weight": 2,
+    "text": [
+     "Born in {place} and educated at {pubschool}, and then at university, where he read for a degree he did not finish. {father}",
+     "He learned to fly with the University Air Squadron on Avro Tutors and was commissioned in the Volunteer Reserve in {joined}. Called up in September 1939, he went through {itw} and then {sfts}, taking his wings on {trainer}.",
+     "He converted to the {type} at {otu}. {pastime}"
+    ],
+    "joined": [
+     1937,
+     1939
+    ],
+    "minage": 20
+   }
+  ],
+  "closing": "He joined {unit} at {base} in {posted} with about {hours} hours in his log book, some {ontype} of them on the {type}."
+ },
+ "lw": {
+  "born": {
+   "nco": [
+    1913,
+    1920
+   ],
+   "officer": [
+    1914,
+    1920
+   ]
+  },
+  "places": [
+   "Hamburg",
+   "Bremen",
+   "Kiel",
+   "Lübeck",
+   "Hannover",
+   "Braunschweig",
+   "Kassel",
+   "Göttingen",
+   "Dortmund",
+   "Essen",
+   "Düsseldorf",
+   "Köln",
+   "Koblenz",
+   "Trier",
+   "Frankfurt am Main",
+   "Wiesbaden",
+   "Mannheim",
+   "Heidelberg",
+   "Karlsruhe",
+   "Stuttgart",
+   "Ulm",
+   "Augsburg",
+   "München",
+   "Rosenheim",
+   "Regensburg",
+   "Nürnberg",
+   "Würzburg",
+   "Bamberg",
+   "Erfurt",
+   "Leipzig",
+   "Dresden",
+   "Chemnitz",
+   "Magdeburg",
+   "Halle an der Saale",
+   "Potsdam",
+   "Berlin-Spandau",
+   "Berlin-Charlottenburg",
+   "Rostock",
+   "Stettin",
+   "Breslau",
+   "Königsberg in Ostpreußen",
+   "Wien",
+   "Graz",
+   "Linz",
+   "Innsbruck",
+   "Salzburg"
+  ],
+  "lists": {
+   "job": [
+    "an apprenticeship as a toolmaker",
+    "an apprenticeship as a motor mechanic",
+    "a commercial apprenticeship in a shipping firm",
+    "an apprenticeship as an electrician",
+    "work as a clerk with the Reichsbahn",
+    "an apprenticeship as a precision mechanic",
+    "work on his father's farm",
+    "an apprenticeship as a joiner"
+   ],
+   "radiojob": [
+    "an apprenticeship as a radio mechanic",
+    "work as a telegraphist with the Reichspost",
+    "an apprenticeship as an electrician",
+    "work in a shop that sold and repaired wireless sets"
+   ],
+   "school": [
+    "the Volksschule and then a trade school",
+    "the Realschule",
+    "the Oberrealschule, which he left with the intermediate certificate"
+   ],
+   "gymnasium": [
+    "the Gymnasium, where he took his Abitur",
+    "the Realgymnasium, where he took his Abitur",
+    "the Oberrealschule, where he took his Abitur"
+   ],
+   "glide": [
+    "on the Wasserkuppe in the Rhön",
+    "at Rossitten on the Kurische Nehrung",
+    "at Grunau in Silesia",
+    "at Hornberg near Schwäbisch Gmünd",
+    "with a gliding group on a hill outside the town",
+    "at Borkenberge in Westphalia"
+   ],
+   "ab": [
+    "the pilot school at Celle",
+    "the pilot school at Salzwedel",
+    "the pilot school at Neuruppin",
+    "the pilot school at Magdeburg",
+    "the pilot school at Kaufbeuren",
+    "the pilot school at Schönwalde near Berlin",
+    "the pilot school at Oschatz in Saxony"
+   ],
+   "lks": [
+    "Luftkriegsschule 1 at Dresden-Klotzsche",
+    "Luftkriegsschule 2 at Berlin-Gatow",
+    "Luftkriegsschule 3 at Wildpark-Werder",
+    "Luftkriegsschule 4 at Fürstenfeldbruck"
+   ],
+   "jfs": [
+    "Jagdfliegerschule 1 at Werneuchen",
+    "Jagdfliegerschule 2 at Schleißheim",
+    "Jagdfliegerschule 5 at Wien-Schwechat"
+   ],
+   "lns": [
+    "the air signals school at Halle an der Saale",
+    "the air signals school at Nordhausen"
+   ],
+   "pastime": [
+    "He skis well and says it is the same thing as flying, which nobody believes.",
+    "He plays the accordion, badly, and is asked to anyway.",
+    "He had never seen the sea until the Gruppe moved to the Channel coast.",
+    "He reads whatever he can find and is teased for it.",
+    "He was a keen footballer and still keeps goal for the Staffel.",
+    "He builds model aeroplanes from whatever wood the carpenters will give him.",
+    "He writes to his mother every week and to a girl in his home town rather less often than she would like."
+   ],
+   "father": [
+    "His father served in the artillery from 1914 to 1918 and came home with a limp.",
+    "His father is a master baker; he was expected to take over the shop.",
+    "His father, a railway official, lost his savings in the inflation of 1923 and the family lived carefully ever after.",
+    "His father was an observer in a two-seater in 1917 and kept the photographs in a drawer.",
+    "His father is a schoolteacher in the town.",
+    "His father farmed a few hectares and did not see the point of aeroplanes.",
+    "His father died when he was small; he was brought up by his mother and an uncle."
+   ],
+   "war": [
+    "He joined the Gruppe in time for the campaign in the West in May and June 1940 and flew over Belgium and northern France.",
+    "He reached the front too late for the fighting in France and has yet to fire his guns at anything but a target.",
+    "He flew in the campaign in the West in May and June 1940, mostly escort work, and came through it without a claim to his name.",
+    "He came to the Gruppe from the replacement pool in June 1940, as the fighting in France ended."
+   ]
+  },
+  "routes": [
+   {
+    "id": "nco109",
+    "who": "nco",
+    "type": "109",
+    "weight": 1,
+    "text": [
+     "Born in {place}. He attended {school}, and then began {job}. {father}",
+     "Powered flying was forbidden to Germany when he was a boy, and like thousands of others he learned to fly in gliders, {glide}, working up through the A, B and C certificates. After his six months in the Reich Labour Service he was called up in {joined}, volunteered for the Luftwaffe and was accepted for aircrew.",
+     "Recruit training with a Fliegerausbildungsregiment came first, then {ab}, where he took the A and B licences on the Focke-Wulf Stieglitz, the Bücker Jungmann and the Arado 66. Selected for fighters, he went to {jfs} and flew the Arado 68 and the early Bf 109 before the E. He came to the front through the Ergänzungsjagdgruppe at Merseburg. {war} {pastime}"
+    ],
+    "joined": [
+     1936,
+     1938
+    ],
+    "minage": 19
+   },
+   {
+    "id": "off109",
+    "who": "officer",
+    "type": "109",
+    "weight": 1,
+    "text": [
+     "Born in {place}. He attended {gymnasium}. {father}",
+     "He learned to fly in gliders as a schoolboy, {glide}, as most of his generation of pilots did when powered flying was still forbidden to Germany. After labour service he entered the Luftwaffe in {joined} as a Fahnenjunker, an officer candidate, and was sent to {lks}: infantry drill, tactics, air law and flying training together, ending in the officer's examination and his pilot's badge.",
+     "He went on to {jfs} for the fighter course and was commissioned Leutnant. {war} {pastime}"
+    ],
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 19
+   },
+   {
+    "id": "nco110",
+    "who": "nco",
+    "type": "110",
+    "weight": 1,
+    "text": [
+     "Born in {place}. He attended {school}, and then began {job}. {father}",
+     "He learned to fly in gliders, {glide}, when powered flying was still forbidden to Germany. After labour service he was called up in {joined} and accepted by the Luftwaffe for aircrew: recruit training, then {ab} for the A and B licences.",
+     "The Zerstörer arm was given its pick of the fighter school output in those years, and he was picked. That meant a longer road than a single-seat man's: the C school for multi-engined aircraft, a blind flying course, and then the Zerstörerschule at Schleißheim, flying the Bf 110 with a wireless operator behind him for the first time. {war} {pastime}"
+    ],
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 19
+   },
+   {
+    "id": "off110",
+    "who": "officer",
+    "type": "110",
+    "weight": 1,
+    "text": [
+     "Born in {place}. He attended {gymnasium}. {father}",
+     "A glider pilot as a schoolboy, {glide}, he entered the Luftwaffe in {joined} as an officer candidate after his labour service and trained at {lks}, leaving with his commission and his pilot's badge.",
+     "He asked for fighters and was given the Zerstörer, which in 1939 was the posting the fighter schools' best pupils were sent to. The C school for multi-engined aircraft and a blind flying course followed, then the Zerstörerschule at Schleißheim and the Bf 110. {war} {pastime}"
+    ],
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 19
+   },
+   {
+    "id": "bordfunker",
+    "who": "crew",
+    "type": "110",
+    "weight": 1,
+    "text": [
+     "Born in {place}. He attended {school}, and then began {radiojob}. {father}",
+     "Called up in {joined} after his labour service, he volunteered for flying duties and was trained as a wireless operator at {lns}: Morse at speed, the FuG 10 set, direction finding, and air gunnery with the MG 15 on a flexible mount.",
+     "He crewed up at the Zerstörerschule at Schleißheim. In a Bf 110 he faces backwards, works the radio, keeps the pilot's tail clear and has one rifle calibre machine gun to do it with. {pastime}"
+    ],
+    "joined": [
+     1936,
+     1939
+    ],
+    "minage": 19
+   }
+  ],
+  "closing": "He flies the {type} with {unit} from {base}.",
+  "closing_crew": "He flies in the back of a {type} with {unit} from {base}."
+ }
+}
