@@ -4431,7 +4431,14 @@ function Invoke-Submit {
     # ADOPTED from a campaign the game already had: bind him to that file
     # so every reader looks at the war he was posted from.
     if (Test-AdoptFits -Pilot $pilot) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
-    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
+    # THE BASELINE COMES ONLY FROM A SAVE HE WAS POSTED INTO. A new man with
+    # no adopted save starts a new campaign through PLAY CAMPAIGN, so nothing
+    # already on the disk is his predecessor's. Taking the newest save's
+    # Log Book here gave a new Zerstoerer pilot yesterday's sortie as his
+    # baseline; his own first sortie, saved under the same file name, then
+    # counted as nought (Patrick, 21 September 2026).
+    $ld0 = $null
+    if ($pilot.Contains('savePath') -and "$($pilot['savePath'])") { $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot) }
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
         $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
@@ -6420,7 +6427,14 @@ function Invoke-GruppeSubmit {
     # ADOPTED from a campaign the game already had: bind him to that file
     # so every reader looks at the war he was posted from.
     if (Test-AdoptFits -Pilot $pilot) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
-    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
+    # THE BASELINE COMES ONLY FROM A SAVE HE WAS POSTED INTO. A new man with
+    # no adopted save starts a new campaign through PLAY CAMPAIGN, so nothing
+    # already on the disk is his predecessor's. Taking the newest save's
+    # Log Book here gave a new Zerstoerer pilot yesterday's sortie as his
+    # baseline; his own first sortie, saved under the same file name, then
+    # counted as nought (Patrick, 21 September 2026).
+    $ld0 = $null
+    if ($pilot.Contains('savePath') -and "$($pilot['savePath'])") { $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot) }
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
         $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
@@ -6609,12 +6623,14 @@ function Show-Flugbuch {
     $warn.BorderThickness = '3,0,0,0'; $warn.CornerRadius = '0,3,3,0'
     $warn.Padding = '16,11'; $warn.Margin = '0,0,0,18'; $warn.HorizontalAlignment = 'Left'; $warn.MaxWidth = 940
     $ws = New-Object Windows.Controls.StackPanel
-    [void]$ws.Children.Add((New-TB -Text 'NOT YET CHECKED AGAINST A GERMAN CAMPAIGN' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    # Sorties were confirmed against a real Luftwaffe save on 21 September
+    # 2026 (Bob_german.bsL: the Log Book table at 101418, one sortie, read
+    # and counted). What no German save has shown yet is a victory, so the
+    # split of claims by British type is the part still unproven.
+    [void]$ws.Children.Add((New-TB -Text 'VICTORIES BY TYPE NOT YET CHECKED' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
     $wt = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
-        'This reads the campaign save the same way the RAF Log Book does, and that part is proved. ' +
-        'What is not is whether the game lays a German pilot out identically: no Luftwaffe save has ' +
-        'been available to check. If the figures below look like nonsense rather than merely empty, ' +
-        'that is why, and it is worth saying so.')
+        'Your Feindfluege are read from the campaign save and have been checked against a real German campaign. ' +
+        'Victories have not been yet: if a claim shows against the wrong British type, it is worth saying so.')
     $wt.Margin = '0,5,0,0'
     [void]$ws.Children.Add($wt)
     $warn.Child = $ws
