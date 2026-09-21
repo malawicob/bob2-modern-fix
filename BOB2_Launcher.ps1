@@ -746,14 +746,14 @@ $xaml = @'
               <StackPanel Orientation="Horizontal">
                 <Viewbox Width="24" Height="24" Margin="0,1,16,0" VerticalAlignment="Center">
                   <Canvas Width="24" Height="24">
-                    <Path Data="{StaticResource IcoWrench}" Fill="{x:Null}" Stroke="#FFE8394F"
+                    <Path Data="{StaticResource IcoWrench}" Fill="{x:Null}" Stroke="#FFD08A2E"
                           StrokeThickness="1.6" StrokeStartLineCap="Round"
                           StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
                   </Canvas>
                 </Viewbox>
                 <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="INSTALL AND REPAIR" Style="{StaticResource NavTitle}" Foreground="#FFE8394F"/>
-                <TextBlock x:Name="SubRepairAlert" Text="attention needed" Style="{StaticResource NavSub}" Foreground="#FFE8394F"/>
+                <TextBlock Text="INSTALL AND REPAIR" Style="{StaticResource NavTitle}" Foreground="#FFD08A2E"/>
+                <TextBlock x:Name="SubRepairAlert" Text="one thing to set right" Style="{StaticResource NavSub}" Foreground="#FFD08A2E"/>
                 </StackPanel>
               </StackPanel>
               </StackPanel>
@@ -1380,8 +1380,9 @@ function Invoke-DriftCheck {
                 $script:CfgRepairOffered = $true
                 $r = Repair-KnownGoodSettings -GameFolder $GameDir
                 if ($r.Ok) {
+                    # quietly: the old file is kept beside it, and the log says so
                     $script:CfgHealthyCache = $true
-                    Show-Note ("The game's graphics settings file was damaged ($($chk.Reason)), which causes the low-resolution picture inside a black border. It has been repaired automatically.`n`n" + $r.Message) 'Graphics settings repaired' 'Information'
+                    try { Add-Content -Path (Join-Path $PSScriptRoot 'BOB2_Launcher.log') -Value ("{0}  settings.cfg repaired at Play ({1}). {2}" -f (Get-Date).ToString('s'), $chk.Reason, $r.Message) } catch { }
                 } else {
                     Show-Note ("The game's graphics settings file is damaged ($($chk.Reason)) but could not be repaired: $($r.Message)") 'Graphics settings damaged' 'Warning'
                 }
@@ -2581,18 +2582,17 @@ function Update-State {
     # its own process, so there is nothing to call back; the only honest
     # answer is to look at the file again. It is a 1,786-byte read on a
     # two-second timer and costs nothing.
-    if (-not $running) {
-        try {
-            $chkNow = Test-SettingsCfgHealthy $GameDir
-            $script:CfgHealthyCache = [bool]$chkNow.Healthy
-        } catch { }
-    }
-    $needsRepair = (-not $w.Ok) -or (-not $script:CfgHealthyCache)
+    #
+    # NO ALARM FOR THE SETTINGS FILE (Patrick, 21 September 2026: a warning
+    # the player cannot act on only worries him). PLAY checks settings.cfg
+    # and quietly puts back a known-good copy if it is really unusable, so
+    # there is nothing for him to do and nothing is said. The one thing
+    # still surfaced is the graphics translator, which he has to repair
+    # himself, and it is said calmly, in amber, as a job rather than a fault.
+    $needsRepair = (-not $w.Ok)
     if ($needsRepair -and -not $running) {
         (C 'BtnRepairAlert').Visibility = 'Visible'
-        (C 'SubRepairAlert').Text = if (-not $w.Ok) {
-            "attention needed — $($w.Name)$(if ($w.Detail) { ": $($w.Detail)" })"
-        } else { 'attention needed — the graphics settings file looks damaged' }
+        (C 'SubRepairAlert').Text = "one thing to set right: $($w.Name)$(if ($w.Detail) { ", $($w.Detail)" })"
     } else {
         (C 'BtnRepairAlert').Visibility = 'Collapsed'
     }
