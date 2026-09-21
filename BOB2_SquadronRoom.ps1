@@ -6766,16 +6766,22 @@ function Get-LwDayReport {
 # quiet campaign says so instead of shouting.
 function Get-LwLead {
     param($Rep, $Pilot)
+    # IN ENGLISH, Patrick's instruction. The masthead and the unit names
+    # stay German because they are names; a headline is there to be read,
+    # and the man reading it reads English.
     if ($Rep.Mine -and [int]$Rep.Mine.Total -gt 0) {
-        return "$($Rep.MineUnit) meldet $([int]$Rep.Mine.Total) Abschuesse"
+        $n = [int]$Rep.Mine.Total
+        return "$($Rep.MineUnit) claims $n $(if ($n -eq 1) { 'victory' } else { 'victories' })"
     }
     if ([int]$Rep.Total -gt 0) {
-        return "Jagdwaffe meldet $([int]$Rep.Total) Abschuesse ueber dem Kanal"
+        $n = [int]$Rep.Total
+        return "Fighter Gruppen claim $n $(if ($n -eq 1) { 'victory' } else { 'victories' }) over the Channel"
     }
     if ([int]$Rep.Launched -gt 0) {
-        return "$([int]$Rep.Launched) Feindfluege geflogen, keine Abschuesse gemeldet"
+        $n = [int]$Rep.Launched
+        return "$n $(if ($n -eq 1) { 'sortie' } else { 'sorties' }) flown, no victories claimed"
     }
-    'Die Gruppen stehen in Bereitschaft'
+    'The Gruppen stand at readiness'
 }
 # Today's report counts as unread until it has been opened. The RAF flag
 # keys on the front page's own date because the papers are dated; there
