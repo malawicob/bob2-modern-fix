@@ -80,3 +80,9 @@ simulated positions (render interpolation); nothing in the game does that.
 - Why smooth=1 shimmered: it moved positions on top of the game's own prediction. It also put its values back at `BlockTick(FALSE)`, before the drawing, so its attitude never reached the screen.
 - The simulation runs on the winmm timer thread (`StaticTimeProc`) whenever the drawing does not hold `BlockTick`, including while objects are drawn.
 - New guard: attitude only. It is written at `BlockTick(TRUE)` and left in place through the drawing. It is put back at the start of every step (only where the field is unchanged), under a critical section, and t = 0 is rewritten after the step. `smooth=1`: other aircraft; `smooth=2`: the player's own too. The log also measures timeGetTime's step, and for aircraft within 3 km how far the velocity prediction misses the true move.
+
+### smooth=1 flight (21 September 2026, 17:05, cockpit view, Hurricane formation close by)
+- Patrick: "smoother but still needs improvement"; the aircraft no longer jerk.
+- Log: the game's own position prediction misses by 1 to 2 cm on about 5.4 m a step (position is fine); timeGetTime has 1 ms steps; nearby aircraft turn up to 6.6 deg in one step, over 1 deg on about 20% of steps.
+- Recording (60 fps, frame differences, FFT in 2 s windows): a 25 Hz beat at 3 to 5 times the background remains wherever aircraft are close. Its map is spread across the whole picture (median screen block about 2 times the background), so it is the camera, i.e. the player's own attitude, which smooth=1 leaves alone.
+- Next: smooth=2 (player included), the same recorded test, then the analysis again (scratchpad motion2.py/heat.py method). Dev left at smooth=1 until then.
