@@ -86,3 +86,8 @@ simulated positions (render interpolation); nothing in the game does that.
 - Log: the game's own position prediction misses by 1 to 2 cm on about 5.4 m a step (position is fine); timeGetTime has 1 ms steps; nearby aircraft turn up to 6.6 deg in one step, over 1 deg on about 20% of steps.
 - Recording (60 fps, frame differences, FFT in 2 s windows): a 25 Hz beat at 3 to 5 times the background remains wherever aircraft are close. Its map is spread across the whole picture (median screen block about 2 times the background), so it is the camera, i.e. the player's own attitude, which smooth=1 leaves alone.
 - Next: smooth=2 (player included), the same recorded test, then the analysis again (scratchpad motion2.py/heat.py method). Dev left at smooth=1 until then.
+
+### smooth=2 flight (21 September 2026, 19:53, cockpit, large formations)
+- Patrick: "a little sluggish when approaching large formations, and a bit jerky". Rejected; dev back to smooth=1.
+- Recording: the 25 Hz beat is not reduced. It is above 2.5 in 58 of 99 windows (smooth=1: 7 of 21) and the median is 2.91 against 1.35, so the player's own attitude was not the source of the beat.
+- Log: near large formations (about 60 aircraft within 3 km) drawing passes fall to 650 to 900 per 5 s, i.e. about 65 to 90 fps, from 200+ in the open. The remaining roughness is most likely frame pacing: an uneven frame rate plus the 40 ms simulation step landing on the drawing thread (BlockTick(FALSE) runs pending steps inline). Next: PresentMon capture near a formation to look for a 40 ms rhythm in frame times.
