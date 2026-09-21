@@ -903,6 +903,17 @@ function Show-Step {
             Set-Content -Path (Join-Path $script:State.GameDir 'BOB2-Win11-Fix.wizard-done') `
                         -Value (Get-Date -Format 's') -Encoding ASCII
         } catch { }
+        # AND in the user's own AppData, which is always writable. A game
+        # installed under Program Files refuses the write above unless this
+        # window runs as administrator, and the try swallowed the refusal:
+        # the wizard said everything was done and the launcher kept PLAY
+        # grey, "not done yet", however often it was run (a forum user,
+        # 21 September 2026). The launcher accepts either marker.
+        try {
+            $ad = Join-Path $env:LOCALAPPDATA 'BOB2-Win11-Fix'
+            if (-not (Test-Path $ad)) { New-Item -ItemType Directory -Path $ad -Force | Out-Null }
+            Add-Content -Path (Join-Path $ad 'wizard-done.txt') -Value ([IO.Path]::GetFullPath($script:State.GameDir).TrimEnd('\')) -Encoding UTF8
+        } catch { }
         return @{ Next = { Return-ToLauncher; $Win.Close() } }
     }
 
