@@ -15,6 +15,34 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.9.3  (2026-09-21)
+--------------------
+  - PLAY CAMPAIGN now also works for a pilot whose campaign is under way:
+    the game opens on the Load Game page with his own save selected and
+    loads it by itself (the crash guard presses the page's own buttons;
+    AUTOSTART.md, mode=load). Before, only a new pilot's first campaign
+    was automatic and every later one landed on the game's main menu.
+  - Leaving a campaign started from the Room brings you back to the Room:
+    the guard presses the game's own Quit when its main menu comes back,
+    and the Room, which now watches the game, comes up by itself.
+  - The first time you come back from the game the Room asks which save
+    is this pilot's campaign. His card shows it (CAMPAIGN SAVE, with a
+    link to change it), and PLAY CAMPAIGN loads it from then on. The list
+    of save files on the log book tab is gone; this replaces it.
+  - The game is given the pilot's name with his unit, "P. Millin, 610 Sqn"
+    (20 characters at most), so its own Log Book shows it. The Room shows
+    his full name everywhere, including his own row on the boards.
+  - A new pilot's sorties are all his: the Room no longer takes an
+    unrelated save's Log Book as his starting point, which made a new
+    pilot's first sortie count as none. The Luftwaffe Log Book is now
+    confirmed read from a real German campaign save.
+  - Only one Squadron Room window: opening it again brings the open one
+    to the front. The orders card describes what PLAY CAMPAIGN now does.
+  - The launcher no longer keeps PLAY grey after the Setup Wizard when the
+    game folder is protected (for example under Program Files): the wizard
+    also records itself in your own AppData, and PLAY opens whenever the
+    install check finds the game correctly patched. Reported on the forum.
+
 v1.9.2  (2026-09-21)
 --------------------
   The first public release since 1.8.4. It carries 1.9.0 and 1.9.1 below

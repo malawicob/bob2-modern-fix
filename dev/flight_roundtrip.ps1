@@ -70,6 +70,7 @@ Set-StateSide 'raf'
 if (-not (Test-Path $script:StateDir)) { New-Item -ItemType Directory -Path $script:StateDir -Force | Out-Null }
 
 $fails = 0
+function Test-SettingsCfgHealthyLocal { param($p) $b=[IO.File]::ReadAllBytes($p); ($b.Length -ge 1770 -and $b.Length -le 2048 -and [Text.Encoding]::ASCII.GetString($b,0,20) -match '^Rowan Savegame: V 0') }
 function Check { param([string]$What, [bool]$Ok, [string]$Saw = '')
     if ($Ok) { "  ok    $What" }
     else { $script:fails++; "  FAIL  $What$(if ($Saw) { "  (saw: $Saw)" })" } }
@@ -363,6 +364,50 @@ try {
     $lp2 = Get-Pilot
     Check 'giving his first name and saving puts it in the untouched story' ("$($lp2.background.story)" -match '^Patrick Millin was born' -and -not [bool]$lp2.background.custom -and "$($lp2.first)" -eq 'Patrick')
     $script:BgDlg = $null
+    "12 asked on the way back which save is his war"
+    Set-StateSide 'raf'
+    $qp = [ordered]@{ pilot='Millin'; first='Patrick'; rank='Sergeant'; status='On strength'; sqn=610; sqcode='DW'; actype='Spitfire I'; base='Biggin Hill'; period='P1'
+                      historical=$false; portrait='pilot01.jpg'; created='1940-07-10'; campaignSorties=0; campaignKills=@(0,0,0,0,0,0,0) }
+    Save-Pilot -Pilot $qp -Shrink
+    Check 'a pilot with no save of his own is asked'            (Test-NeedsSaveQuestion (Get-Pilot))
+    $qw = New-SaveQuestionWindow -Pilot (Get-Pilot) -Since ((Get-Date).AddHours(-1))
+    $rows = @($qw.Content.Child.Children | Where-Object { $_ -is [Windows.Controls.Border] })
+    Check 'the window lists his side''s saves'                  ($rows.Count -ge 1) "$($rows.Count) rows"
+    $ev = New-Object Windows.Input.MouseButtonEventArgs([Windows.Input.Mouse]::PrimaryDevice, 0, [Windows.Input.MouseButton]::Left)
+    $ev.RoutedEvent = [Windows.UIElement]::MouseLeftButtonDownEvent
+    $rows[0].RaiseEvent($ev)
+    Check 'pressing a save chooses it'                          ("$($script:SaveQ.Chosen)" -eq "$($rows[0].Tag)")
+    Set-PilotSave -Path $script:SaveQ.Chosen; $script:SaveQ = $null
+    $qp2 = Get-Pilot
+    Check 'and it is his from then on'                          ("$($qp2.savePath)" -eq "$($rows[0].Tag)" -and [bool]$qp2.saveAsked -and -not (Test-NeedsSaveQuestion $qp2))
+    "13 PLAY CAMPAIGN loads his own war"
+    $cfgSrc = 'D:\Battle of Britain II_Latest_test\SAVEGAME\settings.cfg'
+    $cfg = Join-Path $GameDir 'SAVEGAME\settings.cfg'
+    if (Test-Path $cfgSrc) {
+        Copy-Item $cfgSrc $cfg -Force
+        $mine = Join-Path $GameDir 'SAVEGAME\Millin_war.bsR'
+        Copy-Item $save $mine -Force
+        Check 'the game is told his save is the last one'       (Set-GameLastSave -SavePath $mine)
+        $cb = [IO.File]::ReadAllBytes($cfg)
+        $nm = [Text.Encoding]::GetEncoding(1252).GetString($cb, 1766, $cb.Length - 1766).Split([char]0)
+        Check 'settings.cfg names it first, the rest kept'       ($nm[0] -eq 'Millin_war.bsR' -and $nm[1] -eq 'Bob.cam' -and $nm[2] -eq 'Bob.prf') ($nm -join '|')
+        Check 'and the fixed part is untouched'                  ((Test-SettingsCfgHealthyLocal $cfg) -and ([BitConverter]::ToInt32($cb, 1416) -eq [BitConverter]::ToInt32([IO.File]::ReadAllBytes($cfgSrc), 1416)))
+        [void](Write-AutostartRequest -Pilot (Get-Pilot) -LoadSave $mine)
+        $rq = Get-Content (Join-Path (Get-AutostartRoot) 'autostart.txt') -Raw
+        Check 'the request asks the guard to load it'           ($rq -match 'mode=load' -and $rq -match 'save=Millin_war\.bsR' -and $rq -match 'side=0') $rq
+    } else { '  (no dev settings.cfg to copy, load checks skipped)' }
+    "14 the man's full name"
+    $nm1 = [pscustomobject]@{ pilot='Millin'; first='Patrick'; sqn=610 }
+    $nm3 = [pscustomobject]@{ pilot='Millin'; first='Patrick'; side='lw'; unit='III./ZG 26' }
+    $nm2 = [pscustomobject]@{ pilot='Wolfenbuettel-Hohenstein'; first='Maximilian'; sqn=610 }
+    Check 'the game is given P. Millin, 610 Sqn'              ((Get-GameName $nm1) -eq 'P. Millin, 610 Sqn') (Get-GameName $nm1)
+    Check 'a German pilot fits in 20 without the comma'        ((Get-GameName $nm3) -eq 'P. Millin III./ZG 26') (Get-GameName $nm3)
+    Check 'a long surname falls back and stays within 20'      ((Get-GameName $nm2).Length -le 20) (Get-GameName $nm2)
+    Check 'his older saves (surname) are still his'            (Test-SameMan -Pilot $nm1 -Name 'Millin')
+    Check 'and his new ones'                                  ((Test-SameMan -Pilot $nm1 -Name 'P. Millin, 610 Sqn') -and (Test-SameMan -Pilot $nm1 -Name 'Patrick Millin'))
+    Check 'but not another man''s'                             (-not (Test-SameMan -Pilot $nm1 -Name 'Richard Hughes'))
+    [void](Write-AutostartRequest -Pilot ([pscustomobject]@{ pilot='Millin'; first='Patrick'; period='P1'; sqn=610; cmode='pilot' }))
+    Check 'PLAY CAMPAIGN asks for P. Millin, 610 Sqn'         ((Get-Content (Join-Path (Get-AutostartRoot) 'autostart.txt') -Raw) -match 'name=P\. Millin, 610 Sqn')
     ''
     '--- samples, to be read by a person ---'
     foreach ($c in $cases) { $b = New-PilotBackground -Man $c -Pilot $c; ''; "[$($c.rank), $($c.actype)]  born $($b.born), $($b.place)"; $b.story }

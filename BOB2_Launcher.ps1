@@ -37,7 +37,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$FixVersion = '1.9.2'
+$FixVersion = '1.9.3'
 
 # $PSScriptRoot must be read at top level - inside a function it is the
 # function's own scope and comes back empty. This has bitten this project
@@ -1504,7 +1504,16 @@ function Test-WizardDone {
     # Written by the wizard when it reaches its last screen. Distinct from
     # BOB2-Win11-Fix.setup-done, which only records that we OFFERED setup -
     # declining that is not the same as having been through it.
-    Test-Path (Join-Path $GameDir 'BOB2-Win11-Fix.wizard-done')
+    if (Test-Path (Join-Path $GameDir 'BOB2-Win11-Fix.wizard-done')) { return $true }
+    # the second marker, in AppData, for a game folder the wizard could not write to
+    try {
+        $f = Join-Path $env:LOCALAPPDATA 'BOB2-Win11-Fix\wizard-done.txt'
+        if (Test-Path $f) {
+            $me = [IO.Path]::GetFullPath($GameDir).TrimEnd('\')
+            foreach ($l in @(Get-Content $f -Encoding UTF8)) { if ("$l".Trim().TrimEnd('\') -ieq $me) { return $true } }
+        }
+    } catch { }
+    $false
 }
 
 function Start-Wizard {
@@ -2496,7 +2505,10 @@ function Update-State {
     # PLAY stays shut until the wizard has been through once. Everything it
     # sets - the graphics translator, the menu size, the frame-rate floor -
     # is what makes the game start and stay started.
-    (C 'BtnPlay').IsEnabled     = (-not $running) -and $wizDone
+    # ...or whenever the install check finds the game correctly patched. A
+    # player who has everything working must never be locked out of his
+    # game by a marker file (see Test-WizardDone).
+    (C 'BtnPlay').IsEnabled     = (-not $running) -and ($wizDone -or $w.Ok)
     (C 'BtnGameSettings').IsEnabled = -not $running
     (C 'BtnSetup').IsEnabled    = -not $running
     (C 'BtnWrapper').IsEnabled  = -not $running
