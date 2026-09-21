@@ -7548,7 +7548,7 @@ function Show-ReadyRoom {
     # between the photograph and the counters
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,-22'
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
-    $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
+    $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,44,0'; $d.VerticalAlignment = 'Top'
     [void]$d.Children.Add((New-TB -Text (Get-FullName $Pilot) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
     $appt = Get-Appointment -Pilot $Pilot -Career $career
     $line = "$($Pilot.rank)   $([char]0x2022)   $appt   $([char]0x2022)   $($Pilot.staffel). Staffel"
@@ -7590,7 +7590,7 @@ function Show-ReadyRoom {
         $crewIx++
         $cc = Get-CrewCareer -Member $m -Pilot $Pilot -Sorties ([int]$career.sorties) -Hours ([double]$career.hours)
         [void]$hero.Children.Add((New-Frame -Pilot $m -CrewIndex $crewIx))
-        $cd = New-Object Windows.Controls.StackPanel; $cd.Margin = '30,4,0,0'; $cd.VerticalAlignment = 'Top'
+        $cd = New-Object Windows.Controls.StackPanel; $cd.Margin = '30,4,44,0'; $cd.VerticalAlignment = 'Top'
         [void]$cd.Children.Add((New-TB -Text "$($m.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
         $cl = "$($cc.rank)   $([char]0x2022)   $(Get-CrewAppointment -Member $m -Career $cc)"
         $clt = New-TB -Text $cl -Family $CondFam -Size 15 -Colour '#9FB0B8'; $clt.Margin = '0,7,0,0'
