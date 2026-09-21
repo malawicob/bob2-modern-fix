@@ -746,6 +746,32 @@ if ($rp) {
         if (Test-Path $bat) { Start-Process -FilePath $bat -WorkingDirectory $GameDir }
         else { Start-Process -FilePath (Join-Path $GameDir 'Bob.exe') -WorkingDirectory $GameDir }
         $Win.WindowState = 'Minimized'
+        # COME BACK BY ITSELF when the game closes. The Room used to stay down
+        # on the taskbar until it was clicked, so a player who quit the game
+        # was left at the desktop wondering where it had gone (Patrick, 21
+        # September 2026). Bringing the window up fires Activated, which
+        # records the flight exactly as a click would.
+        $script:GameSeen = $false
+        $script:GameWaitStart = Get-Date
+        if ($script:GameWatch) { $script:GameWatch.Stop() }
+        $script:GameWatch = New-Object Windows.Threading.DispatcherTimer
+        $script:GameWatch.Interval = [TimeSpan]::FromSeconds(2)
+        $script:GameWatch.Add_Tick({
+            $up = Test-GameRunning
+            if ($up) { $script:GameSeen = $true; return }
+            # never started (declined, blocked): stop watching after two minutes
+            if (-not $script:GameSeen) {
+                if (((Get-Date) - $script:GameWaitStart).TotalSeconds -gt 120) { $script:GameWatch.Stop() }
+                return
+            }
+            $script:GameWatch.Stop()
+            try {
+                $Win.WindowState = 'Normal'
+                $Win.Topmost = $true; $Win.Topmost = $false
+                [void]$Win.Activate()
+            } catch { }
+        })
+        $script:GameWatch.Start()
     })
     $rp.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') })
     $rp.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') })
