@@ -4940,6 +4940,141 @@ function Show-Map {
     }
 }
 # =====================================================================
+#  THE DAYBOOK: what actually happened yesterday, on both papers
+# =====================================================================
+#  Patrick asked for more in the papers, historically correct and yet
+#  like a paper. squadronroom/daybook.json is one record for each day of
+#  the Battle, 10 July to 31 October 1940, researched from the published
+#  day by day histories (dev/daybook/*.json keeps the sources for every
+#  date): the weather, what happened in the air, the figures Fighter
+#  Command claimed that evening beside what the records showed after
+#  the war, and the other news a British or a German reader would have
+#  found in his paper that morning.
+#
+#  A morning paper prints YESTERDAY, so the page for a campaign date
+#  carries the record of the day before. And it is labelled as the record
+#  of 1940 every time, because the player's own campaign is not 1940: his
+#  squadron may have had a quiet day on the real 15 September. The
+#  campaign's own figures stay where they were, in their own column.
+#
+#  A figure nobody could source is absent, never estimated.
+$DaybookPath = Join-Path $ModDir 'daybook.json'
+function Get-Daybook {
+    if ($null -ne $script:Daybook) { return $script:Daybook }
+    $t = @{}
+    if (Test-Path $DaybookPath) {
+        try {
+            $j = @(Get-Content $DaybookPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+            while ($j.Count -eq 1 -and ($j[0] -is [System.Array])) { $j = $j[0] }
+            foreach ($e in $j) { if ("$($e.date)") { $t["$($e.date)"] = $e } }
+        } catch { }
+    }
+    $script:Daybook = $t
+    $t
+}
+function Get-DaybookFor {
+    param($Date)
+    if (-not $Date) { return $null }
+    $k = $Date.AddDays(-1).ToString('yyyy-MM-dd')
+    $b = Get-Daybook
+    if ($b.ContainsKey($k)) { return $b[$k] }
+    $null
+}
+# The band under the two columns. -Side 'raf' prints the home news and the
+# Air Ministry's figures as a British paper did; 'lw' prints the items a
+# German reader had. Both print the later count, labelled as later.
+function Add-DaybookBand {
+    param($Col, [string]$Side, $Date)
+    $d = Get-DaybookFor $Date
+    if (-not $d) { return $false }
+    $ink = '#1C1810'; $soft = '#4A4436'; $brass = '#7A5E2E'
+    $when = [datetime]::ParseExact("$($d.date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    $hd = New-Object Windows.Controls.Grid; $hd.Margin = '0,14,0,6'
+    foreach ($i in 0, 1) { $cd = New-Object Windows.Controls.ColumnDefinition; $cd.Width = New-Object Windows.GridLength(1, ([Windows.GridUnitType]::Star)); [void]$hd.ColumnDefinitions.Add($cd) }
+    $h1 = New-TB -Text ('YESTERDAY, ' + $when.ToString('dddd d MMMM', [Globalization.CultureInfo]::InvariantCulture).ToUpper()) -Family $CondFam -Size 12 -Colour $brass -Bold
+    $h2 = New-TB -Text 'FROM THE RECORD OF 1940, NOT FROM YOUR CAMPAIGN' -Family $CondFam -Size 11 -Colour '#6B6250' -Bold
+    $h2.HorizontalAlignment = 'Right'
+    [Windows.Controls.Grid]::SetColumn($h1, 0); [Windows.Controls.Grid]::SetColumn($h2, 1)
+    [void]$hd.Children.Add($h1); [void]$hd.Children.Add($h2)
+    [void]$Col.Children.Add($hd)
+    [void]$Col.Children.Add((New-Rule $brass 1))
+
+    $g = New-Object Windows.Controls.Grid; $g.Margin = '0,10,0,12'
+    foreach ($wd in @(1.55, 0, 1.0, 0, 1.25)) {
+        $cd = New-Object Windows.Controls.ColumnDefinition
+        $cd.Width = if ($wd -eq 0) { New-Object Windows.GridLength(24) } else { New-Object Windows.GridLength($wd, ([Windows.GridUnitType]::Star)) }
+        [void]$g.ColumnDefinitions.Add($cd)
+    }
+    foreach ($ci in 1, 3) {
+        $vr = New-Object Windows.Controls.Border; $vr.Width = 1; $vr.Background = B '#3A3324'; $vr.HorizontalAlignment = 'Center'
+        [Windows.Controls.Grid]::SetColumn($vr, $ci); [void]$g.Children.Add($vr)
+    }
+    $sub = { param([string]$T) $x = New-TB -Text $T -Family $CondFam -Size 11.5 -Colour $brass -Bold; $x.Margin = '0,0,0,5'; $x }
+    $para = { param([string]$T, [double]$Size = 14) $x = New-TB -Wrap -Text $T -Family 'Georgia, Cambria, serif' -Size $Size -Colour '#2A2620'; $x.LineHeight = $Size + 7.5; $x }
+
+    # --- the air war ---
+    $a = New-Object Windows.Controls.StackPanel
+    [void]$a.Children.Add((& $sub 'THE AIR WAR'))
+    if ("$($d.air)") { $p = & $para "$($d.air)"; $p.TextAlignment = 'Justify'; [void]$a.Children.Add($p) }
+    if ("$($d.weather)") {
+        $wx = & $para ("Weather: " + "$($d.weather)") 12.5
+        $wx.FontStyle = 'Italic'; $wx.Foreground = B $soft; $wx.Margin = '0,8,0,0'
+        [void]$a.Children.Add($wx)
+    }
+    [Windows.Controls.Grid]::SetColumn($a, 0); [void]$g.Children.Add($a)
+
+    # --- the figures: what was said then, and what was counted afterwards ---
+    $f = New-Object Windows.Controls.StackPanel
+    $has = { param($v) ($null -ne $v) -and ("$v" -ne '') }
+    $fig = {
+        param([string]$Big, [string]$Small)
+        $s = New-Object Windows.Controls.StackPanel; $s.Margin = '0,0,0,9'
+        [void]$s.Children.Add((New-TB -Text $Big -Family 'Georgia, serif' -Size 19 -Colour $ink -Bold -Wrap))
+        [void]$s.Children.Add((New-TB -Text $Small -Family $CondFam -Size 11 -Colour '#6B6250' -Bold -Wrap))
+        $s
+    }
+    if ($Side -eq 'raf') {
+        [void]$f.Children.Add((& $sub 'CLAIMED AT THE TIME'))
+        $any = $false
+        if (& $has $d.raf_claimed) { [void]$f.Children.Add((& $fig "$([int]$d.raf_claimed) raiders" 'claimed destroyed')); $any = $true }
+        if (& $has $d.raf_lost_announced) { [void]$f.Children.Add((& $fig "$([int]$d.raf_lost_announced) of our fighters" 'announced lost')); $any = $true }
+        if (-not $any) { [void]$f.Children.Add((& $para 'No figures were found for this day.' 12.5)) }
+    }
+    else {
+        [void]$f.Children.Add((& $sub 'LONDON SAID'))
+        if (& $has $d.raf_claimed) { [void]$f.Children.Add((& $fig "$([int]$d.raf_claimed) German aircraft" 'claimed by Fighter Command that night')) }
+        else { [void]$f.Children.Add((& $para 'No British figure was found for this day.' 12.5)) }
+    }
+    if ((& $has $d.lw_lost_actual) -or (& $has $d.raf_lost_actual)) {
+        $lt = & $sub 'THE RECORDS, AFTER THE WAR'; $lt.Margin = '0,6,0,5'
+        [void]$f.Children.Add($lt)
+        $bits = @()
+        if (& $has $d.lw_lost_actual) { $bits += "$([int]$d.lw_lost_actual) German aircraft lost" }
+        if (& $has $d.raf_lost_actual) { $bits += "$([int]$d.raf_lost_actual) British" }
+        $lr = & $para (($bits -join ', ') + '. Both sides claimed more than they shot down.') 12.5
+        $lr.Foreground = B $soft
+        [void]$f.Children.Add($lr)
+    }
+    [Windows.Controls.Grid]::SetColumn($f, 2); [void]$g.Children.Add($f)
+
+    # --- the rest of the paper ---
+    $n = New-Object Windows.Controls.StackPanel
+    $items = if ($Side -eq 'raf') { @($d.home) } else { @($d.reich) }
+    [void]$n.Children.Add((& $sub $(if ($Side -eq 'raf') { 'OTHER NEWS' } else { 'ELSEWHERE' })))
+    $shown = 0
+    foreach ($it in $items) {
+        if (-not "$it") { continue }
+        $x = & $para "$it" 13.5; $x.Margin = '0,0,0,9'
+        [void]$n.Children.Add($x); $shown++
+    }
+    if (-not $shown) { [void]$n.Children.Add((& $para 'Nothing further.' 12.5)) }
+    [Windows.Controls.Grid]::SetColumn($n, 4); [void]$g.Children.Add($n)
+
+    [void]$Col.Children.Add($g)
+    $true
+}
+
+# =====================================================================
 #  The Morning Bulletin: the day's paper, from the real 1940 cables
 # =====================================================================
 $PaperPath = Join-Path $ModDir 'paper.json'
@@ -5145,6 +5280,7 @@ function Show-Paper {
     [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
 
     [void]$col.Children.Add($bodyG)
+    [void](Add-DaybookBand -Col $col -Side 'raf' -Date $script:CampaignDate)
     [void]$col.Children.Add((New-Rule '#1A1712' 2))
     $paper.Child = $col
     [void]$script:Stage.Children.Add($paper)
@@ -7230,6 +7366,7 @@ function Show-Morgenmeldung {
     [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
 
     [void]$col.Children.Add($bodyG)
+    [void](Add-DaybookBand -Col $col -Side 'lw' -Date $script:CampaignDate)
     [void]$col.Children.Add((New-Rule '#1A1712' 2))
     $paper.Child = $col
     [void]$script:Stage.Children.Add($paper)

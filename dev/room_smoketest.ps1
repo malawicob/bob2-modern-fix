@@ -191,6 +191,18 @@ try {
         $fails += 'no Bf 110 Gruppe in the order of battle to test with'
     }
 
+    # THE DAYBOOK BAND on both papers: the record of the day before, for every
+    # day of the Battle, drawn without a campaign save to take the date from.
+    foreach ($sd in 'raf', 'lw') {
+        $drawn = 0; $none = @()
+        for ($dd = [datetime]'1940-07-11'; $dd -le [datetime]'1940-11-01'; $dd = $dd.AddDays(1)) {
+            $holder = New-Object Windows.Controls.StackPanel
+            try { if (Add-DaybookBand -Col $holder -Side $sd -Date $dd) { $drawn++ } else { $none += $dd.ToString('d MMM') } }
+            catch { $fails += "daybook $sd $($dd.ToString('yyyy-MM-dd')) : $($_.Exception.Message)" }
+        }
+        "    daybook band, $sd : drew $drawn of 114 mornings"
+        if ($drawn -lt 114) { $fails += "daybook $sd : no record for $(($none | Select-Object -First 5) -join ', ')" }
+    }
     # Every tab on the German side, the way the RAF's four are swept
     # above. The Morgenmeldung shipped only because it was added by hand
     # to this list; a tab that nothing builds is a tab nobody finds broken

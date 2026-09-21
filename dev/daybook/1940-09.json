@@ -1,0 +1,700 @@
+[
+ {
+  "date": "1940-09-01",
+  "weather": "Fair with patches of cloud in the morning, clearing in the afternoon.",
+  "air": "The Luftwaffe made four main attacks on Fighter Command airfields in Kent and the Thames Estuary. Biggin Hill was hit again and its operations room wrecked, Kenley and Detling were damaged and Tilbury docks were bombed. After dark Liverpool was raided again, with smaller raids on South Wales and the Midlands.",
+  "raf_claimed": 25,
+  "raf_lost_announced": 15,
+  "lw_lost_actual": 16,
+  "raf_lost_actual": 13,
+  "home": [
+   "Romania ceded Northern Transylvania to Hungary under the Vienna Award of 30 August, arbitrated by Germany and Italy.",
+   "Liverpool was bombed again overnight, continuing the run of night raids on Merseyside that began on 28 August."
+  ],
+  "reich": [
+   "The Second Vienna Award of 30 August, arbitrated by Germany and Italy, transferred Northern Transylvania from Romania to Hungary.",
+   "U-32 torpedoed and damaged the British cruiser Fiji north west of Ireland on 1 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=1",
+   "https://battleofbritain1940.com/entry/sunday-1-september-1940/",
+   "https://historydiaries.blog/2025/09/01/world-war-ii-diary-sunday-september-1-1940/",
+   "https://en.wikipedia.org/wiki/Timeline_of_the_United_Kingdom_home_front_during_World_War_II"
+  ]
+ },
+ {
+  "date": "1940-09-02",
+  "weather": "Fine and warm after early morning mist and fog patches.",
+  "air": "Successive waves attacked airfields in Kent and Essex, among them Eastchurch, Detling, Hornchurch, North Weald, Biggin Hill and Gravesend, and the Short Brothers works at Rochester was bombed. At night scattered raiders reached Liverpool, the Midlands and South Wales, where Swansea was hit hard.",
+  "raf_claimed": 41,
+  "raf_lost_announced": 20,
+  "lw_lost_actual": 37,
+  "raf_lost_actual": 14,
+  "home": [
+   "Britain and the United States exchanged notes in Washington on 2 September giving Britain 50 old destroyers in return for leases on Atlantic bases."
+  ],
+  "reich": [
+   "Göring met his fighter commanders in France on 2 September to discuss bomber escort and losses.",
+   "U-46 and U-47 sank the steamers Thornlea and Ville de Mons in the Atlantic approaches on 2 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=2",
+   "https://battleofbritain1940.com/entry/monday-2-september-1940/",
+   "https://historydiaries.blog/2025/09/02/world-war-ii-diary-monday-september-2-1940/",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-03",
+  "weather": "Fine and warm in the south with haze in the Channel and Straits. Cloud and drizzle in the north.",
+  "air": "A morning attack by Do 17s with Bf 110 and Bf 109 escort struck North Weald, where more than 150 bombs fell, and Hornchurch and Debden were also targets. A smaller raid followed in the early afternoon. Pilot Officer Richard Hillary of 603 Squadron was shot down and badly burned. At night Liverpool was bombed again, with raids on South Wales and Avonmouth.",
+  "raf_claimed": 25,
+  "raf_lost_announced": 15,
+  "lw_lost_actual": 20,
+  "raf_lost_actual": 15,
+  "home": [
+   "Tuesday 3 September was the first anniversary of Britain's declaration of war on Germany.",
+   "President Roosevelt told Congress on 3 September of the transfer of 50 destroyers to Britain in exchange for base leases."
+  ],
+  "reich": [
+   "An OKW directive of 3 September set 20 September as the earliest sailing date and 21 September as the landing day for Operation Sea Lion.",
+   "Vichy France ordered on 3 September the internment of persons judged a danger to national security."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=3",
+   "https://battleofbritain1940.com/entry/tuesday-3-september-1940/",
+   "https://historydiaries.blog/2025/09/03/world-war-ii-diary-tuesday-september-3-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-04",
+  "weather": "Fine and warm with haze in the Channel and Straits. Rain and strong winds in the north.",
+  "air": "Two main attacks crossed Kent and the Thames Estuary towards the fighter airfields. At about 13:30 Bf 110 fighter bombers bombed the Vickers works at Brooklands, killing more than 80 workers and halting Wellington production for several days. At night Liverpool, Bristol, South Wales and Tyneside were raided.",
+  "raf_claimed": 52,
+  "raf_lost_announced": 17,
+  "lw_lost_actual": 28,
+  "raf_lost_actual": 17,
+  "home": [
+   "German motor torpedo boats sank several colliers from an east coast convoy off Norfolk on the night of 4 September.",
+   "King Carol of Romania asked General Ion Antonescu on 4 September to form a government."
+  ],
+  "reich": [
+   "Hitler spoke at the Berlin Sportpalast on 4 September, opening the winter relief campaign and threatening heavy reprisal raids on British cities.",
+   "Motor torpedo boats attacked convoy FS 271 off the Norfolk coast and sank several steamers."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=4",
+   "https://battleofbritain1940.com/entry/wednesday-4-september-1940/",
+   "https://historydiaries.blog/2025/09/04/world-war-ii-diary-wednesday-september-4-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-05",
+  "weather": "Fine and warm again, with cloud building later.",
+  "air": "A morning raid of about 70 aircraft crossed at Dungeness and Biggin Hill was damaged again. In the afternoon Ju 88s and He 111s under heavy Bf 109 escort bombed the oil depot at Thameshaven, starting fires visible from London. 303 (Polish) Squadron was among the units engaged. At night raids reached London, Kent, Essex, Liverpool and North Wales.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 27,
+  "raf_lost_actual": 20,
+  "home": [
+   "Churchill told the Commons on 5 September that 1,075 civilians were killed in air raids during August, and widened compensation for bomb damage.",
+   "He also confirmed to the House the agreement with the United States for the transfer of 50 destroyers."
+  ],
+  "reich": [
+   "King Carol of Romania granted General Antonescu full powers on 5 September.",
+   "Hungarian troops began entering Northern Transylvania on 5 September under the Vienna Award."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/thursday-5-september-1940/",
+   "https://historydiaries.blog/2025/09/05/world-war-ii-diary-thursday-september-5-1940/",
+   "https://api.parliament.uk/historic-hansard/commons/1940/sep/05/war-situation",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-06",
+  "weather": "Fine but cooler, with haze in the Straits and the Thames Estuary.",
+  "air": "Three main attacks crossed Kent and the Thames Estuary towards Biggin Hill, North Weald, Hornchurch and the oil tanks at Thameshaven. 303 (Polish) Squadron lost several Hurricanes in the morning fight. After dark bombs fell on the London docks area, West Ham, Woolwich and Southwark.",
+  "raf_claimed": 44,
+  "raf_lost_announced": 22,
+  "lw_lost_actual": 33,
+  "raf_lost_actual": 20,
+  "home": [
+   "King Carol II of Romania abdicated on 6 September in favour of his son Michael, with General Antonescu holding power.",
+   "The first eight American destroyers reached Halifax, Nova Scotia, on 6 September for handing over to the Royal Navy.",
+   "The King and Queen visited Fighter Command headquarters at Bentley Priory on 6 September."
+  ],
+  "reich": [
+   "King Carol II of Romania abdicated on 6 September. His son Michael succeeded him and General Antonescu took control of the government."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=6",
+   "https://battleofbritain1940.com/entry/friday-6-september-1940/",
+   "https://historydiaries.blog/2025/09/06/world-war-ii-diary-friday-september-6-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-07",
+  "weather": "Fair with some haze.",
+  "air": "After a morning raid on Hawkinge and Dover, about 350 aircraft flew up the Thames late in the afternoon and bombed the London docks, Woolwich Arsenal, Beckton gasworks, West Ham and Thameshaven. Night bombers guided by the fires attacked the East End until dawn. More than 400 Londoners were killed and over 1,300 seriously injured.",
+  "raf_claimed": 74,
+  "raf_lost_announced": 27,
+  "lw_lost_actual": 41,
+  "raf_lost_actual": 25,
+  "home": [
+   "GHQ Home Forces issued the code word Cromwell on the evening of 7 September, bringing troops to immediate readiness for invasion.",
+   "Bulgaria and Romania signed the Treaty of Craiova on 7 September, returning Southern Dobruja to Bulgaria."
+  ],
+  "reich": [
+   "Göring, on the Channel coast, announced on 7 September that he had taken personal command of the air attacks on England.",
+   "Bulgaria and Romania signed the Treaty of Craiova on 7 September, returning Southern Dobruja to Bulgaria.",
+   "U-47 sank three ships of convoy SC 2 in the North Atlantic on 7 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=7",
+   "https://battleofbritain1940.com/entry/saturday-7-september-1940/",
+   "https://historydiaries.blog/2025/09/07/world-war-ii-diary-saturday-september-7-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-08",
+  "weather": "Fair early and in the evening, cloudy for the rest of the day.",
+  "air": "Daylight activity was slight. About 20 Do 17s with Bf 109 escort crossed near Deal before midday and were intercepted, their bombs falling across Kent, including West Malling and Detling. From about 20:00 until dawn some 250 bombers attacked London again, hitting the docks, railway termini and hospitals. About 400 civilians were killed.",
+  "raf_claimed": 7,
+  "raf_lost_announced": 4,
+  "lw_lost_actual": 16,
+  "raf_lost_actual": 5,
+  "home": [
+   "A National Day of Prayer was observed on Sunday 8 September, with the King and Queen at the service in Westminster Abbey.",
+   "Church bells were rung in some districts during the night of 7 September in the mistaken belief that invasion had begun."
+  ],
+  "reich": [
+   "In Vichy France, Daladier, Reynaud and General Gamelin were arrested and interned on 7 September.",
+   "Marshal Graziani agreed on 8 September to open the Italian offensive from Libya into Egypt."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=8",
+   "https://battleofbritain1940.com/entry/sunday-8-september-1940/",
+   "https://historydiaries.blog/2025/09/08/world-war-ii-diary-sunday-september-8-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://www.britishpathe.com/asset/47494/"
+  ]
+ },
+ {
+  "date": "1940-09-09",
+  "weather": "Scattered showers, thundery in the east. Fair over the Channel.",
+  "air": "In the late afternoon about 300 aircraft headed for London, the Thames Estuary and the aircraft factories south west of the capital. They were met over Kent and Surrey, and most bombers dropped their loads short of their targets. The Duxford wing was engaged. At night London was the main target, with fires in the City around St Paul's.",
+  "raf_claimed": 52,
+  "raf_lost_announced": 20,
+  "lw_lost_actual": 30,
+  "raf_lost_actual": 17,
+  "home": [
+   "Italian aircraft bombed Tel Aviv on 9 September, killing more than 100 people.",
+   "The first American destroyers were taken over by the Royal Navy at Halifax on 9 September.",
+   "The King toured bombed districts of the East End on 9 September."
+  ],
+  "reich": [
+   "Italian aircraft bombed Tel Aviv in Palestine on 9 September.",
+   "U-47 and U-28 sank further ships from convoy SC 2 in the North Atlantic."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=9",
+   "https://battleofbritain1940.com/entry/monday-9-september-1940/",
+   "https://historydiaries.blog/2025/09/09/world-war-ii-diary-monday-september-9-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-10",
+  "weather": "Generally cloudy with some rain.",
+  "air": "Cloud and rain limited operations to single aircraft raids. Tangmere, West Malling and Poling were attacked, and a Do 17 of KG 76 was shot down over Sussex by Spitfires of 72 and 92 Squadrons. At night more than 150 bombers attacked London, starting large fires at St Katharine Docks, with lesser raids on Merseyside and South Wales.",
+  "raf_claimed": 2,
+  "raf_lost_announced": 1,
+  "lw_lost_actual": 13,
+  "raf_lost_actual": null,
+  "home": [
+   "A delayed action bomb that had fallen at Buckingham Palace exploded on 10 September and damaged the building."
+  ],
+  "reich": [
+   "Italy formed the Corpo Aereo Italiano on 10 September to take part in the air campaign against Britain.",
+   "Hitler deferred his decision on Operation Sea Lion on 10 September and set 14 September for the next review."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=10",
+   "https://battleofbritain1940.com/entry/tuesday-10-september-1940/",
+   "https://historydiaries.blog/2025/09/10/world-war-ii-diary-tuesday-september-10-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-11",
+  "weather": "Mainly fine with local showers. Cloud in the Channel and the Thames Estuary.",
+  "air": "In mid afternoon about 250 aircraft crossed Kent and some 30 reached central London, bombing the docks, Woolwich and Lewisham. At the same time a raid on the Portsmouth and Southampton area hit the Cunliffe Owen works at Eastleigh, killing about 50. Both sides lost about the same number of aircraft. London and Merseyside were bombed at night.",
+  "raf_claimed": 89,
+  "raf_lost_announced": 28,
+  "lw_lost_actual": 29,
+  "raf_lost_actual": 29,
+  "home": [
+   "Churchill broadcast on the evening of 11 September, warning that an invasion attempt might come soon and calling the coming week critical."
+  ],
+  "reich": [
+   "With the decision on Operation Sea Lion put off until 14 September, the earliest possible landing date moved to 24 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=11",
+   "https://battleofbritain1940.com/entry/wednesday-11-september-1940/",
+   "https://historydiaries.blog/2025/09/11/world-war-ii-diary-wednesday-september-11-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-12",
+  "weather": "Unsettled, with rain in most districts.",
+  "air": "Rain kept activity to reconnaissance and single raiders. Bombs fell at Harrogate, Hastings and around south London, and one raider was shot down. Wing Commander J. S. Dewar was lost on a flight to Tangmere. The night raid on London was much lighter, by about 50 bombers. A large delayed action bomb lodged close to St Paul's Cathedral.",
+  "raf_claimed": 3,
+  "raf_lost_announced": 0,
+  "lw_lost_actual": 7,
+  "raf_lost_actual": 1,
+  "home": [
+   "Royal Engineers began digging out a large unexploded bomb buried close to St Paul's Cathedral.",
+   "RAF bombers attacked the invasion barges gathered in the Channel ports on 12 September."
+  ],
+  "reich": [
+   "Hungarian forces were completing the occupation of Northern Transylvania, begun on 5 September under the Vienna Award."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=12",
+   "https://battleofbritain1940.com/entry/thursday-12-september-1940/",
+   "https://historydiaries.blog/2025/09/12/world-war-ii-diary-thursday-september-12-1940/"
+  ]
+ },
+ {
+  "date": "1940-09-13",
+  "weather": "Unsettled, with cloud and poor visibility.",
+  "air": "Small raids, mostly single aircraft using cloud cover, came in over Kent to London through the day. At about 11:00 a bomber hit Buckingham Palace, wrecking the chapel while the King and Queen were in residence. Whitehall, Maidstone and Eastbourne were also bombed. Sergeant J. H. Lacey of 501 Squadron shot down a He 111 and baled out. London was bombed again at night.",
+  "raf_claimed": 3,
+  "raf_lost_announced": 1,
+  "lw_lost_actual": 7,
+  "raf_lost_actual": 3,
+  "home": [
+   "Buckingham Palace was bombed in daylight on 13 September while the King and Queen were there. The chapel was wrecked and neither was hurt.",
+   "Italian forces crossed the frontier from Libya into Egypt on 13 September and occupied Sollum."
+  ],
+  "reich": [
+   "The Italian Tenth Army crossed from Libya into Egypt on 13 September, retaking Fort Capuzzo and occupying Sollum.",
+   "Hitler met his commanders in Berlin on 13 September to review the air offensive and the invasion plans."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=13",
+   "https://battleofbritain1940.com/entry/friday-13-september-1940/",
+   "https://historydiaries.blog/2025/09/13/world-war-ii-diary-friday-september-13-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-14",
+  "weather": "Showers and local thunder. Cloud in the Straits, the Channel and the Thames Estuary.",
+  "air": "Two afternoon attacks, of about 150 and 100 aircraft and made up largely of fighters, came in over Kent and the Thames Estuary towards London. Coastal towns including Brighton and Eastbourne were bombed by single raiders. 73 Squadron lost three Hurricanes. Night activity was reduced, with London again the main target.",
+  "raf_claimed": 16,
+  "raf_lost_announced": 12,
+  "lw_lost_actual": 13,
+  "raf_lost_actual": 13,
+  "home": [
+   "RAF Bomber Command sent heavy raids against Antwerp and the invasion barges in the Channel ports on the night of 14 September."
+  ],
+  "reich": [
+   "Hitler reviewed Operation Sea Lion on 14 September and put off the decision for a further three days, to 17 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=14",
+   "https://battleofbritain1940.com/entry/saturday-14-september-1940/",
+   "https://historydiaries.blog/2025/09/14/world-war-ii-diary-saturday-september-14-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-15",
+  "weather": "Fair with some cloud patches, fine in the evening.",
+  "air": "Two large attacks were made on London, the first about midday and the second in mid afternoon, and both were met in strength by 11 Group and the Duxford wing. Bombs fell across south and east London. Smaller raids attacked Portland and the Supermarine works at Woolston. Sergeant R. T. Holmes of 504 Squadron brought down a Dornier that fell on Victoria Station. London was bombed again at night.",
+  "raf_claimed": 185,
+  "raf_lost_announced": 25,
+  "lw_lost_actual": 61,
+  "raf_lost_actual": 31,
+  "home": [
+   "The Prime Minister watched the battle of 15 September from the 11 Group operations room at Uxbridge.",
+   "RAF bombers attacked the invasion ports that night. Sergeant John Hannah of 83 Squadron fought a fire aboard his Hampden over Antwerp."
+  ],
+  "reich": [
+   "U-48 sank the British sloop Dundee, an escort of convoy SC 3, west of Ireland on 15 September.",
+   "The battleship Bismarck left Hamburg for the first time on 15 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=15",
+   "https://battleofbritain1940.com/entry/sunday-15-september-1940/",
+   "https://historydiaries.blog/2025/09/15/world-war-ii-diary-sunday-september-15-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Battle_of_Britain_Day"
+  ]
+ },
+ {
+  "date": "1940-09-16",
+  "weather": "General rain and cloud.",
+  "air": "A force of several hundred aircraft assembled over the Pas de Calais early in the morning and crossed into Kent, but turned back without pressing on to London. Rain and cloud prevented almost all further fighting. After dark London was bombed continuously, with smaller raids on Merseyside and the Midlands.",
+  "raf_claimed": 2,
+  "raf_lost_announced": 1,
+  "lw_lost_actual": 10,
+  "raf_lost_actual": 1,
+  "home": [
+   "President Roosevelt signed the Selective Training and Service Act on 16 September, the first peacetime conscription in the United States.",
+   "Aircraft from the carrier Illustrious attacked Benghazi harbour on the night of 16 September and sank Italian ships."
+  ],
+  "reich": [
+   "Italian forces occupied Sidi Barrani in Egypt on 16 September and halted there.",
+   "Göring conferred with his air fleet commanders on 16 September after the losses of the previous day.",
+   "Spanish minister Ramon Serrano Suner was in Berlin on 16 September for talks with Ribbentrop."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=16",
+   "https://battleofbritain1940.com/entry/monday-16-september-1940/",
+   "https://historydiaries.blog/2025/09/16/world-war-ii-diary-monday-september-16-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-17",
+  "weather": "Squally showers with thunder and bright intervals.",
+  "air": "Showers kept the morning quiet. At about 15:30 a large fighter sweep crossed the Kent coast and was met by many squadrons, with fighting over east Kent. At night London was heavily bombed and parachute mines were used. Oxford Street stores including John Lewis were burned out. Merseyside and Glasgow were also raided.",
+  "raf_claimed": 10,
+  "raf_lost_announced": 5,
+  "lw_lost_actual": 8,
+  "raf_lost_actual": 6,
+  "home": [
+   "Churchill told the Commons on 17 September that about 2,000 civilians had been killed and 8,000 wounded in the first half of the month, most in London.",
+   "The House then went into secret session."
+  ],
+  "reich": [
+   "Hitler postponed Operation Sea Lion until further notice on 17 September.",
+   "Spanish minister Ramon Serrano Suner was received by Hitler in Berlin on 17 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=17",
+   "https://battleofbritain1940.com/entry/tuesday-17-september-1940/",
+   "https://historydiaries.blog/2025/09/17/world-war-ii-diary-tuesday-september-17-1940/",
+   "https://api.parliament.uk/historic-hansard/commons/1940/sep/17/war-situation",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-18",
+  "weather": "Bright and squally.",
+  "air": "Several raids crossed Kent and the Estuary during the day, the first made up mostly of fighters. In the late afternoon bombers making for Tilbury and the Thames docks were intercepted by the Duxford wing led by Squadron Leader Bader and lost several aircraft. Chatham, Sheerness and the Maidstone area were bombed. At night London was hit hard again and Merseyside was raided.",
+  "raf_claimed": 33,
+  "raf_lost_announced": 12,
+  "lw_lost_actual": 20,
+  "raf_lost_actual": 12,
+  "home": [
+   "Large fires burned in Oxford Street after the night raid of 17 September, which gutted the John Lewis store."
+  ],
+  "reich": [
+   "U-48 torpedoed and sank the British liner City of Benares in convoy OB 213 in the North Atlantic late on 17 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=18",
+   "https://battleofbritain1940.com/entry/wednesday-18-september-1940/",
+   "https://historydiaries.blog/2025/09/18/world-war-ii-diary-wednesday-september-18-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Sinking_of_the_SS_City_of_Benares"
+  ]
+ },
+ {
+  "date": "1940-09-19",
+  "weather": "Showery.",
+  "air": "There were no major attacks. Single raiders operated over the south east, the Thames Estuary and east London, and several Ju 88s were shot down. One Ju 88 force landed intact at Oakington in Cambridgeshire. At night London and Merseyside were bombed. Heston aerodrome was damaged and a public shelter in Tottenham was hit.",
+  "raf_claimed": 5,
+  "raf_lost_announced": 0,
+  "lw_lost_actual": 10,
+  "raf_lost_actual": 0,
+  "home": [
+   "No. 71 Squadron, the first Eagle squadron of American volunteer pilots, formed at Church Fenton on 19 September.",
+   "RAF bombers kept up their night attacks on the invasion barges in the Channel ports."
+  ],
+  "reich": [
+   "Hitler ordered on 19 September that the assembly of invasion shipping stop and that vessels in the Channel ports be dispersed.",
+   "Ribbentrop was in Rome on 19 September for talks with Mussolini."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=19",
+   "https://battleofbritain1940.com/entry/thursday-19-september-1940/",
+   "https://historydiaries.blog/2025/09/19/world-war-ii-diary-thursday-september-19-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-20",
+  "weather": "Fair with bright periods and showers.",
+  "air": "At about 11:00 a force of roughly 100 aircraft, mostly Bf 109s and some of them carrying bombs, swept over east Kent towards London. Bombs fell near the Thames by London Bridge. Spitfire squadrons including 72, 92 and 222 lost several aircraft to the high flying fighters. London was the target again at night.",
+  "raf_claimed": 6,
+  "raf_lost_announced": 7,
+  "lw_lost_actual": 8,
+  "raf_lost_actual": 8,
+  "home": [
+   "Ministers were reconsidering the ban on sheltering in Underground stations, which many Londoners were already using at night."
+  ],
+  "reich": [
+   "Major Werner Mölders of JG 51 claimed his 40th victory on 20 September.",
+   "U-47 sighted convoy HX 72 in the North Atlantic on 20 September and other boats were called in."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=20",
+   "https://battleofbritain1940.com/entry/friday-20-september-1940/",
+   "https://historydiaries.blog/2025/09/20/world-war-ii-diary-friday-september-20-1940/"
+  ]
+ },
+ {
+  "date": "1940-09-21",
+  "weather": "Mainly fine.",
+  "air": "Only reconnaissance aircraft and single raiders appeared until about 18:00, when some 200 aircraft, mostly fighters, swept over Kent and the Estuary and a few reached the eastern edge of London. Single German aircraft were shot down in Sussex and near Liverpool. At night London and Merseyside were attacked.",
+  "raf_claimed": 2,
+  "raf_lost_announced": 0,
+  "lw_lost_actual": 11,
+  "raf_lost_actual": 1,
+  "home": [
+   "The government gave official approval on 21 September for Underground stations to be used as air raid shelters.",
+   "Australia voted in a federal election on 21 September. The Menzies government stayed in office."
+  ],
+  "reich": [
+   "Major Werner Mölders was awarded the Oak Leaves to the Knight's Cross on 21 September after his 40th victory.",
+   "U-boats including U-47, U-99 and U-100 attacked convoy HX 72 west of Ireland on the night of 21 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=21",
+   "https://battleofbritain1940.com/entry/saturday-21-september-1940/",
+   "https://historydiaries.blog/2025/09/21/world-war-ii-diary-saturday-september-21-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-22",
+  "weather": "Dull with fog in the morning, some rain, clearing later in the afternoon.",
+  "air": "Fog and cloud made this one of the quietest days of the battle and Fighter Command flew very few sorties. Two raiders flew inland to the Duxford area, and a Ju 88 was shot down off Cornwall by 234 Squadron. After dark London was heavily attacked, with large fires in the docks and at Woolwich and direct hits on shelters in Poplar and Lambeth.",
+  "raf_claimed": 1,
+  "raf_lost_announced": 0,
+  "lw_lost_actual": 6,
+  "raf_lost_actual": 1,
+  "home": [
+   "Japanese troops began moving into northern French Indochina on 22 September after the French authorities at Hanoi accepted Japanese demands.",
+   "RAF bombers attacked Berlin on the night of 22 September."
+  ],
+  "reich": [
+   "The attack on convoy HX 72 ended on 22 September with 11 ships sunk.",
+   "Japan and Vichy France signed an agreement at Hanoi on 22 September admitting Japanese troops to northern Indochina.",
+   "Germany and Finland agreed on 22 September on the transit of German troops through Finland to northern Norway."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=22",
+   "https://battleofbritain1940.com/entry/sunday-22-september-1940/",
+   "https://historydiaries.blog/2025/09/22/world-war-ii-diary-sunday-september-22-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-23",
+  "weather": "Fine.",
+  "air": "At about 09:30 some 200 aircraft, nearly all Bf 109s, swept over east Kent and the Estuary and were met by 11 Group without reaching London. A second, smaller sweep came in over Kent at about 17:30. The fighting was fighter against fighter. At night London was bombed from 19:45, West Ham suffering badly, and Merseyside was also raided.",
+  "raf_claimed": 11,
+  "raf_lost_announced": 11,
+  "lw_lost_actual": 17,
+  "raf_lost_actual": 11,
+  "home": [
+   "The King broadcast on 23 September and announced the creation of the George Cross and George Medal for civilian gallantry.",
+   "News was released that the liner City of Benares had been sunk in the Atlantic on 17 September with the loss of 77 evacuee children.",
+   "British and Free French forces under General de Gaulle arrived off Dakar on 23 September and were fired on by the Vichy garrison."
+  ],
+  "reich": [
+   "Vichy French forces at Dakar resisted a British and Free French landing attempt that began on 23 September.",
+   "About 120 RAF bombers were sent against Berlin on the night of 23 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=23",
+   "https://battleofbritain1940.com/entry/monday-23-september-1940/",
+   "https://historydiaries.blog/2025/09/23/world-war-ii-diary-monday-september-23-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/Sinking_of_the_SS_City_of_Benares"
+  ]
+ },
+ {
+  "date": "1940-09-24",
+  "weather": "Early fog in northern France. Channel cloudy, with haze in the Straits and the Thames Estuary.",
+  "air": "Two morning attacks of about 200 aircraft crossed Kent towards Tilbury and Gravesend, and many turned back early. At about 13:30 Bf 110 fighter bombers attacked the Supermarine works at Woolston, Southampton, where a works shelter was hit with heavy loss of life. A second raid reached the Southampton area later. London and Merseyside were bombed at night.",
+  "raf_claimed": 7,
+  "raf_lost_announced": 5,
+  "lw_lost_actual": 11,
+  "raf_lost_actual": 6,
+  "home": [
+   "Vichy French aircraft bombed Gibraltar on 24 September in reprisal for the attack on Dakar.",
+   "Fighting continued off Dakar, where the battleship Richelieu and the shore batteries engaged the British squadron."
+  ],
+  "reich": [
+   "Vichy French bombers from Morocco and Algeria attacked Gibraltar on 24 September in reply to the Dakar operation.",
+   "Major Adolf Galland of JG 26 claimed his 40th victory on 24 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=24",
+   "https://battleofbritain1940.com/entry/tuesday-24-september-1940/",
+   "https://historydiaries.blog/2025/09/24/world-war-ii-diary-tuesday-september-24-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-25",
+  "weather": "Fair to fine in most areas, and cool.",
+  "air": "Late in the morning a force of He 111s with Bf 110 escort flew in over the Dorset coast and bombed the Bristol Aeroplane Company works at Filton, causing heavy damage and killing about 130 people, most of them workers. Portland and later Plymouth were also attacked. 504 Squadron was moved to Filton afterwards. At night London, North Wales and Lancashire were bombed.",
+  "raf_claimed": 26,
+  "raf_lost_announced": 4,
+  "lw_lost_actual": 16,
+  "raf_lost_actual": 6,
+  "home": [
+   "The British and Free French force broke off the attack on Dakar on 25 September after the battleship Resolution was torpedoed.",
+   "Vichy aircraft bombed Gibraltar for a second day on 25 September."
+  ],
+  "reich": [
+   "Reichskommissar Terboven announced on 25 September that all Norwegian parties except Nasjonal Samling were banned.",
+   "Major Adolf Galland received the Oak Leaves to the Knight's Cross on 25 September.",
+   "The British and Free French attempt on Dakar was abandoned on 25 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=25",
+   "https://battleofbritain1940.com/entry/wednesday-25-september-1940/",
+   "https://historydiaries.blog/2025/09/25/world-war-ii-diary-wednesday-september-25-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-26",
+  "weather": "Mainly fair to cloudy.",
+  "air": "At about 16:30 a force of He 111s and Bf 110s bombed the Supermarine works at Woolston, Southampton, wrecking the factory and killing many people in the town. At dusk about 25 bombers attacked Crewe. 303 (Polish) Squadron was in action during a visit by the King to Northolt. London and Merseyside were raided at night.",
+  "raf_claimed": 33,
+  "raf_lost_announced": 10,
+  "lw_lost_actual": 9,
+  "raf_lost_actual": 8,
+  "home": [
+   "The King visited RAF Northolt on 26 September while 303 (Polish) Squadron was in action.",
+   "The United States announced on 26 September an embargo on exports of scrap iron and steel, to take effect on 16 October."
+  ],
+  "reich": [
+   "Grand Admiral Raeder urged Hitler on 26 September to turn the war effort towards the Mediterranean, against Gibraltar and Suez.",
+   "Japanese forces completed their occupation of northern French Indochina on 26 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=26",
+   "https://battleofbritain1940.com/entry/thursday-26-september-1940/",
+   "https://historydiaries.blog/2025/09/26/world-war-ii-diary-thursday-september-26-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-27",
+  "weather": "Fair in the far south and south west. Cloud in the Channel and light rain over southern England.",
+  "air": "Three major attacks were made on London and the south east, and a smaller force made for Filton. The raids were met over Kent and Surrey and few bombers reached London. Hauptmann Martin Lutz, leading Erprobungsgruppe 210, was killed. A Ju 88 crew that force landed on Graveney Marsh in Kent exchanged fire with soldiers before surrendering. London, Merseyside and the Midlands were bombed at night.",
+  "raf_claimed": 133,
+  "raf_lost_announced": 27,
+  "lw_lost_actual": 57,
+  "raf_lost_actual": 28,
+  "home": [
+   "Germany, Italy and Japan signed a ten year military and economic pact in Berlin on 27 September.",
+   "In Washington, Secretary of State Cordell Hull played down the significance of the pact."
+  ],
+  "reich": [
+   "Germany, Italy and Japan signed the Tripartite Pact in Berlin on 27 September. Ribbentrop, Ciano and Ambassador Kurusu signed."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=27",
+   "https://battleofbritain1940.com/entry/friday-27-september-1940/",
+   "https://historydiaries.blog/2025/09/27/world-war-ii-diary-friday-september-27-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-09-28",
+  "weather": "Fair to fine inland. Cloud over the Channel, the Straits and the Thames Estuary.",
+  "air": "Two attacks came over Kent towards London and one approached Portsmouth, made up mostly of fighters flying very high, with few bombers. Some bombs fell on Poplar, Deptford and Woolwich. Fighter Command lost more aircraft than it shot down. Flying Officer A. G. Lewis of 249 Squadron was shot down and badly burned. London was bombed again at night.",
+  "raf_claimed": 6,
+  "raf_lost_announced": 16,
+  "lw_lost_actual": 12,
+  "raf_lost_actual": 17,
+  "home": [
+   "The first of the 50 American destroyers reached Britain on 28 September.",
+   "Radio Belgique began broadcasting from London to occupied Belgium on 28 September."
+  ],
+  "reich": [
+   "Count Ciano was received by Hitler in Berlin on 28 September, the day after the pact was signed.",
+   "The battleship Bismarck left Kiel on 28 September for trials in the Baltic."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=28",
+   "https://battleofbritain1940.com/entry/saturday-28-september-1940/",
+   "https://historydiaries.blog/2025/09/28/world-war-ii-diary-saturday-september-28-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-29",
+  "weather": "Fine early and late, cloudy in between.",
+  "air": "Activity was reduced. Reconnaissance aircraft and single raiders operated over East Anglia and the south, and convoys were attacked. In the late afternoon fighter formations swept through Kent and one element flew as far as Reading. At night London and Merseyside were bombed, and He 111s of KG 27 started dock fires in Liverpool.",
+  "raf_claimed": 6,
+  "raf_lost_announced": 5,
+  "lw_lost_actual": 9,
+  "raf_lost_actual": 6,
+  "home": [
+   "British warships bombarded the Italian held coast road in Libya on 29 September."
+  ],
+  "reich": [
+   "U-32 sank the British steamer Bassa south west of Rockall on 29 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=29",
+   "https://battleofbritain1940.com/entry/sunday-29-september-1940/",
+   "https://historydiaries.blog/2025/09/29/world-war-ii-diary-sunday-september-29-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ },
+ {
+  "date": "1940-09-30",
+  "weather": "Generally fair but cloudy, with light winds.",
+  "air": "Four attacks, strong in fighters, crossed Kent towards London and two approached the Dorset coast, one of them making for Yeovil. Most were broken up and few bombs fell on London by day. After dark about 175 aircraft reached central London, and raids also went to Merseyside, the Midlands and South Wales.",
+  "raf_claimed": 46,
+  "raf_lost_announced": 20,
+  "lw_lost_actual": 47,
+  "raf_lost_actual": 21,
+  "home": [
+   "The first awards of the George Cross were gazetted on 30 September, among them Lieutenant R. Davies and Sapper G. Wyllie for the St Paul's bomb.",
+   "Three German agents landed by seaplane on the Moray coast on 30 September and were arrested within a day."
+  ],
+  "reich": [
+   "Berlin schoolchildren were offered extended holidays from 30 September if their parents placed them in the country.",
+   "The submarine U-73 was commissioned on 30 September."
+  ],
+  "sources": [
+   "https://web.archive.org/web/2015/http://www.raf.mod.uk/history/campaign_diaries.cfm?diarymonth=9&diaryyear=1940&diaryday=30",
+   "https://battleofbritain1940.com/entry/monday-30-september-1940/",
+   "https://historydiaries.blog/2025/09/30/world-war-ii-diary-monday-september-30-1940/",
+   "https://en.wikipedia.org/wiki/September_1940"
+  ]
+ }
+]
