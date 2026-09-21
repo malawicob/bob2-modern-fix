@@ -824,6 +824,12 @@ if ($rp) {
         try {
             $p0 = Get-Pilot
             if (Test-FreshPilot -Pilot $p0) { $script:AutostartArmed = Write-AutostartRequest -Pilot $p0 }
+            elseif ($p0 -and ($p0.PSObject.Properties.Name -contains 'savePath') -and "$($p0.savePath)" -and (Test-Path "$($p0.savePath)") -and
+                    (Set-GameLastSave -SavePath "$($p0.savePath)")) {
+                # his own war: the game opens on the Load Game page with his
+                # save selected and the guard presses LOAD
+                $script:AutostartArmed = Write-AutostartRequest -Pilot $p0 -LoadSave "$($p0.savePath)"
+            }
             else { [void](Write-AutostartRequest -Pilot $null) }
         } catch { }
         $script:LaunchCard = New-LaunchCardData
@@ -1834,7 +1840,7 @@ function Get-AutostartRoot {
     $StateRoot
 }
 function Write-AutostartRequest {
-    param($Pilot)
+    param($Pilot, [string]$LoadSave)
     $root = Get-AutostartRoot
     if (-not $root) { return $false }
     $req = Join-Path $root 'autostart.txt'; $done = Join-Path $root 'autostart.done'
@@ -1855,13 +1861,14 @@ function Write-AutostartRequest {
         if ($pos -ge 0) { $unit = $RafSqBase + $pos }
     }
     $lines = @(
-        'mode=begin'
+        $(if ($LoadSave) { 'mode=load' } else { 'mode=begin' })
         'side=' + $(if ($script:Side -eq 'lw') { '1' } else { '0' })
         'role=' + $(if ("$($Pilot.cmode)" -eq 'commander') { '5' } else { '4' })
         "phase=$phase"
         "unit=$unit"
         'name=' + ("$($Pilot.pilot)".Trim())
     )
+    if ($LoadSave) { $lines += ('save=' + (Split-Path $LoadSave -Leaf)) }
     try {
         if (-not (Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
         [System.IO.File]::WriteAllText($req, ($lines -join "`r`n") + "`r`n", [System.Text.Encoding]::GetEncoding(1252))
@@ -1871,6 +1878,36 @@ function Write-AutostartRequest {
 # What the guard reported, read once the game has gone. The last status
 # line wins: armed, begin, ok on a good run; fallback, mismatch or the
 # like when the player was left at a menu.
+# THE SAVE THE GAME WILL OFFER. settings.cfg ends, from byte 1766, with
+# three NUL-terminated names: the last saved game, Bob.cam and Bob.prf. The
+# game reads the first into Save_Data.lastsavegame at start-up, and its Load
+# Game page opens with that file selected; the guard then presses LOAD. So
+# PLAY CAMPAIGN for a pilot with a war of his own sets this name to his save
+# first. Only a file of the known shape is touched, with the game closed.
+function Set-GameLastSave {
+    param([string]$SavePath)
+    if (-not $GameDir -or -not $SavePath -or -not (Test-Path $SavePath)) { return $false }
+    if (Test-GameRunning) { return $false }
+    $cfg = Join-Path $GameDir 'SAVEGAME\settings.cfg'
+    if (-not (Test-Path $cfg)) { return $false }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($cfg)
+        if ($b.Length -lt 1770 -or $b.Length -gt 2048) { return $false }
+        if ([System.Text.Encoding]::ASCII.GetString($b, 0, 20) -notmatch '^Rowan Savegame: V 0') { return $false }
+        $enc = [System.Text.Encoding]::GetEncoding(1252)
+        $names = $enc.GetString($b, 1766, $b.Length - 1766).Split([char]0)
+        if ($names.Count -lt 3) { return $false }
+        $leaf = Split-Path $SavePath -Leaf
+        if ($names[0] -eq $leaf) { return $true }
+        $tail = $enc.GetBytes($leaf + [char]0 + $names[1] + [char]0 + $names[2] + [char]0)
+        $out = New-Object byte[] (1766 + $tail.Length)
+        [Array]::Copy($b, 0, $out, 0, 1766); [Array]::Copy($tail, 0, $out, 1766, $tail.Length)
+        if ($out.Length -gt 2048) { return $false }
+        Copy-Item $cfg "$cfg.before-room" -Force
+        [System.IO.File]::WriteAllBytes($cfg, $out)
+        return $true
+    } catch { return $false }
+}
 function Read-AutostartResult {
     $root = Get-AutostartRoot
     if (-not $root) { return $null }

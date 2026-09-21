@@ -138,9 +138,30 @@ Tools: `~/bob2/ghidra/bobq` (2.12 symbols; `BOBQ_PROG=Bob213.exe` for 2.13),
 history (python over the `.data` section, `.data` vma `0x766000` at file
 `0x366000` in 2.13).
 
-## Not built yet
+## Load (mode=load), built 21 September 2026
 
-`mode=load`: a pilot with a campaign save. Needs `SetUpLoadGame`,
-`SetUpRafLoadGame` / `SetUpLWLoadGame`, `DoLoadGame`, `CFiling::LoadGame` and
-how the load page picks its file. Until then the Room writes no request for
-such a pilot and the guided card stands.
+For a pilot with a campaign of his own (his `savePath`, chosen when he first
+comes back from the game). The Room writes that file's name into the last-save
+slot of `SAVEGAME\settings.cfg` (from byte 1766: last save, `Bob.cam`,
+`Bob.prf`, each NUL-terminated) with the game closed, and a request:
+
+```
+mode=load
+side=0          0 RAF, 1 Luftwaffe
+save=Bob.bsR    for the log only; the game takes the name from settings.cfg
+```
+
+The game reads the name into `Save_Data.lastsavegame` at start-up. The hook
+sends the intro exit to the Load Game page instead of the Begin page. Its
+InitProc (`SetUpLoadGame`) builds the RAF list with that file selected; for
+the Luftwaffe the timer presses row 1 (`SetUpLWLoadGame`, same name). Then
+row 3, LOAD: `DoLoadGame` loads `selectedfile` and launches the map. Nothing
+is written in the game's memory; two of its own buttons are pressed.
+
+| what | 2.13 | how it was pinned |
+|---|---|---|
+| `loadgame` | `0x0078d0f0` | its dynamic initializer (2.12 `0x006bc78e`, 2.13 `0x006bc5de`) copies `SetUpRafLoadGame` into row 0; the page's static rows are RAF `0xa38`, LW `0xa39`, back `0x47e` to `title`; row 3 LOAD `0x494` / `DoLoadGame` is filled at run time and checked before it is pressed |
+
+Status lines: `load`, then `ok`, or `fallback` if the page never came up or
+LOAD left it on the page (the file would not load); the player is then on
+the Load Game page with the Room's card.

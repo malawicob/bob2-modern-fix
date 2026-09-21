@@ -290,6 +290,10 @@ __declspec(dllexport) HRESULT WINAPI DllUnregisterServer(void) {
 #define AS_TITLE             0x0078ce60u   /* RFullPanelDial::title */
 #define AS_CAMPSELECT        0x0078ddc0u   /* RFullPanelDial::campaignselect */
 #define AS_CAMPENTERNAME     0x00788180u   /* RFullPanelDial::campaignentername */
+#define AS_LOADGAME          0x0078d0f0u   /* RFullPanelDial::loadgame: rows RAF, LW, back to title, LOAD (DoLoadGame) */
+#define AS_LOADGAME_TEXT_RAF 0xa38u
+#define AS_LOADGAME_TEXT_LW  0xa39u
+#define AS_LOADGAME_TEXT_LOAD 0x494u
 #define AS_GAMESTATE         0x04f4b358u   /* RFullPanelDial::gamestate  4 PILOT 5 COMMANDER */
 #define AS_GAMESIDE          0x04f4b32cu   /* RFullPanelDial::gameside   0 RAF 1 LW */
 #define AS_PLAYERNAME        0x04f1e753u   /* Save_Data + 0xE3, char[21] */
@@ -391,6 +395,12 @@ static int AsVerifyExe(void) {
     if (isr[0] != 0 || isr[1] != AS_TITLE) { LogMsg("autostart: introsmack row 0 is not (0, title)"); return 0; }
     if (cer[0] != 0x47e || cer[1] != AS_TITLE || cer[6] != 0x327 || cer[7] != 0) { LogMsg("autostart: campaignentername rows differ"); return 0; }
     if (*(const DWORD *)(AS_CAMPSELECT + FS_TEXTLISTS + FS_ROW + 4) != AS_CAMPENTERNAME) { LogMsg("autostart: campaignselect row 1 does not lead to campaignentername"); return 0; }
+    {   /* the Load Game page, pinned 21 September 2026 from its 2.12 and 2.13 initializers:
+         * static text and nextscreen of rows 0..2 (RAF tab, LW tab, back to the title) */
+        const DWORD *lg = (const DWORD *)(AS_LOADGAME + FS_TEXTLISTS);
+        if (lg[0] != AS_LOADGAME_TEXT_RAF || lg[1] != 0 || lg[6] != AS_LOADGAME_TEXT_LW || lg[7] != 0 || lg[12] != 0x47e || lg[13] != AS_TITLE) {
+            LogMsg("autostart: loadgame rows differ"); return 0; }
+    }
     return 1;
 }
 
@@ -450,6 +460,46 @@ static VOID CALLBACK AsBeginTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
     AsDone("ok");
 }
 
+/* LOAD. The Load Game page's InitProc (SetUpLoadGame) builds the RAF list
+ * with the file named by Save_Data.lastsavegame already selected; the game
+ * read that name from settings.cfg at start-up, and the Squadron Room wrote
+ * the pilot's own save there before launching. For a Luftwaffe pilot the
+ * LW tab (row 1, SetUpLWLoadGame) rebuilds the list from the same name.
+ * Row 3 is LOAD: DoLoadGame loads selectedfile and launches the map. So
+ * this is two presses of the game's own buttons, nothing written. */
+static int g_asLoadStep = 0;
+static VOID CALLBACK AsLoadTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
+    void *cur = g_asFullpane ? *(void **)((char *)g_asFullpane + RF_CURRENTSCREEN) : NULL;
+    const DWORD *lg = (const DWORD *)(AS_LOADGAME + FS_TEXTLISTS);
+    (void)hwnd; (void)msg; (void)now;
+    if (cur != (void *)AS_LOADGAME) {
+        if (++g_asBeginTries < 25) return;
+        KillTimer(NULL, id);
+        LogMsg("autostart: Load Game page never became current (screen 0x%08X), leaving it to the player", (DWORD)(DWORD_PTR)cur);
+        AsDone("fallback");
+        return;
+    }
+    if (lg[18] != AS_LOADGAME_TEXT_LOAD || lg[20] < AS_TEXT_LO || lg[20] >= AS_TEXT_HI) {
+        KillTimer(NULL, id);
+        LogMsg("autostart: LOAD row not as expected (text 0x%X, onselect 0x%08X), leaving the page to the player", lg[18], lg[20]);
+        AsDone("fallback");
+        return;
+    }
+    if (g_as.side == 1 && g_asLoadStep == 0) {
+        g_asLoadStep = 1;
+        LogMsg("autostart: Luftwaffe tab (OnSelectRlistbox row 1)");
+        ((PFN_OnSelectRlistbox)AS_ONSELECTRLISTBOX)(g_asFullpane, 1, 1);
+        return;                                   /* let the list build, press LOAD next tick */
+    }
+    KillTimer(NULL, id);
+    LogMsg("autostart: pressing LOAD (OnSelectRlistbox row 3) for \"%s\"", g_as.save);
+    AsDone("load");
+    ((PFN_OnSelectRlistbox)AS_ONSELECTRLISTBOX)(g_asFullpane, 3, 3);
+    cur = *(void **)((char *)g_asFullpane + RF_CURRENTSCREEN);
+    if (cur == (void *)AS_LOADGAME) { LogMsg("autostart: still on the Load Game page after LOAD, the save did not load; left to the player"); AsDone("fallback"); }
+    else { LogMsg("autostart: LOAD returned, campaign map should be up"); AsDone("ok"); }
+}
+
 /* Runs on the game's UI thread, inside OnSelectRlistbox, as introsmack's
  * only row fires. ECX is the RFullPanelDial (row 0's this-delta is checked
  * to be zero before the hook is installed). */
@@ -468,6 +518,15 @@ static int __attribute__((thiscall)) AutostartHook(void *self, void **next) {
         DWORD tip = *(DWORD *)(AS_TITLE + FS_INITPROC);
         if (tip >= AS_TEXT_LO && tip < AS_TEXT_HI) { ((int (__attribute__((thiscall)) *)(void *))tip)(self); LogMsg("autostart: ran TitleInit (0x%08X)", tip); }
         else LogMsg("autostart: title InitProc 0x%08X not in .text, skipped", tip);
+    }
+    if (g_as.mode == AS_MODE_LOAD) {
+        *(DWORD *)AS_GAMESIDE = (DWORD)g_as.side;
+        *(BYTE *)AS_SKIPVIDEOS = 1;
+        *next = (void *)AS_LOADGAME;
+        LogMsg("autostart: side=%d, intro exit rewritten to the Load Game page for \"%s\"", g_as.side, g_as.save);
+        g_asBeginTries = 0; g_asLoadStep = 0;
+        if (!SetTimer(NULL, 0, 200, AsLoadTimer)) { LogMsg("autostart: SetTimer failed (err=%u)", GetLastError()); AsDone("fallback"); }
+        return 1;
     }
     *(DWORD *)AS_GAMESIDE = (DWORD)g_as.side;
     *(DWORD *)AS_GAMESTATE = (DWORD)g_as.role;
@@ -511,7 +570,6 @@ static void AutostartInit(void) {
     HANDLE t;
     if (!AsReadRequest()) { LogMsg("no autostart request"); return; }
     if (g_as.mode == AS_MODE_OFF) { AsDone("off"); return; }
-    if (g_as.mode == AS_MODE_LOAD) { LogMsg("autostart: mode=load is not built yet"); AsDone("unsupported"); return; }
     if (g_as.phase < 0 || g_as.phase > 3 || (g_as.side != 0 && g_as.side != 1) || (g_as.role != 4 && g_as.role != 5)) { LogMsg("autostart: request out of range"); AsDone("bad-request"); return; }
     if (!AsVerifyExe()) { AsDone("mismatch"); return; }
     t = CreateThread(NULL, 0, AsArmThread, NULL, 0, NULL);
