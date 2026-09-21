@@ -40,3 +40,22 @@ Patch on: avg +4%, median +10%, CPU time -9%, 1% low -5%. The two fights were no
 **Also:** terrain blur reported in both battles. `LANDSCAPE_TEXTURE_SIZE` was 1024 on both installs (BDG default 2048; 1024 is the weak-GPU remedy); dev set to 2048. The 1707x1067 render stretched to 2560x1600 is soft by nature and the package's answer, ReShade's sharpening, is not installed on dev.
 
 **2026-09-20, look check.** `LANDSCAPE_TEXTURE_SIZE` 2048, forced antialiasing off, 16x filtering, ReShade installed (Balanced: SMAA and sharpening): Patrick reports the terrain looks great, no grid lines, ReShade all good. This is the recommended graphics state for the package. Settings now recommends 2048.
+
+## 2026-09-21: nearby aircraft judder since the frame rate went up (both installs)
+
+Patrick: aircraft close by no longer move smoothly, on the stable and the dev
+install, since the frame rate rose. Hypothesis, not yet measured: frame pacing.
+The simulation runs on its own timer; the render thread draws as fast as it can
+and only reads the last simulated positions, and ThreeDee::SetFrameTime takes
+each frame's length from timeGetTime (whole milliseconds). At 200+ fps a frame
+is ~5 ms, so the millisecond granularity and the beat between frame and sim
+rates are a large share of each frame; close aircraft show it most. Vsync is
+not in effect (captures show SyncInterval 0) and dgVoodoo's FPSLimit 240 is the
+only cap. SMOOTHEN_FRAMERATE_MODE was tried before and is ruled out (Patrick).
+
+Plan, one change at a time on dev: FPSLimit 120, then 60; real vsync; cloud and
+line patches off. Winner becomes the package default with a switch in Settings.
+
+| run | change | result |
+|---|---|---|
+| fps120 | dgVoodoo FPSLimit 240 -> 120 (backup dgVoodoo.conf.before-fps120) | |

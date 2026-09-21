@@ -701,6 +701,42 @@ static void __attribute__((thiscall)) PfLineFast(void *self, unsigned char **pli
     g_pfLineCalls++;
 }
 
+/* ==================== AUTOPILOT IN THE COCKPIT ====================
+ *
+ * The autopilot key (ViewPoint::ControlViewSelect) calls ForceToOutside and
+ * then hands the aircraft to the AI, so engaging autopilot always threw the
+ * player into the outside view (Patrick, 21 September 2026: "I want to stay
+ * in the cockpit with autopilot"). It is the only place autopilot forces the
+ * view (ControlViewDraw's own ForceToOutside is a map-bounds safety net), and
+ * going back inside (InitInside) still switches autopilot off, so the cockpit
+ * view key remains the way to take the controls back.
+ *
+ * The patch: the 5-byte call at 2.13 0x00627f2c becomes five NOPs. It is a
+ * thiscall with no stack arguments, so nothing else moves. Checked against
+ * the exe's timestamp and 23 bytes of the surrounding code first; on by
+ * default, cockpitautopilot=0 in bob2guard.ini turns it off. */
+#define AP_CALLSITE 0x00627f2cu
+static int g_apCockpit = 1;
+static const unsigned char AP_SIG[23] = {           /* from 14 bytes before the call to 4 after */
+    0x80,0x38,0x00,0x0f,0x94,0xc1,0x84,0xc9,0x88,0x08,0x74,0x1a,0x8b,0xcd,
+    0xe8,0xe8,0xae,0xff,0xff,0x6a,0x00,0xff,0x35 };
+static void ApInstall(void) {
+    unsigned char *site = (unsigned char *)(AP_CALLSITE - 14);
+    IMAGE_DOS_HEADER *dos = (IMAGE_DOS_HEADER *)GetModuleHandleA(NULL);
+    IMAGE_NT_HEADERS *nt;
+    DWORD old;
+    if (!g_apCockpit) { LogMsg("autopilot: cockpitautopilot=0, the game's outside view is kept"); return; }
+    if (!dos) return;
+    nt = (IMAGE_NT_HEADERS *)((char *)dos + dos->e_lfanew);
+    if (nt->FileHeader.TimeDateStamp != AS_EXE_TIMESTAMP) { LogMsg("autopilot: not Bob.exe 2.13, patch not applied"); return; }
+    if (memcmp(site, AP_SIG, sizeof(AP_SIG))) { LogMsg("autopilot: code differs at 0x%08X, patch not applied", AP_CALLSITE); return; }
+    if (!VirtualProtect(site, sizeof(AP_SIG), PAGE_EXECUTE_READWRITE, &old)) { LogMsg("autopilot: VirtualProtect failed (err=%u)", GetLastError()); return; }
+    memset((void *)AP_CALLSITE, 0x90, 5);
+    VirtualProtect(site, sizeof(AP_SIG), old, &old);
+    FlushInstructionCache(GetCurrentProcess(), site, sizeof(AP_SIG));
+    LogMsg("autopilot: stays in the cockpit (ForceToOutside call at 0x%08X removed)", AP_CALLSITE);
+}
+
 static int PfReadIni(void) {
     char dllPath[MAX_PATH], ini[MAX_PATH], line[256], *slash;
     FILE *f;
@@ -716,6 +752,7 @@ static int PfReadIni(void) {
         *eq = '\0';
         if      (!strcmp(line, "cloudstep")) g_pfCloudStep = atoi(eq + 1);
         else if (!strcmp(line, "lines"))     g_pfLines = atoi(eq + 1);
+        else if (!strcmp(line, "cockpitautopilot")) g_apCockpit = atoi(eq + 1);
     }
     fclose(f);
     return 1;
@@ -776,7 +813,9 @@ static DWORD WINAPI PfThread(LPVOID p) {
 
 static void PfInit(void) {
     HANDLE t;
-    if (!PfReadIni()) { LogMsg("perf: no bob2guard.ini, patches off"); return; }
+    int haveIni = PfReadIni();
+    ApInstall();                                   /* on by default, ini or not */
+    if (!haveIni) { LogMsg("perf: no bob2guard.ini, patches off"); return; }
     if (g_pfCloudStep < 0 || g_pfCloudStep > 256) g_pfCloudStep = 0;
     LogMsg("perf: bob2guard.ini cloudstep=%d lines=%d", g_pfCloudStep, g_pfLines);
     if (!g_pfCloudStep && !g_pfLines) return;
