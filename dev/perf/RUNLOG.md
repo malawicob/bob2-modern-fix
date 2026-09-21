@@ -58,4 +58,16 @@ line patches off. Winner becomes the package default with a switch in Settings.
 
 | run | change | result |
 |---|---|---|
-| fps120 | dgVoodoo FPSLimit 240 -> 120 (backup dgVoodoo.conf.before-fps120) | |
+| fps120 | dgVoodoo FPSLimit 240 -> 120 (backup dgVoodoo.conf.before-fps120) | cockpit autopilot works; the world outside jumps in steps (view only, gauges steady) |
+| fps100 | FPSLimit 100: four frames per simulation step exactly | |
+
+Found 21 September: the simulation runs at 25 Hz. Mast3d::Mast3d starts it with
+timeSetEvent(0x28 = 40 ms, periodic, Mast3d::StaticTimeProc). Every aircraft,
+the player's too under the AI, moves once per 40 ms; the manual flight path is
+what keeps the player's own aircraft smooth. Inst3d::BlockTick makes render and
+simulation take turns, and when the render thread holds it the waiting ticks are
+then run back to back (while (ticks) DoMoveCycle()), so at 200+ fps an aircraft
+can stand still and then jump two steps: the likely reason it got worse as the
+frame rate rose. A frame rate that is a multiple of 25 gives every step the same
+number of frames. The proper cure is drawing aircraft between their two latest
+simulated positions (render interpolation); nothing in the game does that.
