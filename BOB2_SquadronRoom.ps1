@@ -3882,7 +3882,8 @@ function Show-Roster {
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
     [void]$d.Children.Add((New-TB -Text (Get-FullName $Pilot) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
-    $line = if ($flownCount -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
+    # his codes from the day he is posted, now the aeroplane that wears them is on the board too
+    $line = if ("$($Pilot.codes)") { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)" }
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
     [void]$d.Children.Add($lt)
     # worn on the tunic: rank cuff and wings, the ribbons beneath them
@@ -3936,11 +3937,10 @@ function Show-Roster {
         # aeroplane's letter instead, and nothing here can know in
         # advance which it will be.
         $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign and fly the day. " +
-                            "When you come back here your first sortie will be in the logbook, and your aircraft, with " +
-                            "your code letter and serial, will be waiting on the board.`n`n" +
-                            "The letter above is the one the game paints on the leader's aeroplane. Fly further down " +
-                            "the flight and you will wear a different one; the game decides that when it makes up the " +
-                            "squadron, and it changes from sortie to sortie.`n`n" +
+                            "When you come back here your first sortie will be in the logbook.`n`n" +
+                            "Your aircraft below wears the squadron's code and the letter the game paints on the leader's " +
+                            "aeroplane. If the game puts you further down the flight you will fly a different letter, and " +
+                            "after that sortie the board shows the one you actually flew.`n`n" +
                             "Quick missions and training are not recorded here. Your aeroplane and your logbook are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
@@ -3948,8 +3948,11 @@ function Show-Roster {
         [void]$script:Stage.Children.Add($ord)
     }
     $Pilot = Ensure-Serial -Pilot $Pilot
-    $flown = ($flownCount -gt 0)
-    $ac = if ($flown) { New-Aircraft -Pilot $Pilot } else { $null }
+    # Shown from the day he is posted, as the German side always has been.
+    # It used to wait for the first sortie ("an aircraft earned by flying"),
+    # and a new British pilot looked at an empty board while his German
+    # counterpart already had his aeroplane. Patrick asked why.
+    $ac = New-Aircraft -Pilot $Pilot
     if ($ac) {
         [void]$script:Stage.Children.Add($ac)
         $acHint = New-TB -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap -Text (
