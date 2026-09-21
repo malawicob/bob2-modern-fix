@@ -292,6 +292,9 @@ __declspec(dllexport) HRESULT WINAPI DllUnregisterServer(void) {
 #define AS_CAMPENTERNAME     0x00788180u   /* RFullPanelDial::campaignentername */
 #define AS_LOADGAME          0x0078d0f0u   /* RFullPanelDial::loadgame: rows RAF, LW, back to title, LOAD (DoLoadGame) */
 #define AS_LOADGAME_TEXT_RAF 0xa38u
+#define AS_MPVIEW            0x0079e8f4u   /* RDialog::m_pView, the CMIGView (2.12 0x0079f9f4) */
+#define VIEW_FULLPANE        0x108         /* CMIGView::m_pfullpane: the live front-end panel, NULL on the map */
+#define AS_TITLE_TEXT_QUIT   0xfu          /* title row whose onselect is ConfirmExit */
 #define AS_LOADGAME_TEXT_LW  0xa39u
 #define AS_LOADGAME_TEXT_LOAD 0x494u
 #define AS_GAMESTATE         0x04f4b358u   /* RFullPanelDial::gamestate  4 PILOT 5 COMMANDER */
@@ -405,6 +408,7 @@ static int AsVerifyExe(void) {
 }
 
 static int __attribute__((thiscall)) AutostartHook(void *self, void **next);
+static void AsArmExitWatch(void);
 
 static VOID CALLBACK AsBeginTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
     void *cur = g_asFullpane ? *(void **)((char *)g_asFullpane + RF_CURRENTSCREEN) : NULL;
@@ -458,6 +462,45 @@ static VOID CALLBACK AsBeginTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
     ((PFN_OnSelectRlistbox)AS_ONSELECTRLISTBOX)(g_asFullpane, 1, 1);
     LogMsg("autostart: BEGIN returned, campaign map should be up");
     AsDone("ok");
+    AsArmExitWatch();
+}
+
+/* BACK TO THE SQUADRON ROOM. Leaving a campaign puts the game on its own
+ * title menu and it keeps running, so the Room, which comes back when the
+ * game closes, never appeared (Patrick, 21 September 2026). After the guard
+ * has taken the player into his campaign this watches for that menu and
+ * presses its own Quit (ConfirmExit: saves the preferences, restores the
+ * display mode, closes the main window; no dialog).
+ *
+ * The front-end panel the guard steered is DESTROYED when the map opens
+ * (CMIGView::LaunchMap) and the title menu afterwards is a new one, so it is
+ * found fresh every tick: RDialog::m_pView, then the view's m_pfullpane,
+ * which is NULL while the map or the 3D is up. It acts only after it has
+ * seen that NULL, i.e. after the campaign was really reached. */
+static int g_asSeenMap = 0;
+static VOID CALLBACK AsExitWatch(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
+    char *view = *(char **)AS_MPVIEW;
+    char *fp; void *cur; const DWORD *row; int k;
+    (void)hwnd; (void)msg; (void)now;
+    if (!view || IsBadReadPtr(view + VIEW_FULLPANE, 4)) return;
+    fp = *(char **)(view + VIEW_FULLPANE);
+    if (!fp) { g_asSeenMap = 1; return; }
+    if (!g_asSeenMap || IsBadReadPtr(fp + RF_CURRENTSCREEN, 4)) return;
+    cur = *(void **)(fp + RF_CURRENTSCREEN);
+    if (cur != (void *)AS_TITLE) return;
+    row = (const DWORD *)(AS_TITLE + FS_TEXTLISTS);
+    for (k = 0; k < 10; k++, row += 6) {
+        if (row[0] == AS_TITLE_TEXT_QUIT && row[1] == 0 && row[2] >= AS_TEXT_LO && row[2] < AS_TEXT_HI && row[3] == 0) break;
+    }
+    KillTimer(NULL, id);
+    if (k >= 10) { LogMsg("autostart: back on the title menu, but no Quit row found; left to the player"); return; }
+    LogMsg("autostart: the campaign was left for the title menu; pressing its Quit (row %d) to return to the Squadron Room", k);
+    ((PFN_OnSelectRlistbox)AS_ONSELECTRLISTBOX)(fp, k, k);
+}
+static void AsArmExitWatch(void) {
+    g_asSeenMap = 0;
+    if (!SetTimer(NULL, 0, 500, AsExitWatch)) LogMsg("autostart: exit watch not started (err=%u)", GetLastError());
+    else LogMsg("autostart: watching for the campaign to be left");
 }
 
 /* LOAD. The Load Game page's InitProc (SetUpLoadGame) builds the RAF list
@@ -497,7 +540,7 @@ static VOID CALLBACK AsLoadTimer(HWND hwnd, UINT msg, UINT_PTR id, DWORD now) {
     ((PFN_OnSelectRlistbox)AS_ONSELECTRLISTBOX)(g_asFullpane, 3, 3);
     cur = *(void **)((char *)g_asFullpane + RF_CURRENTSCREEN);
     if (cur == (void *)AS_LOADGAME) { LogMsg("autostart: still on the Load Game page after LOAD, the save did not load; left to the player"); AsDone("fallback"); }
-    else { LogMsg("autostart: LOAD returned, campaign map should be up"); AsDone("ok"); }
+    else { LogMsg("autostart: LOAD returned, campaign map should be up"); AsDone("ok"); AsArmExitWatch(); }
 }
 
 /* Runs on the game's UI thread, inside OnSelectRlistbox, as introsmack's

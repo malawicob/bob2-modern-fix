@@ -165,3 +165,16 @@ is written in the game's memory; two of its own buttons are pressed.
 Status lines: `load`, then `ok`, or `fallback` if the page never came up or
 LOAD left it on the page (the file would not load); the player is then on
 the Load Game page with the Room's card.
+
+## Back to the Squadron Room (both modes), built 21 September 2026
+
+Leaving a campaign puts the game on its title menu and it keeps running, so
+the Room (which returns when the game closes) stayed hidden. After a
+successful begin or load the guard arms a 500 ms watch. The front-end panel
+it steered is destroyed when the map opens (`CMIGView::LaunchMap`), so every
+tick it finds the live one afresh: `RDialog::m_pView` (2.13 `0x0079e8f4`, 2.12
+`0x0079f9f4`, read from `RFullPanelDial::LaunchMap`) then the view's
+`m_pfullpane` at `+0x108`, NULL while the map or 3D is up. Once it has seen
+NULL, and the panel's current screen is `title` again, it presses the title
+row whose text is `0xf` (onselect `ConfirmExit`: saves preferences, restores
+the display mode, closes the main window, no dialog).

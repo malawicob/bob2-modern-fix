@@ -717,7 +717,7 @@ function New-SaveQuestionWindow {
     $w.Width = 720; $w.SizeToContent = 'Height'; $w.WindowStartupLocation = 'CenterOwner'; $w.Background = B '#0F171D'
     $outer = New-Object Windows.Controls.Border; $outer.BorderBrush = $script:BrassBrush; $outer.BorderThickness = '1.5'; $outer.Padding = '28,24,28,22'
     $sp = New-Object Windows.Controls.StackPanel; $outer.Child = $sp; $w.Content = $outer
-    [void]$sp.Children.Add((New-TB -Text 'WELCOME BACK' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    [void]$sp.Children.Add((New-TB -Text $(if ($Since) { 'WELCOME BACK' } else { 'CAMPAIGN SAVE' }) -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
     [void]$sp.Children.Add((New-TB -Text 'Which save is his campaign?' -Family $SerifFam -Size 26 -Colour '#E9E3D4' -Bold))
     $lead = New-TB -Wrap -Family 'Segoe UI' -Size 13.5 -Colour '#9FB0B8' -Text (
         "Pick the save you flew $(Get-FullName $Pilot)'s war in. From now on his log book and victories are read from it, and PLAY CAMPAIGN takes him back into it.")
@@ -762,10 +762,38 @@ function Set-PilotSave {
     $o['saveAsked'] = $true
     Save-Pilot -Pilot $o
 }
+# WHICH SAVE IS HIS, said on his card (Patrick, 21 September 2026): the
+# file PLAY CAMPAIGN will load, when it was last saved, and a way to change
+# it. Before the first answer it says so plainly instead.
+function New-SaveLine {
+    param($Pilot)
+    $sp = New-Object Windows.Controls.StackPanel; $sp.Margin = '0,14,0,0'; $sp.MaxWidth = 380; $sp.HorizontalAlignment = 'Left'
+    [void]$sp.Children.Add((New-TB -Text 'CAMPAIGN SAVE' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $has = ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'savePath') -and "$($Pilot.savePath)" -and (Test-Path "$($Pilot.savePath)"))
+    $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,3,0,0'
+    if ($has) {
+        $fi = Get-Item "$($Pilot.savePath)"
+        [void]$row.Children.Add((New-TB -Text $fi.Name -Family $CondFam -Size 14 -Colour '#E9E3D4' -Bold))
+        $w = New-TB -Text ("   saved " + $fi.LastWriteTime.ToString('ddd d MMM, HH:mm')) -Family 'Segoe UI' -Size 12.5 -Colour '#8FA0A8'
+        $w.VerticalAlignment = 'Center'; [void]$row.Children.Add($w)
+    } else {
+        $n = New-TB -Text 'Not chosen yet. You are asked when you first come back from the game.' -Family 'Segoe UI' -Size 12.5 -Colour '#8FA0A8' -Wrap
+        $n.MaxWidth = 300
+        [void]$row.Children.Add($n)
+    }
+    if (@(Get-SideSaves).Count -gt 0) {
+        $ch = New-TB -Text $(if ($has) { '   change' } else { '   choose now' }) -Family 'Segoe UI' -Size 12.5 -Colour '#C8973F'
+        $ch.Cursor = 'Hand'; $ch.VerticalAlignment = 'Center'; $ch.TextDecorations = [Windows.TextDecorations]::Underline
+        $ch.Add_MouseLeftButtonDown({ param($sender, $e) $e.Handled = $true; Invoke-SaveQuestion -Force; Show-Tab $script:CurrentTab })
+        [void]$row.Children.Add($ch)
+    }
+    [void]$sp.Children.Add($row)
+    $sp
+}
 function Invoke-SaveQuestion {
-    param($Since)
+    param($Since, [switch]$Force)
     $p = Get-Pilot
-    if (-not (Test-NeedsSaveQuestion $p)) { return }
+    if (-not $Force -and -not (Test-NeedsSaveQuestion $p)) { return }
     $w = New-SaveQuestionWindow -Pilot $p -Since $Since
     if (-not $w) { return }
     try { $w.Owner = $Win } catch { }
@@ -4059,6 +4087,7 @@ function Show-Roster {
         $nt.Margin = '0,12,0,0'; $nt.MaxWidth = 380
         [void]$d.Children.Add($nt)
     }
+    [void]$d.Children.Add((New-SaveLine -Pilot $Pilot))
     [void]$hero.Children.Add($d)
     [void]$script:Stage.Children.Add($hero)
 
@@ -7721,6 +7750,7 @@ function Show-ReadyRoom {
     if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
     $hr = New-LwHonourRow $honours
     if ($hr) { $hr.Margin = '0,14,0,0'; [void]$d.Children.Add($hr) }
+    [void]$d.Children.Add((New-SaveLine -Pilot $Pilot))
     [void]$hero.Children.Add($d)
 
     # Anyone who did not come back is replaced first, so the men drawn
