@@ -690,6 +690,89 @@ function Show-Tab {
         default   { if ($script:Side -eq 'lw') { Show-ReadyRoom -Pilot $pl } else { Show-Roster -Pilot $pl } }
     }
 }
+
+# ASKED ON THE WAY BACK: WHICH SAVE IS THIS MAN'S WAR (Patrick, 21 September
+# 2026). The chooser on the log book tab only appeared with more than one
+# save and only if he went looking for it; a new pilot came back from his
+# first campaign and was never asked. Now the first return from the game
+# puts the question, once: his side's saves, newest first, the ones written
+# during this flight marked. The answer is his savePath from then on, which
+# every reader uses and PLAY CAMPAIGN loads.
+function Test-NeedsSaveQuestion {
+    param($Pilot)
+    if (-not $Pilot) { return $false }
+    if (($Pilot.PSObject.Properties.Name -contains 'savePath') -and "$($Pilot.savePath)" -and (Test-Path "$($Pilot.savePath)")) { return $false }
+    (@(Get-SideSaves).Count -gt 0)
+}
+function Get-SideSaves {
+    $ext = if ($script:Side -eq 'lw') { '.bsl' } else { '.bsr' }
+    @(Get-SaveFiles | Where-Object { $_.Extension.ToLower() -eq $ext })
+}
+function New-SaveQuestionWindow {
+    param($Pilot, $Since)
+    $saves = @(Get-SideSaves)
+    if (-not $saves.Count) { return $null }
+    $w = New-Object Windows.Window
+    $w.WindowStyle = 'None'; $w.ResizeMode = 'NoResize'; $w.ShowInTaskbar = $false
+    $w.Width = 720; $w.SizeToContent = 'Height'; $w.WindowStartupLocation = 'CenterOwner'; $w.Background = B '#0F171D'
+    $outer = New-Object Windows.Controls.Border; $outer.BorderBrush = $script:BrassBrush; $outer.BorderThickness = '1.5'; $outer.Padding = '28,24,28,22'
+    $sp = New-Object Windows.Controls.StackPanel; $outer.Child = $sp; $w.Content = $outer
+    [void]$sp.Children.Add((New-TB -Text 'WELCOME BACK' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    [void]$sp.Children.Add((New-TB -Text 'Which save is his campaign?' -Family $SerifFam -Size 26 -Colour '#E9E3D4' -Bold))
+    $lead = New-TB -Wrap -Family 'Segoe UI' -Size 13.5 -Colour '#9FB0B8' -Text (
+        "Pick the save you flew $(Get-FullName $Pilot)'s war in. From now on his log book and victories are read from it, and PLAY CAMPAIGN takes him back into it.")
+    $lead.Margin = '0,6,0,16'
+    [void]$sp.Children.Add($lead)
+    $script:SaveQ = @{ Win = $w; Chosen = $null }
+    $n = 0
+    foreach ($f in $saves) {
+        if ($n -ge 8) { break }; $n++
+        $id = Get-CampaignIdentity -Path $f.FullName
+        $fresh = ($Since -and $f.LastWriteTime -ge $Since)
+        $b = New-Object Windows.Controls.Border
+        $b.Padding = '14,10'; $b.Margin = '0,0,0,8'; $b.CornerRadius = '3'; $b.Cursor = 'Hand'; $b.Tag = $f.FullName
+        $b.Background = B $(if ($fresh) { '#213540' } else { '#101B22' })
+        $b.BorderBrush = B $(if ($fresh) { '#FFE28A' } else { '#22303C' }); $b.BorderThickness = '1'
+        $row = New-Object Windows.Controls.StackPanel
+        [void]$row.Children.Add((New-TB -Text $f.BaseName -Family $CondFam -Size 15 -Colour $(if ($fresh) { '#FFE28A' } else { '#E9E3D4' }) -Bold))
+        $bits = @("saved $($f.LastWriteTime.ToString('ddd d MMM, HH:mm'))")
+        if ($id -and $id.Name) { $bits += "pilot $($id.Name)" }
+        if ($id -and $id.Date) { $bits += "campaign at $($id.Date.ToString('d MMMM yyyy'))" }
+        if ($fresh) { $bits += 'written during this flight' }
+        [void]$row.Children.Add((New-TB -Text ($bits -join ('   ' + [char]0x2022 + '   ')) -Family 'Segoe UI' -Size 12 -Colour '#8FA0A8'))
+        $b.Child = $row
+        # on the press, and handled: see the personal record's buttons
+        $b.Add_MouseLeftButtonDown({ param($sender, $e) $e.Handled = $true; $script:SaveQ.Chosen = "$($sender.Tag)"; try { $script:SaveQ.Win.Close() } catch { } })
+        [void]$sp.Children.Add($b)
+    }
+    $later = New-TB -Text 'Not now. Ask me next time.' -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
+    $later.Cursor = 'Hand'; $later.Margin = '0,8,0,0'; $later.HorizontalAlignment = 'Right'
+    $later.Add_MouseLeftButtonDown({ param($sender, $e) $e.Handled = $true; try { $script:SaveQ.Win.Close() } catch { } })
+    [void]$sp.Children.Add($later)
+    $w.Add_KeyDown({ param($sender, $e) if ($e.Key -eq 'Escape') { $sender.Close() } })
+    $w
+}
+function Set-PilotSave {
+    param([string]$Path)
+    $p = Get-Pilot
+    if (-not $p -or -not $Path) { return }
+    $o = [ordered]@{}
+    foreach ($pp in $p.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
+    $o['savePath'] = $Path
+    $o['saveAsked'] = $true
+    Save-Pilot -Pilot $o
+}
+function Invoke-SaveQuestion {
+    param($Since)
+    $p = Get-Pilot
+    if (-not (Test-NeedsSaveQuestion $p)) { return }
+    $w = New-SaveQuestionWindow -Pilot $p -Since $Since
+    if (-not $w) { return }
+    try { $w.Owner = $Win } catch { }
+    [void]$w.ShowDialog()
+    if ($script:SaveQ.Chosen) { Set-PilotSave -Path $script:SaveQ.Chosen }
+    $script:SaveQ = $null
+}
 $Win.Add_Activated({
     if ($script:Activating) { return }
     if (Test-GameRunning) { return }
@@ -698,7 +781,10 @@ $Win.Add_Activated({
     try {
         $st = Read-AutostartResult
         $script:AutostartNote = $(if ($st -and $st -ne 'ok' -and $st -ne 'armed' -and $st -ne 'begin') { "The game did not open the campaign by itself ($st); the launcher log bob2guard.log says why. The clicks on the card still work." } else { $null })
+        $since = $null
+        try { $since = [datetime](Get-Content $FlightOpen -Raw | ConvertFrom-Json).start } catch { }
         Finalize-Flight
+        Invoke-SaveQuestion -Since $since
         if (-not (Invoke-AdoptionCheck)) { Show-Tab $script:CurrentTab }
     } catch { } finally { $script:Activating = $false }
 })

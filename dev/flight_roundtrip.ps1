@@ -363,6 +363,22 @@ try {
     $lp2 = Get-Pilot
     Check 'giving his first name and saving puts it in the untouched story' ("$($lp2.background.story)" -match '^Patrick Millin was born' -and -not [bool]$lp2.background.custom -and "$($lp2.first)" -eq 'Patrick')
     $script:BgDlg = $null
+    "12 asked on the way back which save is his war"
+    Set-StateSide 'raf'
+    $qp = [ordered]@{ pilot='Millin'; first='Patrick'; rank='Sergeant'; status='On strength'; sqn=610; sqcode='DW'; actype='Spitfire I'; base='Biggin Hill'; period='P1'
+                      historical=$false; portrait='pilot01.jpg'; created='1940-07-10'; campaignSorties=0; campaignKills=@(0,0,0,0,0,0,0) }
+    Save-Pilot -Pilot $qp -Shrink
+    Check 'a pilot with no save of his own is asked'            (Test-NeedsSaveQuestion (Get-Pilot))
+    $qw = New-SaveQuestionWindow -Pilot (Get-Pilot) -Since ((Get-Date).AddHours(-1))
+    $rows = @($qw.Content.Child.Children | Where-Object { $_ -is [Windows.Controls.Border] })
+    Check 'the window lists his side''s saves'                  ($rows.Count -ge 1) "$($rows.Count) rows"
+    $ev = New-Object Windows.Input.MouseButtonEventArgs([Windows.Input.Mouse]::PrimaryDevice, 0, [Windows.Input.MouseButton]::Left)
+    $ev.RoutedEvent = [Windows.UIElement]::MouseLeftButtonDownEvent
+    $rows[0].RaiseEvent($ev)
+    Check 'pressing a save chooses it'                          ("$($script:SaveQ.Chosen)" -eq "$($rows[0].Tag)")
+    Set-PilotSave -Path $script:SaveQ.Chosen; $script:SaveQ = $null
+    $qp2 = Get-Pilot
+    Check 'and it is his from then on'                          ("$($qp2.savePath)" -eq "$($rows[0].Tag)" -and [bool]$qp2.saveAsked -and -not (Test-NeedsSaveQuestion $qp2))
     ''
     '--- samples, to be read by a person ---'
     foreach ($c in $cases) { $b = New-PilotBackground -Man $c -Pilot $c; ''; "[$($c.rank), $($c.actype)]  born $($b.born), $($b.place)"; $b.story }
