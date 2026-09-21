@@ -1,5 +1,5 @@
 {
- "note": "Invented pilot histories for the Squadron Room. Every route below is a real way a man reached a fighter cockpit by the summer of 1940, and every school, unit and place named is real and was doing that job at that time. The men are invented. A story is the route's paragraphs followed by the side's closing paragraph. Tokens in {braces} are either computed ({first}, {last}, {name}, {born}, {year}, {age}, {place}, {joined}, {type}, {unit}, {base}, and on the British side {posted}, {hours}, {ontype}, {otu}) or are looked up in the side's lists, one item picked by a number made from the pilot's name, so the same man gets the same past every time, and the same item is reused if a token appears twice in one story. List items may themselves contain tokens. Rules for anyone adding to the lists: family items stay neutral about the birthplace; only the father lists mention a father, only the sibling list mentions brothers or sisters, and the mother is always alive; every item must read correctly in every sentence that uses its token. Check any change with dev/render_backgrounds.py. Read by Get-PilotBackground in BOB2_SquadronRoom.ps1.",
+ "note": "Invented pilot histories for the Squadron Room, written in the plain voice of the example Patrick gave on 21 September 2026. Every route is a real way into a fighter cockpit by the summer of 1940; the men are invented. A story is the route's four paragraphs (the side's closing is empty: where he is now opens the last paragraph). Computed tokens: {first} {last} {name} {born} {year} {age} {place} {town} {joined} {type} {unit} {base}, and on the British side {posted} {hours} {ontype} {otu}. Anything else is looked up in the side's lists, one item picked from a number made from the pilot's name and reused if the token appears again. Rules for the lists: plain sentences, subject first, no semicolons, no clever endings; only the home lists mention a father; the mother is always alive; nothing that has to happen by the sea or on a farm. Check any change with dev/render_backgrounds.py.",
  "raf": {
   "born": {
    "nco": [
@@ -74,22 +74,38 @@
    "Belfast",
    "Londonderry"
   ],
+  "otu": {
+   "Spitfire": [
+    "Hawarden",
+    "Aston Down"
+   ],
+   "Hurricane": [
+    "Sutton Bridge",
+    "Aston Down"
+   ]
+  },
   "lists": {
-   "job": [
-    "a clerk in a bank",
-    "a junior draughtsman in an engineering works",
-    "an apprentice with a firm of motor engineers",
-    "an insurance clerk",
-    "a clerk in the borough treasurer's office",
-    "a junior in a solicitor's office",
-    "a trainee with a firm of surveyors",
-    "a laboratory assistant at a chemical works",
-    "a booking clerk on the railway",
-    "a counter hand in his uncle's ironmongery",
-    "a junior reporter on the local weekly paper",
-    "an apprentice electrician",
-    "a junior in a shipping office",
-    "a clerk in an estate agent's office"
+   "home": [
+    "above his father's chemist's shop",
+    "above the grocer's shop his parents ran",
+    "as the son of an engine driver on the railway",
+    "as the son of a postman",
+    "as the son of a printer",
+    "as the son of a foreman at the local engineering works",
+    "as the son of an elementary schoolmaster",
+    "as the son of a brewery van driver, who taught him to drive at fourteen",
+    "with his mother after his father died of war wounds in 1924",
+    "as the son of a garage owner, spending his boyhood around cars and engines"
+   ],
+   "homeoff": [
+    "as the son of a family doctor",
+    "as the son of a solicitor",
+    "as the son of a vicar",
+    "as the son of a bank manager",
+    "as the son of a retired army officer",
+    "as the son of a civil engineer who worked abroad for much of his childhood",
+    "with his mother and an uncle after his father died when he was small",
+    "as the son of a schoolmaster"
    ],
    "school": [
     "the local grammar school",
@@ -100,23 +116,67 @@
     "the boys' grammar school"
    ],
    "pubschool": [
-    "a minor public school in the Midlands",
-    "a day school of some reputation",
+    "a public school in the Midlands",
+    "a day school near his home",
     "a boarding school on the south coast",
     "his father's old school",
-    "a small public school that was prouder of its rugby than of its scholars",
-    "a grammar school of old foundation"
+    "a grammar school of old foundation",
+    "a small public school in the West Country"
+   ],
+   "boyhood": [
+    "enjoyed Scouts and had a knack for map-reading",
+    "played football in the winter and cricket in the summer",
+    "built model aeroplanes and read every flying magazine he could find",
+    "was good at mathematics and hopeless at French",
+    "sang in the church choir and ran for the school",
+    "spent his spare time taking bicycles apart and putting them back together",
+    "won a prize for mathematics and captained the football team",
+    "was a keen swimmer and a good shot with an air rifle"
+   ],
+   "boyhoodoff": [
+    "played rugby for the first fifteen and did well at mathematics",
+    "was a good cricketer and a better swimmer",
+    "rowed for the school and was made a prefect",
+    "joined the Officers' Training Corps and enjoyed it more than his lessons",
+    "boxed for the school and won a prize for history",
+    "enjoyed sport more than work and captained the cricket team in his last year"
+   ],
+   "job": [
+    "a junior reporter on the town's weekly newspaper",
+    "a clerk in a bank",
+    "a junior draughtsman at an engineering works",
+    "an apprentice motor mechanic",
+    "an insurance clerk",
+    "a clerk in the council offices",
+    "a junior in a solicitor's office",
+    "a laboratory assistant at a chemical works",
+    "a booking clerk on the railway",
+    "an apprentice electrician",
+    "a shop assistant in a department store"
+   ],
+   "offjob": [
+    "a clerk in an insurance office in London",
+    "a trainee with a firm of accountants",
+    "a salesman for a motor company",
+    "a junior in a stockbroker's office",
+    "a trainee at a bank",
+    "a clerk with a shipping company in London"
    ],
    "univ": [
     "went up to Oxford to read law",
     "went up to Oxford to read history",
-    "went up to Oxford to read chemistry",
     "went up to Cambridge to read engineering",
     "went up to Cambridge to read mathematics",
-    "went up to Cambridge to read modern languages",
-    "went to London University to read engineering",
-    "went to London University to read medicine",
-    "went to London University to read economics"
+    "went to London University to read economics",
+    "went to London University to study engineering"
+   ],
+   "spark": [
+    "watching an air display at fourteen",
+    "a five shilling joyride with a touring air circus at twelve",
+    "reading about the Schneider Trophy races as a schoolboy",
+    "a trip to the Hendon air display as a schoolboy",
+    "his first sight of an airliner coming in to land at Croydon",
+    "a flight in a Tiger Moth that an uncle paid for on his sixteenth birthday"
    ],
    "erfts": [
     "No. 3 E&RFTS at Hamble",
@@ -142,12 +202,6 @@
     "the Bristol company's school at Filton",
     "the Brooklands Aviation school at Sywell"
    ],
-   "itw": [
-    "No. 1 Initial Training Wing at Cambridge",
-    "No. 3 Initial Training Wing at Hastings",
-    "No. 4 Initial Training Wing at Bexhill",
-    "No. 5 Initial Training Wing at Hastings"
-   ],
    "sfts": [
     "No. 5 Flying Training School at Sealand",
     "No. 6 Flying Training School at Little Rissington",
@@ -158,137 +212,53 @@
     "No. 9 Flying Training School at Hullavington",
     "No. 15 Flying Training School at Lossiemouth"
    ],
+   "itwplace": [
+    "Cambridge",
+    "Hastings"
+   ],
    "trainer": [
-    "the Harvard",
-    "the Miles Master",
-    "the Hawker Hart and then the Harvard"
+    "Harts and Harvards",
+    "Miles Masters",
+    "Harvards"
    ],
    "trade": [
-    "fitter, aero engines",
-    "fitter, airframes",
-    "wireless operator mechanic",
-    "instrument maker"
-   ],
-   "father": [
-    "His father came back from the Western Front in 1919 and never spoke of it.",
-    "His father drove an engine on the railway, and his mother kept a small shop in the front room.",
-    "His father, an elementary schoolmaster, would have kept him at school longer had there been the money.",
-    "His father had been a rigger in the Royal Flying Corps, and kept a splintered piece of propeller on the mantelpiece.",
-    "His father kept a chemist's shop, and the family lived over it.",
-    "His father, a works foreman, held that a job was done properly or not at all.",
-    "His father died in 1924 of his war wounds, and his mother brought him up on a pension and her dressmaking.",
-    "His father was a postman who grew prize chrysanthemums, and his mother played the organ at chapel.",
-    "His father drove a brewery van, and had taught him to drive it by the time he was fourteen.",
-    "His father was a compositor at a printing works, a careful man with ink under his nails."
-   ],
-   "fatheroff": [
-    "His father was a doctor, whose patients came to the side door at all hours.",
-    "His father, a solicitor, had a place waiting for him in the firm and was patient about it.",
-    "His father was a clergyman with a small stipend and a large library.",
-    "His father had been a gunner officer in the last war and afterwards managed a branch of a bank.",
-    "His father was a civil engineer, abroad for years at a time building harbours, and known chiefly by his letters.",
-    "His father, a regular soldier, had retired as a major and taken to gardening with military thoroughness.",
-    "His father owned a small engineering business and assumed that his son would come into it.",
-    "His father died when he was small and is chiefly a photograph on the piano; an uncle paid the school fees.",
-    "His father was a schoolmaster who taught classics and distrusted machinery.",
-    "His father edited a provincial newspaper, and the house was full of proofs and argument."
-   ],
-   "sibling": [
-    "There were three children, of whom he was the eldest.",
-    "One sister, four years older, taught him to read before he went to school.",
-    "There were no other children.",
-    "Two younger sisters thought him a great bore until he came home in uniform.",
-    "A younger brother followed him everywhere, and follows him still by post.",
-    "The youngest of four, he was used to waiting his turn.",
-    "An elder brother went into the Navy, which settled where the younger would not go.",
-    "Of three boys he was the middle one, and the one who could not sit still."
-   ],
-   "pastime": [
-    "As a boy he built wireless sets from parts bought with his pocket money.",
-    "He sang treble in the church choir until his voice broke.",
-    "From the age of twelve he kept the scorebook for a cricket club, in a hand neater than the secretary's.",
-    "His boyhood was spent on a bicycle, which he took to pieces and rebuilt every winter.",
-    "Cigarette cards of aeroplanes were his passion, and he knew every type in the set by its outline.",
-    "A keen Boy Scout, he was a good one mostly because he liked maps.",
-    "He read everything in the public library that had an engine in it.",
-    "Football and cricket filled his boyhood, and he claims to have been picked for neither on merit.",
-    "His holidays were spent in a garage, handing spanners to a mechanic who let him watch.",
-    "Good with his hands, he made model aeroplanes of balsa and tissue, most of which flew once."
-   ],
-   "spark": [
-    "When he was fourteen a touring air circus came to the town, and five shillings bought him ten minutes in an old Avro.",
-    "At an air display when he was fourteen he stood at the rope from the first take-off to the last landing.",
-    "What settled it was a silver biplane fighter seen from a train, keeping pace for a mile before it rolled away.",
-    "Every week he bought a flying magazine, read it from cover to cover, and filed it in order under his bed.",
-    "On his fifteenth birthday a family friend who had flown in the last war took him up and let him hold the stick.",
-    "From the age of ten he cycled out to the nearest aerodrome to lie in the grass by the boundary and watch.",
-    "The Schneider Trophy races filled the newspapers, and he cut out the photographs of the seaplanes and pinned them over his bed.",
-    "Where the wish to fly came from he could never say, only that it was there by the time he was twelve."
-   ],
-   "solo": [
-    "He went solo after nine hours. His instructor climbed out one dull afternoon, fastened the straps across the empty seat, and told him not to bend it.",
-    "His first solo landing was really three, one after another down the field. When he taxied in the instructor was lighting his pipe and seemed not to have been watching.",
-    "He was slow to go solo because he would not leave the controls alone. Aeroplanes, his instructor told him, had flown perfectly well before he was born.",
-    "On his first solo the aeroplane, lighter by one instructor, climbed so fast that he was at a thousand feet before he had stopped talking to himself.",
-    "He went solo in eight hours, the first of his course, and it went to his head for a week, until a crosswind landing took it out again.",
-    "The first solo came on a still evening after ten hours of dual. He flew one circuit, landed, and sat for a full minute before taxiing in.",
-    "His instructor, a man with a bad back and no small talk, sent him solo with the remark that he was unlikely to improve by being watched.",
-    "His first solo he remembers less well than the flight before it, when he bounced so badly that the instructor took over without a word."
+    "an engine fitter",
+    "an airframe fitter",
+    "a wireless mechanic",
+    "an instrument maker"
    ],
    "moment": [
-    "On a night cross-country he lost himself for twenty minutes, found a railway line shining under the moon and followed it home. He told nobody.",
-    "He once came in to land with the wheels still up and was saved by the warning horn. His instructor never mentioned it again, which was worse than a lecture.",
-    "An instructor wrote that he flew accurately and landed as if the ground owed him money. He worked at his landings for a month, and they improved.",
-    "In his second week he swung on landing and took off a wing tip. His flight commander walked the skid mark with him, slowly, and then sent him straight up again.",
-    "Instrument flying under the hood nearly finished him. He passed the test at the second attempt, and remains a little proud of how much he disliked it.",
-    "Formation flying came easily to him and aerobatics did not. His slow rolls, an instructor told him, were neither.",
-    "On his first night solo the flare path vanished under the nose on the approach, as he had been warned it would, and he went round twice before he landed.",
-    "Halfway through the course an instructor told him that he would make a sound pilot if he stopped trying to be a brilliant one. He wrote it in his log book."
+    "He was the first on his course to fly solo, after eight hours of instruction. A difficult crosswind landing soon checked his confidence.",
+    "He took twelve hours to go solo, longer than most, but after that he made steady progress.",
+    "Instrument flying gave him more trouble than anything else, and he passed the test at the second attempt.",
+    "On a solo cross-country flight he got lost in cloud and landed at the wrong airfield, which his instructor did not let him forget.",
+    "His instructors described him as a steady and reliable pilot rather than a brilliant one.",
+    "He did well at navigation but had to work hard at his landings.",
+    "His engine cut on take-off one morning, but he put the aircraft down safely in the next field."
    ],
    "temper": [
-    "In the air he is careful rather than dashing, and is always where he ought to be.",
-    "His assessments say above the average as a pilot and average as a shot, and he thinks both about right.",
-    "In the mess he is quiet; after a flight he talks, and cannot help going over every minute of it.",
-    "People find him easy company. He listens more than he talks, laughs readily, and is slow to take offence.",
-    "There is a stubborn streak in him that his instructors noted and his friends work around.",
-    "Nobody would call him a natural pilot, and he knows it. What he has is application.",
-    "Steadier than his years and a little solemn, he is someone the others have taken to asking things.",
-    "His flying is smooth and his landings neat, and he is chiefly afraid of making a fool of himself.",
-    "He is cheerful in the mornings, which is held against him.",
-    "Not a great talker, he does what he is asked, does it properly, and keeps his opinions to himself."
+    "He is quiet in the mess but talks a lot after flying.",
+    "He is cheerful and easy company, and the ground crew like him.",
+    "He is careful and thorough, and reads his pilot's notes more than most.",
+    "The others find him steady and reliable, if a little serious.",
+    "He is keen to prove himself and sometimes tries too hard.",
+    "Most of the squadron like him, although he can be short with people when he is tired."
    ],
    "habit": [
-    "Before every flight he walks round his aeroplane with his hands in his pockets, looking at everything and touching nothing.",
-    "A neat upright hand fills his log book, and the lines are ruled in red ink.",
-    "A pipe that is forever going out and a sixpenny paperback travel in his tunic pockets.",
-    "Before a flight he polishes his own windscreen, however clean it already is.",
-    "Sleep comes to him anywhere, at once, and leaves the moment the dispersal telephone rings.",
-    "On the mess piano he plays by ear, the same five tunes, and is always asked for a sixth.",
-    "In the evenings he rides a bicycle round the perimeter track, for something to do with his legs.",
-    "When he is concentrating he whistles through his teeth, and has no idea that he does it.",
-    "A friend from school plays chess with him by post, a move a week, and is winning.",
-    "Lately he has been teaching himself to draw, and the margins of his letters are full of aeroplanes."
+    "He plays football for the station team whenever there is time.",
+    "He smokes a pipe, mostly to have something to do with his hands.",
+    "He spends his free evenings writing letters or reading.",
+    "He enjoys a game of cards in the mess and usually loses.",
+    "He keeps a small notebook of every flight, as well as his log book.",
+    "On a free afternoon he likes to take a bicycle out into the country lanes."
    ],
-   "home": [
-    "His mother writes every Sunday, and he answers every Sunday, saying very little about flying.",
-    "There is a girl at home, Joan, who writes twice a week and to whom he is not quite engaged.",
-    "At home his room is as he left it, books and all, and his mother dusts it on Fridays.",
-    "Part of his pay goes home every month, and he has mentioned it to no one.",
-    "A motor cycle, bought second-hand with his first pay, stands under a sheet in the shed at home.",
-    "At home an elderly dog still goes to the gate at the hour he used to come in.",
-    "His mother keeps his letters in a biscuit tin and still addresses hers to Master {first} {last}.",
-    "Since the war began he has been home once, for four days, and spent most of them asleep.",
-    "On his last leave the house seemed smaller, and he found little to say about what he did."
-   ]
-  },
-  "otu": {
-   "Spitfire": [
-    "No. 7 Operational Training Unit at Hawarden",
-    "No. 5 Operational Training Unit at Aston Down"
-   ],
-   "Hurricane": [
-    "No. 6 Operational Training Unit at Sutton Bridge",
-    "No. 5 Operational Training Unit at Aston Down"
+   "family": [
+    "His mother writes to him every week, and he tries to answer every letter.",
+    "He sends part of his pay home every month.",
+    "He has a girl in {town} and writes to her twice a week.",
+    "His family have not seen him since Christmas.",
+    "He has not been home since the spring and misses it more than he admits.",
+    "His mother keeps every letter he sends her."
    ]
   },
   "routes": [
@@ -296,84 +266,84 @@
     "id": "rafvr",
     "who": "nco",
     "weight": 5,
-    "text": [
-     "{name} was born on {born} in {place}. {father} {pastime} From {school} he went, at sixteen, to work as {job}.",
-     "{spark} Private flying cost more for an hour than he earned in a week, but the Volunteer Reserve taught young men to fly at weekends and at the public expense, and in {joined} it took him as an airman under training, pilot. Civilian instructors at {erfts} taught him on the Tiger Moth and later the Hawker Hart.",
-     "{solo} Called up with the rest of the Reserve on 1 September 1939, he waited some weeks for a course. {itw} gave him drill and ground subjects; {sfts} gave him {trainer}, his wings and a Sergeant's stripes. At {otu} the {type} took about a fortnight, with hardly a round fired, and he left with some {hours} hours in all.",
-     "{temper} {habit} {home}"
-    ],
     "joined": [
      1937,
      1939
     ],
-    "minage": 18
+    "minage": 18,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. At sixteen, he left school to become {job}.",
+     "He had wanted to fly since {spark}, but lessons were well beyond his wages. Joining the RAF Volunteer Reserve in {joined} gave him the opportunity. He trained at weekends at {erfts}, learning on Tiger Moths before progressing to the Hawker Hart. {moment}",
+     "Called up on 1 September 1939, he spent several weeks waiting for a training place. He completed his initial instruction at {itwplace}, then moved to {sfts}, where he flew {trainer} and qualified as a sergeant pilot. A short conversion course at {otu} followed. He finished it with roughly {hours} flying hours, but only {ontype} on {type}s and little gunnery practice.",
+     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "halton",
     "who": "nco",
     "weight": 2,
-    "text": [
-     "{name} comes from {place}, where he was born on {born}. {father} {pastime}",
-     "{spark} For a boy without money the way into the Air Force was an aircraft apprenticeship, and at sixteen he left {school} for No. 1 School of Technical Training, Halton. Three years later he passed out in the trade of {trade}. {last} worked on aeroplanes and watched other men fly them until {joined}, when he was chosen for pilot training from the ranks, as a few ex-apprentices were each year.",
-     "He began again at the bottom, as a pupil, and went on to {trainer} at {sfts}. {moment} Wings and a Sergeant's stripes came together. The {type} he learned at {otu}: about a fortnight, very little firing, and a Merlin engine he would have liked longer to look at.",
-     "{last} knows what is under the cowling better than most officers, and the ground crew listen to him. {temper} {habit} {home}"
-    ],
     "joined": [
-     1937,
+     1938,
      1939
     ],
-    "minage": 20
+    "minage": 20,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. At fifteen he passed the entrance examination for an RAF aircraft apprenticeship.",
+     "He spent three years at No. 1 School of Technical Training at Halton and passed out as {trade}. He then served on a squadron, looking after the aircraft he hoped one day to fly. A few former apprentices were chosen for pilot training each year, and in {joined} he was one of them.",
+     "He learned to fly at {erfts} and then went on to {sfts}, where he flew {trainer} and qualified as a sergeant pilot. {moment} A short conversion course at {otu} followed. He came to fighters knowing far more about engines and airframes than most of his fellow pilots.",
+     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "ssc",
     "who": "officer",
     "weight": 5,
-    "text": [
-     "{name} was born on {born} in {place}. {fatheroff} {pastime} School was {pubschool}.",
-     "{spark} In {joined} he answered an Air Ministry advertisement for short service commissions: four years on the active list and six on the reserve. His first flying was done as a civilian at {civschool}, under contract to the Air Ministry. Then came a fortnight of drill and tailors at the RAF Depot, Uxbridge, and his name in the Gazette as an Acting Pilot Officer on probation.",
-     "At {sfts} he flew {trainer}. {moment} In due course he took his wings and was posted to fighters. The {type} he learned at {otu}, where the course ran to about a fortnight and very little gunnery.",
-     "What {last} will do when the commission runs out he has not decided, and the question has stopped being asked. {temper} {habit} {home}"
-    ],
     "joined": [
-     1936,
+     1938,
      1939
     ],
-    "minage": 18
+    "minage": 18,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}. He left school at eighteen and worked for a year as {offjob}.",
+     "He had wanted to fly since {spark}. In {joined} he answered an Air Ministry advertisement for short service commissions, which offered four years of flying followed by six on the reserve. He learned to fly as a civilian at {civschool}, then spent a fortnight at the RAF Depot at Uxbridge on drill and uniform fittings before being commissioned as an acting pilot officer.",
+     "He finished his training at {sfts}, where he flew {trainer} and was awarded his wings. {moment} He was then posted to fighters and learned to fly the {type} with his squadron.",
+     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "cranwell",
     "who": "officer",
     "weight": 2,
-    "text": [
-     "{name} was born on {born} and brought up in {place}. {fatheroff} {sibling} {pastime} His school was {pubschool}.",
-     "{spark} The Air Force was to be his career, and that meant the Royal Air Force College at Cranwell. He sat the competitive examination and entered as a flight cadet in {joined}. The two years there gave as much time to the parade ground, the lecture room and the sports field as to the air.",
-     "The flying was done on the Avro Tutor and then the Hawker Hart. {solo} A permanent commission followed. The College closed to cadets at the outbreak of war, and the course he took is no longer given. The {type} he learned at {otu}, in about a fortnight.",
-     "A regular officer among men who mostly are not, {last} is expected to know the book, and does. {temper} {habit} {home}"
-    ],
     "joined": [
      1935,
      1937
     ],
-    "minage": 18
+    "minage": 18,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}.",
+     "He had wanted to fly since {spark}, and in {joined} he entered the RAF College at Cranwell as a flight cadet. The two year course mixed flying on Avro Tutors and Hawker Harts with lectures, drill and a great deal of sport. {moment}",
+     "He passed out with a permanent commission and was posted to a fighter squadron. He converted to the {type} when the squadron was re-equipped shortly before the war, and he now has more experience than most of the pilots around him.",
+     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "uas",
     "who": "officer",
     "weight": 2,
-    "text": [
-     "{name} comes from {place}, where he was born on {born}. {fatheroff} {sibling} {pastime} From {pubschool} he {univ}.",
-     "{spark} At university the Air Squadron was the obvious next step. It flew Avro Tutors, taught undergraduates to fly for nothing, and asked only that they turn up, which he did more faithfully than he went to lectures. In {joined} he was commissioned in the Volunteer Reserve.",
-     "Called up in September 1939, he found that the Air Force meant to teach him again from the beginning. {itw} supplied the drill, and {sfts} supplied {trainer} and, in the end, his wings. {moment} At {otu} the {type} took about a fortnight, and he left with some {hours} hours in all.",
-     "The degree is unfinished, and {last} does not seem to miss it. {temper} {habit} {home}"
-    ],
     "joined": [
      1937,
      1939
     ],
-    "minage": 20
+    "minage": 20,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}, and then {univ}.",
+     "He had wanted to fly since {spark}. At university he joined the University Air Squadron and learned to fly on Avro Tutors, and in {joined} he was commissioned in the RAF Volunteer Reserve. When war came he left his degree unfinished and was called up in September 1939.",
+     "He completed his initial training at {itwplace}, then moved to {sfts}, where he flew {trainer} and was awarded his wings. {moment} A short conversion course at {otu} followed. He finished it with roughly {hours} flying hours, but only {ontype} on {type}s and little gunnery practice.",
+     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+    ]
    }
   ],
-  "closing": "He joined {unit} at {base} in {posted}, with {ontype} hours on the {type} in his log book. He is {age} years old."
+  "closing": ""
  },
  "lw": {
   "born": {
@@ -391,17 +361,17 @@
    "Bremen",
    "Kiel",
    "Lübeck",
-   "Hannover",
-   "Braunschweig",
+   "Hanover",
+   "Brunswick",
    "Kassel",
    "Göttingen",
    "Dortmund",
    "Essen",
    "Düsseldorf",
-   "Köln",
+   "Cologne",
    "Koblenz",
    "Trier",
-   "Frankfurt am Main",
+   "Frankfurt",
    "Wiesbaden",
    "Mannheim",
    "Heidelberg",
@@ -409,10 +379,10 @@
    "Stuttgart",
    "Ulm",
    "Augsburg",
-   "München",
+   "Munich",
    "Rosenheim",
    "Regensburg",
-   "Nürnberg",
+   "Nuremberg",
    "Würzburg",
    "Bamberg",
    "Erfurt",
@@ -420,40 +390,40 @@
    "Dresden",
    "Chemnitz",
    "Magdeburg",
-   "Halle an der Saale",
+   "Halle",
    "Potsdam",
-   "Berlin-Spandau",
-   "Berlin-Charlottenburg",
+   "Spandau, Berlin",
+   "Charlottenburg, Berlin",
    "Rostock",
    "Stettin",
    "Breslau",
-   "Königsberg in Ostpreußen",
-   "Wien",
+   "Königsberg in East Prussia",
+   "Vienna",
    "Graz",
    "Linz",
    "Innsbruck",
    "Salzburg"
   ],
   "lists": {
-   "job": [
-    "an apprenticeship as a toolmaker",
-    "an apprenticeship as a motor mechanic",
-    "a commercial apprenticeship in a shipping firm",
-    "an apprenticeship as an electrician",
-    "work as a clerk with the Reichsbahn",
-    "an apprenticeship as a precision mechanic",
-    "an apprenticeship as a joiner",
-    "an apprenticeship as a typesetter",
-    "work as a junior clerk in a savings bank",
-    "an apprenticeship with a firm of instrument makers"
+   "home": [
+    "above his father's bakery",
+    "as the son of a railway official",
+    "as the son of a schoolteacher",
+    "as the son of a tram driver",
+    "as the son of a master joiner",
+    "as the son of a foreman in a machine factory",
+    "with his mother and an uncle after his father died when he was small",
+    "as the son of a post office clerk",
+    "above the small shop his parents ran"
    ],
-   "radiojob": [
-    "an apprenticeship as a radio mechanic",
-    "work as a telegraphist with the Reichspost",
-    "an apprenticeship as an electrician",
-    "work in a shop that sold and repaired wireless sets",
-    "an apprenticeship with a firm that made telephone equipment",
-    "work as a junior telegraphist on the railway"
+   "homeoff": [
+    "as the son of a doctor",
+    "as the son of a judge",
+    "as the son of a pastor",
+    "as the son of a factory director",
+    "as the son of an army officer who had served in the last war",
+    "as the son of a university lecturer",
+    "with his mother after his father died when he was small"
    ],
    "school": [
     "the Volksschule and then a trade school",
@@ -461,16 +431,40 @@
     "the Oberrealschule as far as the intermediate certificate"
    ],
    "gymnasium": [
-    "the Gymnasium, where he took his Abitur",
-    "the Realgymnasium, where he took his Abitur",
-    "the Oberrealschule, where he took his Abitur"
+    "the Gymnasium",
+    "the Realgymnasium",
+    "the Oberrealschule"
+   ],
+   "boyhood": [
+    "played football and built model gliders",
+    "was good at mathematics and spent his summers hiking",
+    "enjoyed sport and was a strong swimmer",
+    "built model aeroplanes and read everything he could find about flying",
+    "played the accordion and sang in a choir",
+    "went skiing in the winter and cycling in the summer",
+    "was good with his hands and repaired bicycles for his friends"
+   ],
+   "job": [
+    "an apprenticeship as a toolmaker",
+    "an apprenticeship as a motor mechanic",
+    "an apprenticeship as an electrician",
+    "work as a clerk with the railway",
+    "an apprenticeship as a joiner",
+    "work as a junior clerk in a savings bank",
+    "an apprenticeship as a precision mechanic"
+   ],
+   "radiojob": [
+    "an apprenticeship as a radio mechanic",
+    "work as a telegraphist with the post office",
+    "an apprenticeship as an electrician",
+    "work in a shop that sold and repaired wireless sets"
    ],
    "glide": [
     "on the Wasserkuppe in the Rhön",
     "at Rossitten on the Kurische Nehrung",
     "at Grunau in Silesia",
     "at Hornberg near Schwäbisch Gmünd",
-    "with a club on a bare hill outside the town",
+    "with a club on a hill outside the town",
     "at Borkenberge in Westphalia"
    ],
    "ab": [
@@ -494,133 +488,58 @@
     "Jagdfliegerschule 5 at Wien-Schwechat"
    ],
    "lns": [
-    "the air signals school at Halle an der Saale",
-    "the air signals school at Nordhausen"
-   ],
-   "father": [
-    "His father served in the artillery from 1914 to 1918 and came home with a limp and little to say.",
-    "His father was a master baker, and it was understood that the shop would one day be his.",
-    "His father, a railway official, lost his savings in the inflation of 1923, and the family lived carefully ever after.",
-    "His father had been an observer in a two-seater in 1917 and kept the photographs in a drawer.",
-    "His father taught at the elementary school and was strict at home in the same even way.",
-    "His father died when he was small, and he was brought up by his mother and an uncle.",
-    "His father drove a tram and knew half the district by name.",
-    "His father was a cabinet maker, and the flat always smelled of glue and wood shavings.",
-    "His father was a foreman in a machine factory and came home at the same minute every evening.",
-    "His father kept a small inn, where the boy was carrying glasses before he could see over the bar."
-   ],
-   "fatheroff": [
-    "His father was a doctor, whose surgery took up the ground floor of the family house.",
-    "His father had been an infantry officer in the war and was afterwards a discontented official of an insurance company.",
-    "His father was a judge at the district court, a precise and kindly man.",
-    "His father taught Latin and Greek at a Gymnasium across the town and had hoped for a scholar.",
-    "His father was an engineer with a firm that built bridges, and was often away.",
-    "His father had flown as an observer in 1917 and kept the photographs in a drawer, to be looked at on Sundays.",
-    "His father died in 1925, and his mother let rooms to students to keep him at school.",
-    "His father owned a small printing works and would have liked a son in the business.",
-    "His father was a senior official of the postal service, a man of fixed habits.",
-    "His father was a regular officer, retired in 1920 when the army was cut down, who never quite found another occupation."
-   ],
-   "sibling": [
-    "There were four children, of whom he was the eldest.",
-    "Two elder sisters spoiled him.",
-    "There were no other children.",
-    "A younger brother is still at school.",
-    "Of three sons he was the second.",
-    "There was one sister, two years younger, his ally in everything.",
-    "The youngest of five, he was mostly left to himself."
-   ],
-   "pastime": [
-    "As a boy he kept goal for a football club and was good enough to be noticed.",
-    "He read whatever he could find, adventure stories above all, and was teased for it.",
-    "Model gliders of pine strip and paper were his passion, and most of them were lost over the neighbours' roofs.",
-    "A good gymnast, small and quick, he won a district medal that his mother still keeps.",
-    "His free afternoons were spent at a rowing club on the river.",
-    "He took bicycles and clocks apart, and got most of them together again.",
-    "Summers were spent with grandparents in the country, where he learned to milk a cow and drive a horse.",
-    "He sang in a church choir until his voice broke.",
-    "He swam for his school and claims to have disliked every length.",
-    "He drew well, aeroplanes and ships for the most part, in the margins of his school books."
-   ],
-   "glidebit": [
-    "The first launch gave him eleven seconds in the air, a hop down the slope on a rubber rope and a landing on the skid.",
-    "For every minute in the air there was an hour of hauling the glider back up the hill, which he thought a fair exchange.",
-    "The A certificate asked for a straight glide of thirty seconds, and he managed thirty-four.",
-    "The group built its own glider one winter, and he glued ribs for four months before he was allowed to sit in it.",
-    "On his fourth launch he broke a skid, and he spent the rest of that summer repairing it.",
-    "An instructor there, who had flown in the war and said little, taught him to feel the air through the seat of his trousers."
+    "the air signals school at Halle"
    ],
    "moment": [
-    "His first powered solo came after some fifty circuits with an instructor who shouted down the speaking tube throughout. The silence, he says, was the strangest part.",
-    "On his first solo cross-country he mistook one town for another, landed in a meadow to ask a farmer the way, and took off again before anyone could report him.",
-    "A heavy landing cost him a bent undercarriage leg and three days confined to barracks. He has been gentle with aeroplanes ever since.",
-    "Aerobatics were the first thing in his life that he had been plainly better at than everyone around him, and he took care not to say so.",
-    "His instructor told him that he flew like a glider pilot, too gently and too politely, and that the engine was there to be used.",
-    "Airsick on his first three powered flights, he said nothing. On the fourth it stopped, and it has not returned.",
-    "When his engine failed on a cross-country flight he put the trainer down in a stubble field without a scratch, as any glider pilot would.",
-    "Instrument flying came hard to him. Under the hood he once flew a gentle spiral that he would have sworn was level flight."
+    "He was airsick on his first few flights but said nothing, and it soon passed.",
+    "On a cross-country flight his engine failed, and he landed the trainer safely in a stubble field.",
+    "On his first solo cross-country flight he got lost and had to land in a meadow to ask a farmer the way.",
+    "He went solo after nine hours, one of the first in his class.",
+    "His instructor judged him steady rather than gifted, and said so in his report.",
+    "He found the flying easy and the classroom work hard."
    ],
    "funkmoment": [
-    "By the end of the course he could read Morse faster than he could write it down, which the instructors said was the usual complaint.",
-    "On his first air firing detail he put most of a drum into empty air and a few rounds into the drogue, and was told that this was about average.",
-    "Airsick on his first training flights, he learned to take down a message with a paper bag on his knee.",
-    "His first direction finding exercise in the air put the aircraft forty kilometres from where it was. He had taken a bearing the wrong way round.",
-    "His section instructor held that a wireless operator who could not change a valve in the dark with gloves on was a passenger.",
-    "He passed out near the top of his course in Morse and near the bottom in gunnery, and has worked at the second ever since."
-   ],
-   "whyfly": [
-    "because the flying pay was worth having",
-    "because a friend from the barrack room did and he would not be left behind",
-    "because he had never been in an aeroplane and wanted to know what it was like",
-    "for no better reason, he says, than boredom with the parade ground",
-    "because the alternative was a telephone exchange in a cellar",
-    "because an instructor told him that he would never pass the medical"
+    "On his first gunnery exercise he missed the target drogue with nearly every round, which his instructor said was normal.",
+    "He learned Morse quickly and was one of the fastest operators on his course.",
+    "He was sick on his first flight in a rear seat but soon got used to it.",
+    "He found the direction finding equipment difficult at first but had mastered it by the end of the course."
    ],
    "war": [
-    "He reached the Gruppe in time for the campaign in the West, and flew over Belgium and northern France.",
-    "He came too late for the fighting in France, and has fired his guns only at targets.",
-    "He flew through the campaign in the West in May and June 1940, escort work mostly, and ended it without a claim.",
-    "He arrived from the replacement pool in June 1940, as the fighting in France was ending, and has still to prove himself."
+    "He joined his Gruppe in time for the campaign in France in May 1940 and flew escort missions over Belgium and northern France.",
+    "He reached the front just as the fighting in France ended, and has not yet fired his guns in action.",
+    "He flew in the campaign in France in May and June 1940 but made no claims.",
+    "He came to the Gruppe from the replacement pool in June 1940, after the fighting in France was over."
    ],
    "temper": [
-    "Calm in the air and economical with words, he is marked down by his Staffelkapitän as reliable.",
-    "In the air he is quick and a little impatient; on the ground he is slow to anger and hard to dislike.",
-    "His flying is tidy rather than brilliant, and he still looks at the sky first, as glider pilots do.",
-    "Those who fly with him say that he is easy to follow and does nothing sudden without a reason.",
-    "Ambitious in a quiet way, he keeps it to himself and works at his gunnery more than most.",
-    "There is a dry humour in him that new acquaintances take some time to notice.",
-    "Conscientious to a fault, he is the kind of man who reads the handbook twice and then asks the mechanics.",
-    "Sociable and a good mimic, he is more serious about his flying than he allows anyone to see."
+    "He is quiet and dependable, and the others trust him in the air.",
+    "He is cheerful and popular in the Staffel.",
+    "He is careful and thorough, and reads the aircraft manual more than most.",
+    "The others find him easy to fly with, as he never does anything sudden without a reason.",
+    "He is ambitious and works hard at his gunnery.",
+    "Most of the Staffel like him, although he gets moody when bad weather keeps them on the ground."
    ],
    "crewtemper": [
-    "A steady man in the back seat, unhurried on the key and sparing with the intercom, he is never asked twice whether a message has gone.",
-    "His reports over the intercom are short and exact: what, where, how far. His pilot says it is like flying with a good clock.",
-    "On the ground he is the more talkative half of the crew, and in the air the quieter.",
-    "The set is his own affair: he trusts nobody else's soldering, and is on good terms with the signals section in spite of it.",
-    "Watching the sky backwards is not something he pretends to enjoy, only to be good at.",
-    "Pilot and wireless operator are unlike in most things and have found that it does not matter."
+    "He is calm on the radio and never wastes words.",
+    "The pilots rate him as a good lookout.",
+    "He is steady and unhurried, which the pilots appreciate.",
+    "The pilots trust him because he never misses a call.",
+    "He is quiet on the ground but talks a lot on the intercom, mostly about what he can see behind them."
    ],
    "habit": [
-    "He plays the accordion, badly, and is asked to anyway.",
-    "Every spare minute goes to reading, and his kit is heavier than anyone's by the weight of the books.",
-    "On free afternoons he keeps goal for the Staffel football team.",
-    "He carves model aeroplanes from whatever wood the carpenters will give him, and gives them away.",
-    "With his first pay he bought a camera, and he has filled two albums since the spring.",
-    "Most evenings he plays Skat for small stakes, and wins more often than chance would explain.",
-    "By his own account he smokes too much, and he gives it up on the first of every month.",
-    "Wherever he goes a diary goes too, a few lines a day, most of them about the weather.",
-    "Up before anyone else, he is usually to be found with the mechanics, drinking their coffee.",
-    "Whenever he is working at something he whistles, tunelessly."
+    "He plays in goal for the Staffel football team.",
+    "He smokes too much and keeps promising to stop.",
+    "He plays the accordion in the evenings, not very well.",
+    "He spends his free time reading or writing letters.",
+    "He likes to spend time with the mechanics and help them with the aircraft.",
+    "He goes swimming in the sea whenever there is a free afternoon."
    ],
-   "home": [
-    "He writes to his mother every week, and to a girl in his home town rather less often than she would like.",
-    "His mother sends parcels of cake that arrive as crumbs, and he writes to thank her for every one.",
-    "His fiancée, Anneliese, he has known since school, and her photograph travels in his pay book.",
-    "His last leave was at Christmas, and he spent most of it asleep or eating.",
-    "His mother's letters begin 'My dear {first}' and end with instructions to dress warmly, whatever the season.",
-    "Half his pay goes home, and he has told nobody.",
-    "It is a long time since he was last at home, and he says that the town will keep.",
-    "A motor cycle that he had half paid for stands in a shed at home."
+   "family": [
+    "He writes to his mother every week.",
+    "He sends half his pay home to his family.",
+    "He has a girl in {town} and writes to her when he can.",
+    "His mother sends him parcels of cake and socks.",
+    "He has not been home on leave since the spring.",
+    "His family keep every letter he sends them."
    ]
   },
   "routes": [
@@ -629,88 +548,88 @@
     "who": "nco",
     "type": "109",
     "weight": 1,
-    "text": [
-     "{name} was born on {born} in {place}. {father} {pastime} School was {school}, and after it came {job}.",
-     "Powered flying was forbidden to Germany by the Treaty of Versailles when he was a boy, and like thousands of others he came to the air by glider. {last} learned to glide {glide}. {glidebit} The A, B and C certificates followed, and after six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for aircrew.",
-     "Recruit training with a Fliegerausbildungsregiment came first, months of drill and no aeroplane. Then came {ab}, and the A and B licences on the Focke-Wulf Stieglitz, the Bücker Jungmann and the Arado 66. {moment} Selected for fighters, he went to {jfs}, flew the Arado 68 and the early Bf 109, and reached the front through the Ergänzungsjagdgruppe at Merseburg.",
-     "{war} {temper} {habit} {home}"
-    ],
     "joined": [
      1936,
      1938
     ],
-    "minage": 19
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {job}.",
+     "Germany was not allowed an air force under the Treaty of Versailles, and gliding was how most young Germans of his age first learned to fly. He learned to glide {glide}, gaining his A, B and C gliding certificates. After six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for pilot training.",
+     "After basic training he went to {ab}, where he gained his A and B licences on the Focke-Wulf Stieglitz, the Bücker Jungmann and the Arado 66. {moment} He was selected for fighters and sent to {jfs}, where he flew the Arado 68 and early versions of the Bf 109. He reached the front through the Ergänzungsjagdgruppe at Merseburg.",
+     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "off109",
     "who": "officer",
     "type": "109",
     "weight": 1,
-    "text": [
-     "{name} comes from {place}, where he was born on {born}. {fatheroff} {sibling} {pastime} His school was {gymnasium}.",
-     "He was a glider pilot before he was anything else. Powered flying was still forbidden to Germany when he was a schoolboy, and his holidays were spent {glide}. {glidebit} After his Abitur and six months in the Reich Labour Service he entered the Luftwaffe in {joined} as a Fahnenjunker, an officer candidate.",
-     "The service sent him to {lks}, where infantry drill, tactics, air law and flying training ran side by side and ended in the officer's examination and the pilot's badge. {moment} The fighter course followed at {jfs}, on the Arado 68 and the early marks of the Bf 109, and with it his commission as Leutnant.",
-     "{war} {temper} {habit} {home}"
-    ],
     "joined": [
      1935,
      1937
     ],
-    "minage": 19
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He attended {gymnasium}, where he passed his Abitur. As a boy he {boyhood}.",
+     "Like most young German pilots of his generation he started on gliders, as Germany was not allowed an air force under the Treaty of Versailles. He learned to glide {glide}. After six months in the Reich Labour Service he joined the Luftwaffe in {joined} as an officer cadet.",
+     "He trained at {lks}, where officer training and flying instruction ran side by side. {moment} He was commissioned as a Leutnant and sent to {jfs} for fighter training, flying the Arado 68 and early versions of the Bf 109.",
+     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "nco110",
     "who": "nco",
     "type": "110",
     "weight": 1,
-    "text": [
-     "{name} was born on {born} and grew up in {place}. {father} {pastime} Schooling meant {school}, and it led to {job}.",
-     "Flying, for a German boy of those years, meant gliding, since powered aircraft were forbidden to the country by treaty. {last} first left the ground {glide}. {glidebit} Six months in the Reich Labour Service followed, and then the call-up. In {joined} the Luftwaffe accepted him for aircrew.",
-     "After recruit training came {ab} and the A and B licences. {moment} At fighter school he did well enough to be picked for the Zerstörer arm, which then had its choice of the best pupils. That meant a longer road than the single-seat men took: the C school for multi-engined aircraft, a blind flying course, and at last the Zerstörerschule at Schleißheim and a Bf 110 with a wireless operator behind him.",
-     "{war} {temper} {habit} {home}"
-    ],
     "joined": [
      1935,
      1937
     ],
-    "minage": 19
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {job}.",
+     "Germany was not allowed an air force under the Treaty of Versailles, and gliding was how most young Germans of his age first learned to fly. He learned to glide {glide}, gaining his A, B and C gliding certificates. After six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for pilot training.",
+     "After basic training he went to {ab}, where he gained his A and B licences. {moment} His good results got him chosen for the Zerstörer force, which meant a longer course than a single-seat fighter pilot's. He went on to a C school for multi-engined aircraft and a blind flying course before learning to fly the Bf 110.",
+     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "off110",
     "who": "officer",
     "type": "110",
     "weight": 1,
-    "text": [
-     "{name} was born on {born} in {place}. {fatheroff} {sibling} {pastime} School was {gymnasium}.",
-     "Like most pilots of his age he began on gliders, powered flying being forbidden to Germany when he was at school. His gliding was done {glide}. {glidebit} In {joined}, with his Abitur and six months of Reich Labour Service behind him, he entered the Luftwaffe as an officer candidate and was sent to {lks}.",
-     "There he was drilled as an infantryman, taught tactics and air law, and taught to fly, all more or less at once. {moment} Commissioned, and with his pilot's badge, he asked for fighters and was given the Zerstörer, for which the best pupils were then being chosen. The C school for multi-engined aircraft and a blind flying course followed, and then the Zerstörerschule at Schleißheim.",
-     "{war} {temper} {habit} {home}"
-    ],
     "joined": [
      1935,
      1937
     ],
-    "minage": 19
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He attended {gymnasium}, where he passed his Abitur. As a boy he {boyhood}.",
+     "Like most young German pilots of his generation he started on gliders, as Germany was not allowed an air force under the Treaty of Versailles. He learned to glide {glide}. After six months in the Reich Labour Service he joined the Luftwaffe in {joined} as an officer cadet.",
+     "He trained at {lks} and was commissioned as a Leutnant. {moment} He asked for fighters, but like many of the best pupils at that time he was sent to the Zerstörer force instead. A C school for multi-engined aircraft and a blind flying course followed before he learned to fly the Bf 110.",
+     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+    ]
    },
    {
     "id": "bordfunker",
     "who": "crew",
     "type": "110",
     "weight": 1,
-    "text": [
-     "{name} was born on {born} in {place}. {father} {sibling} {pastime} School was {school}, and after it came {radiojob}.",
-     "Flying had no part in his plans. After six months in the Reich Labour Service he was called up in {joined}, and the Luftwaffe, seeing his trade, put him down for signals. When volunteers were asked for as aircrew he gave in his name, {whyfly}.",
-     "At {lns} he learned Morse at speed, the FuG 10 set, direction finding, and air gunnery with the MG 15 on its flexible mount. {funkmoment} At the Zerstörerschule at Schleißheim he was crewed with a pilot, more or less by lot, and the two have flown together since.",
-     "In a Bf 110 the wireless operator sits facing aft. {last} works the radio, watches the sky behind, and has one rifle-calibre machine gun with which to keep it clear. {crewtemper} {habit} {home}"
-    ],
     "joined": [
      1936,
      1939
     ],
-    "minage": 19
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {radiojob}.",
+     "He had no plans to fly. After six months in the Reich Labour Service he was called up in {joined}, and because of his trade the Luftwaffe put him into signals. When volunteers were needed for aircrew, he put his name forward.",
+     "He trained as a wireless operator at {lns}, learning Morse, the FuG 10 radio, direction finding and air gunnery with the MG 15. {funkmoment} He finished his training on the Bf 110, flying in the rear seat.",
+     "Today he flies with {unit} from {base}. In the Bf 110 he sits behind the pilot, facing backwards. He works the radio, keeps watch behind them and has a single machine gun to defend the tail. {crewtemper} {family}"
+    ]
    }
   ],
-  "closing": "{last} flies the {type} with {unit} from {base}. He is {age} years old.",
-  "closing_crew": "{last} flies in the rear seat of a {type} with {unit} from {base}, facing the way he has come. He is {age} years old."
+  "closing": "",
+  "closing_crew": ""
  }
 }

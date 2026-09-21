@@ -1369,6 +1369,7 @@ function New-PilotBackground {
     $age = 1940 - $year; if ($month -gt 7) { $age-- }
     $tok = @{
         first = $nm.first; last = $nm.last; name = $nm.name; born = $born; year = "$year"; age = "$age"
+        town = ("$place" -split ',')[0].Trim()
         place = $place; joined = "$joined"; type = $type; unit = $unit; base = $base; posted = $posted
         hours = "$(150 + (& $next 61))"; ontype = "$(10 + (& $next 16))"
     }
@@ -1398,7 +1399,8 @@ function New-PilotBackground {
 # Version 2 of the stories (21 September 2026) is the rewritten set. A past
 # the Room dealt under version 1 and the player never touched is dealt again;
 # anything he wrote or saved himself is his and is left alone.
-$BackgroundVersion = 2
+# Version 3 (the same day): rewritten again in the plain voice of Patrick's own example.
+$BackgroundVersion = 3
 function Test-BackgroundKept {
     param($Man)
     if (-not $Man -or ($Man.PSObject.Properties.Name -notcontains 'background') -or -not $Man.background) { return $false }

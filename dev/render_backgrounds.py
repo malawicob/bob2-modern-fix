@@ -25,8 +25,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_JSON = os.path.join(HERE, '..', 'squadronroom', 'backgrounds.json')
 
 FIRST, LAST = 'Patrick', 'Millin'
-MIN_WORDS, MAX_WORDS = 200, 360
-COMPUTED = {'first', 'last', 'name', 'born', 'year', 'age', 'place', 'joined', 'type',
+MIN_WORDS, MAX_WORDS = 170, 300
+BANNED = ['which is held against him', 'as if the ground owed him money', 'mostly because he liked maps',
+          'the question has stopped being asked', 'whatever the season', 'facing the way he has come',
+          'military thoroughness', ' whose ', ' for which ', ' of which ', 'is usually to be found']
+COMPUTED = {'first', 'last', 'name', 'born', 'year', 'age', 'place', 'town', 'joined', 'type',
             'unit', 'base', 'posted', 'hours', 'ontype', 'otu'}
 RAF_ONLY = {'posted', 'hours', 'ontype', 'otu'}
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
@@ -67,6 +70,7 @@ def render(side_key, side, route, rng, actype):
         'age': str(1940 - year), 'place': rng.choice(side['places']),
         'joined': str(joined), 'type': actype, 'unit': unit, 'base': base,
     }
+    tok['town'] = tok['place'].split(',')[0].strip()
     if not is_lw:
         tok['posted'] = rng.choice(['July 1940', 'August 1940', 'September 1940'])
         tok['hours'] = str(150 + rng.randrange(61))
@@ -98,7 +102,7 @@ def render(side_key, side, route, rng, actype):
 
 
 def sentences(par):
-    return [s for s in re.split(r"(?<=[.?!])['\"]?\s+", par) if s]
+    return [s for s in re.split(r"(?<!No\.)(?<=[.?!])['\"]?\s+", par) if s]
 
 
 def check_story(story, tok, paras, raw_paras):
@@ -135,18 +139,28 @@ def check_story(story, tok, paras, raw_paras):
         vowel = word[0] in 'aeio' or (word[0] == 'u' and not word.startswith(('uni', 'use', 'usu')))
         if word.startswith(('hour', 'honour', 'heir')):
             vowel = True
+        if word in ('raf',):
+            vowel = True
         if word in ('one', 'once') or word.startswith('eu'):
             vowel = False
         if len(word) == 1 or word in ('der', 'and') or m.group(1) == 'A' and story[m.end(1)] == ',':
             continue
         if (art == 'an') != vowel:
             errs.append('a/an: "%s"' % m.group(0))
-    # editorial: three sentences running that open on the same word
+    # plain voice: no semicolons, no banned turns of phrase, subject first
+    if ';' in story:
+        errs.append('semicolon')
+    low = story.lower()
+    for b in BANNED:
+        if b in low:
+            errs.append('banned phrase: "%s"' % b.strip())
     for p in paras:
-        firsts = [s.split()[0].strip(',;') for s in sentences(p) if s.split()]
-        for i in range(len(firsts) - 2):
-            if firsts[i] == firsts[i + 1] == firsts[i + 2]:
-                errs.append('three sentences running open with "%s"' % firsts[i])
+        sents = sentences(p)
+        # four sentences running that open on the same word
+        firsts = [x.split()[0].strip(',') for x in sents if x.split()]
+        for i in range(len(firsts) - 3):
+            if len(set(firsts[i:i + 4])) == 1:
+                errs.append('four sentences running open with "%s"' % firsts[i])
                 break
     if story.count(LAST) > 5:
         errs.append('surname used %d times' % story.count(LAST))
@@ -170,11 +184,9 @@ def check_structure(data):
         if not side:
             errs.append('%s: side missing' % sk)
             continue
-        for key in ('born', 'places', 'lists', 'routes', 'closing'):
+        for key in ('born', 'places', 'lists', 'routes'):
             if key not in side:
                 errs.append('%s: "%s" missing' % (sk, key))
-        if sk == 'lw' and 'closing_crew' not in side:
-            errs.append('lw: closing_crew missing')
         if sk == 'raf' and 'otu' not in side:
             errs.append('raf: otu missing')
         ids = [r.get('id') for r in side.get('routes', [])]
@@ -195,7 +207,7 @@ def check_structure(data):
         texts.append(('closing_crew', side.get('closing_crew', '')))
         for name, items in lists.items():
             texts.append(('list ' + name, '\n'.join(items)))
-            if not 6 <= len(items) <= 14:
+            if not 2 <= len(items) <= 14:
                 warns.append('%s: list "%s" has %d items' % (sk, name, len(items)))
             if len(set(items)) != len(items):
                 errs.append('%s: list "%s" has a duplicate item' % (sk, name))
