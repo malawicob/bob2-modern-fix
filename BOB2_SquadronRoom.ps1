@@ -1395,6 +1395,19 @@ function New-PilotBackground {
     [pscustomobject]@{ born = $born; place = $place; story = $story; custom = $false; joined = $joined; year = $year }
 }
 # The man behind a frame: -1 is the player, 0 and up his crew.
+# Version 2 of the stories (21 September 2026) is the rewritten set. A past
+# the Room dealt under version 1 and the player never touched is dealt again;
+# anything he wrote or saved himself is his and is left alone.
+$BackgroundVersion = 2
+function Test-BackgroundKept {
+    param($Man)
+    if (-not $Man -or ($Man.PSObject.Properties.Name -notcontains 'background') -or -not $Man.background) { return $false }
+    $b = $Man.background
+    if (-not "$($b.story)") { return $false }
+    if (($b.PSObject.Properties.Name -contains 'custom') -and [bool]$b.custom) { return $true }
+    $v = 1; if ($b.PSObject.Properties.Name -contains 'v') { $v = [int]$b.v }
+    ($v -ge $BackgroundVersion)
+}
 function Get-BackgroundMan {
     param($Pilot, [int]$CrewIndex)
     if (-not $Pilot) { return $null }
@@ -1407,13 +1420,13 @@ function Get-PilotBackground {
     param($Pilot, [int]$CrewIndex = -1)
     $man = Get-BackgroundMan -Pilot $Pilot -CrewIndex $CrewIndex
     if (-not $man) { return $null }
-    if (($man.PSObject.Properties.Name -contains 'background') -and $man.background -and "$($man.background.story)") { return $man.background }
+    if (Test-BackgroundKept $man) { return $man.background }
     New-PilotBackground -Man $man -Pilot $Pilot
 }
 function Save-PilotBackground {
     param($Pilot, [int]$CrewIndex = -1, [string]$Born, [string]$Place, [string]$Story, [bool]$Custom = $true, [string]$First = $null)
     if (-not $Pilot) { return $null }
-    $rec = [ordered]@{ born = "$Born".Trim(); place = "$Place".Trim(); story = "$Story".Trim(); custom = [bool]$Custom }
+    $rec = [ordered]@{ born = "$Born".Trim(); place = "$Place".Trim(); story = "$Story".Trim(); custom = [bool]$Custom; v = [int]$BackgroundVersion }
     $o = [ordered]@{}
     foreach ($pp in $Pilot.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
     if ($CrewIndex -lt 0) {
@@ -1535,7 +1548,11 @@ function New-BackgroundWindow {
     $head.Add_MouseLeftButtonDown({ param($sender, $e) try { [Windows.Window]::GetWindow($sender).DragMove() } catch { } })
     # State the buttons read. Script scope and no closures: a closure in this
     # file gets a module scope of its own and its writes never reach the Room.
-    $script:BgDlg = @{ Win = $w; First = $firstBox; Born = $bornBox; Place = $placeBox; Story = $storyBox; CrewIndex = $CrewIndex; Salt = 0; Saved = $false }
+    # Generated: the text as the Room dealt it, so SAVE can tell a story the
+    # player left alone from one he wrote, and so a first name given later can
+    # be put into an untouched story instead of leaving 'Millin was born'.
+    $gen = ''; if (-not (($bg.PSObject.Properties.Name -contains 'custom') -and [bool]$bg.custom)) { $gen = "$($bg.story)" }
+    $script:BgDlg = @{ Generated = $gen; Win = $w; First = $firstBox; Born = $bornBox; Place = $placeBox; Story = $storyBox; CrewIndex = $CrewIndex; Salt = 0; Saved = $false }
     $w
 }
 function Invoke-BackgroundAction {
@@ -1557,11 +1574,26 @@ function Invoke-BackgroundAction {
                 if ([int]$d.CrewIndex -lt 0) { $p = $man }
             }
             $n = New-PilotBackground -Man $man -Pilot $p -Salt ([int]$d.Salt)
-            if ($n) { $d.Born.Text = "$($n.born)"; $d.Place.Text = "$($n.place)"; $d.Story.Text = "$($n.story)" }
+            if ($n) { $d.Born.Text = "$($n.born)"; $d.Place.Text = "$($n.place)"; $d.Story.Text = "$($n.story)"; $d.Generated = "$($n.story)" }
         }
         'save' {
             $p = Get-Pilot
-            if ($p) {
+            $untouched = ("$($d.Generated)" -and ("$($d.Story.Text)".Trim() -eq "$($d.Generated)".Trim()))
+            if ($p -and $untouched) {
+                # his own text was never typed over: deal it again under the name
+                # now in the box (same salt, so the same past), and keep it the Room's
+                $man = Get-BackgroundMan -Pilot $p -CrewIndex ([int]$d.CrewIndex)
+                if ($d.First -and "$($d.First.Text)".Trim() -and $man) {
+                    $mo = [ordered]@{}
+                    foreach ($pp in $man.PSObject.Properties) { $mo[$pp.Name] = $pp.Value }
+                    $mo['first'] = "$($d.First.Text)".Trim()
+                    $n = New-PilotBackground -Man ([pscustomobject]$mo) -Pilot ([pscustomobject]$mo) -Salt ([int]$d.Salt)
+                    if ($n) { $d.Story.Text = "$($n.story)" }
+                }
+                [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $false -First $(if ($d.First) { "$($d.First.Text)" } else { $null }))
+                $d.Saved = $true
+            }
+            elseif ($p) {
                 [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $true -First $(if ($d.First) { "$($d.First.Text)" } else { $null }))
                 $d.Saved = $true
             }
@@ -1575,7 +1607,7 @@ function Show-Background {
     if (-not $p) { return }
     # the first look fixes his past in his record, so it cannot shift under him
     $man = Get-BackgroundMan -Pilot $p -CrewIndex $CrewIndex
-    if ($man -and -not (($man.PSObject.Properties.Name -contains 'background') -and $man.background -and "$($man.background.story)")) {
+    if ($man -and -not (Test-BackgroundKept $man)) {
         $g = New-PilotBackground -Man $man -Pilot $p
         if ($g) { $p = Save-PilotBackground -Pilot $p -CrewIndex $CrewIndex -Born $g.born -Place $g.place -Story $g.story -Custom $false }
     }

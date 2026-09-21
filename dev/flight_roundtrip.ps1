@@ -285,9 +285,9 @@ try {
     $script:CampaignDate = [datetime]'1940-08-12'
     $cases = @(
         [pscustomobject]@{ pilot='Millin'; first='Patrick'; rank='Sergeant'; sqn=610; actype='Spitfire I'; base='Biggin Hill' },
-        [pscustomobject]@{ pilot='Millin'; rank='Pilot Officer'; sqn=32; actype='Hurricane I'; base='Biggin Hill' },
-        [pscustomobject]@{ pilot='Millin'; rank='Unteroffizier'; side='lw'; unit='II./JG 26'; actype='Bf 109E'; base='Marquise' },
-        [pscustomobject]@{ pilot='Millin'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley' }
+        [pscustomobject]@{ pilot='Millin'; first='Patrick'; rank='Pilot Officer'; sqn=32; actype='Hurricane I'; base='Biggin Hill' },
+        [pscustomobject]@{ pilot='Millin'; first='Patrick'; rank='Unteroffizier'; side='lw'; unit='II./JG 26'; actype='Bf 109E'; base='Marquise' },
+        [pscustomobject]@{ pilot='Millin'; first='Patrick'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley' }
     )
     foreach ($c in $cases) {
         $seenRoutes = @{}
@@ -299,7 +299,7 @@ try {
             if ("$($b.story)" -match [char]0x2014 -or "$($b.story)" -match [char]0x2013 -or "$($b.story)" -match ' - ') { $bad += "salt $salt : a dash" }
             $y = [int]("$($b.born)".Substring("$($b.born)".Length - 4))
             $j = [int]$b.joined
-            if ("$($b.story)" -notmatch " in $j") { $bad += "salt $salt : the year he joined is not in the story" }
+            if ("$($b.story)" -notmatch "\b$j\b") { $bad += "salt $salt : the year he joined is not in the story" }
             if ($y -lt 1911 -or $y -gt 1921) { $bad += "salt $salt : born $y" }
             if ($j -and (($j - $y) -lt 17 -or ($j - $y) -gt 25)) { $bad += "salt $salt : joined at $($j - $y)" }
             $seenRoutes["$("$($b.story)".Substring(0, 40))"] = 1
@@ -325,6 +325,12 @@ try {
     [void](Save-PilotBackground -Pilot (Get-Pilot) -CrewIndex 0 -Born '1 June 1918' -Place 'Kiel' -Story 'The man in the back.')
     $p2 = Get-Pilot
     Check 'and the crewman''s, without touching the pilot''s'  ("$(@(Get-Crew $p2)[0].background.story)" -eq 'The man in the back.' -and "$($p2.background.story)" -eq 'My own words.' -and "$(@(Get-Crew $p2)[0].pilot)" -eq 'Lehmann, P')
+    # a past dealt by the first version of the stories, never touched by the player, is dealt again
+    $oldp = [pscustomobject]@{ pilot='Millin'; first='Patrick'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley'
+                               background=[pscustomobject]@{ born='28 July 1914'; place='Rostock'; story='Born in Rostock. He attended the Oberrealschule.'; custom=$false } }
+    Check 'an untouched version 1 story is replaced'            ("$((Get-PilotBackground -Pilot $oldp).story)" -match '^Patrick Millin')
+    $oldp.background.custom = $true
+    Check 'but never one the player wrote'                      ("$((Get-PilotBackground -Pilot $oldp).story)" -match '^Born in Rostock')
     $bw = New-BackgroundWindow -Pilot $p2 -CrewIndex -1
     Check 'the window builds with his record in it'            ($bw -and "$($script:BgDlg.Story.Text)" -eq 'My own words.' -and "$($script:BgDlg.Born.Text)" -eq '3 May 1917')
     # THE BUTTONS ANSWER A PRESS. They were wired to the release, and the
@@ -345,6 +351,17 @@ try {
     $bw = New-BackgroundWindow -Pilot $p3 -CrewIndex -1
     Invoke-BackgroundAction 'another'
     Check 'WRITE ANOTHER writes another'                       ("$($script:BgDlg.Story.Text)" -ne 'My own words.' -and "$($script:BgDlg.Story.Text)".Length -gt 300)
+    $script:BgDlg = $null
+    Set-StateSide 'raf'
+    $lp = [ordered]@{ pilot='Millin'; rank='Sergeant'; status='On strength'; sqn=610; sqcode='DW'; actype='Spitfire I'; base='Biggin Hill'; period='P1'
+                      historical=$false; portrait='pilot01.jpg'; created='1940-07-10'; campaignSorties=0; campaignKills=@(0,0,0,0,0,0,0) }
+    Save-Pilot -Pilot $lp -Shrink
+    $lw0 = New-BackgroundWindow -Pilot (Get-Pilot) -CrewIndex -1
+    Check 'a man with one name is called by it until he gives another' ("$($script:BgDlg.Story.Text)" -match '^Millin was born')
+    $script:BgDlg.First.Text = 'Patrick'
+    Invoke-BackgroundAction 'save'
+    $lp2 = Get-Pilot
+    Check 'giving his first name and saving puts it in the untouched story' ("$($lp2.background.story)" -match '^Patrick Millin was born' -and -not [bool]$lp2.background.custom -and "$($lp2.first)" -eq 'Patrick')
     $script:BgDlg = $null
     ''
     '--- samples, to be read by a person ---'
