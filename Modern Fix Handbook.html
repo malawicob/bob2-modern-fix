@@ -90,7 +90,7 @@ footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-si
 
 <header class="mast">
   <div>
-    <div class="kicker"><span class="label">Battle of Britain II</span><span class="label" style="color:var(--muted)">2.13 Modern Fix, version 1.9</span></div>
+    <div class="kicker"><span class="label">Battle of Britain II</span><span class="label" style="color:var(--muted)">2.13 Modern Fix, version 1.9.2</span></div>
     <h1>The Modern Fix Handbook</h1>
     <p class="lede measure">Everything the mod does, how to install it, and how to fly a career with it: from a fresh Windows 11 install to your first sortie, and your pilot's record after it. Written for new players and for anyone coming from version 1.8.</p>
     <nav class="paths" aria-label="Where to start">
@@ -221,7 +221,7 @@ footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-si
   <ol class="steps">
     <li><div><h3>Delete the old BOB2-Win11-Fix folder</h3><p>It holds nothing of yours. Your pilots and their records are kept in the <span class="path">SquadronRoom</span> folder beside <span class="path">Bob.exe</span>, and your backups and joystick settings are kept elsewhere too, so none of them are touched.</p></div></li>
     <li><div><h3>Put the new folder in its place</h3><p>Unblock and extract the new zip exactly as in the steps above.</p></div></li>
-    <li><div><h3>Start the launcher and click the upgrade line</h3><p>At the foot of the launcher it will say <b>Mod 1.8.4 installed, 1.9 available, click here to upgrade</b>. Click it, and the game folder is brought up to date. Your settings and pilots carry over.</p></div></li>
+    <li><div><h3>Start the launcher and click the upgrade line</h3><p>At the foot of the launcher it will say <b>Mod 1.8.4 installed, 1.9.2 available, click here to upgrade</b>. Click it, and the game folder is brought up to date. Your settings and pilots carry over.</p></div></li>
   </ol>
 </section>
 

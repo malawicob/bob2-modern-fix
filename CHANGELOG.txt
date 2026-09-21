@@ -15,6 +15,54 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.9.2  (2026-09-21)
+--------------------
+  The first public release since 1.8.4. It carries 1.9.0 and 1.9.1 below
+  as well as this entry. "Modern Fix Handbook.html" in the package is a
+  picture guide to all of it.
+
+  - NEW: Modern Fix Handbook.html, a guide for new and existing players:
+    what is new, installing and updating, and flying a career.
+  - The launcher no longer says "attention needed, the graphics settings
+    file looks damaged". The file is not a fixed size (the game adds the
+    name of the last save to its end), and PLAY already puts back a good
+    copy on its own if it is ever really unusable, so the menu warning only
+    caused worry. The repair at PLAY is now silent; the old file is kept
+    beside it and the launcher log records it. The one alert left is a
+    missing or broken graphics translator, shown calmly in amber.
+  - Graphics: forced antialiasing is what drew the grid lines across the
+    terrain, so Setup and Settings now leave it to the game (off) and keep
+    16x filtering. The full 2048 terrain texture size is recommended for
+    sharp distant ground.
+  - Squadron Room, both sides:
+      * A pilot has a first name and a surname, both required when he is
+        created. The surname is still the name the game and its saves use.
+      * Click a portrait for his personal record: born, where, and how he
+        came to fly, by a real training route for his rank and aircraft,
+        ending on the entry his commanding officer found in the file. The
+        player can edit it or write his own.
+      * The aircraft on the board follows the game: after a sortie it shows
+        the letter (RAF) or number and colour (Luftwaffe) the game actually
+        gave him. A new British pilot has his Spitfire or Hurricane on the
+        board from the day he is posted.
+      * Both papers carry "yesterday, from the record of 1940": the raids,
+        the weather, the figures claimed that night beside the losses
+        counted after the war, and the other news of the day. 114 days,
+        10 July to 31 October 1940, researched with sources.
+      * The Morgenmeldung's headlines are in English.
+      * A marking the player dragged or resized is dropped when the side
+        view under it is redrawn, instead of floating off it.
+      * Adopting a campaign save binds only a pilot of the save's own
+        unit, so a new pilot of another unit gets a campaign of his own.
+  - Squadron Room, Luftwaffe:
+      * All 125 Bf 109 E and 12 Bf 110 side views are painted from the
+        game's own skin textures, so the camouflage matches the game. No
+        swastika on any fin.
+      * The Bf 110's Geschwader code is drawn at the game's own height.
+      * PLAY CAMPAIGN sets the right Gruppe (the Gruppe field is one based).
+  - Crash guard: optional cloud lighting and line drawing patches (1.9.1)
+    remain off by default.
+
 v1.9.1  (2026-09-14)
 --------------------
   - NEW (measured, off by default): two performance patches in the crash

@@ -1,6 +1,6 @@
 ﻿========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.7.8  (2026-09-07)
+  Fix package v1.9.2  (2026-09-21)
   For the v2.13 executable
 ========================================================================
 
@@ -46,6 +46,10 @@ QUICK START
 
   4. The launcher opens. Run the SETUP WIZARD - it walks you through the
      rest and tells you what it is changing at every step.
+
+  5. Open "Modern Fix Handbook.html" in this folder for a guide to
+     everything the mod does, with pictures: installing, what is new,
+     and flying a career in the Squadron Room.
 
 
 WHAT YOU NEED TO SUPPLY
