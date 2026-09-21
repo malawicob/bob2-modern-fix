@@ -762,6 +762,19 @@ function Set-PilotSave {
     $o['saveAsked'] = $true
     Save-Pilot -Pilot $o
 }
+# The orders card's opening, for a new man and for one whose campaign is
+# already under way. PLAY CAMPAIGN opens the game on the campaign by itself
+# now, and the card said "start or continue the Campaign" as if it did not.
+function Get-OrdersIntro {
+    param($Pilot, [string]$Mission = 'sortie', [string]$Book = 'logbook')
+    $has = ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'savePath') -and "$($Pilot.savePath)" -and (Test-Path "$($Pilot.savePath)"))
+    if ($has) {
+        return ("Press PLAY CAMPAIGN (top right) and the game opens your campaign, " + (Split-Path "$($Pilot.savePath)" -Leaf) + ", by itself. " +
+                "Fly the day, then leave the campaign: the game closes and you come back here, with your first $Mission in the $Book.")
+    }
+    ("Press PLAY CAMPAIGN (top right) and the game opens a new campaign for you by itself, with your unit, the date and your name already set. " +
+     "Fly the day, then leave the campaign: the game closes and you come back here. You will be asked which save is yours, and PLAY CAMPAIGN takes you back into it from then on.")
+}
 # WHICH SAVE IS HIS, said on his card (Patrick, 21 September 2026): the
 # file PLAY CAMPAIGN will load, when it was last saved, and a way to change
 # it. Before the first answer it says so plainly instead.
@@ -4114,8 +4127,7 @@ function Show-Roster {
         # the game puts him further down the flight he gets that
         # aeroplane's letter instead, and nothing here can know in
         # advance which it will be.
-        $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign and fly the day. " +
-                            "When you come back here your first sortie will be in the logbook.`n`n" +
+        $ot = New-TB -Text ((Get-OrdersIntro -Pilot $Pilot) + "`n`n" +
                             "Your aircraft below wears the squadron's code and the letter the game paints on the leader's " +
                             "aeroplane. If the game puts you further down the flight you will fly a different letter, and " +
                             "after that sortie the board shows the one you actually flew.`n`n" +
@@ -7853,7 +7865,7 @@ function Show-ReadyRoom {
         # the game decides which aeroplane he actually flies, and the board then
         # follows the game (Get-FlownMark)
         $mk = if ("$($Pilot.actype)" -match '110') { 'letter' } else { 'number' }
-        $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch.`n`n" +
+        $ot = New-TB -Text ((Get-OrdersIntro -Pilot $Pilot -Mission 'Feindflug' -Book 'Flugbuch') + "`n`n" +
                             "Your aircraft below wears the $mk you chose. The game decides which aeroplane of the Gruppe you fly on each sortie, " +
                             "and after your first sortie with your own Gruppe the board shows the one you actually flew.`n`n" +
                             "Quick missions and training are not recorded here. Your aeroplane and your Flugbuch are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
