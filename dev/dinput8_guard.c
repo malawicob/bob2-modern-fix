@@ -716,7 +716,12 @@ static void __attribute__((thiscall)) PfLineFast(void *self, unsigned char **pli
  * the exe's timestamp and 23 bytes of the surrounding code first; on by
  * default, cockpitautopilot=0 in bob2guard.ini turns it off. */
 #define AP_CALLSITE 0x00627f2cu
-static int g_apCockpit = 1;
+/* OFF by default since 21 September 2026: the simulation moves every aircraft
+ * in 40 ms steps (25 Hz) and under the AI the player's own aircraft steps with
+ * it, so from the cockpit the world outside jumps. Patrick: "actually hurt my
+ * eyes". The game's outside view hides the steps; it stays until aircraft are
+ * drawn between steps. cockpitautopilot=1 in bob2guard.ini still turns it on. */
+static int g_apCockpit = 0;
 static const unsigned char AP_SIG[23] = {           /* from 14 bytes before the call to 4 after */
     0x80,0x38,0x00,0x0f,0x94,0xc1,0x84,0xc9,0x88,0x08,0x74,0x1a,0x8b,0xcd,
     0xe8,0xe8,0xae,0xff,0xff,0x6a,0x00,0xff,0x35 };
@@ -725,7 +730,7 @@ static void ApInstall(void) {
     IMAGE_DOS_HEADER *dos = (IMAGE_DOS_HEADER *)GetModuleHandleA(NULL);
     IMAGE_NT_HEADERS *nt;
     DWORD old;
-    if (!g_apCockpit) { LogMsg("autopilot: cockpitautopilot=0, the game's outside view is kept"); return; }
+    if (!g_apCockpit) { LogMsg("autopilot: the game's outside view is kept (cockpitautopilot=1 in bob2guard.ini to change)"); return; }
     if (!dos) return;
     nt = (IMAGE_NT_HEADERS *)((char *)dos + dos->e_lfanew);
     if (nt->FileHeader.TimeDateStamp != AS_EXE_TIMESTAMP) { LogMsg("autopilot: not Bob.exe 2.13, patch not applied"); return; }
@@ -814,7 +819,7 @@ static DWORD WINAPI PfThread(LPVOID p) {
 static void PfInit(void) {
     HANDLE t;
     int haveIni = PfReadIni();
-    ApInstall();                                   /* on by default, ini or not */
+    ApInstall();                                   /* off unless bob2guard.ini asks */
     if (!haveIni) { LogMsg("perf: no bob2guard.ini, patches off"); return; }
     if (g_pfCloudStep < 0 || g_pfCloudStep > 256) g_pfCloudStep = 0;
     LogMsg("perf: bob2guard.ini cloudstep=%d lines=%d", g_pfCloudStep, g_pfLines);
