@@ -1428,18 +1428,28 @@ $BackgroundsPath = Join-Path $ModDir 'backgrounds.json'
 # boards and the one the game is given and its saves are matched by: his
 # surname. `first` is new on 21 September 2026 and required at enrolment.
 # A record made before that has none, and the personal record asks for it.
-# THE NAME THE GAME IS GIVEN: his full name, which is what its own Log Book
-# and campaign screens show (Patrick, 21 September 2026: "should be Patrick
-# Millin, not just Millin"). The game holds 20 characters; a longer name
-# becomes the initial and the surname.
+# THE NAME THE GAME IS GIVEN, which its own Log Book and campaign screens
+# show: initial, surname and his unit, "P. Millin, 610 Sqn" (Patrick, 21
+# September 2026). The game holds 20 characters, so longer forms give way
+# in order: no comma ("P. Millin III./ZG 26", which is 20), then the surname
+# and unit alone, then initial and surname.
+function Get-GameUnit {
+    param($Man)
+    if (($Man.PSObject.Properties.Name -contains 'side') -and "$($Man.side)" -eq 'lw') { return "$($Man.unit)".Trim() }
+    if (($Man.PSObject.Properties.Name -contains 'sqn') -and [int]$Man.sqn -gt 0) { return "$([int]$Man.sqn) Sqn" }
+    ''
+}
 function Get-GameName {
     param($Man)
-    $n = (Get-FullName $Man).Trim()
-    if ($n.Length -le 20) { return $n }
+    $sur = "$($Man.pilot)".Trim()
     $f = ''; if ($Man.PSObject.Properties.Name -contains 'first') { $f = "$($Man.first)".Trim() }
-    $n = if ($f) { "$($f.Substring(0,1)). $("$($Man.pilot)".Trim())" } else { "$($Man.pilot)".Trim() }
-    if ($n.Length -gt 20) { $n = $n.Substring(0, 20) }
-    $n
+    $who = if ($f) { "$($f.Substring(0,1)). $sur" } else { $sur }
+    $u = Get-GameUnit $Man
+    $forms = @()
+    if ($u) { $forms += "$who, $u"; $forms += "$who $u"; $forms += "$sur, $u" }
+    $forms += $who
+    foreach ($c in $forms) { if ($c.Length -le 20) { return $c } }
+    $who.Substring(0, [math]::Min(20, $who.Length))
 }
 # Is the name a save carries this man? Older campaigns were given his
 # surname, new ones his full name (or the 20 character form of it).
