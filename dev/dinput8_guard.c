@@ -742,6 +742,181 @@ static void ApInstall(void) {
     LogMsg("autopilot: stays in the cockpit (ForceToOutside call at 0x%08X removed)", AP_CALLSITE);
 }
 
+/* ==================== SMOOTH AIRCRAFT (smooth=1 in bob2guard.ini) ====================
+ *
+ * The simulation moves every item once per 40 ms (Mast3d: timeSetEvent(0x28),
+ * 25 Hz) and nothing in the game draws between those steps, so close aircraft
+ * move in visible jumps, and worse at high frame rates when steps are run late
+ * and back to back (Inst3d::BlockTick). This draws each aircraft between its
+ * last two simulated positions instead.
+ *
+ * Render and simulation take turns through Inst3d::BlockTick(take): the
+ * drawing thread takes it (TRUE) for each stretch of drawing and releases it
+ * (FALSE), and the release is where waiting simulation steps run. So:
+ *   DoMoveCycle (each 40 ms step): before it, note every item's position and
+ *     attitude; after it, note the time.
+ *   BlockTick(TRUE), after taking it: move each item to prev + (cur - prev) * t,
+ *     t = time since the step / 40 ms, remembering the true values.
+ *   BlockTick(FALSE), before releasing it: put the true values back, only where
+ *     the field still holds what was written.
+ * The simulation therefore never sees an in-between value. Items are found by
+ * walking the live lists (mobileitem::ACList, MobileList; nextmobile at +0x36),
+ * so an item removed since the last step is never touched. The player's own
+ * aircraft (Persons2::PlayerSeenAC) is left alone in this first version.
+ * Drawn one step (up to 40 ms) behind the simulation, the usual price of
+ * interpolation. Addresses are 2.13 (2.12 in brackets), each found by a unique
+ * code match: DoMoveCycle 0x00418c29 (0x00418d3c), BlockTick 0x0041922f
+ * (0x00419342), ACList 0x007a8f58 (0x007aa050), MobileList 0x007a8f5c,
+ * PlayerSeenAC 0x007a1fb8. Item fields: World X/Y/Z int at +4/+8/+0x0c,
+ * heading/pitch/roll u16 at +0x20/+0x22/+0x24. */
+#define SM_DOMOVECYCLE  0x00418c29u
+#define SM_BLOCKTICK    0x0041922fu
+#define SM_ACLIST       0x007a8f58u
+#define SM_MOBILELIST   0x007a8f5cu
+#define SM_PLAYERSEEN   0x007a1fb8u
+#define SM_NEXT         0x36
+#define SM_MAXITEMS     4096
+#define SM_TABLE        8192            /* open addressing, power of two */
+#define SM_STEP_MS      40.0
+#define SM_MAXJUMP      30000           /* world units in one step; more is a teleport, left alone */
+static const unsigned char SM_SIG_DMC[16] = { 0x6a,0x18,0x68,0x38,0x27,0x74,0x00,0xe8,0x07,0xd9,0x05,0x00,0x8b,0xf9,0x83,0x65 };
+static const unsigned char SM_SIG_BT[16]  = { 0x55,0x8b,0xec,0x83,0xec,0x24,0xf6,0x05,0x70,0x89,0x15,0x06,0x40,0x56,0x8b,0xf1 };
+typedef struct { char *item; int x, y, z; unsigned short h, p, r; unsigned int tick; } SmPrev;
+typedef struct { char *item; int x, y, z; unsigned short h, p, r; int wx, wy, wz; unsigned short wh, wp, wr; } SmApplied;
+static SmPrev g_smPrev[SM_TABLE];
+static SmApplied g_smApplied[SM_MAXITEMS];
+static int g_smNApplied = 0;
+static unsigned int g_smTick = 0;
+static LARGE_INTEGER g_smTickTime, g_smFreq;
+static int g_smOn = 0, g_smHooked = 0;
+static volatile LONG g_smFrames = 0, g_smMoved = 0;
+static void *g_smTrampDMC = NULL, *g_smTrampBT = NULL;
+static unsigned char g_smOrigDMC[7], g_smOrigBT[6];
+typedef void (__attribute__((thiscall)) *PFN_DMC)(void *self);
+typedef void (__attribute__((thiscall)) *PFN_BT)(void *self, int take);
+
+static unsigned int SmHash(const void *p) { unsigned int v = (unsigned int)(DWORD_PTR)p; v ^= v >> 13; v *= 0x9E3779B1u; return v & (SM_TABLE - 1); }
+static SmPrev *SmSlot(char *item, int create) {
+    unsigned int i = SmHash(item), n;
+    for (n = 0; n < SM_TABLE; n++, i = (i + 1) & (SM_TABLE - 1)) {
+        if (g_smPrev[i].item == item) return &g_smPrev[i];
+        if (g_smPrev[i].item == NULL || g_smPrev[i].tick + 2 < g_smTick) { if (!create) { if (g_smPrev[i].item == NULL) return NULL; continue; } g_smPrev[i].item = item; return &g_smPrev[i]; }
+    }
+    return NULL;
+}
+static void SmNoteAll(void) {
+    int list, count = 0;
+    g_smTick++;
+    for (list = 0; list < 2; list++) {
+        char *it = *(char **)(list ? SM_MOBILELIST : SM_ACLIST);
+        while (it && count < SM_MAXITEMS) {
+            SmPrev *e = SmSlot(it, 1);
+            if (e) { e->x = *(int *)(it + 4); e->y = *(int *)(it + 8); e->z = *(int *)(it + 0x0c);
+                     e->h = *(unsigned short *)(it + 0x20); e->p = *(unsigned short *)(it + 0x22); e->r = *(unsigned short *)(it + 0x24); e->tick = g_smTick; }
+            it = *(char **)(it + SM_NEXT); count++;
+        }
+    }
+}
+static unsigned short SmAng(unsigned short a, unsigned short b, double t) { short d = (short)(b - a); return (unsigned short)(a + (int)(d * t)); }
+static int SmLerp(int a, int b, double t) { return a + (int)((double)(b - a) * t); }
+static void SmApply(void) {
+    LARGE_INTEGER now; double t; int list, count = 0;
+    char *player = *(char **)SM_PLAYERSEEN;
+    g_smNApplied = 0;
+    if (!g_smTick) return;
+    QueryPerformanceCounter(&now);
+    t = (double)(now.QuadPart - g_smTickTime.QuadPart) * 1000.0 / (double)g_smFreq.QuadPart / SM_STEP_MS;
+    if (t < 0) t = 0;
+    if (t >= 1) return;                                          /* at or past the step: draw it as simulated */
+    for (list = 0; list < 2; list++) {
+        char *it = *(char **)(list ? SM_MOBILELIST : SM_ACLIST);
+        while (it && count < SM_MAXITEMS && g_smNApplied < SM_MAXITEMS) {
+            SmPrev *e = SmSlot(it, 0);
+            if (it != player && e && e->tick == g_smTick) {
+                int cx = *(int *)(it + 4), cy = *(int *)(it + 8), cz = *(int *)(it + 0x0c);
+                if (abs(cx - e->x) < SM_MAXJUMP && abs(cy - e->y) < SM_MAXJUMP && abs(cz - e->z) < SM_MAXJUMP && (cx != e->x || cy != e->y || cz != e->z)) {
+                    SmApplied *a = &g_smApplied[g_smNApplied++];
+                    a->item = it; a->x = cx; a->y = cy; a->z = cz;
+                    a->h = *(unsigned short *)(it + 0x20); a->p = *(unsigned short *)(it + 0x22); a->r = *(unsigned short *)(it + 0x24);
+                    /* the step runs from e (before) to a (after); draw where t says between them */
+                    a->wx = SmLerp(e->x, cx, t); a->wy = SmLerp(e->y, cy, t); a->wz = SmLerp(e->z, cz, t);
+                    a->wh = SmAng(e->h, a->h, t); a->wp = SmAng(e->p, a->p, t); a->wr = SmAng(e->r, a->r, t);
+                    *(int *)(it + 4) = a->wx; *(int *)(it + 8) = a->wy; *(int *)(it + 0x0c) = a->wz;
+                    *(unsigned short *)(it + 0x20) = a->wh; *(unsigned short *)(it + 0x22) = a->wp; *(unsigned short *)(it + 0x24) = a->wr;
+                }
+            }
+            it = *(char **)(it + SM_NEXT); count++;
+        }
+    }
+    InterlockedIncrement(&g_smFrames); InterlockedExchangeAdd(&g_smMoved, g_smNApplied);
+}
+static void SmRestore(void) {
+    int i;
+    for (i = 0; i < g_smNApplied; i++) {
+        SmApplied *a = &g_smApplied[i]; char *it = a->item;
+        if (*(int *)(it + 4) == a->wx) *(int *)(it + 4) = a->x;
+        if (*(int *)(it + 8) == a->wy) *(int *)(it + 8) = a->y;
+        if (*(int *)(it + 0x0c) == a->wz) *(int *)(it + 0x0c) = a->z;
+        if (*(unsigned short *)(it + 0x20) == a->wh) *(unsigned short *)(it + 0x20) = a->h;
+        if (*(unsigned short *)(it + 0x22) == a->wp) *(unsigned short *)(it + 0x22) = a->p;
+        if (*(unsigned short *)(it + 0x24) == a->wr) *(unsigned short *)(it + 0x24) = a->r;
+    }
+    g_smNApplied = 0;
+}
+static void __attribute__((thiscall)) SmDoMoveCycle(void *self) {
+    SmRestore();                                       /* belt and braces: the step must see true values */
+    SmNoteAll();
+    ((PFN_DMC)g_smTrampDMC)(self);
+    QueryPerformanceCounter(&g_smTickTime);
+}
+static void __attribute__((thiscall)) SmBlockTick(void *self, int take) {
+    if (!take) SmRestore();
+    ((PFN_BT)g_smTrampBT)(self, take);
+    if (take) SmApply();
+}
+static void *SmTrampoline(const unsigned char *code, int n, DWORD back) {
+    unsigned char *t = (unsigned char *)VirtualAlloc(NULL, 32, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    DWORD rel;
+    if (!t) return NULL;
+    memcpy(t, code, n);
+    t[n] = 0xe9; rel = back - ((DWORD)(DWORD_PTR)t + n + 5); memcpy(t + n + 1, &rel, 4);
+    FlushInstructionCache(GetCurrentProcess(), t, 32);
+    return t;
+}
+static int SmJmp(DWORD at, void *to, int len) {
+    DWORD old, rel; unsigned char j[8];
+    if (!VirtualProtect((void *)at, 16, PAGE_EXECUTE_READWRITE, &old)) return 0;
+    memset(j, 0x90, sizeof(j)); j[0] = 0xe9; rel = (DWORD)(DWORD_PTR)to - (at + 5); memcpy(j + 1, &rel, 4);
+    memcpy((void *)at, j, len);
+    VirtualProtect((void *)at, 16, old, &old);
+    FlushInstructionCache(GetCurrentProcess(), (void *)at, 16);
+    return 1;
+}
+static void SmInstall(void) {
+    IMAGE_DOS_HEADER *dos = (IMAGE_DOS_HEADER *)GetModuleHandleA(NULL);
+    IMAGE_NT_HEADERS *nt;
+    if (!g_smOn) return;
+    if (!dos) return;
+    nt = (IMAGE_NT_HEADERS *)((char *)dos + dos->e_lfanew);
+    if (nt->FileHeader.TimeDateStamp != AS_EXE_TIMESTAMP) { LogMsg("smooth: not Bob.exe 2.13, off"); return; }
+    if (memcmp((void *)SM_DOMOVECYCLE, SM_SIG_DMC, 16) || memcmp((void *)SM_BLOCKTICK, SM_SIG_BT, 16)) { LogMsg("smooth: code differs, off"); return; }
+    QueryPerformanceFrequency(&g_smFreq);
+    memcpy(g_smOrigDMC, (void *)SM_DOMOVECYCLE, 7); memcpy(g_smOrigBT, (void *)SM_BLOCKTICK, 6);
+    g_smTrampDMC = SmTrampoline(g_smOrigDMC, 7, SM_DOMOVECYCLE + 7);
+    g_smTrampBT  = SmTrampoline(g_smOrigBT, 6, SM_BLOCKTICK + 6);
+    if (!g_smTrampDMC || !g_smTrampBT) { LogMsg("smooth: no trampoline memory, off"); return; }
+    if (!SmJmp(SM_DOMOVECYCLE, (void *)SmDoMoveCycle, 7) || !SmJmp(SM_BLOCKTICK, (void *)SmBlockTick, 6)) { LogMsg("smooth: VirtualProtect failed, off"); return; }
+    g_smHooked = 1;
+    LogMsg("smooth: aircraft drawn between simulation steps (DoMoveCycle 0x%08X, BlockTick 0x%08X hooked)", SM_DOMOVECYCLE, SM_BLOCKTICK);
+}
+static void SmRemove(void) {
+    DWORD old;
+    if (!g_smHooked) return;
+    if (VirtualProtect((void *)SM_DOMOVECYCLE, 16, PAGE_EXECUTE_READWRITE, &old)) { memcpy((void *)SM_DOMOVECYCLE, g_smOrigDMC, 7); VirtualProtect((void *)SM_DOMOVECYCLE, 16, old, &old); }
+    if (VirtualProtect((void *)SM_BLOCKTICK, 16, PAGE_EXECUTE_READWRITE, &old)) { memcpy((void *)SM_BLOCKTICK, g_smOrigBT, 6); VirtualProtect((void *)SM_BLOCKTICK, 16, old, &old); }
+    g_smHooked = 0;
+}
+
 static int PfReadIni(void) {
     char dllPath[MAX_PATH], ini[MAX_PATH], line[256], *slash;
     FILE *f;
@@ -758,6 +933,7 @@ static int PfReadIni(void) {
         if      (!strcmp(line, "cloudstep")) g_pfCloudStep = atoi(eq + 1);
         else if (!strcmp(line, "lines"))     g_pfLines = atoi(eq + 1);
         else if (!strcmp(line, "cockpitautopilot")) g_apCockpit = atoi(eq + 1);
+        else if (!strcmp(line, "smooth")) g_smOn = atoi(eq + 1);
     }
     fclose(f);
     return 1;
@@ -810,6 +986,8 @@ static DWORD WINAPI PfThread(LPVOID p) {
         if (GetTickCount() - last >= 5000) {
             unsigned long n = g_pfLineCalls;
             if (g_pfLines && n != lastLines) LogMsg("perf: %lu lines in the last 5 s (%lu/s)", n - lastLines, (n - lastLines) / 5);
+            if (g_smHooked) { LONG f = InterlockedExchange(&g_smFrames, 0), m = InterlockedExchange(&g_smMoved, 0);
+                              if (f) LogMsg("smooth: %ld drawing passes in the last 5 s, %ld aircraft drawn between steps on average", f, m / f); }
             lastLines = n; last = GetTickCount();
         }
     }
@@ -820,13 +998,14 @@ static void PfInit(void) {
     HANDLE t;
     int haveIni = PfReadIni();
     ApInstall();                                   /* off unless bob2guard.ini asks */
+    SmInstall();                                   /* off unless bob2guard.ini asks */
     if (!haveIni) { LogMsg("perf: no bob2guard.ini, patches off"); return; }
     if (g_pfCloudStep < 0 || g_pfCloudStep > 256) g_pfCloudStep = 0;
     LogMsg("perf: bob2guard.ini cloudstep=%d lines=%d", g_pfCloudStep, g_pfLines);
-    if (!g_pfCloudStep && !g_pfLines) return;
+    if (!g_pfCloudStep && !g_pfLines && !g_smHooked) return;
     if (g_pfCloudStep && memcmp((void *)0x00631746u, PF_SIG_UCLM, 8)) { LogMsg("perf: cloud step NOT applied, UpdateCloudLightMap signature differs"); g_pfCloudStep = 0; }
     if (g_pfLines) { if (!PfInstallLineHook()) g_pfLines = 0; }
-    if (g_pfCloudStep || g_pfLines) { t = CreateThread(NULL, 0, PfThread, NULL, 0, NULL); if (t) CloseHandle(t); }
+    if (g_pfCloudStep || g_pfLines || g_smHooked) { t = CreateThread(NULL, 0, PfThread, NULL, 0, NULL); if (t) CloseHandle(t); }
 }
 
 /* ==================== DLLMAIN ==================== */
@@ -852,6 +1031,7 @@ BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved) {
     }
     else if (fdwReason == DLL_PROCESS_DETACH) {
         PfRemoveLineHook();
+        SmRemove();
         if (g_logFile) {
             LogMsg("=== Unloading (skipped %u breakpoints, %u SxS errors, %u RCombo AV) ===", g_bpCount, g_sxsCount, g_avCount);
             fclose(g_logFile);

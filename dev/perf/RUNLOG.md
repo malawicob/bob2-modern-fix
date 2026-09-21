@@ -59,7 +59,8 @@ line patches off. Winner becomes the package default with a switch in Settings.
 | run | change | result |
 |---|---|---|
 | fps120 | dgVoodoo FPSLimit 240 -> 120 (backup dgVoodoo.conf.before-fps120) | cockpit autopilot works; the world outside jumps in steps (view only, gauges steady) |
-| fps100 | FPSLimit 100: four frames per simulation step exactly | |
+| fps100 | FPSLimit 100: four frames per simulation step exactly | not flown (cockpit autopilot test hurt Patrick's eyes; patch turned off) |
+| smooth1 | guard smooth=1 (aircraft drawn between steps), FPSLimit back to 240 | |
 
 Found 21 September: the simulation runs at 25 Hz. Mast3d::Mast3d starts it with
 timeSetEvent(0x28 = 40 ms, periodic, Mast3d::StaticTimeProc). Every aircraft,
