@@ -1,5 +1,5 @@
 {
- "note": "Invented pilot histories for the Squadron Room, written in the plain voice of the example Patrick gave on 21 September 2026. Every route is a real way into a fighter cockpit by the summer of 1940; the men are invented. A story is the route's four paragraphs (the side's closing is empty: where he is now opens the last paragraph). Computed tokens: {first} {last} {name} {born} {year} {age} {place} {town} {joined} {type} {unit} {base}, and on the British side {posted} {hours} {ontype} {otu}. Anything else is looked up in the side's lists, one item picked from a number made from the pilot's name and reused if the token appears again. Rules for the lists: plain sentences, subject first, no semicolons, no clever endings; only the home lists mention a father; the mother is always alive; nothing that has to happen by the sea or on a farm. Check any change with dev/render_backgrounds.py.",
+ "note": "Invented pilot histories for the Squadron Room, written in the plain voice of the example Patrick gave on 21 September 2026. Every route is a real way into a fighter cockpit by the summer of 1940; the men are invented. A story is the route's four paragraphs (the side's closing is empty). The last paragraph is not personal: it is the short entry his new commanding officer finds in the file, where he is posted and how he was assessed. Computed tokens: {first} {last} {name} {born} {year} {age} {place} {town} {joined} {type} {unit} {base}, and on the British side {posted} {hours} {ontype} {otu}. Anything else is looked up in the side's lists, one item picked from a number made from the pilot's name and reused if the token appears again. Rules for the lists: plain sentences, subject first, no semicolons, no clever endings; only the home lists mention a father; the mother is always alive; nothing that has to happen by the sea or on a farm. Check any change with dev/render_backgrounds.py.",
  "raf": {
   "born": {
    "nco": [
@@ -236,29 +236,14 @@
     "He did well at navigation but had to work hard at his landings.",
     "His engine cut on take-off one morning, but he put the aircraft down safely in the next field."
    ],
-   "temper": [
-    "He is quiet in the mess but talks a lot after flying.",
-    "He is cheerful and easy company, and the ground crew like him.",
-    "He is careful and thorough, and reads his pilot's notes more than most.",
-    "The others find him steady and reliable, if a little serious.",
-    "He is keen to prove himself and sometimes tries too hard.",
-    "Most of the squadron like him, although he can be short with people when he is tired."
-   ],
-   "habit": [
-    "He plays football for the station team whenever there is time.",
-    "He smokes a pipe, mostly to have something to do with his hands.",
-    "He spends his free evenings writing letters or reading.",
-    "He enjoys a game of cards in the mess and usually loses.",
-    "He keeps a small notebook of every flight, as well as his log book.",
-    "On a free afternoon he likes to take a bicycle out into the country lanes."
-   ],
-   "family": [
-    "His mother writes to him every week, and he tries to answer every letter.",
-    "He sends part of his pay home every month.",
-    "He has a girl in {town} and writes to her twice a week.",
-    "His family have not seen him since Christmas.",
-    "He has not been home since the spring and misses it more than he admits.",
-    "His mother keeps every letter he sends her."
+   "report": [
+    "Assessed as average. Keen and reliable, but his air gunnery needs more practice.",
+    "Assessed as above the average. Flies accurately and keeps good formation.",
+    "Assessed as average. Sound in the air, weak on instrument flying.",
+    "Assessed as average. A steady pilot who should improve with experience.",
+    "Assessed as below the average on arrival. Conscientious and improving quickly.",
+    "Assessed as above the average. A good navigator, inclined to be over-confident.",
+    "Assessed as average. Quiet and conscientious, fit for operations."
    ]
   },
   "routes": [
@@ -275,7 +260,7 @@
      "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. At sixteen, he left school to become {job}.",
      "He had wanted to fly since {spark}, but lessons were well beyond his wages. Joining the RAF Volunteer Reserve in {joined} gave him the opportunity. He trained at weekends at {erfts}, learning on Tiger Moths before progressing to the Hawker Hart. {moment}",
      "Called up on 1 September 1939, he spent several weeks waiting for a training place. He completed his initial instruction at {itwplace}, then moved to {sfts}, where he flew {trainer} and qualified as a sergeant pilot. A short conversion course at {otu} followed. He finished it with roughly {hours} flying hours, but only {ontype} on {type}s and little gunnery practice.",
-     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}, {posted}. {report}"
     ]
    },
    {
@@ -291,7 +276,7 @@
      "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. At fifteen he passed the entrance examination for an RAF aircraft apprenticeship.",
      "He spent three years at No. 1 School of Technical Training at Halton and passed out as {trade}. He then served on a squadron, looking after the aircraft he hoped one day to fly. A few former apprentices were chosen for pilot training each year, and in {joined} he was one of them.",
      "He learned to fly at {erfts} and then went on to {sfts}, where he flew {trainer} and qualified as a sergeant pilot. {moment} A short conversion course at {otu} followed. He came to fighters knowing far more about engines and airframes than most of his fellow pilots.",
-     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}, {posted}. {report}"
     ]
    },
    {
@@ -307,7 +292,7 @@
      "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}. He left school at eighteen and worked for a year as {offjob}.",
      "He had wanted to fly since {spark}. In {joined} he answered an Air Ministry advertisement for short service commissions, which offered four years of flying followed by six on the reserve. He learned to fly as a civilian at {civschool}, then spent a fortnight at the RAF Depot at Uxbridge on drill and uniform fittings before being commissioned as an acting pilot officer.",
      "He finished his training at {sfts}, where he flew {trainer} and was awarded his wings. {moment} He was then posted to fighters and learned to fly the {type} with his squadron.",
-     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}, {posted}. {report}"
     ]
    },
    {
@@ -323,7 +308,7 @@
      "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}.",
      "He had wanted to fly since {spark}, and in {joined} he entered the RAF College at Cranwell as a flight cadet. The two year course mixed flying on Avro Tutors and Hawker Harts with lectures, drill and a great deal of sport. {moment}",
      "He passed out with a permanent commission and was posted to a fighter squadron. He converted to the {type} when the squadron was re-equipped shortly before the war, and he now has more experience than most of the pilots around him.",
-     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}, {posted}. {report}"
     ]
    },
    {
@@ -339,7 +324,7 @@
      "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}, and then {univ}.",
      "He had wanted to fly since {spark}. At university he joined the University Air Squadron and learned to fly on Avro Tutors, and in {joined} he was commissioned in the RAF Volunteer Reserve. When war came he left his degree unfinished and was called up in September 1939.",
      "He completed his initial training at {itwplace}, then moved to {sfts}, where he flew {trainer} and was awarded his wings. {moment} A short conversion course at {otu} followed. He finished it with roughly {hours} flying hours, but only {ontype} on {type}s and little gunnery practice.",
-     "In {posted} he joined {unit} at {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}, {posted}. {report}"
     ]
    }
   ],
@@ -505,41 +490,25 @@
     "He found the direction finding equipment difficult at first but had mastered it by the end of the course."
    ],
    "war": [
-    "He joined his Gruppe in time for the campaign in France in May 1940 and flew escort missions over Belgium and northern France.",
-    "He reached the front just as the fighting in France ended, and has not yet fired his guns in action.",
-    "He flew in the campaign in France in May and June 1940 but made no claims.",
-    "He came to the Gruppe from the replacement pool in June 1940, after the fighting in France was over."
+    "Flew in the campaign in the West, May and June 1940. No claims.",
+    "Flew escort missions over Belgium and northern France in May 1940. No claims.",
+    "Arrived as the campaign in France ended. No combat experience.",
+    "Joined from the replacement pool in June 1940. No combat experience."
    ],
-   "temper": [
-    "He is quiet and dependable, and the others trust him in the air.",
-    "He is cheerful and popular in the Staffel.",
-    "He is careful and thorough, and reads the aircraft manual more than most.",
-    "The others find him easy to fly with, as he never does anything sudden without a reason.",
-    "He is ambitious and works hard at his gunnery.",
-    "Most of the Staffel like him, although he gets moody when bad weather keeps them on the ground."
+   "report": [
+    "Assessment: reliable and keen. Flying ability good, gunnery average.",
+    "Assessment: a steady pilot, not yet tested in combat.",
+    "Assessment: flying ability above average, discipline good.",
+    "Assessment: conscientious and hard working. Needs more practice in formation flying.",
+    "Assessment: a capable pilot, inclined to take risks.",
+    "Assessment: sound and dependable. Suitable as a wingman."
    ],
-   "crewtemper": [
-    "He is calm on the radio and never wastes words.",
-    "The pilots rate him as a good lookout.",
-    "He is steady and unhurried, which the pilots appreciate.",
-    "The pilots trust him because he never misses a call.",
-    "He is quiet on the ground but talks a lot on the intercom, mostly about what he can see behind them."
-   ],
-   "habit": [
-    "He plays in goal for the Staffel football team.",
-    "He smokes too much and keeps promising to stop.",
-    "He plays the accordion in the evenings, not very well.",
-    "He spends his free time reading or writing letters.",
-    "He likes to spend time with the mechanics and help them with the aircraft.",
-    "He goes swimming in the sea whenever there is a free afternoon."
-   ],
-   "family": [
-    "He writes to his mother every week.",
-    "He sends half his pay home to his family.",
-    "He has a girl in {town} and writes to her when he can.",
-    "His mother sends him parcels of cake and socks.",
-    "He has not been home on leave since the spring.",
-    "His family keep every letter he sends them."
+   "crewreport": [
+    "Assessment: a competent wireless operator, quick and accurate on the key.",
+    "Assessment: reliable in the air. Air gunnery average.",
+    "Assessment: good at direction finding. Steady in the air.",
+    "Assessment: keen and dependable. Needs more practice with the MG 15.",
+    "Assessment: an accurate operator, somewhat slow with the direction finder."
    ]
   },
   "routes": [
@@ -557,7 +526,7 @@
      "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {job}.",
      "Germany was not allowed an air force under the Treaty of Versailles, and gliding was how most young Germans of his age first learned to fly. He learned to glide {glide}, gaining his A, B and C gliding certificates. After six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for pilot training.",
      "After basic training he went to {ab}, where he gained his A and B licences on the Focke-Wulf Stieglitz, the Bücker Jungmann and the Arado 66. {moment} He was selected for fighters and sent to {jfs}, where he flew the Arado 68 and early versions of the Bf 109. He reached the front through the Ergänzungsjagdgruppe at Merseburg.",
-     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}. {war} {report}"
     ]
    },
    {
@@ -574,7 +543,7 @@
      "{name} was born in {town} on {born} and grew up {homeoff}. He attended {gymnasium}, where he passed his Abitur. As a boy he {boyhood}.",
      "Like most young German pilots of his generation he started on gliders, as Germany was not allowed an air force under the Treaty of Versailles. He learned to glide {glide}. After six months in the Reich Labour Service he joined the Luftwaffe in {joined} as an officer cadet.",
      "He trained at {lks}, where officer training and flying instruction ran side by side. {moment} He was commissioned as a Leutnant and sent to {jfs} for fighter training, flying the Arado 68 and early versions of the Bf 109.",
-     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}. {war} {report}"
     ]
    },
    {
@@ -591,7 +560,7 @@
      "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {job}.",
      "Germany was not allowed an air force under the Treaty of Versailles, and gliding was how most young Germans of his age first learned to fly. He learned to glide {glide}, gaining his A, B and C gliding certificates. After six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for pilot training.",
      "After basic training he went to {ab}, where he gained his A and B licences. {moment} His good results got him chosen for the Zerstörer force, which meant a longer course than a single-seat fighter pilot's. He went on to a C school for multi-engined aircraft and a blind flying course before learning to fly the Bf 110.",
-     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}. {war} {report}"
     ]
    },
    {
@@ -608,7 +577,7 @@
      "{name} was born in {town} on {born} and grew up {homeoff}. He attended {gymnasium}, where he passed his Abitur. As a boy he {boyhood}.",
      "Like most young German pilots of his generation he started on gliders, as Germany was not allowed an air force under the Treaty of Versailles. He learned to glide {glide}. After six months in the Reich Labour Service he joined the Luftwaffe in {joined} as an officer cadet.",
      "He trained at {lks} and was commissioned as a Leutnant. {moment} He asked for fighters, but like many of the best pupils at that time he was sent to the Zerstörer force instead. A C school for multi-engined aircraft and a blind flying course followed before he learned to fly the Bf 110.",
-     "{war} Today he flies the {type} with {unit} from {base}. {temper} {habit} {family}"
+     "Posted to {unit}, {base}. {war} {report}"
     ]
    },
    {
@@ -625,7 +594,7 @@
      "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {radiojob}.",
      "He had no plans to fly. After six months in the Reich Labour Service he was called up in {joined}, and because of his trade the Luftwaffe put him into signals. When volunteers were needed for aircrew, he put his name forward.",
      "He trained as a wireless operator at {lns}, learning Morse, the FuG 10 radio, direction finding and air gunnery with the MG 15. {funkmoment} He finished his training on the Bf 110, flying in the rear seat.",
-     "Today he flies with {unit} from {base}. In the Bf 110 he sits behind the pilot, facing backwards. He works the radio, keeps watch behind them and has a single machine gun to defend the tail. {crewtemper} {family}"
+     "Posted to {unit}, {base}, as wireless operator and rear gunner. {crewreport}"
     ]
    }
   ],

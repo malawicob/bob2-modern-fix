@@ -1400,7 +1400,8 @@ function New-PilotBackground {
 # the Room dealt under version 1 and the player never touched is dealt again;
 # anything he wrote or saved himself is his and is left alone.
 # Version 3 (the same day): rewritten again in the plain voice of Patrick's own example.
-$BackgroundVersion = 3
+# Version 4: the last paragraph is the commanding officer's file entry, not a portrait.
+$BackgroundVersion = 4
 function Test-BackgroundKept {
     param($Man)
     if (-not $Man -or ($Man.PSObject.Properties.Name -notcontains 'background') -or -not $Man.background) { return $false }

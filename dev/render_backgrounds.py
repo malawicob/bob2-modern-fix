@@ -25,7 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_JSON = os.path.join(HERE, '..', 'squadronroom', 'backgrounds.json')
 
 FIRST, LAST = 'Patrick', 'Millin'
-MIN_WORDS, MAX_WORDS = 170, 300
+MIN_WORDS, MAX_WORDS = 140, 260
 BANNED = ['which is held against him', 'as if the ground owed him money', 'mostly because he liked maps',
           'the question has stopped being asked', 'whatever the season', 'facing the way he has come',
           'military thoroughness', ' whose ', ' for which ', ' of which ', 'is usually to be found']
