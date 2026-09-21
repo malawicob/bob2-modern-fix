@@ -7670,7 +7670,13 @@ function Show-ReadyRoom {
         if ($fn) { [void]$script:Stage.Children.Add($fn) }
         if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
+        # the same paragraph the RAF card carries: the mark is the one he chose,
+        # the game decides which aeroplane he actually flies, and the board then
+        # follows the game (Get-FlownMark)
+        $mk = if ("$($Pilot.actype)" -match '110') { 'letter' } else { 'number' }
         $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch.`n`n" +
+                            "Your aircraft below wears the $mk you chose. The game decides which aeroplane of the Gruppe you fly on each sortie, " +
+                            "and after your first sortie with your own Gruppe the board shows the one you actually flew.`n`n" +
                             "Quick missions and training are not recorded here. Your aeroplane and your Flugbuch are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
