@@ -16,6 +16,11 @@ ground.
 import math, os, io, json, argparse, urllib.request, concurrent.futures
 import numpy as np
 
+# The RAF sheet's extent, and the default. The German sheet covers
+# different ground, so the bounds are arguments now: relief fetched for
+# one extent and drawn onto another is stretched across the wrong
+# country, which is subtle enough to look like bad shading rather than
+# like a bug.
 WEST, EAST, SOUTH, NORTH = -5.6, 4.0, 50.0, 53.8
 ZOOM = 9
 URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'
@@ -42,8 +47,19 @@ def get(args):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', required=True)
+    ap.add_argument('--west', type=float); ap.add_argument('--east', type=float)
+    ap.add_argument('--south', type=float); ap.add_argument('--north', type=float)
+    ap.add_argument('--side', choices=['raf', 'lw'])
     a = ap.parse_args()
 
+    global WEST, EAST, SOUTH, NORTH
+    if a.side == 'lw':
+        WEST, EAST, SOUTH, NORTH = -4.5, 6.2, 47.6, 51.95
+    for name in ('west', 'east', 'south', 'north'):
+        v = getattr(a, name)
+        if v is not None:
+            globals()[name.upper()] = v
+    print('fetching relief for %.2f..%.2f east, %.2f..%.2f north' % (WEST, EAST, SOUTH, NORTH))
     x0, x1 = int(math.floor(lon2x(WEST, ZOOM))), int(math.floor(lon2x(EAST, ZOOM)))
     y0, y1 = int(math.floor(lat2y(NORTH, ZOOM))), int(math.floor(lat2y(SOUTH, ZOOM)))
     tiles = [(ZOOM, x, y) for x in range(x0, x1 + 1) for y in range(y0, y1 + 1)]

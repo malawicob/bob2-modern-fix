@@ -30,7 +30,10 @@
 param(
     [switch]$Apply,        # write the changes; without it this only reports
     [switch]$Axes,         # DeviceDefaults.txt only
-    [switch]$Buttons       # keys.txt button preset only
+    [switch]$Buttons,      # keys.txt button preset only
+    [string]$GameDir       # the install to write to; the launcher and Setup
+                           # pass theirs so this can never find a different
+                           # Battle of Britain II on the same machine
 )
 
 $ErrorActionPreference = 'Stop'
@@ -206,7 +209,8 @@ $HAT_ACTIONS = @('ROTUP','ROTUPRIGHT','ROTRIGHT','ROTDNRIGHT','ROTDOWN','ROTDNLE
 function ConvertTo-JoyCode { param([int]$Device, [int]$Button) 260 + (40 * $Device) + $Button }
 
 # ---------------------------------------------------------------------
-$GameDir = Find-GameDir
+if ($GameDir -and -not (Test-Path (Join-Path $GameDir 'Bob.exe'))) { Write-Err "No Bob.exe in $GameDir."; exit 1 }
+if (-not $GameDir) { $GameDir = Find-GameDir }
 if (-not $GameDir) { Write-Err 'Could not find Bob.exe.'; exit 1 }
 
 Write-Host ''

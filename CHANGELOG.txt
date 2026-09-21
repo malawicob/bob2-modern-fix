@@ -15,6 +15,106 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+v1.9.2  (2026-09-21)
+--------------------
+  The first public release since 1.8.4. It carries 1.9.0 and 1.9.1 below
+  as well as this entry. "Modern Fix Handbook.html" in the package is a
+  picture guide to all of it.
+
+  - NEW: Modern Fix Handbook.html, a guide for new and existing players:
+    what is new, installing and updating, and flying a career.
+  - The launcher no longer says "attention needed, the graphics settings
+    file looks damaged". The file is not a fixed size (the game adds the
+    name of the last save to its end), and PLAY already puts back a good
+    copy on its own if it is ever really unusable, so the menu warning only
+    caused worry. The repair at PLAY is now silent; the old file is kept
+    beside it and the launcher log records it. The one alert left is a
+    missing or broken graphics translator, shown calmly in amber.
+  - Graphics: forced antialiasing is what drew the grid lines across the
+    terrain, so Setup and Settings now leave it to the game (off) and keep
+    16x filtering. The full 2048 terrain texture size is recommended for
+    sharp distant ground.
+  - Squadron Room, both sides:
+      * A pilot has a first name and a surname, both required when he is
+        created. The surname is still the name the game and its saves use.
+      * Click a portrait for his personal record: born, where, and how he
+        came to fly, by a real training route for his rank and aircraft,
+        ending on the entry his commanding officer found in the file. The
+        player can edit it or write his own.
+      * The aircraft on the board follows the game: after a sortie it shows
+        the letter (RAF) or number and colour (Luftwaffe) the game actually
+        gave him. A new British pilot has his Spitfire or Hurricane on the
+        board from the day he is posted.
+      * Both papers carry "yesterday, from the record of 1940": the raids,
+        the weather, the figures claimed that night beside the losses
+        counted after the war, and the other news of the day. 114 days,
+        10 July to 31 October 1940, researched with sources.
+      * The Morgenmeldung's headlines are in English.
+      * A marking the player dragged or resized is dropped when the side
+        view under it is redrawn, instead of floating off it.
+      * Adopting a campaign save binds only a pilot of the save's own
+        unit, so a new pilot of another unit gets a campaign of his own.
+  - Squadron Room, Luftwaffe:
+      * All 125 Bf 109 E and 12 Bf 110 side views are painted from the
+        game's own skin textures, so the camouflage matches the game. No
+        swastika on any fin.
+      * The Bf 110's Geschwader code is drawn at the game's own height.
+      * PLAY CAMPAIGN sets the right Gruppe (the Gruppe field is one based).
+  - Crash guard: optional cloud lighting and line drawing patches (1.9.1)
+    remain off by default.
+
+v1.9.1  (2026-09-14)
+--------------------
+  - NEW (measured, off by default): two performance patches in the crash
+    guard, switched on by bob2guard.ini beside it. cloudstep=N sets how
+    many texels of the cloud light map the game lights per frame (the
+    game's 256 is 16% of all CPU time; 32 does an eighth of the work and
+    only slows how fast the light map follows the sun). lines=1 replaces
+    the game's line copy, which writes each of tens of thousands of lines
+    a frame into the graphics buffer one float at a time and was 23% of
+    all CPU time, with five 16-byte stores of the same bytes. Both check
+    the exe's bytes first and do nothing otherwise. dev/perf/RUNLOG.md
+    carries the measurements. Cloud step 32 measured on the Biggin Hill
+    circuit: average 173 to 201 fps, median 169 to 223, CPU time per
+    frame 5.8 to 4.4 ms.
+  - FIXED: bright straight lines along the terrain tile grid, worse with
+    height. They were the forced antialiasing this package recommended:
+    flown at 2x and at 4x they are there, with it off they are gone.
+    Settings now recommends Off (and Off keeps the 16x ground filtering,
+    which it used to switch off as well), and "Everything at once" in
+    Setup is 16x filtering plus ReShade, whose SMAA pass smooths edges
+    without touching the terrain. If you turned 4x on, press Off in
+    Settings, Graphics.
+  - FIXED: "attention needed - the graphics settings file looks damaged"
+    after saving a campaign under your own name. settings.cfg ends with
+    the name of the last saved game, so its length changes with that name;
+    the check demanded exactly 1786 bytes, which is only true while the
+    save is called "Bob". Nothing was ever damaged. (Pressing Install and
+    repair in that state replaced a healthy file; it no longer offers to.)
+  - Settings recommends the full 2048 terrain texture size. 1024 blurs the
+    ground and gains nothing on a modern graphics card: the game is
+    limited by the processor, the card is idle half of every frame.
+  - The airfield dressing parks far fewer aircraft (95, was 191): measured
+    ten per cent over Biggin Hill, nearly all of it the parked aeroplanes.
+
+v1.9.0  (2026-09-12)
+--------------------
+  - NEW: PLAY CAMPAIGN in the Squadron Room opens the game straight onto
+    the campaign map, with the pilot's side, role, war phase and name
+    already set. The crash guard (dinput8.dll) reads
+    SquadronRoom\autostart.txt once and steers the game's own front end
+    through its own Begin path; it checks the exe byte for byte first and
+    stands down on any doubt, leaving the player at a menu with the
+    Room's click card. Nothing changes for the launcher's PLAY or for
+    anyone without the Room. A pilot with a campaign save keeps the
+    guided card for now (Load Game is the next stage). AUTOSTART.md.
+  - NEW: the launcher notices a changed joystick (a config still bound to
+    a stick that is not plugged in, or a stick with no axis layout) and
+    offers to set it up; Setup does it once at install. The Settings
+    live test polls the stick that was found, not device 0.
+  - The Luftwaffe map tab is the pilot's own map, and the PLAY CAMPAIGN
+    card names the game's campaign tab (CONVOYS, EAGLE ATTACK...).
+
 v1.8.4  (2026-09-09)
 --------------------
   - FIXED: Install and repair could bring back the giant cockpit. Windows

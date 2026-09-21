@@ -1,0 +1,604 @@
+{
+ "note": "Invented pilot histories for the Squadron Room, written in the plain voice of the example Patrick gave on 21 September 2026. Every route is a real way into a fighter cockpit by the summer of 1940; the men are invented. A story is the route's four paragraphs (the side's closing is empty). The last paragraph is not personal: it is the short entry his new commanding officer finds in the file, where he is posted and how he was assessed. Computed tokens: {first} {last} {name} {born} {year} {age} {place} {town} {joined} {type} {unit} {base}, and on the British side {posted} {hours} {ontype} {otu}. Anything else is looked up in the side's lists, one item picked from a number made from the pilot's name and reused if the token appears again. Rules for the lists: plain sentences, subject first, no semicolons, no clever endings; only the home lists mention a father; the mother is always alive; nothing that has to happen by the sea or on a farm. Check any change with dev/render_backgrounds.py.",
+ "raf": {
+  "born": {
+   "nco": [
+    1914,
+    1921
+   ],
+   "officer": [
+    1913,
+    1920
+   ]
+  },
+  "places": [
+   "Guildford, Surrey",
+   "Croydon, Surrey",
+   "Maidstone, Kent",
+   "Canterbury, Kent",
+   "Brighton, Sussex",
+   "Portsmouth, Hampshire",
+   "Southampton, Hampshire",
+   "Reading, Berkshire",
+   "Oxford",
+   "Bristol",
+   "Exeter, Devon",
+   "Plymouth, Devon",
+   "Truro, Cornwall",
+   "Gloucester",
+   "Cheltenham, Gloucestershire",
+   "Worcester",
+   "Birmingham",
+   "Coventry, Warwickshire",
+   "Leicester",
+   "Nottingham",
+   "Derby",
+   "Lincoln",
+   "Norwich, Norfolk",
+   "Ipswich, Suffolk",
+   "Cambridge",
+   "Bedford",
+   "Northampton",
+   "Chelmsford, Essex",
+   "Ilford, Essex",
+   "Harrow, Middlesex",
+   "Ealing, Middlesex",
+   "Wimbledon, Surrey",
+   "Lewisham, London",
+   "Hampstead, London",
+   "Sheffield, Yorkshire",
+   "Leeds, Yorkshire",
+   "Bradford, Yorkshire",
+   "York",
+   "Hull, Yorkshire",
+   "Harrogate, Yorkshire",
+   "Manchester",
+   "Stockport, Cheshire",
+   "Liverpool",
+   "Preston, Lancashire",
+   "Blackpool, Lancashire",
+   "Carlisle, Cumberland",
+   "Newcastle upon Tyne",
+   "Sunderland, County Durham",
+   "Darlington, County Durham",
+   "Edinburgh",
+   "Glasgow",
+   "Dundee",
+   "Aberdeen",
+   "Perth",
+   "Inverness",
+   "Cardiff",
+   "Swansea",
+   "Newport, Monmouthshire",
+   "Wrexham, Denbighshire",
+   "Belfast",
+   "Londonderry"
+  ],
+  "otu": {
+   "Spitfire": [
+    "Hawarden",
+    "Aston Down"
+   ],
+   "Hurricane": [
+    "Sutton Bridge",
+    "Aston Down"
+   ]
+  },
+  "lists": {
+   "home": [
+    "above his father's chemist's shop",
+    "above the grocer's shop his parents ran",
+    "as the son of an engine driver on the railway",
+    "as the son of a postman",
+    "as the son of a printer",
+    "as the son of a foreman at the local engineering works",
+    "as the son of an elementary schoolmaster",
+    "as the son of a brewery van driver, who taught him to drive at fourteen",
+    "with his mother after his father died of war wounds in 1924",
+    "as the son of a garage owner, spending his boyhood around cars and engines"
+   ],
+   "homeoff": [
+    "as the son of a family doctor",
+    "as the son of a solicitor",
+    "as the son of a vicar",
+    "as the son of a bank manager",
+    "as the son of a retired army officer",
+    "as the son of a civil engineer who worked abroad for much of his childhood",
+    "with his mother and an uncle after his father died when he was small",
+    "as the son of a schoolmaster"
+   ],
+   "school": [
+    "the local grammar school",
+    "the county secondary school",
+    "the junior technical school",
+    "the town's old grammar school",
+    "the municipal secondary school",
+    "the boys' grammar school"
+   ],
+   "pubschool": [
+    "a public school in the Midlands",
+    "a day school near his home",
+    "a boarding school on the south coast",
+    "his father's old school",
+    "a grammar school of old foundation",
+    "a small public school in the West Country"
+   ],
+   "boyhood": [
+    "enjoyed Scouts and had a knack for map-reading",
+    "played football in the winter and cricket in the summer",
+    "built model aeroplanes and read every flying magazine he could find",
+    "was good at mathematics and hopeless at French",
+    "sang in the church choir and ran for the school",
+    "spent his spare time taking bicycles apart and putting them back together",
+    "won a prize for mathematics and captained the football team",
+    "was a keen swimmer and a good shot with an air rifle"
+   ],
+   "boyhoodoff": [
+    "played rugby for the first fifteen and did well at mathematics",
+    "was a good cricketer and a better swimmer",
+    "rowed for the school and was made a prefect",
+    "joined the Officers' Training Corps and enjoyed it more than his lessons",
+    "boxed for the school and won a prize for history",
+    "enjoyed sport more than work and captained the cricket team in his last year"
+   ],
+   "job": [
+    "a junior reporter on the town's weekly newspaper",
+    "a clerk in a bank",
+    "a junior draughtsman at an engineering works",
+    "an apprentice motor mechanic",
+    "an insurance clerk",
+    "a clerk in the council offices",
+    "a junior in a solicitor's office",
+    "a laboratory assistant at a chemical works",
+    "a booking clerk on the railway",
+    "an apprentice electrician",
+    "a shop assistant in a department store"
+   ],
+   "offjob": [
+    "a clerk in an insurance office in London",
+    "a trainee with a firm of accountants",
+    "a salesman for a motor company",
+    "a junior in a stockbroker's office",
+    "a trainee at a bank",
+    "a clerk with a shipping company in London"
+   ],
+   "univ": [
+    "went up to Oxford to read law",
+    "went up to Oxford to read history",
+    "went up to Cambridge to read engineering",
+    "went up to Cambridge to read mathematics",
+    "went to London University to read economics",
+    "went to London University to study engineering"
+   ],
+   "spark": [
+    "watching an air display at fourteen",
+    "a five shilling joyride with a touring air circus at twelve",
+    "reading about the Schneider Trophy races as a schoolboy",
+    "a trip to the Hendon air display as a schoolboy",
+    "his first sight of an airliner coming in to land at Croydon",
+    "a flight in a Tiger Moth that an uncle paid for on his sixteenth birthday"
+   ],
+   "erfts": [
+    "No. 3 E&RFTS at Hamble",
+    "No. 15 E&RFTS at Redhill",
+    "No. 6 E&RFTS at Sywell",
+    "No. 4 E&RFTS at Brough",
+    "No. 5 E&RFTS at Hanworth",
+    "No. 11 E&RFTS at Perth",
+    "No. 12 E&RFTS at Prestwick",
+    "No. 2 E&RFTS at Filton",
+    "No. 7 E&RFTS at Desford",
+    "No. 9 E&RFTS at Ansty",
+    "No. 1 E&RFTS at Hatfield",
+    "No. 13 E&RFTS at White Waltham",
+    "No. 18 E&RFTS at Fair Oaks",
+    "No. 22 E&RFTS at Cambridge"
+   ],
+   "civschool": [
+    "the de Havilland School of Flying at Hatfield",
+    "the Reid and Sigrist school at Desford",
+    "Air Service Training at Hamble",
+    "the Airwork school at Perth",
+    "the Bristol company's school at Filton",
+    "the Brooklands Aviation school at Sywell"
+   ],
+   "sfts": [
+    "No. 5 Flying Training School at Sealand",
+    "No. 6 Flying Training School at Little Rissington",
+    "No. 2 Flying Training School at Brize Norton",
+    "No. 3 Flying Training School at South Cerney",
+    "No. 8 Flying Training School at Montrose",
+    "No. 10 Flying Training School at Tern Hill",
+    "No. 9 Flying Training School at Hullavington",
+    "No. 15 Flying Training School at Lossiemouth"
+   ],
+   "itwplace": [
+    "Cambridge",
+    "Hastings"
+   ],
+   "trainer": [
+    "Harts and Harvards",
+    "Miles Masters",
+    "Harvards"
+   ],
+   "trade": [
+    "an engine fitter",
+    "an airframe fitter",
+    "a wireless mechanic",
+    "an instrument maker"
+   ],
+   "moment": [
+    "He was the first on his course to fly solo, after eight hours of instruction. A difficult crosswind landing soon checked his confidence.",
+    "He took twelve hours to go solo, longer than most, but after that he made steady progress.",
+    "Instrument flying gave him more trouble than anything else, and he passed the test at the second attempt.",
+    "On a solo cross-country flight he got lost in cloud and landed at the wrong airfield, which his instructor did not let him forget.",
+    "His instructors described him as a steady and reliable pilot rather than a brilliant one.",
+    "He did well at navigation but had to work hard at his landings.",
+    "His engine cut on take-off one morning, but he put the aircraft down safely in the next field."
+   ],
+   "report": [
+    "Assessed as average. Keen and reliable, but his air gunnery needs more practice.",
+    "Assessed as above the average. Flies accurately and keeps good formation.",
+    "Assessed as average. Sound in the air, weak on instrument flying.",
+    "Assessed as average. A steady pilot who should improve with experience.",
+    "Assessed as below the average on arrival. Conscientious and improving quickly.",
+    "Assessed as above the average. A good navigator, inclined to be over-confident.",
+    "Assessed as average. Quiet and conscientious, fit for operations."
+   ]
+  },
+  "routes": [
+   {
+    "id": "rafvr",
+    "who": "nco",
+    "weight": 5,
+    "joined": [
+     1937,
+     1939
+    ],
+    "minage": 18,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. At sixteen, he left school to become {job}.",
+     "He had wanted to fly since {spark}, but lessons were well beyond his wages. Joining the RAF Volunteer Reserve in {joined} gave him the opportunity. He trained at weekends at {erfts}, learning on Tiger Moths before progressing to the Hawker Hart. {moment}",
+     "Called up on 1 September 1939, he spent several weeks waiting for a training place. He completed his initial instruction at {itwplace}, then moved to {sfts}, where he flew {trainer} and qualified as a sergeant pilot. A short conversion course at {otu} followed. He finished it with roughly {hours} flying hours, but only {ontype} on {type}s and little gunnery practice.",
+     "Posted to {unit}, {base}, {posted}. {report}"
+    ]
+   },
+   {
+    "id": "halton",
+    "who": "nco",
+    "weight": 2,
+    "joined": [
+     1938,
+     1939
+    ],
+    "minage": 20,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. At fifteen he passed the entrance examination for an RAF aircraft apprenticeship.",
+     "He spent three years at No. 1 School of Technical Training at Halton and passed out as {trade}. He then served on a squadron, looking after the aircraft he hoped one day to fly. A few former apprentices were chosen for pilot training each year, and in {joined} he was one of them.",
+     "He learned to fly at {erfts} and then went on to {sfts}, where he flew {trainer} and qualified as a sergeant pilot. {moment} A short conversion course at {otu} followed. He came to fighters knowing far more about engines and airframes than most of his fellow pilots.",
+     "Posted to {unit}, {base}, {posted}. {report}"
+    ]
+   },
+   {
+    "id": "ssc",
+    "who": "officer",
+    "weight": 5,
+    "joined": [
+     1938,
+     1939
+    ],
+    "minage": 18,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}. He left school at eighteen and worked for a year as {offjob}.",
+     "He had wanted to fly since {spark}. In {joined} he answered an Air Ministry advertisement for short service commissions, which offered four years of flying followed by six on the reserve. He learned to fly as a civilian at {civschool}, then spent a fortnight at the RAF Depot at Uxbridge on drill and uniform fittings before being commissioned as an acting pilot officer.",
+     "He finished his training at {sfts}, where he flew {trainer} and was awarded his wings. {moment} He was then posted to fighters and learned to fly the {type} with his squadron.",
+     "Posted to {unit}, {base}, {posted}. {report}"
+    ]
+   },
+   {
+    "id": "cranwell",
+    "who": "officer",
+    "weight": 2,
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 18,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}.",
+     "He had wanted to fly since {spark}, and in {joined} he entered the RAF College at Cranwell as a flight cadet. The two year course mixed flying on Avro Tutors and Hawker Harts with lectures, drill and a great deal of sport. {moment}",
+     "He passed out with a permanent commission and was posted to a fighter squadron. He converted to the {type} when the squadron was re-equipped shortly before the war, and he now has more experience than most of the pilots around him.",
+     "Posted to {unit}, {base}, {posted}. {report}"
+    ]
+   },
+   {
+    "id": "uas",
+    "who": "officer",
+    "weight": 2,
+    "joined": [
+     1937,
+     1939
+    ],
+    "minage": 20,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He was educated at {pubschool}, where he {boyhoodoff}, and then {univ}.",
+     "He had wanted to fly since {spark}. At university he joined the University Air Squadron and learned to fly on Avro Tutors, and in {joined} he was commissioned in the RAF Volunteer Reserve. When war came he left his degree unfinished and was called up in September 1939.",
+     "He completed his initial training at {itwplace}, then moved to {sfts}, where he flew {trainer} and was awarded his wings. {moment} A short conversion course at {otu} followed. He finished it with roughly {hours} flying hours, but only {ontype} on {type}s and little gunnery practice.",
+     "Posted to {unit}, {base}, {posted}. {report}"
+    ]
+   }
+  ],
+  "closing": ""
+ },
+ "lw": {
+  "born": {
+   "nco": [
+    1913,
+    1920
+   ],
+   "officer": [
+    1914,
+    1920
+   ]
+  },
+  "places": [
+   "Hamburg",
+   "Bremen",
+   "Kiel",
+   "Lübeck",
+   "Hanover",
+   "Brunswick",
+   "Kassel",
+   "Göttingen",
+   "Dortmund",
+   "Essen",
+   "Düsseldorf",
+   "Cologne",
+   "Koblenz",
+   "Trier",
+   "Frankfurt",
+   "Wiesbaden",
+   "Mannheim",
+   "Heidelberg",
+   "Karlsruhe",
+   "Stuttgart",
+   "Ulm",
+   "Augsburg",
+   "Munich",
+   "Rosenheim",
+   "Regensburg",
+   "Nuremberg",
+   "Würzburg",
+   "Bamberg",
+   "Erfurt",
+   "Leipzig",
+   "Dresden",
+   "Chemnitz",
+   "Magdeburg",
+   "Halle",
+   "Potsdam",
+   "Spandau, Berlin",
+   "Charlottenburg, Berlin",
+   "Rostock",
+   "Stettin",
+   "Breslau",
+   "Königsberg in East Prussia",
+   "Vienna",
+   "Graz",
+   "Linz",
+   "Innsbruck",
+   "Salzburg"
+  ],
+  "lists": {
+   "home": [
+    "above his father's bakery",
+    "as the son of a railway official",
+    "as the son of a schoolteacher",
+    "as the son of a tram driver",
+    "as the son of a master joiner",
+    "as the son of a foreman in a machine factory",
+    "with his mother and an uncle after his father died when he was small",
+    "as the son of a post office clerk",
+    "above the small shop his parents ran"
+   ],
+   "homeoff": [
+    "as the son of a doctor",
+    "as the son of a judge",
+    "as the son of a pastor",
+    "as the son of a factory director",
+    "as the son of an army officer who had served in the last war",
+    "as the son of a university lecturer",
+    "with his mother after his father died when he was small"
+   ],
+   "school": [
+    "the Volksschule and then a trade school",
+    "the Realschule",
+    "the Oberrealschule as far as the intermediate certificate"
+   ],
+   "gymnasium": [
+    "the Gymnasium",
+    "the Realgymnasium",
+    "the Oberrealschule"
+   ],
+   "boyhood": [
+    "played football and built model gliders",
+    "was good at mathematics and spent his summers hiking",
+    "enjoyed sport and was a strong swimmer",
+    "built model aeroplanes and read everything he could find about flying",
+    "played the accordion and sang in a choir",
+    "went skiing in the winter and cycling in the summer",
+    "was good with his hands and repaired bicycles for his friends"
+   ],
+   "job": [
+    "an apprenticeship as a toolmaker",
+    "an apprenticeship as a motor mechanic",
+    "an apprenticeship as an electrician",
+    "work as a clerk with the railway",
+    "an apprenticeship as a joiner",
+    "work as a junior clerk in a savings bank",
+    "an apprenticeship as a precision mechanic"
+   ],
+   "radiojob": [
+    "an apprenticeship as a radio mechanic",
+    "work as a telegraphist with the post office",
+    "an apprenticeship as an electrician",
+    "work in a shop that sold and repaired wireless sets"
+   ],
+   "glide": [
+    "on the Wasserkuppe in the Rhön",
+    "at Rossitten on the Kurische Nehrung",
+    "at Grunau in Silesia",
+    "at Hornberg near Schwäbisch Gmünd",
+    "with a club on a hill outside the town",
+    "at Borkenberge in Westphalia"
+   ],
+   "ab": [
+    "the pilot school at Celle",
+    "the pilot school at Salzwedel",
+    "the pilot school at Neuruppin",
+    "the pilot school at Magdeburg",
+    "the pilot school at Kaufbeuren",
+    "the pilot school at Schönwalde near Berlin",
+    "the pilot school at Oschatz in Saxony"
+   ],
+   "lks": [
+    "Luftkriegsschule 1 at Dresden-Klotzsche",
+    "Luftkriegsschule 2 at Berlin-Gatow",
+    "Luftkriegsschule 3 at Wildpark-Werder",
+    "Luftkriegsschule 4 at Fürstenfeldbruck"
+   ],
+   "jfs": [
+    "Jagdfliegerschule 1 at Werneuchen",
+    "Jagdfliegerschule 2 at Schleißheim",
+    "Jagdfliegerschule 5 at Wien-Schwechat"
+   ],
+   "lns": [
+    "the air signals school at Halle"
+   ],
+   "moment": [
+    "He was airsick on his first few flights but said nothing, and it soon passed.",
+    "On a cross-country flight his engine failed, and he landed the trainer safely in a stubble field.",
+    "On his first solo cross-country flight he got lost and had to land in a meadow to ask a farmer the way.",
+    "He went solo after nine hours, one of the first in his class.",
+    "His instructor judged him steady rather than gifted, and said so in his report.",
+    "He found the flying easy and the classroom work hard."
+   ],
+   "funkmoment": [
+    "On his first gunnery exercise he missed the target drogue with nearly every round, which his instructor said was normal.",
+    "He learned Morse quickly and was one of the fastest operators on his course.",
+    "He was sick on his first flight in a rear seat but soon got used to it.",
+    "He found the direction finding equipment difficult at first but had mastered it by the end of the course."
+   ],
+   "war": [
+    "Flew in the campaign in the West, May and June 1940. No claims.",
+    "Flew escort missions over Belgium and northern France in May 1940. No claims.",
+    "Arrived as the campaign in France ended. No combat experience.",
+    "Joined from the replacement pool in June 1940. No combat experience."
+   ],
+   "report": [
+    "Assessment: reliable and keen. Flying ability good, gunnery average.",
+    "Assessment: a steady pilot, not yet tested in combat.",
+    "Assessment: flying ability above average, discipline good.",
+    "Assessment: conscientious and hard working. Needs more practice in formation flying.",
+    "Assessment: a capable pilot, inclined to take risks.",
+    "Assessment: sound and dependable. Suitable as a wingman."
+   ],
+   "crewreport": [
+    "Assessment: a competent wireless operator, quick and accurate on the key.",
+    "Assessment: reliable in the air. Air gunnery average.",
+    "Assessment: good at direction finding. Steady in the air.",
+    "Assessment: keen and dependable. Needs more practice with the MG 15.",
+    "Assessment: an accurate operator, somewhat slow with the direction finder."
+   ]
+  },
+  "routes": [
+   {
+    "id": "nco109",
+    "who": "nco",
+    "type": "109",
+    "weight": 1,
+    "joined": [
+     1936,
+     1938
+    ],
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {job}.",
+     "Germany was not allowed an air force under the Treaty of Versailles, and gliding was how most young Germans of his age first learned to fly. He learned to glide {glide}, gaining his A, B and C gliding certificates. After six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for pilot training.",
+     "After basic training he went to {ab}, where he gained his A and B licences on the Focke-Wulf Stieglitz, the Bücker Jungmann and the Arado 66. {moment} He was selected for fighters and sent to {jfs}, where he flew the Arado 68 and early versions of the Bf 109. He reached the front through the Ergänzungsjagdgruppe at Merseburg.",
+     "Posted to {unit}, {base}. {war} {report}"
+    ]
+   },
+   {
+    "id": "off109",
+    "who": "officer",
+    "type": "109",
+    "weight": 1,
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He attended {gymnasium}, where he passed his Abitur. As a boy he {boyhood}.",
+     "Like most young German pilots of his generation he started on gliders, as Germany was not allowed an air force under the Treaty of Versailles. He learned to glide {glide}. After six months in the Reich Labour Service he joined the Luftwaffe in {joined} as an officer cadet.",
+     "He trained at {lks}, where officer training and flying instruction ran side by side. {moment} He was commissioned as a Leutnant and sent to {jfs} for fighter training, flying the Arado 68 and early versions of the Bf 109.",
+     "Posted to {unit}, {base}. {war} {report}"
+    ]
+   },
+   {
+    "id": "nco110",
+    "who": "nco",
+    "type": "110",
+    "weight": 1,
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {job}.",
+     "Germany was not allowed an air force under the Treaty of Versailles, and gliding was how most young Germans of his age first learned to fly. He learned to glide {glide}, gaining his A, B and C gliding certificates. After six months in the Reich Labour Service he was called up in {joined} and accepted by the Luftwaffe for pilot training.",
+     "After basic training he went to {ab}, where he gained his A and B licences. {moment} His good results got him chosen for the Zerstörer force, which meant a longer course than a single-seat fighter pilot's. He went on to a C school for multi-engined aircraft and a blind flying course before learning to fly the Bf 110.",
+     "Posted to {unit}, {base}. {war} {report}"
+    ]
+   },
+   {
+    "id": "off110",
+    "who": "officer",
+    "type": "110",
+    "weight": 1,
+    "joined": [
+     1935,
+     1937
+    ],
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {homeoff}. He attended {gymnasium}, where he passed his Abitur. As a boy he {boyhood}.",
+     "Like most young German pilots of his generation he started on gliders, as Germany was not allowed an air force under the Treaty of Versailles. He learned to glide {glide}. After six months in the Reich Labour Service he joined the Luftwaffe in {joined} as an officer cadet.",
+     "He trained at {lks} and was commissioned as a Leutnant. {moment} He asked for fighters, but like many of the best pupils at that time he was sent to the Zerstörer force instead. A C school for multi-engined aircraft and a blind flying course followed before he learned to fly the Bf 110.",
+     "Posted to {unit}, {base}. {war} {report}"
+    ]
+   },
+   {
+    "id": "bordfunker",
+    "who": "crew",
+    "type": "110",
+    "weight": 1,
+    "joined": [
+     1936,
+     1939
+    ],
+    "minage": 19,
+    "text": [
+     "{name} was born in {town} on {born} and grew up {home}. He attended {school}, {boyhood}. After leaving school he began {radiojob}.",
+     "He had no plans to fly. After six months in the Reich Labour Service he was called up in {joined}, and because of his trade the Luftwaffe put him into signals. When volunteers were needed for aircrew, he put his name forward.",
+     "He trained as a wireless operator at {lns}, learning Morse, the FuG 10 radio, direction finding and air gunnery with the MG 15. {funkmoment} He finished his training on the Bf 110, flying in the rear seat.",
+     "Posted to {unit}, {base}, as wireless operator and rear gunner. {crewreport}"
+    ]
+   }
+  ],
+  "closing": "",
+  "closing_crew": ""
+ }
+}

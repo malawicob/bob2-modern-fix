@@ -1,4 +1,4 @@
-# Smoke test: BUILD every screen of the Squadron Room, offscreen.
+﻿# Smoke test: BUILD every screen of the Squadron Room, offscreen.
 #
 # Why it exists: on 8 September 2026 the Room would not open at all. One
 # line still read a roster record's victories as a number after they had
@@ -37,8 +37,9 @@ $fails = @()
 $src = Get-Content $Room -Raw
 $src = $src -replace '(?m)^\[void\]\$Win\.ShowDialog\(\)\s*$', ''
 $src = $src -replace '(?m)^Finalize-Flight\s*$', ''
-$src = $src -replace '(?m)^\$existing = Get-Pilot\s*$', ''
-$src = $src -replace '(?m)^if \(\$existing\) \{ Show-Roster -Pilot \$existing \} else \{ Show-SquadronSelect \}\s*$', ''
+# The Room's bootstrap is one named call, so this is one line to take
+# out and it cannot drift as that bootstrap grows.
+$src = $src -replace '(?m)^Start-Room\s*$', ''
 $tmp = Join-Path (Split-Path -Parent $Room) '_rendertest.ps1'
 Set-Content -Path $tmp -Value $src -Encoding UTF8
 try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
@@ -52,22 +53,20 @@ try { . $tmp } finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
 #  supposed to be examining - and it did: it read Patrick's bulletin for
 #  him, so the dispersal had nothing to flag when he went looking for it.
 #
-#  Every path is reassigned, not just $StateDir: each one was computed
-#  from $StateDir when the script loaded, so moving the folder afterwards
-#  leaves them all pointing at the old place.
+#  Point $script:StateRootOverride at the copy and let Set-StateSide work
+#  out the paths. Assigning them here by hand looks equivalent and is not:
+#  the Room now has two sides, and the next Set-StateSide - which every
+#  side change and the bootstrap performs - would recompute all six back
+#  onto the real install and the harness would eat a pilot again.
 # ---------------------------------------------------------------------
-$realState = $StateDir
-$StateDir  = Join-Path ([IO.Path]::GetTempPath()) ('roomtest-' + [guid]::NewGuid().ToString('N'))
-New-Item -ItemType Directory -Path $StateDir -Force | Out-Null
-$PilotPath     = Join-Path $StateDir 'pilot.json'
-$SessionsPath  = Join-Path $StateDir 'sessions.json'
-$FlightOpen    = Join-Path $StateDir 'flight.open'
-$AcPosPath     = Join-Path $StateDir 'acpos.json'
-$AutoClaimPath = Join-Path $StateDir 'autoclaim.json'
-if (Test-Path $realState) {
-    Get-ChildItem $realState -File -ErrorAction SilentlyContinue |
-        ForEach-Object { Copy-Item $_.FullName (Join-Path $StateDir $_.Name) -Force }
+$realRoot = Split-Path -Parent $StateDir      # <GameDir>\SquadronRoom
+$script:StateRootOverride = Join-Path ([IO.Path]::GetTempPath()) ('roomtest-' + [guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $script:StateRootOverride -Force | Out-Null
+if (Test-Path $realRoot) {
+    Copy-Item (Join-Path $realRoot '*') $script:StateRootOverride -Recurse -Force -ErrorAction SilentlyContinue
 }
+Set-StateSide $script:Side
+if (-not (Test-Path $script:StateDir)) { New-Item -ItemType Directory -Path $script:StateDir -Force | Out-Null }
 try {
 "loaded: pilot '$((Get-Pilot).pilot)', squadron $((Get-Pilot).sqn), campaign date $(Get-CampaignDate)"
 foreach ($tab in 'dispersal','logbook','map','paper') {
@@ -89,9 +88,137 @@ foreach ($q in (Get-Squadrons)) {
 }
 Set-Content -Path $PilotPath -Value $saved -Encoding UTF8
 "  dispersal for all $((Get-Squadrons).Count) squadrons x 3 dates: $bad failure(s)"
+
+# --- the German side ---------------------------------------------------
+# It has no career yet, so there is nothing but the postings board to
+# build. Every period, because a Gruppe only appears once it has been
+# moved up and the empty early periods are where a board like this breaks.
+try {
+    Set-Side 'lw'
+    $g = @(Get-LwGruppen)
+    "  luftwaffe : $($g.Count) fighter Gruppen loaded"
+    foreach ($per in $Periods) {
+        $script:SelPeriod = $per.Id
+        Show-GruppeSelect
+        "    $($per.Id) : drew $($script:Stage.Children.Count) blocks"
+    }
+    # A career, so the ready room is actually built. Without one the board
+    # is all this test ever saw, and the ready room shipped unexercised.
+    $unit = @($g)[0]
+    $script:SelSq = @{
+        Unit = "$($unit.unit)"; Gesch = "$($unit.geschwader)"; Gruppe = "$($unit.gruppe)"
+        Type = "$($unit.type)"; Base = "$($unit.field)"; Skill = "$($unit.skill)"
+        Luftflotte = [int]$unit.luftflotte; Period = 'P2'
+    }
+    Show-GruppeCreate
+    "    adjutant : drew $($script:Stage.Children.Count) blocks"
+    $script:FirstBox.Text = 'Hans'
+    $script:NameBox.Text = 'Testflieger'
+    $script:SelPortrait = 'pilot01.jpg'
+    # reporting now asks for an aircraft number as well, and without one
+    # Invoke-GruppeSubmit writes acnum 0 and the aeroplane comes out bare
+    $script:SelAcNum = 7
+    foreach ($rk in @('Unteroffizier','Leutnant')) {
+        $script:SelRank = $rk
+        Invoke-GruppeSubmit
+        $lp = Get-Pilot
+        "    $rk : $($lp.rank) of $($lp.unit), $($lp.staffel). Staffel, ready room drew $($script:Stage.Children.Count) blocks"
+    }
+    # AND A ZERSTOERER, because a Bf 110 carries two men and every screen
+    # that draws a crew is a screen the fighter path never touches: the
+    # second frame, the loss-and-replacement line, the Flugbuch's two
+    # names, the seat column on the Staffel table. A sweep that only ever
+    # posts a man to a Jagdgruppe proves none of it.
+    $zg = @($g) | Where-Object { "$($_.type)" -match '110' } | Select-Object -First 1
+    if ($zg) {
+        $script:SelSq = @{
+            Unit = "$($zg.unit)"; Gesch = "$($zg.geschwader)"; Gruppe = "$($zg.gruppe)"
+            Type = "$($zg.type)"; Base = "$($zg.field)"; Skill = "$($zg.skill)"
+            Luftflotte = [int]$zg.luftflotte; Period = 'P2'
+        }
+        Show-GruppeCreate
+        $script:FirstBox.Text = 'Karl'
+        $script:NameBox.Text = 'Zerstoerer'
+        $script:SelPortrait = 'pilot01.jpg'
+        $script:SelAcNum = 4
+        $script:SelRank = 'Leutnant'
+        Invoke-GruppeSubmit
+        $zp = Get-Pilot
+        $zc = @(Get-Crew $zp)
+        "    $($zg.unit) : $($zp.rank), crew of $($zc.Count + 1)$(if ($zc.Count) { " with $($zc[0].rank) $($zc[0].pilot), $($zc[0].role)" })"
+        if (-not $zc.Count) { $fails += "zerstoerer : posted with no crew"; "    zerstoerer : NO CREW" }
+        # THE SECOND MAN MUST BE ON THE SCREEN, not only in the record.
+        # Counting the record proved nothing about what was drawn.
+        function Find-Text { param($Node, [string]$Text)
+            $n = 0
+            if ($Node -is [Windows.Controls.TextBlock]) { if ("$($Node.Text)" -eq $Text) { $n++ } }
+            $kids = @()
+            if ($Node -is [Windows.Controls.Panel]) { $kids = @($Node.Children) }
+            elseif ($Node -is [Windows.Controls.Decorator]) { $kids = @($Node.Child) }
+            elseif ($Node -is [Windows.Controls.ContentControl]) { $kids = @($Node.Content) }
+            foreach ($k in $kids) { if ($k -is [Windows.DependencyObject]) { $n += Find-Text $k $Text } }
+            $n
+        }
+        if ($zc.Count) {
+            Show-Tab 'dispersal'
+            $seen = Find-Text $script:Stage "$($zc[0].pilot)"
+            "    110 ready room : the crewman's name is drawn $seen time(s)"
+            if ($seen -lt 1) { $fails += 'zerstoerer : the crewman is in the record and not on the ready room' }
+        }
+        # A NUDGE MADE ON AN OLD DRAWING IS DROPPED, one made on this one kept.
+        $ck = 'lw110|' + ("$($zp.unit)" -replace '[^A-Za-z0-9]','') + '|code'
+        $script:AcPos[$ck] = @{ x = 0.10; y = 0.10 }                       # no base: predates the painted side views
+        Save-AcPos $script:AcPos                                          # the screen reloads the file, so it must be in it
+        Show-Tab 'dispersal'
+        if ($script:AcPos.ContainsKey($ck)) { $fails += 'a stale nudge survived a redrawn side view'; "    stale nudge : KEPT (wrong)" } else { "    stale nudge : dropped" }
+        $mpz = (Get-MarkPositions).lw.profiles110.((Split-Path (Get-Profile110 -G (Get-LwGruppen | Where-Object { "$($_.unit)" -eq "$($zp.unit)" } | Select-Object -First 1) -Pilot $zp -Date $script:CampaignDate) -Leaf))
+        $script:AcPos[$ck] = @{ x = 0.30; y = 0.30; bx = [math]::Round([double]$mpz.code.dx, 4); by = [math]::Round([double]$mpz.code.dy, 4) }
+        Save-AcPos $script:AcPos
+        Show-Tab 'dispersal'
+        if ($script:AcPos.ContainsKey($ck)) { "    fresh nudge : kept" } else { $fails += 'a nudge made on the present side view was thrown away'; "    fresh nudge : DROPPED (wrong)" }
+        $script:AcPos.Remove($ck); Save-AcPos $script:AcPos
+        # every tab again, this time with two men in the aeroplane
+        foreach ($tab in 'dispersal','logbook','gruppen','paper') {
+            try { Show-Tab $tab; "    110 tab $tab : drew $($script:Stage.Children.Count) blocks" }
+            catch { $fails += "110 tab $tab : $($_.Exception.Message)"; "    110 tab $tab : FAILED - $($_.Exception.Message)" }
+        }
+        # and late in the campaign, when his crewman's fate has passed and
+        # the replacement path runs
+        try {
+            $script:CampaignDate = [datetime]'1940-10-31'
+            Show-Tab 'dispersal'
+            "    110 late-war dispersal : drew $($script:Stage.Children.Count) blocks"
+        } catch { $fails += "110 late : $($_.Exception.Message)"; "    110 late : FAILED - $($_.Exception.Message)" }
+    } else {
+        $fails += 'no Bf 110 Gruppe in the order of battle to test with'
+    }
+
+    # THE DAYBOOK BAND on both papers: the record of the day before, for every
+    # day of the Battle, drawn without a campaign save to take the date from.
+    foreach ($sd in 'raf', 'lw') {
+        $drawn = 0; $none = @()
+        for ($dd = [datetime]'1940-07-11'; $dd -le [datetime]'1940-11-01'; $dd = $dd.AddDays(1)) {
+            $holder = New-Object Windows.Controls.StackPanel
+            try { if (Add-DaybookBand -Col $holder -Side $sd -Date $dd) { $drawn++ } else { $none += $dd.ToString('d MMM') } }
+            catch { $fails += "daybook $sd $($dd.ToString('yyyy-MM-dd')) : $($_.Exception.Message)" }
+        }
+        "    daybook band, $sd : drew $drawn of 114 mornings"
+        if ($drawn -lt 114) { $fails += "daybook $sd : no record for $(($none | Select-Object -First 5) -join ', ')" }
+    }
+    # Every tab on the German side, the way the RAF's four are swept
+    # above. The Morgenmeldung shipped only because it was added by hand
+    # to this list; a tab that nothing builds is a tab nobody finds broken
+    # until a player finds it.
+    foreach ($tab in 'dispersal','logbook','gruppen','paper') {
+        try { Show-Tab $tab; "    tab $tab : drew $($script:Stage.Children.Count) blocks" }
+        catch { $fails += "lw tab $tab : $($_.Exception.Message)"; "    tab $tab : FAILED - $($_.Exception.Message)" }
+    }
+    Set-Side 'raf'
+}
+catch { $fails += "luftwaffe : $($_.Exception.Message)"; "  luftwaffe : FAILED - $($_.Exception.Message)" }
 }
 finally {
     # the throwaway copy goes, whatever happened above
-    if ($StateDir -ne $realState) { Remove-Item $StateDir -Recurse -Force -ErrorAction SilentlyContinue }
+    if ($script:StateRootOverride) { Remove-Item $script:StateRootOverride -Recurse -Force -ErrorAction SilentlyContinue }
 }
 if ($fails.Count) { "FAILURES: $($fails.Count)"; exit 1 } else { 'ALL SCREENS BUILT'; exit 0 }

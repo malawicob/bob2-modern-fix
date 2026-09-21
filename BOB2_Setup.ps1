@@ -1,4 +1,4 @@
-﻿# BOB2 2.13 Modern Fix - install and repair
+# BOB2 2.13 Modern Fix - install and repair
 # Automates patching from v2.06 through v2.12/v2.13, dgVoodoo2, and crash fix
 
 param(
@@ -1591,6 +1591,26 @@ function Step-Win11Tweaks {
     }
 }
 
+function Step-SetupControls {
+    param([string]$GameFolder)
+    Write-Step "Joystick axis layout"
+    # The game ships axis layouts for three sticks from 2005. Anything
+    # else lands in its setup screen with nothing mapped. BOB2_Controls.ps1
+    # writes a layout for whatever is plugged in; this runs it once so a
+    # new player never has to know it exists. The launcher does the same
+    # check every time it opens, for the day the stick changes.
+    $tool = Join-Path $ScriptDir 'BOB2_Controls.ps1'
+    if (-not (Test-Path $tool)) { Write-Warn "BOB2_Controls.ps1 is not in the fix package, skipping."; return $false }
+    # In its own process: the tool says "exit 1" when no stick is plugged
+    # in, and dot-sourced or called with & that would end Setup itself.
+    try {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $tool -Apply -Axes -GameDir $GameFolder 2>&1 | ForEach-Object { Write-Info "    $_" }
+        if ($LASTEXITCODE -ne 0) { Write-Warn "No game controller found. Plug one in and run this step again, or the launcher will offer it."; return $false }
+    } catch { Write-Warn "Could not write the axis layout: $($_.Exception.Message)"; return $false }
+    Write-OK "Axis layout written for the connected controllers."
+    return $true
+}
+
 function Step-InstallLauncher {
     param([string]$GameFolder)
     Write-Step "Launcher and desktop shortcut"
@@ -2208,6 +2228,205 @@ function Step-RemoveDunkirkPack { param([string]$GameFolder)
 }
 
 # ============================================================
+# Luftwaffe dispersal (optional). Dresses the 40 German-held airfields
+# that ship with no scenery at all: tents, revetments, barns, a flak
+# piece, ground crew and a few vehicles, about 23 objects a field, all
+# static. Every object is lifted from one of the six French fields the
+# BDG dressed by hand, and set down at the bearing that keeps it
+# furthest from that field's own runway markers.
+#
+# Unlike the RAF living dispersal this modifies NOTHING. It writes one
+# new file into ObjectAdds\, which the game globs, so installing is a
+# copy and removing is a delete. Object count is the dominant CPU cost
+# in this engine, so if the frame rate suffers this is one file to bin.
+# ============================================================
+# Two files now, one per side, installed and removed together. Both are
+# new files dropped into ObjectAdds\, which the game globs, so nothing
+# shipped is modified either way.
+$LwDispersalFiles  = @('LW_Airfields.txt', 'RAF_Airfields.txt')
+$LwDispersalFile   = 'LW_Airfields.txt'
+$LwDispersalMarker = '# Luftwaffe dispersal'
+$RafDispersalMarker = '# Living dispersal'
+
+function Get-LwDispersalState { param([string]$GameFolder)
+    # 'on' | 'off' | 'partial' | 'foreign' (a file of that name that is not ours)
+    $on = 0; $off = 0
+    foreach ($f in $LwDispersalFiles) {
+        $p = Join-Path $GameFolder ('ObjectAdds\' + $f)
+        if (-not (Test-Path $p)) { $off++; continue }
+        $head = Get-Content $p -TotalCount 3 -ErrorAction SilentlyContinue
+        $txt = if ($head) { $head -join "`n" } else { '' }
+        if ($txt -match [regex]::Escape($LwDispersalMarker) -or
+            $txt -match [regex]::Escape($RafDispersalMarker)) { $on++ }
+        else { return 'foreign' }
+    }
+    if ($on -eq $LwDispersalFiles.Count) { return 'on' }
+    if ($off -eq $LwDispersalFiles.Count) { return 'off' }
+    return 'partial'
+}
+
+function Step-InstallLwDispersal { param([string]$GameFolder)
+    Write-Step 'Dress the airfields'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $oa = Join-Path $GameFolder 'ObjectAdds'
+    if (-not (Test-Path $oa)) { Write-Warn 'ObjectAdds folder not found in the game folder.'; return $false }
+    if ((Get-LwDispersalState $GameFolder) -eq 'foreign') {
+        Write-Warn 'A file of one of those names exists and is not ours - leaving it strictly alone.'
+        return $false
+    }
+    $any = $false
+    foreach ($f in $LwDispersalFiles) {
+        $payload = $null
+        foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+            $cand = Join-Path $base ('dispersal\' + $f)
+            if (Test-Path $cand) { $payload = $cand; break }
+        }
+        if (-not $payload) { Write-Warn "dispersal\$f payload not found."; continue }
+        $dst = Join-Path $oa $f
+        Copy-Item $payload $dst -Force
+        $n = @(Get-Content $dst | Where-Object { $_ -match '^OBJECT_ADD' }).Count
+        $side = if ($f -like 'RAF*') { 'RAF' } else { 'German' }
+        Write-OK "Dressed the $side airfields ($n static objects, no trees)"
+        $any = $true
+    }
+    return $any
+}
+
+function Step-RemoveLwDispersal { param([string]$GameFolder)
+    Write-Step 'Undress the airfields'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    switch (Get-LwDispersalState $GameFolder) {
+        'off'     { Write-OK 'Not installed'; return $true }
+        'foreign' { Write-Warn 'One of those files is not ours - leaving it strictly alone.'; return $false }
+    }
+    foreach ($f in $LwDispersalFiles) {
+        $p = Join-Path $GameFolder ('ObjectAdds\' + $f)
+        if (Test-Path $p) { Remove-Item $p -Force; Write-OK "Removed $f" }
+    }
+    Write-OK 'Nothing else was ever touched'
+    return $true
+}
+
+# ============================================================
+# Reach the dressed airfields (optional). The Basic Training and
+# Familiarisation missions let you take off from a Luftwaffe airfield,
+# and the I.D. list offers four: Marck, Abbeville, Wissant and Le Havre.
+# Those are four of the six German fields that already had scenery, so
+# they are the four that test nothing new.
+#
+# The list cannot be made longer. H/SQUICK1.H declares targets[4][4], so
+# four is the size of the array and not a choice. What CAN be changed is
+# which four, and nine missions all spend their four slots on the same
+# fields. Giving each a different quartet reaches 36 airfields instead of
+# 4, or 40 with the Dunkirk pack installed.
+#
+# Unlike the scenery this edits a stock game file, so it is its own step,
+# it is gated on finding exactly what it expects, and quick.dat is kept
+# as quick.dat.before-lwfields before a byte is written.
+# ============================================================
+$LwFieldsBackup = '.before-lwfields'
+
+function Get-LwQuickFieldsPayload { param([string]$GameFolder)
+    foreach ($base in @($ScriptDir, (Join-Path $GameFolder 'BOB2-Win11-Fix'))) {
+        $cand = Join-Path $base 'dispersal\lw-quickfields.json'
+        if (Test-Path $cand) { return $cand }
+    }
+    return $null
+}
+
+function Find-BytePattern { param([byte[]]$Hay, [byte[]]$Needle)
+    $hits = New-Object System.Collections.Generic.List[int]
+    $last = $Hay.Length - $Needle.Length
+    for ($i = 0; $i -le $last; $i++) {
+        if ($Hay[$i] -ne $Needle[0]) { continue }
+        $ok = $true
+        for ($j = 1; $j -lt $Needle.Length; $j++) {
+            if ($Hay[$i + $j] -ne $Needle[$j]) { $ok = $false; break }
+        }
+        if ($ok) { [void]$hits.Add($i); $i += $Needle.Length - 1 }
+    }
+    return $hits
+}
+
+function Get-UidBytes { param($Uids)
+    $b = New-Object byte[] ($Uids.Count * 4)
+    for ($i = 0; $i -lt $Uids.Count; $i++) {
+        $v = [uint32]$Uids[$i]
+        $b[$i*4]   = [byte]( $v        -band 0xFF)
+        $b[$i*4+1] = [byte](($v -shr 8)  -band 0xFF)
+        $b[$i*4+2] = [byte](($v -shr 16) -band 0xFF)
+        $b[$i*4+3] = [byte](($v -shr 24) -band 0xFF)
+    }
+    return ,$b
+}
+
+function Get-LwQuickFieldsState { param([string]$GameFolder)
+    # 'on' | 'off' | 'unknown' (a quick.dat this does not recognise)
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (-not (Test-Path $q)) { return 'unknown' }
+    $pay = Get-LwQuickFieldsPayload $GameFolder
+    if (-not $pay) { return 'unknown' }
+    $j = Get-Content $pay -Raw | ConvertFrom-Json
+    $b = [System.IO.File]::ReadAllBytes($q)
+    $stock = Get-UidBytes @($j.stock | ForEach-Object { $_.uid })
+    $first = Get-UidBytes @($j.quartets[0].uids)
+    $nStock = (Find-BytePattern $b $stock).Count
+    $nOurs  = (Find-BytePattern $b $first).Count
+    if ($nOurs -ge 1 -and $nStock -eq 0) { return 'on' }
+    if ($nStock -ge 9) { return 'off' }
+    return 'unknown'
+}
+
+function Step-InstallLwQuickFields { param([string]$GameFolder)
+    Write-Step 'Reach the dressed airfields from Basic Training'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $pay = Get-LwQuickFieldsPayload $GameFolder
+    if (-not $pay) { Write-Warn 'dispersal\lw-quickfields.json payload not found.'; return $false }
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (-not (Test-Path $q)) { Write-Warn 'BFIELDS\quick.dat not found.'; return $false }
+    switch (Get-LwQuickFieldsState $GameFolder) {
+        'on' { Write-OK 'The training missions already offer the dressed airfields'; return $true }
+    }
+    $j = Get-Content $pay -Raw | ConvertFrom-Json
+    $b = [System.IO.File]::ReadAllBytes($q)
+    $stock = Get-UidBytes @($j.stock | ForEach-Object { $_.uid })
+    $hits = Find-BytePattern $b $stock
+    if ($hits.Count -lt 9) {
+        Write-Warn ("quick.dat holds $($hits.Count) of the expected airfield lists, not 9 or more - " +
+                    "this is not a quick.dat this step recognises, so it is left strictly alone.")
+        return $false
+    }
+    if (-not (Test-Path ($q + $LwFieldsBackup))) { Copy-Item $q ($q + $LwFieldsBackup) }
+    $n = [Math]::Min($hits.Count, $j.quartets.Count)
+    for ($k = 0; $k -lt $n; $k++) {
+        $repl = Get-UidBytes @($j.quartets[$k].uids)
+        [Array]::Copy($repl, 0, $b, $hits[$k], 16)
+    }
+    [System.IO.File]::WriteAllBytes($q, $b)
+    Write-OK "Set $n training missions to $($n * 4) different airfields (was 4, repeated)"
+    foreach ($k in 0..($n - 1)) {
+        Write-Host ("        " + (($j.quartets[$k].fields) -join ', ')) -ForegroundColor DarkGray
+    }
+    if ($hits.Count -gt $j.quartets.Count) {
+        Write-Host ("        $($hits.Count - $j.quartets.Count) further list(s) left as they were") -ForegroundColor DarkGray
+    }
+    return $true
+}
+
+function Step-RemoveLwQuickFields { param([string]$GameFolder)
+    Write-Step 'Put the training airfields back'
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { Write-Warn 'Close the game first.'; return $false }
+    $q = Join-Path $GameFolder 'BFIELDS\quick.dat'
+    if (Test-Path ($q + $LwFieldsBackup)) {
+        Copy-Item ($q + $LwFieldsBackup) $q -Force
+        Write-OK 'Restored quick.dat from the backup taken before it was touched'
+        return $true
+    }
+    Write-OK 'No backup here, so nothing was ever changed'
+    return $true
+}
+
+# ============================================================
 # Enhanced sea (optional). Replaces Weather\Water.fx with the tuned
 # shader (larger swells, sun glint, sparse white specks on both the
 # detailed and the distant filler water) and sets the deep-navy channel
@@ -2441,7 +2660,16 @@ function Test-SettingsCfgHealthy {
     if (-not (Test-Path $p)) { return @{ Exists = $false; Healthy = $true; Reason = 'no file' } }
     try {
         $b = [System.IO.File]::ReadAllBytes($p)
-        if ($b.Length -ne 1786) { return @{ Exists = $true; Healthy = $false; Reason = "unexpected size $($b.Length) bytes" } }
+        # NOT a fixed size. The file ends with three names from offset 1766:
+        # the last saved game, then Bob.cam and Bob.prf. It is 1786 bytes
+        # only while that save is called "Bob"; "British.bsR" made it 1794
+        # and "Bob_german.bsL" 1797, and an exact-size test called both
+        # damaged. That is the message 33lima and Patrick kept getting after
+        # saving a campaign under a name of their own. Everything this
+        # package reads or writes sits below 1766, so the fixed part is what
+        # has to be there, and the banner says it is the right kind of file.
+        if ($b.Length -lt 1770 -or $b.Length -gt 2048) { return @{ Exists = $true; Healthy = $false; Reason = "unexpected size $($b.Length) bytes" } }
+        if ([System.Text.Encoding]::ASCII.GetString($b, 0, 20) -notmatch '^Rowan Savegame: V 0') { return @{ Exists = $true; Healthy = $false; Reason = 'no savegame banner' } }
         $w = [BitConverter]::ToInt32($b, 1416); $h = [BitConverter]::ToInt32($b, 1480)
         if ($w -lt 800 -or $w -gt 7680 -or $h -lt 600 -or $h -gt 4320) {
             return @{ Exists = $true; Healthy = $false; Reason = "stored mode reads ${w}x${h}" }
@@ -2674,10 +2902,15 @@ function Get-ReShadePreset {
 # runs before the upscale and puts back most of what it costs.
 #
 # 8x multisampling was tried first and produced visible seams along the
-# terrain tile edges plus an occasional hitch; 4x has neither.
+# terrain tile edges plus an occasional hitch; 4x was thought to have
+# neither. It has: flown on 20 September 2026, forced multisampling at 2x
+# and at 4x both draw bright lines along the tile grid, worse with height,
+# and with it off they are gone (dev/perf/RUNLOG.md). So this step no
+# longer forces antialiasing. The edge smoothing is ReShade's SMAA pass in
+# the Balanced preset, which works on the finished picture.
 function Step-VisualEnhancements {
     param([string]$GameFolder, [switch]$Off)
-    Write-Step $(if ($Off) { 'Turn the visual enhancements off' } else { 'Visual enhancements (antialiasing, filtering, ReShade)' })
+    Write-Step $(if ($Off) { 'Turn the visual enhancements off' } else { 'Visual enhancements (16x filtering, ReShade with SMAA)' })
     $conf = Join-Path $GameFolder 'dgVoodoo.conf'
     if (-not (Test-Path $conf)) { Write-Warn 'dgVoodoo.conf not found. Install the graphics translator first.'; return $false }
     if ($Off) {
@@ -2687,12 +2920,11 @@ function Step-VisualEnhancements {
         if ((Get-ReShadeState $GameFolder) -eq 'on') { [void](Step-DisableReShade $GameFolder) }
         return $true
     }
-    Set-IniValue $conf 'Antialiasing' '4x' 'DirectX'
+    Set-IniValue $conf 'Antialiasing' 'appdriven' 'DirectX'
     Set-IniValue $conf 'Filtering'    '16' 'DirectX'
-    Write-OK 'Antialiasing 4x, filtering 16x.'
-    Write-Info '  4x is the tested setting. Menu 13 again turns the whole lot back off.'
-    Write-Info '  This switches all three on together. To try the antialiasing on its own,'
-    Write-Info '  and see what it costs before ReShade is involved, use Settings, Graphics.'
+    Write-OK 'Filtering 16x. Forced antialiasing is left OFF: it draws lines along the terrain tiles.'
+    Write-Info '  The edge smoothing comes from ReShade''s SMAA pass instead (Balanced preset).'
+    Write-Info '  This menu entry again turns the whole lot back off.'
     [void](Step-InstallReShade -GameFolder $GameFolder)
     Write-Info '  In game: DEL opens the ReShade overlay, PgUp/PgDn change preset.'
     $true
@@ -3171,9 +3403,9 @@ function Do-Settings {
                         # options menu; flown at 4x on a 2560x1600 panel with the
                         # options page checked and it was fine. Keeping a note
                         # rather than a threat, since 8x did show terrain seams.
-                        Write-Info "  Forced antialiasing has been reported to upset the in-game options page."
-                        Write-Info "  4x is the tested setting; 8x showed seams along the terrain tiles."
-                        Write-Info "  Set this back to appdriven if anything looks wrong."
+                        Write-Warn "  Forced antialiasing draws bright lines along the terrain tile grid, worse with height."
+                        Write-Info "  Flown at 2x and 4x on 20 September 2026; with appdriven they are gone."
+                        Write-Info "  For smooth edges use ReShade's SMAA (Balanced preset) and set this back to appdriven."
                     }
                 }
             }
@@ -3379,6 +3611,9 @@ function Do-FullInstall {
     # Step 8: Launcher + desktop shortcut
     Step-InstallLauncher $gameFolder
 
+    # Step 8b: an axis layout for the stick that is plugged in
+    Step-SetupControls $gameFolder
+
     # Step 9: Validate
     Step-Validate $gameFolder
 
@@ -3422,12 +3657,26 @@ function Do-IndividualSteps {
         }) -ForegroundColor White
         Write-Host " 11. Install the Dunkirk mission pack + living dispersal (optional)" -ForegroundColor White
         Write-Host " 12. Install the enhanced sea (optional)" -ForegroundColor White
-        Write-Host " 13. Everything at once: 4x AA, 16x filtering and ReShade" -ForegroundColor White
+        $lw13 = Get-LwDispersalState $gameFolder
+        Write-Host $(switch ($lw13) {
+            'on'      { " 13. Undress the airfields (currently dressed)" }
+            'partial' { " 13. Dress the airfields (half installed, press to finish)" }
+            'foreign' { " 13. Dress the airfields (blocked: a file of that name is not ours)" }
+            default   { " 13. Dress the airfields (optional, 40 German and 28 RAF fields)" }
+        }) -ForegroundColor White
+        $qf14 = Get-LwQuickFieldsState $gameFolder
+        Write-Host $(switch ($qf14) {
+            'on'      { " 14. Put the training airfields back (currently showing 36 of them)" }
+            'unknown' { " 14. Reach the dressed airfields from Basic Training (quick.dat not recognised)" }
+            default   { " 14. Reach the dressed airfields from Basic Training (optional)" }
+        }) -ForegroundColor White
+        Write-Host " 15. Set up the joystick that is plugged in (axis layout)" -ForegroundColor White
+        Write-Host " 16. Everything at once: 16x filtering and ReShade with SMAA" -ForegroundColor White
         Write-Host "     (to try them one at a time, use Settings, Graphics)" -ForegroundColor DarkGray
-        Write-Host " 14. Back to main menu" -ForegroundColor White
+        Write-Host " 17. Back to main menu" -ForegroundColor White
         Write-Host "  ----------------------------" -ForegroundColor Cyan
         Write-Host ""
-        Write-Host "  Select step (1-14): " -ForegroundColor Yellow -NoNewline
+        Write-Host "  Select step (1-17): " -ForegroundColor Yellow -NoNewline
         $choice = Read-Host
 
         switch ($choice) {
@@ -3449,6 +3698,20 @@ function Do-IndividualSteps {
             "11" { Step-InstallDunkirkPack $gameFolder; Pause-Continue }
             "12" { Step-InstallSeaState $gameFolder; Pause-Continue }
             "13" {
+                # One key, and it does whatever the current state needs, the
+                # way step 10 does for ReShade.
+                if ((Get-LwDispersalState $gameFolder) -eq 'on') { Step-RemoveLwDispersal $gameFolder }
+                else { Step-InstallLwDispersal $gameFolder }
+                Pause-Continue
+            }
+            "14" {
+                # One key, and it does whatever the current state needs.
+                if ((Get-LwQuickFieldsState $gameFolder) -eq 'on') { Step-RemoveLwQuickFields $gameFolder }
+                else { Step-InstallLwQuickFields $gameFolder }
+                Pause-Continue
+            }
+            "15" { Step-SetupControls $gameFolder; Pause-Continue }
+            "16" {
                 # One key for the whole look, and a way back off it. It turns
                 # OFF only when the whole look is already on. Judging that on
                 # the antialiasing alone was wrong once Settings could set the
@@ -3456,14 +3719,16 @@ function Do-IndividualSteps {
                 # and then pressed this expecting to add ReShade had his
                 # antialiasing taken away instead.
                 $conf = Join-Path $gameFolder 'dgVoodoo.conf'
-                $aaNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Antialiasing' } else { '' }
-                $allOn = ($aaNow -and $aaNow -ne 'appdriven') -and ((Get-ReShadeState $gameFolder) -eq 'on')
+                # The look is now 16x filtering plus ReShade; forced
+                # antialiasing is no longer part of it (terrain lines).
+                $filtNow = if (Test-Path $conf) { Get-IniValue (Get-Content $conf -Raw) 'DirectX' 'Filtering' } else { '' }
+                $allOn = ("$filtNow" -eq '16') -and ((Get-ReShadeState $gameFolder) -eq 'on')
                 if ($allOn) { Step-VisualEnhancements $gameFolder -Off }
                 else { Step-VisualEnhancements $gameFolder }
                 Pause-Continue
             }
-            "14" { return }
-            default { Write-Warn "Invalid option. Please enter 1-13." }
+            "17" { return }
+            default { Write-Warn "Invalid option. Please enter 1-17." }
         }
     }
 }

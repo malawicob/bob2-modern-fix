@@ -1,0 +1,213 @@
+{
+ "west": -4.5,
+ "east": 6.2,
+ "south": 47.6,
+ "north": 51.95,
+ "width": 2560,
+ "height": 1600,
+ "note": "x = (lon - west) / (east - west); y = (north - lat) / (north - south)",
+ "unnamed": [
+  "Audembert",
+  "Barley",
+  "Caffiers",
+  "Cocquelles",
+  "Colombert",
+  "Desvres",
+  "Guines",
+  "Hermelinghen",
+  "Marck (Calais)",
+  "Marquise",
+  "Peuplingues",
+  "Samer",
+  "St. Omer",
+  "Tramecourt",
+  "Yvrench"
+ ],
+ "stations": {
+  "Abbeville": [
+   0.59193,
+   0.42389
+  ],
+  "Amiens": [
+   0.63511,
+   0.4726
+  ],
+  "Antwerp": [
+   0.83175,
+   0.16756
+  ],
+  "Arras": [
+   0.68011,
+   0.38138
+  ],
+  "Audembert": [
+   0.57879,
+   0.25025
+  ],
+  "Barley": [
+   0.65868,
+   0.39051
+  ],
+  "Beaumont-le-Roger": [
+   0.49316,
+   0.66018
+  ],
+  "Beauvais": [
+   0.61517,
+   0.57929
+  ],
+  "Caen": [
+   0.38658,
+   0.63648
+  ],
+  "Caffiers": [
+   0.5897,
+   0.2549
+  ],
+  "Cambrai": [
+   0.72286,
+   0.40786
+  ],
+  "Carquebut": [
+   0.29637,
+   0.59264
+  ],
+  "Chartres": [
+   0.55964,
+   0.806
+  ],
+  "Chateaudun": [
+   0.54472,
+   0.89191
+  ],
+  "Cocquelles": [
+   0.58879,
+   0.23301
+  ],
+  "Colombert": [
+   0.59253,
+   0.27641
+  ],
+  "Cormeilles-en-Vexin": [
+   0.60943,
+   0.65156
+  ],
+  "Creil": [
+   0.65172,
+   0.61821
+  ],
+  "Crepon": [
+   0.3691,
+   0.60543
+  ],
+  "Desvres": [
+   0.59204,
+   0.29474
+  ],
+  "Dinnard": [
+   0.22822,
+   0.76276
+  ],
+  "Dreux": [
+   0.54845,
+   0.73887
+  ],
+  "Epinoy": [
+   0.71516,
+   0.39674
+  ],
+  "Etampes": [
+   0.62256,
+   0.80816
+  ],
+  "Guines": [
+   0.59536,
+   0.24848
+  ],
+  "Hermelinghen": [
+   0.5943,
+   0.26377
+  ],
+  "Lannion": [
+   0.09731,
+   0.73972
+  ],
+  "Laval": [
+   0.34828,
+   0.89179
+  ],
+  "Le Havre": [
+   0.43065,
+   0.56462
+  ],
+  "Lille": [
+   0.70687,
+   0.30193
+  ],
+  "Marck (Calais)": [
+   0.60344,
+   0.22984
+  ],
+  "Marquise": [
+   0.5794,
+   0.26147
+  ],
+  "Montdidier": [
+   0.66077,
+   0.52966
+  ],
+  "Orleans-Bricy": [
+   0.58683,
+   0.90766
+  ],
+  "Orly": [
+   0.64508,
+   0.7372
+  ],
+  "Peuplingues": [
+   0.58597,
+   0.23791
+  ],
+  "Plumetot": [
+   0.38719,
+   0.61418
+  ],
+  "Rennes": [
+   0.26355,
+   0.88246
+  ],
+  "Rosieres-en-Santerre": [
+   0.67308,
+   0.49126
+  ],
+  "Samer": [
+   0.58382,
+   0.30131
+  ],
+  "St. Malo": [
+   0.23121,
+   0.75874
+  ],
+  "St. Omer": [
+   0.63116,
+   0.27549
+  ],
+  "St. Trond": [
+   0.90522,
+   0.26085
+  ],
+  "Tramecourt": [
+   0.62155,
+   0.34172
+  ],
+  "Villacoublay": [
+   0.62523,
+   0.72853
+  ],
+  "Yvrench": [
+   0.60788,
+   0.4074
+  ]
+ },
+ "sectors": {}
+}

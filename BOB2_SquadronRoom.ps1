@@ -16,9 +16,22 @@ $ErrorActionPreference = 'Stop'
 $ScriptDir = $PSScriptRoot
 if (-not $ScriptDir) { $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition }
 $ModDir      = Join-Path $ScriptDir 'squadronroom'
+# The RAF keeps its art at the top of squadronroom\ and the Luftwaffe in
+# lw\ beneath it. Set by Set-AssetSide, which Set-StateSide calls, so the
+# art and the state can never end up describing different air forces.
 $PortraitDir = Join-Path $ModDir 'portraits'
 $PortIndex   = Join-Path $ModDir 'portraits.json'
 $BadgeDir    = Join-Path $ModDir 'badges'
+$AircraftDir = Join-Path $ModDir 'aircraft'
+function Set-AssetSide {
+    param([string]$Side)
+    $base = if ($Side -eq 'lw') { Join-Path $ModDir 'lw' } else { $ModDir }
+    $script:SideModDir  = $base
+    $script:PortraitDir = Join-Path $base 'portraits'
+    $script:PortIndex   = Join-Path $base 'portraits.json'
+    $script:BadgeDir    = Join-Path $base 'badges'
+    $script:AircraftDir = Join-Path $base 'aircraft'
+}
 
 function Find-GameDir {
     foreach ($d in @($ScriptDir, (Split-Path $ScriptDir -Parent))) {
@@ -27,10 +40,126 @@ function Find-GameDir {
     return $null
 }
 $GameDir   = Find-GameDir
-$StateDir     = if ($GameDir) { Join-Path $GameDir 'SquadronRoom' } else { Join-Path $ModDir 'state' }
-$PilotPath    = Join-Path $StateDir 'pilot.json'
-$SessionsPath = Join-Path $StateDir 'sessions.json'
-$FlightOpen   = Join-Path $StateDir 'flight.open'
+
+# =====================================================================
+#  WHICH AIR FORCE
+#
+#  BOB2 is flown from either side, and a man can keep a British and a
+#  German career at once. Each side gets its own folder under the state
+#  root, so the two never see each other's pilot, log book or claims:
+#
+#      <GameDir>\SquadronRoom\raf\pilot.json
+#      <GameDir>\SquadronRoom\lw\pilot.json
+#
+#  The six state paths are DERIVED from $StateDir, and were derived once
+#  at load. Change $StateDir on its own and every one of them still points
+#  at the old folder, which is the trap dev\README-testing.md was written
+#  about. Set-StateSide is now the only place any of them is assigned, and
+#  they are always assigned together.
+# =====================================================================
+$StateRoot = if ($GameDir) { Join-Path $GameDir 'SquadronRoom' } else { Join-Path $ModDir 'state' }
+# A test harness sets this to draw against a copy. Honoured by Set-StateSide,
+# so it survives a side change instead of being quietly overwritten.
+$script:StateRootOverride = $null
+$script:Side = 'raf'
+
+function Set-StateSide {
+    param([string]$Side = $script:Side)
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $script:Side       = $Side
+    $script:StateDir   = Join-Path $root $Side
+    $script:PilotPath    = Join-Path $script:StateDir 'pilot.json'
+    $script:SessionsPath = Join-Path $script:StateDir 'sessions.json'
+    $script:FlightOpen   = Join-Path $script:StateDir 'flight.open'
+    $script:AcPosPath    = Join-Path $script:StateDir 'acpos.json'
+    $script:AutoClaimPath = Join-Path $script:StateDir 'autoclaim.json'
+    Set-AssetSide $Side
+    if (Get-Command Load-MapProjection -ErrorAction SilentlyContinue) { Load-MapProjection $Side }
+}
+# WHICH SIDE THE ROOM OPENS ON. It always opened on the RAF, so a man
+# with a German career had to find the side switch every time.
+#
+# The last side WRITTEN is the last side flown, because the Room saves the
+# pilot record every time it draws his screens. The campaign save would be
+# a truer source and it is not used: byte 0 of the .BSR is
+# MissMan::currcampaignnum, which is WHICH campaign and not which side,
+# and no other field is known to carry the nationality. The launcher picks
+# its emblem by the same rule, in Get-LastRoomSide, so the button and the
+# Room cannot disagree.
+function Get-LastSide {
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $best = 'raf'; $bestAt = $null
+    foreach ($side in @('raf', 'lw')) {
+        $f = Join-Path (Join-Path $root $side) 'pilot.json'
+        if (-not (Test-Path $f)) { continue }
+        $t = (Get-Item $f).LastWriteTimeUtc
+        if (($null -eq $bestAt) -or ($t -gt $bestAt)) { $bestAt = $t; $best = $side }
+    }
+    $best
+}
+Set-StateSide 'raf'
+
+# Careers made before there were two sides sit loose in the state root.
+# Move them under raf\ so the German side can have its own.
+#
+# The rules here are all about not repeating 9 September 2026, when a
+# career was lost to a careless write:
+#
+#   Copy, never move. The loose files stay exactly where they are. They
+#   cost three kilobytes and they are a free way back.
+#   Read the copy back and check it is a pilot BEFORE declaring success.
+#   On any doubt at all, change nothing and carry on in the old shape. A
+#   Room that works in the old layout beats one that half-moved.
+function Initialize-StateLayout {
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $flat = Join-Path $root 'pilot.json'
+    $done = Join-Path $root 'layout.json'
+    if ((Test-Path $done) -or -not (Test-Path $flat)) { return }
+    $dst = Join-Path $root 'raf'
+    if (Test-Path (Join-Path $dst 'pilot.json')) { return }   # someone got here first
+    $log = Join-Path $root 'migrate.log'
+    try {
+        if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+        $moved = @()
+        foreach ($f in @('pilot.json','sessions.json','autoclaim.json','acpos.json','flight.open','before.bsr')) {
+            $src = Join-Path $root $f
+            if (Test-Path $src) { Copy-Item $src (Join-Path $dst $f) -Force; $moved += $f }
+        }
+        $arch = Join-Path $root 'archive'
+        if (Test-Path $arch) { Copy-Item $arch (Join-Path $dst 'archive') -Recurse -Force; $moved += 'archive\' }
+
+        # Prove it before committing to it. A pilot.json that will not read
+        # back as a pilot means the copy failed, whatever the file system
+        # said, and the old layout is still good.
+        $check = Get-Content (Join-Path $dst 'pilot.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+        if (-not $check -or -not "$($check.pilot)".Trim()) { throw 'the copied record does not read back as a pilot' }
+        $srcN = @((Get-Content $flat -Raw -Encoding UTF8 | ConvertFrom-Json).PSObject.Properties).Count
+        $dstN = @($check.PSObject.Properties).Count
+        if ($dstN -ne $srcN) { throw "the copy has $dstN fields where the original has $srcN" }
+
+        @{ version = 2; migrated = (Get-Date).ToString('s'); from = 'flat'; files = $moved } |
+            ConvertTo-Json -Depth 3 | Set-Content -Path $done -Encoding UTF8
+        Add-Content -LiteralPath $log -Value ("{0}  moved to raf\: {1}" -f (Get-Date -Format 's'), ($moved -join ', ')) -ErrorAction SilentlyContinue
+    }
+    catch {
+        # No layout.json is written, so this is retried next time rather
+        # than being left half done, and the loose files are untouched.
+        $script:StateLegacy = $true
+        try { Add-Content -LiteralPath $log -Value ("{0}  FAILED, left in the old layout: {1}" -f (Get-Date -Format 's'), $_.Exception.Message) -ErrorAction SilentlyContinue } catch { }
+        Set-StateSideLegacy
+    }
+}
+# The old shape: everything loose in the state root, no side folder.
+function Set-StateSideLegacy {
+    $root = if ($script:StateRootOverride) { $script:StateRootOverride } else { $StateRoot }
+    $script:StateDir      = $root
+    $script:PilotPath     = Join-Path $root 'pilot.json'
+    $script:SessionsPath  = Join-Path $root 'sessions.json'
+    $script:FlightOpen    = Join-Path $root 'flight.open'
+    $script:AcPosPath     = Join-Path $root 'acpos.json'
+    $script:AutoClaimPath = Join-Path $root 'autoclaim.json'
+}
+Initialize-StateLayout
 
 # --- squadrons a new pilot may join --------------------------------------
 # Postings are PER CAMPAIGN PERIOD: P1 = the Channel battles (10 Jul),
@@ -48,6 +177,39 @@ $MapSectors  = @{}
 $MapUnnamed  = @{}
 $MapProj = $null
 $MapProjPath = Join-Path (Join-Path $ModDir 'map') 'sector-map.json'
+# Each air force has its own sheet and its own projection, so this is
+# reloaded when the side changes rather than read once at startup. Drawn
+# from the RAF projection, a German field would be plotted with England's
+# arithmetic and land in the sea.
+function Load-MapProjection {
+    param([string]$Side = $script:Side)
+    $script:MapStations = @{}
+    $script:MapSectors  = @{}
+    $script:MapUnnamed  = @{}
+    $script:MapProj = $null
+    $dir = if ($Side -eq 'lw') { Join-Path (Join-Path $ModDir 'lw') 'map' } else { Join-Path $ModDir 'map' }
+    $file = if ($Side -eq 'lw') { 'kanalfront-map.json' } else { 'sector-map.json' }
+    $script:MapProjPath = Join-Path $dir $file
+    $script:MapImagePath = Join-Path $dir ($file -replace '\.json$', '.jpg')
+    if (-not (Test-Path $script:MapProjPath)) { return }
+    try {
+        $script:MapProj = Get-Content $script:MapProjPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        foreach ($pp in $script:MapProj.stations.PSObject.Properties) {
+            $script:MapStations[$pp.Name] = @([double]$pp.Value[0], [double]$pp.Value[1])
+        }
+        if ($script:MapProj.PSObject.Properties.Name -contains 'unnamed') {
+            foreach ($nm in @($script:MapProj.unnamed)) {
+                $script:MapUnnamed["$nm"] = $true; $script:MapUnnamed['RAF ' + $nm] = $true
+            }
+        }
+        if ($script:MapProj.PSObject.Properties.Name -contains 'sectors') {
+            foreach ($pp in $script:MapProj.sectors.PSObject.Properties) {
+                $script:MapSectors[$pp.Name] = $pp.Value
+                $script:MapSectors['RAF ' + $pp.Name] = $pp.Value
+            }
+        }
+    } catch { }
+}
 if (Test-Path $MapProjPath) {
     try {
         $MapProj = Get-Content $MapProjPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -113,10 +275,12 @@ $SquadronCodes = @{
 # The campaign's four starting points, and the order of battle date each
 # one reads. These are the game's own dates, not ours.
 $Periods = @(
-    @{ Id='P1'; Key='1940-07-10'; Label='10 JULY - THE CHANNEL';    Desc='convoy battles over the Channel' }
-    @{ Id='P2'; Key='1940-08-12'; Label='12 AUGUST - EAGLE DAY';    Desc='the assault on the airfields' }
-    @{ Id='P3'; Key='1940-08-24'; Label='24 AUGUST - THE AIRFIELDS'; Desc='the attack on the sector stations' }
-    @{ Id='P4'; Key='1940-09-07'; Label='7 SEPTEMBER - LONDON';     Desc='the great daylight raids on London' }
+    # Game is the tab the campaign screen shows along its top, so the
+    # launch card can say which one to press in the game's own words.
+    @{ Id='P1'; Key='1940-07-10'; Label='10 JULY - THE CHANNEL';    Desc='convoy battles over the Channel';      Game='CONVOYS';         GameDates='10th July - August 11th' }
+    @{ Id='P2'; Key='1940-08-12'; Label='12 AUGUST - EAGLE DAY';    Desc='the assault on the airfields';        Game='EAGLE ATTACK';    GameDates='12th August - 23rd August' }
+    @{ Id='P3'; Key='1940-08-24'; Label='24 AUGUST - THE AIRFIELDS'; Desc='the attack on the sector stations';   Game='CRITICAL PERIOD'; GameDates='24th August - 6th September' }
+    @{ Id='P4'; Key='1940-09-07'; Label='7 SEPTEMBER - LONDON';     Desc='the great daylight raids on London';  Game='BLITZ';           GameDates='7th September - 15th September' }
 )
 # Every squadron in Fighter Command's order of battle, built from the
 # game's own oob.json rather than a hand-kept list of the two dozen we
@@ -215,10 +379,97 @@ function Get-Pilot {
     if (Test-Path $PilotPath) { try { return (Get-Content $PilotPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { } }
     $null
 }
+# Every write in the program comes through here: Set-BulletinRead,
+# Update-CareerRecord, Add-AutoClaims, Sync-CampaignClaims, Ensure-Serial,
+# Ensure-Squadron and Invoke-Submit. That makes it the one place worth
+# guarding, and on 9 September 2026 it needed guarding: a test harness
+# built a stub pilot called "Test" and saved it over a real career. The
+# function did exactly what it was told. Nothing warned, and nothing had
+# kept a copy.
+#
+# Three rules, cheap enough to run on every write:
+#
+#   A record with no name is not a pilot. Refuse it.
+#   A record with FEWER fields than the one on disk is a stub overwriting
+#   a career. Refuse it unless the caller says -Shrink and means it.
+#   Keep the last twenty versions, so a bad write is an inconvenience
+#   rather than a loss.
+#
+# Sync-CampaignClaims already reasons about the second hazard in a comment
+# of its own ("a stub containing only campaignKills would destroy a
+# career"). This makes it a rule instead of a comment.
+# How many fields a record has, whichever shape it arrives in.
+#
+# Half the callers build an [ordered]@{} and half pass the PSCustomObject
+# that came back from ConvertFrom-Json, and .PSObject.Properties on a
+# dictionary does NOT list what is in it: it lists the dictionary's own
+# members, Count, Keys, Values and the rest. Always seven, whatever the
+# record holds. Counting that way made the guard below refuse every
+# legitimate write through Sync-CampaignClaims the moment a career grew
+# past seven fields, which is to say immediately.
+#
+# It also counts THE CREW. A Bf 110 record carries a `crew` array of the
+# other men in the aeroplane, and if only top-level keys were counted then
+# losing a crewman's rank, his honours or the whole man would read as no
+# change at all and the guard below would wave it through. The guard is
+# here because a career was destroyed on 9 September; it should protect
+# the second man as well as the first.
+function Get-FieldCount {
+    param($Obj)
+    if ($null -eq $Obj) { return 0 }
+    if ($Obj -is [System.Collections.IDictionary]) {
+        $n = @($Obj.Keys).Count
+        if ($Obj.Contains('crew')) { foreach ($m in @($Obj['crew'])) { $n += Get-FieldCount $m } }
+        return $n
+    }
+    $n = @($Obj.PSObject.Properties).Count
+    if ($Obj.PSObject.Properties.Name -contains 'crew') {
+        foreach ($m in @($Obj.crew)) { $n += Get-FieldCount $m }
+    }
+    $n
+}
 function Save-Pilot {
-    param($Pilot)
+    param($Pilot, [switch]$Shrink)
+    if (-not $Pilot) { throw 'Save-Pilot was given nothing to save.' }
+    $name = "$($Pilot.pilot)".Trim()
+    if (-not $name) { throw 'Save-Pilot refused a record with no pilot name.' }
+
     if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
-    $Pilot | ConvertTo-Json -Depth 6 | Set-Content -Path $PilotPath -Encoding UTF8
+
+    if (Test-Path $PilotPath) {
+        $old = $null
+        try { $old = Get-Content $PilotPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+        if ($old) {
+            if (-not $Shrink) {
+                $wasN = Get-FieldCount $old
+                $nowN = Get-FieldCount $Pilot
+                if ($nowN -lt $wasN) {
+                    throw ("Save-Pilot refused to replace a $wasN field record for " +
+                           "'$($old.pilot)' with a $nowN field one for '$name'. " +
+                           'Pass -Shrink if that is really meant.')
+                }
+            }
+            # Keep the version being replaced, newest twenty only. Written
+            # before the new one, so the copy on disk is always the last
+            # good state rather than the one just written.
+            try {
+                $bak = Join-Path $StateDir 'archive\autobackup'
+                if (-not (Test-Path $bak)) { New-Item -ItemType Directory -Path $bak -Force | Out-Null }
+                # Milliseconds, not seconds. Drawing one screen can save
+                # twice through Sync-CampaignClaims and Update-CareerRecord,
+                # and at second resolution the second write overwrote the
+                # first backup: thirty saves kept two copies, not twenty.
+                Copy-Item $PilotPath (Join-Path $bak ('pilot-' + (Get-Date).ToString('yyyyMMdd-HHmmss-fff') + '.json')) -Force
+                Get-ChildItem $bak -Filter 'pilot-*.json' -ErrorAction SilentlyContinue |
+                    Sort-Object Name -Descending | Select-Object -Skip 20 |
+                    Remove-Item -Force -ErrorAction SilentlyContinue
+            } catch { }
+        }
+    }
+    # Depth 8, not 6: a crew member's honours array sits two levels deeper
+    # than anything the record used to hold, and ConvertTo-Json silently
+    # writes the string "System.Collections.Hashtable" once it runs out.
+    $Pilot | ConvertTo-Json -Depth 8 | Set-Content -Path $PilotPath -Encoding UTF8
 }
 
 # =====================================================================
@@ -304,15 +555,49 @@ $Xaml = @'
     <Grid Grid.Row="0" Background="#101B22">
       <StackPanel Orientation="Horizontal" Margin="40,20,0,20" VerticalAlignment="Center">
         <Grid Width="52" Height="52" VerticalAlignment="Center">
-          <Ellipse Fill="#1C3F94"/>
-          <Ellipse Fill="#F2EFE6" Margin="8"/>
-          <Ellipse Fill="#C8102E" Margin="17"/>
+          <!-- Fighter Command's roundel. -->
+          <Grid x:Name="HdrRoundel">
+            <Ellipse Fill="#1C3F94"/>
+            <Ellipse Fill="#F2EFE6" Margin="8"/>
+            <Ellipse Fill="#C8102E" Margin="17"/>
+          </Grid>
+          <!-- The Balkenkreuz: white bars with the black cross inside
+               them, which is what the marking is on an aeroplane.
+
+               The black is DARKER than the header rather than equal to
+               it. At the header's own tone the cross vanished into the
+               background and the emblem read as four white corner
+               pieces instead of a cross. -->
+          <Grid x:Name="HdrBalkenkreuz" Visibility="Collapsed">
+            <Rectangle Fill="#F2EFE6" Width="52" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Rectangle Fill="#F2EFE6" Width="22" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Rectangle Fill="#07090B" Width="52" Height="11" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            <Rectangle Fill="#07090B" Width="11" Height="52" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Grid>
         </Grid>
         <StackPanel Margin="20,0,0,0" VerticalAlignment="Center">
           <TextBlock Style="{StaticResource Serif}" FontSize="27" FontWeight="Bold"
                      Foreground="{StaticResource Ink}" x:Name="HdrSquadron" Text="No. 92 Squadron"/>
           <TextBlock Style="{StaticResource Cond}" FontSize="13" Foreground="{StaticResource Faint}"
                      x:Name="HdrMotto" Text="ROYAL AIR FORCE  &#x2022;  AUT PUGNA AUT MORERE" Margin="1,3,0,0"/>
+        </StackPanel>
+        <!-- Which air force. Detection from the campaign save cannot help
+             on the day a career starts, because a campaign that has flown
+             nothing has no player record to read, so this is the way in
+             rather than a fallback for odd cases. -->
+        <StackPanel x:Name="SideSwitch" Orientation="Horizontal" Margin="26,0,0,0" VerticalAlignment="Center">
+          <Border x:Name="SideRaf" Background="#213540" BorderBrush="#C8973F" BorderThickness="0,0,0,2"
+                  CornerRadius="3,0,0,3" Cursor="Hand" Padding="13,7">
+            <TextBlock x:Name="SideRafText" Text="RAF"
+                       FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="12.5"
+                       FontWeight="Bold" Foreground="#E9E3D4" VerticalAlignment="Center"/>
+          </Border>
+          <Border x:Name="SideLw" Background="#101B22" BorderBrush="#101B22" BorderThickness="0,0,0,2"
+                  CornerRadius="0,3,3,0" Cursor="Hand" Padding="13,7">
+            <TextBlock x:Name="SideLwText" Text="LUFTWAFFE"
+                       FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="12.5"
+                       FontWeight="Bold" Foreground="#6F828C" VerticalAlignment="Center"/>
+          </Border>
         </StackPanel>
       </StackPanel>
       <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,84,0">
@@ -333,12 +618,16 @@ $Xaml = @'
                      FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
         </Border>
         <Border x:Name="RoomPlay" Background="#C8973F" CornerRadius="3" Cursor="Hand" Padding="26,10">
-          <TextBlock Text="PLAY" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
+          <TextBlock Text="PLAY CAMPAIGN" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="17"
                      FontWeight="Bold" Foreground="#171203" VerticalAlignment="Center"/>
         </Border>
         <Border x:Name="RoomNewCareer" Background="#A6252F" CornerRadius="3" Cursor="Hand" Padding="20,10" Margin="14,0,0,0">
           <TextBlock Text="START A NEW CAREER" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="15"
                      FontWeight="Bold" Foreground="#F7ECE6" VerticalAlignment="Center"/>
+        </Border>
+        <Border x:Name="RoomDeletePilot" Background="#2A2D31" BorderBrush="#5A3236" BorderThickness="1" CornerRadius="3" Cursor="Hand" Padding="16,10" Margin="10,0,0,0">
+          <TextBlock Text="DELETE THIS PILOT" FontFamily="Bahnschrift SemiCondensed, Segoe UI" FontSize="13"
+                     FontWeight="Bold" Foreground="#C99A9E" VerticalAlignment="Center"/>
         </Border>
       </StackPanel>
       <Border x:Name="ChromeClose" Width="52" Height="52" Background="Transparent"
@@ -386,12 +675,19 @@ function Show-Tab {
     param([string]$Tab)
     $script:CurrentTab = $Tab
     $pl = Get-Pilot
-    if (-not $pl) { Show-SquadronSelect; return }
+    # No career on this side yet: send him to the right board, not the
+    # RAF's. A German pilot arriving at the Fighter Command plotting table
+    # would be able to report to No. 32 Squadron from it.
+    if (-not $pl) {
+        if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
+        return
+    }
     switch ($Tab) {
-        'logbook' { Show-Logbook -Pilot $pl }
-        'map'     { Show-Map -Pilot $pl }
-        'paper'   { Show-Paper -Pilot $pl }
-        default   { Show-Roster -Pilot $pl }
+        'logbook' { if ($script:Side -eq 'lw') { Show-Flugbuch -Pilot $pl } else { Show-Logbook -Pilot $pl } }
+        'map'     { if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-Map -Pilot $pl } }
+        'paper'   { if ($script:Side -eq 'lw') { Show-Morgenmeldung -Pilot $pl } else { Show-Paper -Pilot $pl } }
+        'gruppen' { $script:SelPeriod = $null; $script:SelSq = $null; Show-GruppeSelect }
+        default   { if ($script:Side -eq 'lw') { Show-ReadyRoom -Pilot $pl } else { Show-Roster -Pilot $pl } }
     }
 }
 $Win.Add_Activated({
@@ -399,7 +695,12 @@ $Win.Add_Activated({
     if (Test-GameRunning) { return }
     if (-not (Test-Path $FlightOpen)) { return }
     $script:Activating = $true
-    try { Finalize-Flight; Show-Tab $script:CurrentTab } catch { } finally { $script:Activating = $false }
+    try {
+        $st = Read-AutostartResult
+        $script:AutostartNote = $(if ($st -and $st -ne 'ok' -and $st -ne 'armed' -and $st -ne 'begin') { "The game did not open the campaign by itself ($st); the launcher log bob2guard.log says why. The clicks on the card still work." } else { $null })
+        Finalize-Flight
+        if (-not (Invoke-AdoptionCheck)) { Show-Tab $script:CurrentTab }
+    } catch { } finally { $script:Activating = $false }
 })
 # PLAY from inside the Room: same flight-marker pipeline as the launcher,
 # so the sortie logs itself; then the game starts via the pinning bat.
@@ -410,17 +711,37 @@ if ($rp) {
         if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { [System.Windows.MessageBox]::Show('The game is already running.', 'Squadron Room') | Out-Null; return }
         try {
             if (-not (Test-Path $StateDir)) { New-Item -ItemType Directory -Path $StateDir -Force | Out-Null }
+            # THE PILOT'S OWN SAVE, not the newest. The newest was a guess
+            # that read a man's date off somebody else's war.
+            $sp0 = Get-CampaignSavePath
             $before = ''
-            $cd0 = Get-CampaignDate
+            $cd0 = Get-CampaignDate -Path $sp0
             if ($cd0) { $before = $cd0.ToString('yyyy-MM-dd') }
-            $sav0 = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
             # record WHICH save was snapshotted: byte offsets only line up
-            # against the same slot, and "newest" can be a different file
-            # after the flight (Auto Save vs a named save)
-            @{ start = (Get-Date).ToString('s'); dateBefore = $before; savePath = $(if ($sav0) { $sav0.FullName } else { '' }) } |
+            # against the same slot, and Finalize-Flight reads this back
+            @{ start = (Get-Date).ToString('s'); dateBefore = $before; savePath = $(if ($sp0) { "$sp0" } else { '' }) } |
                 ConvertTo-Json | Set-Content -Path $FlightOpen -Encoding UTF8
-            if ($sav0) { Copy-Item $sav0.FullName (Join-Path $StateDir 'before.bsr') -Force }
+            if ($sp0 -and (Test-Path $sp0)) { Copy-Item $sp0 (Join-Path $StateDir 'before.bsr') -Force }
         } catch { }
+        # THE REQUEST AND THE CARD. Bob.exe has no switch and bdg.txt no
+        # key to open on a campaign, but the crash guard can steer the
+        # front end there (AUTOSTART.md). A new campaign is asked for by
+        # the request file; a pilot with a save is not, until mode=load is
+        # built. The card says the clicks either way, because the guard
+        # stands down on any doubt and leaves the player at a menu.
+        $script:AutostartNote = $null
+        $script:AutostartArmed = $false
+        # A NEW campaign means a man with no war of his own yet: no save of
+        # his on record and nothing in his log. The newest save on the disk
+        # is not his; it is whoever flew last, and the adoption check deals
+        # with that separately.
+        try {
+            $p0 = Get-Pilot
+            if (Test-FreshPilot -Pilot $p0) { $script:AutostartArmed = Write-AutostartRequest -Pilot $p0 }
+            else { [void](Write-AutostartRequest -Pilot $null) }
+        } catch { }
+        $script:LaunchCard = New-LaunchCardData
+        try { Show-Tab $script:CurrentTab } catch { }
         $bat = Join-Path $ScriptDir 'BOB2_Launch.bat'
         if (Test-Path $bat) { Start-Process -FilePath $bat -WorkingDirectory $GameDir }
         else { Start-Process -FilePath (Join-Path $GameDir 'Bob.exe') -WorkingDirectory $GameDir }
@@ -441,11 +762,65 @@ if ($ra) {
     $ra.Add_MouseEnter({ param($se,$e) if ($script:ChromeActionOn) { $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#DCA84B') } })
     $ra.Add_MouseLeave({ param($se,$e) if ($script:ChromeActionOn) { $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C8973F') } })
 }
+# Move between the two air forces. Each keeps its own pilot, log book and
+# claims under its own folder, so nothing of one is visible from the other
+# and a man can have a British and a German career at the same time.
+foreach ($pair in @(@('SideRaf','raf'), @('SideLw','lw'))) {
+    $seg = C $pair[0]
+    if (-not $seg) { continue }
+    $seg.Tag = $pair[1]
+    # Pressing the side you are already in does nothing rather than
+    # rebuilding the screen under the pointer.
+    $seg.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        if ("$($sender.Tag)" -ne $script:Side) { Set-Side "$($sender.Tag)" }
+    })
+}
+function Update-SideSwitch {
+    # Both segments are always there; the one you are in is lit and the
+    # other is dim, so the control says where you are AND what it will do.
+    $lwOn = ($script:Side -eq 'lw')
+    foreach ($x in @(@('SideRaf','SideRafText', -not $lwOn), @('SideLw','SideLwText', $lwOn))) {
+        $b = C $x[0]; $t = C $x[1]; $on = [bool]$x[2]
+        if ($b) {
+            $b.Background  = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($on) { '#213540' } else { '#101B22' }))
+            $b.BorderBrush = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($on) { '#C8973F' } else { '#101B22' }))
+        }
+        if ($t) { $t.Foreground = [Windows.Media.BrushConverter]::new().ConvertFrom($(if ($on) { '#E9E3D4' } else { '#6F828C' })) }
+    }
+    # The emblem is the quickest way to see which air force is up. The RAF
+    # gets its roundel and the Luftwaffe its Balkenkreuz, rather than the
+    # header quietly changing a word nobody reads.
+    $lw = ($script:Side -eq 'lw')
+    $r = C 'HdrRoundel';      if ($r) { $r.Visibility = $(if ($lw) { 'Collapsed' } else { 'Visible' }) }
+    $b = C 'HdrBalkenkreuz';  if ($b) { $b.Visibility = $(if ($lw) { 'Visible' } else { 'Collapsed' }) }
+}
+function Set-Side {
+    param([string]$Side)
+    Set-StateSide $Side
+    $script:SquadronList = $null
+    $script:SelSq = $null
+    Update-SideSwitch
+    $p = Get-Pilot
+    if ($Side -eq 'lw') {
+        if ($p) { Show-ReadyRoom -Pilot $p } else { Show-GruppeSelect }
+    }
+    else {
+        if ($p) { Show-Roster -Pilot $p } else { Show-SquadronSelect }
+    }
+}
+
 $rnc = C 'RoomNewCareer'
 if ($rnc) {
     $rnc.Add_MouseLeftButtonUp({ Start-NewCareer })
     $rnc.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#C23440') })
     $rnc.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#A6252F') })
+}
+$rdp = C 'RoomDeletePilot'
+if ($rdp) {
+    $rdp.Add_MouseLeftButtonUp({ Remove-PilotCareer })
+    $rdp.Add_MouseEnter({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#4A2A2E') })
+    $rdp.Add_MouseLeave({ param($se,$e) $se.Background = [Windows.Media.BrushConverter]::new().ConvertFrom('#2A2D31') })
 }
 $cx = C 'ChromeClose'
 if ($cx) {
@@ -507,6 +882,21 @@ function New-BadgeImage {
 }
 function Get-RankBadgeFile {
     param([string]$Rank)
+    # The German collar patches. Order matters, as it does below: this is
+    # -Regex and matches substrings, so Oberfeldwebel must be tested
+    # before Feldwebel and Oberleutnant before Leutnant, or both come out
+    # one rank too low. Hauptmann has none: it is a command, not a rung,
+    # and New-BadgeImage returning $null leaves the rank in words.
+    if ($script:Side -eq 'lw') {
+        switch -Regex ($Rank) {
+            '^Oberfeldwebel' { return 'oberfeldwebel.png' }
+            '^Feldwebel'     { return 'feldwebel.png' }
+            '^Unteroffizier' { return 'unteroffizier.png' }
+            '^Oberleutnant'  { return 'oberleutnant.png' }
+            '^Leutnant'      { return 'leutnant.png' }
+        }
+        return $null
+    }
     switch -Regex ($Rank) {
         '^Sergeant'          { return 'sergeant.png' }
         '^Pilot Officer'     { return 'pilot-officer.png' }
@@ -577,13 +967,15 @@ function Fate-Colour { param([string]$s)
 # and Combat Report: across one sortie offset 57 moved 10 -> 11 July while
 # 61 sat still at 11 August. $null when no campaign.
 function Get-CampaignDate {
+    param($Path)
     if (-not $GameDir) { return $null }
-    $dir = Join-Path $GameDir 'SAVEGAME'
-    if (-not (Test-Path $dir)) { return $null }
-    $sav = Get-ChildItem $dir -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $sav) { return $null }
+    # ONE SAVE, CHOSEN ONCE. This used to take the newest .BSR regardless,
+    # so a man who had said which file was his campaign saw its Log Book
+    # and somebody else's date on the same board.
+    $p = if ($Path) { "$Path" } else { Get-CampaignSavePath }
+    if (-not $p -or -not (Test-Path $p)) { return $null }
     try {
-        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        $b = [System.IO.File]::ReadAllBytes($p)
         if ($b.Length -lt 70) { return $null }
         $hdr = [System.Text.Encoding]::ASCII.GetString($b, 1, 20)
         if ($hdr -notmatch '^Rowan Savegame: V 0') { return $null }
@@ -644,13 +1036,12 @@ function Get-SquadronBase {
 # surname at file offset 100 and the aircraft name at 121 (char[21], NUL
 # padded) inside the campaign block - see modernization/BSR_FORMAT.md.
 function Get-CampaignPilot {
+    param($Path)
     if (-not $GameDir) { return $null }
-    $dir = Join-Path $GameDir 'SAVEGAME'
-    if (-not (Test-Path $dir)) { return $null }
-    $sav = Get-ChildItem $dir -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-    if (-not $sav) { return $null }
+    $p = if ($Path) { "$Path" } else { Get-CampaignSavePath }
+    if (-not $p -or -not (Test-Path $p)) { return $null }
     try {
-        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        $b = [System.IO.File]::ReadAllBytes($p)
         if ($b.Length -lt 160) { return $null }
         if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
         $name  = [System.Text.Encoding]::ASCII.GetString($b, 100, 21).TrimEnd([char]0)
@@ -810,7 +1201,9 @@ function Get-Awards {
 
 # --- a framed photograph on the wall ------------------------------------
 function New-Frame {
-    param($Pilot, [switch]$IsPlayer)
+    # -CrewIndex: -1 the player, 0 and up his crew; either makes the photograph
+    # a door to the man's background. Left at -2 the frame is only a picture.
+    param($Pilot, [switch]$IsPlayer, [int]$CrewIndex = -2)
     $col = New-Object Windows.Controls.StackPanel
     $col.Width = 196; $col.Margin = '0,0,22,26'
 
@@ -841,8 +1234,391 @@ function New-Frame {
         $photo.Child = $ini
     }
     $frame.Child = $photo
+    if ($CrewIndex -ge -1) {
+        $frame.Tag = $CrewIndex; $frame.Cursor = 'Hand'
+        $frame.ToolTip = 'Who he was before the war. Click to read it, or to write your own.'
+        $frame.Add_MouseLeftButtonUp({ param($sender, $e) Show-Background -CrewIndex ([int]$sender.Tag); $e.Handled = $true })
+    }
     [void]$col.Children.Add($frame)
     $col
+}
+
+# =====================================================================
+#  WHO HE WAS BEFORE THE WAR: a background behind every portrait
+# =====================================================================
+#  Patrick asked for it on 21 September 2026: click the photograph and
+#  read where the man was born, when, and how he came to be sitting in
+#  this aeroplane; and let the player rewrite any of it, or all of it.
+#
+#  The man is invented. The road he came by is not: every route in
+#  squadronroom/backgrounds.json is a real way into a fighter cockpit by
+#  the summer of 1940 (the Volunteer Reserve, a Halton apprenticeship, a
+#  short service commission, Cranwell, a University Air Squadron; glider
+#  clubs, labour service, the A/B schools, the Luftkriegsschulen, the
+#  fighter and Zerstoerer schools), and every school and unit named was
+#  doing that job then. The route follows his rank and his aeroplane, so
+#  a Sergeant is not given Cranwell and a Bf 110 pilot gets the C school
+#  and the blind flying course a 109 pilot never saw.
+#
+#  Made from a number taken from his own name, so he has the same past
+#  every time until somebody changes it. Once opened it is WRITTEN INTO
+#  HIS RECORD, so a later edit of the lists cannot quietly give a man who
+#  has flown forty sorties a different father.
+$BackgroundsPath = Join-Path $ModDir 'backgrounds.json'
+# FIRST AND LAST NAME. `pilot` stays what it always was, the name on the
+# boards and the one the game is given and its saves are matched by: his
+# surname. `first` is new on 21 September 2026 and required at enrolment.
+# A record made before that has none, and the personal record asks for it.
+function Get-FullName {
+    param($Man)
+    if (-not $Man) { return '' }
+    $f = ''; if ($Man.PSObject.Properties.Name -contains 'first') { $f = "$($Man.first)".Trim() }
+    $l = "$($Man.pilot)".Trim()
+    if ($f) { return "$f $l" }
+    $l
+}
+# The men of the rosters are "Lehmann, P": a surname and an initial. A story
+# needs a first name, so one is dealt from the names their generation was
+# given, keeping the initial where a name begins with it.
+$LwFirstNames = @('Albert','Alfred','Anton','Bruno','Bernhard','Carl','Dieter','Dietrich','Emil','Erich','Ernst','Franz','Friedrich','Fritz',
+                  'Georg','Gerhard','Günther','Hans','Heinrich','Heinz','Helmut','Herbert','Hermann','Horst','Josef','Johannes','Karl','Konrad','Kurt',
+                  'Ludwig','Lothar','Martin','Max','Otto','Oskar','Paul','Peter','Richard','Rudolf','Robert','Siegfried','Stefan','Theodor','Thomas',
+                  'Ulrich','Viktor','Walter','Werner','Wilhelm','Willi','Wolfgang')
+function Get-BackgroundNames {
+    param($Man, [int]$Seed = 0)
+    $raw = "$($Man.pilot)".Trim()
+    $first = ''; if ($Man.PSObject.Properties.Name -contains 'first') { $first = "$($Man.first)".Trim() }
+    $last = $raw
+    if (-not $first -and $raw -match '^(.+?),\s*(\S)') {
+        $last = $Matches[1].Trim(); $ini = $Matches[2].ToUpper()
+        $pool = @($LwFirstNames | Where-Object { $_.Substring(0,1) -eq $ini })
+        if (-not $pool.Count) { $pool = $LwFirstNames }
+        $first = $pool[[math]::Abs($Seed) % $pool.Count]
+    }
+    $name = if ($first) { "$first $last" } else { $last }
+    if (-not $first) { $first = $last }
+    @{ first = $first; last = $last; name = $name }
+}
+function Get-BackgroundData {
+    if ($null -ne $script:BackgroundData) { return $script:BackgroundData }
+    $d = $null
+    if (Test-Path $BackgroundsPath) {
+        try { $d = Get-Content $BackgroundsPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:BackgroundData = $d
+    $d
+}
+function New-PilotBackground {
+    param($Man, $Pilot, [int]$Salt = 0)
+    $data = Get-BackgroundData
+    if (-not $data -or -not $Man) { return $null }
+    if (-not $Pilot) { $Pilot = $Man }
+    $isLw = (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -eq 'lw'))
+    $side = if ($isLw) { $data.lw } else { $data.raf }
+    $actype = "$($Pilot.actype)"
+    $isCrew = (($Man.PSObject.Properties.Name -contains 'role') -and "$($Man.role)" -and ("$($Man.role)" -ne 'Flugzeugfuehrer'))
+    $rank = "$($Man.rank)"
+    $who = 'officer'
+    if ($isCrew) { $who = 'crew' }
+    elseif ($isLw) { if ($LwRankOfficer -notcontains $rank) { $who = 'nco' } }
+    elseif ($rank -match 'Sergeant') { $who = 'nco' }
+    $tkey = if ($actype -match '110') { '110' } else { '109' }
+
+    # one stream of numbers from his name, so every pick is his and repeatable
+    $seed = 7
+    foreach ($c in ("$($Man.pilot)|$($Pilot.unit)|$($Pilot.sqn)|$Salt").ToCharArray()) { $seed = ($seed * 31 + [int]$c) % 2147483647 }
+    $state = @{ n = [long]$seed }
+    $next = {
+        param([int]$Mod)
+        $state.n = ($state.n * 1103515245 + 12345) % 2147483648
+        if ($Mod -le 0) { return 0 }
+        [int](([long][math]::Floor($state.n / 65536)) % $Mod)
+    }
+    $pick = { param($List) $l = @($List); if (-not $l.Count) { return '' }; "$($l[(& $next $l.Count)])" }
+
+    $routes = @($side.routes | Where-Object {
+        ("$($_.who)" -eq $who) -and (-not $isLw -or "$($_.type)" -eq $tkey)
+    })
+    if (-not $routes.Count) { $routes = @($side.routes | Where-Object { "$($_.who)" -eq $who }) }
+    if (-not $routes.Count) { return $null }
+    $bag = @()
+    foreach ($r in $routes) { $w = 1; if ($r.PSObject.Properties.Name -contains 'weight') { $w = [int]$r.weight }; for ($i = 0; $i -lt $w; $i++) { $bag += $r } }
+    $route = $bag[(& $next $bag.Count)]
+
+    $bornKey = if ($who -eq 'officer') { 'officer' } else { 'nco' }
+    $by = @($side.born.$bornKey)
+    $year = [int]$by[0] + (& $next ([int]$by[1] - [int]$by[0] + 1))
+    $jr = @($route.joined)
+    $joined = [int]$jr[0] + (& $next ([int]$jr[1] - [int]$jr[0] + 1))
+    # old enough on the day he joined, and not a man of thirty either
+    $minage = [int]$route.minage
+    if ($year -gt ($joined - $minage)) { $year = $joined - $minage }
+    if ($year -lt ($joined - 24)) { $year = $joined - 24 }
+    $month = 1 + (& $next 12)
+    $day = 1 + (& $next ([datetime]::DaysInMonth($year, $month)))
+    $born = ([datetime]::new($year, $month, $day)).ToString('d MMMM yyyy', [Globalization.CultureInfo]::InvariantCulture)
+    $place = & $pick $side.places
+
+    $type = if ($isLw) { if ($tkey -eq '110') { 'Bf 110' } else { 'Bf 109 E' } }
+            elseif ($actype -match 'Hurricane') { 'Hurricane' } else { 'Spitfire' }
+    $unit = if ($isLw) { "$($Pilot.unit)" } else { "No. $([int]$Pilot.sqn) Squadron" }
+    $base = "$($Pilot.base)"; if (-not $base) { $base = 'its station' }
+    $posted = 'July 1940'
+    if ($script:CampaignDate) { $posted = $script:CampaignDate.ToString('MMMM yyyy', [Globalization.CultureInfo]::InvariantCulture) }
+    $nm = Get-BackgroundNames -Man $Man -Seed $seed
+    $age = 1940 - $year; if ($month -gt 7) { $age-- }
+    $tok = @{
+        first = $nm.first; last = $nm.last; name = $nm.name; born = $born; year = "$year"; age = "$age"
+        town = ("$place" -split ',')[0].Trim()
+        place = $place; joined = "$joined"; type = $type; unit = $unit; base = $base; posted = $posted
+        hours = "$(150 + (& $next 61))"; ontype = "$(10 + (& $next 16))"
+    }
+    if (-not $isLw) { $tok['otu'] = & $pick $side.otu.$type }
+    $fill = {
+        param([string]$Text)
+        [regex]::Replace($Text, '\{(\w+)\}', {
+            param($m)
+            $k = $m.Groups[1].Value
+            if ($tok.ContainsKey($k)) { return "$($tok[$k])" }
+            if ($side.lists.PSObject.Properties.Name -contains $k) { $v = & $pick $side.lists.$k; $tok[$k] = $v; return $v }
+            ''
+        })
+    }
+    $deep = { param([string]$Text) $x = $Text; foreach ($pass in 1..3) { if ($x -notmatch '\{') { break }; $x = & $fill $x }; $x }
+    $paras = @()
+    foreach ($t in @($route.text)) { $paras += (& $deep "$t") }
+    $closing = "$($side.closing)"
+    if ($isCrew -and ($side.PSObject.Properties.Name -contains 'closing_crew')) { $closing = "$($side.closing_crew)" }
+    if ($closing) { $paras += (& $deep $closing) }
+    $story = (($paras | ForEach-Object { ($_ -replace '\s{2,}', ' ').Trim() }) -join "`r`n`r`n")
+    # a sentence that begins with a school's number must still begin with a capital
+    $story = [regex]::Replace($story, '(^|\n)the ', { param($m) $m.Groups[1].Value + 'The ' })
+    [pscustomobject]@{ born = $born; place = $place; story = $story; custom = $false; joined = $joined; year = $year }
+}
+# The man behind a frame: -1 is the player, 0 and up his crew.
+# Version 2 of the stories (21 September 2026) is the rewritten set. A past
+# the Room dealt under version 1 and the player never touched is dealt again;
+# anything he wrote or saved himself is his and is left alone.
+# Version 3 (the same day): rewritten again in the plain voice of Patrick's own example.
+# Version 4: the last paragraph is the commanding officer's file entry, not a portrait.
+$BackgroundVersion = 4
+function Test-BackgroundKept {
+    param($Man)
+    if (-not $Man -or ($Man.PSObject.Properties.Name -notcontains 'background') -or -not $Man.background) { return $false }
+    $b = $Man.background
+    if (-not "$($b.story)") { return $false }
+    if (($b.PSObject.Properties.Name -contains 'custom') -and [bool]$b.custom) { return $true }
+    $v = 1; if ($b.PSObject.Properties.Name -contains 'v') { $v = [int]$b.v }
+    ($v -ge $BackgroundVersion)
+}
+function Get-BackgroundMan {
+    param($Pilot, [int]$CrewIndex)
+    if (-not $Pilot) { return $null }
+    if ($CrewIndex -lt 0) { return $Pilot }
+    $crew = @(Get-Crew $Pilot)
+    if ($CrewIndex -ge $crew.Count) { return $null }
+    $crew[$CrewIndex]
+}
+function Get-PilotBackground {
+    param($Pilot, [int]$CrewIndex = -1)
+    $man = Get-BackgroundMan -Pilot $Pilot -CrewIndex $CrewIndex
+    if (-not $man) { return $null }
+    if (Test-BackgroundKept $man) { return $man.background }
+    New-PilotBackground -Man $man -Pilot $Pilot
+}
+function Save-PilotBackground {
+    param($Pilot, [int]$CrewIndex = -1, [string]$Born, [string]$Place, [string]$Story, [bool]$Custom = $true, [string]$First = $null)
+    if (-not $Pilot) { return $null }
+    $rec = [ordered]@{ born = "$Born".Trim(); place = "$Place".Trim(); story = "$Story".Trim(); custom = [bool]$Custom; v = [int]$BackgroundVersion }
+    $o = [ordered]@{}
+    foreach ($pp in $Pilot.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
+    if ($CrewIndex -lt 0) {
+        $o['background'] = $rec
+        if ($null -ne $First -and "$First".Trim()) { $o['first'] = "$First".Trim() }
+    }
+    else {
+        $crew = @()
+        $i = 0
+        foreach ($m in @(Get-Crew $Pilot)) {
+            $mo = [ordered]@{}
+            foreach ($pp in $m.PSObject.Properties) { $mo[$pp.Name] = $pp.Value }
+            if ($i -eq $CrewIndex) { $mo['background'] = $rec }
+            $crew += $mo; $i++
+        }
+        $o['crew'] = @($crew)
+    }
+    Save-Pilot -Pilot $o
+    Get-Pilot
+}
+# The window. Built apart from being shown, so the smoke test can build it
+# and press its buttons without a modal dialog stopping the run.
+function New-BackgroundWindow {
+    param($Pilot, [int]$CrewIndex = -1)
+    $man = Get-BackgroundMan -Pilot $Pilot -CrewIndex $CrewIndex
+    if (-not $man) { return $null }
+    $bg = Get-PilotBackground -Pilot $Pilot -CrewIndex $CrewIndex
+    if (-not $bg) { return $null }
+    $w = New-Object Windows.Window
+    $w.WindowStyle = 'None'; $w.ResizeMode = 'NoResize'; $w.ShowInTaskbar = $false
+    $w.Width = 820; $w.SizeToContent = 'Height'; $w.WindowStartupLocation = 'CenterOwner'
+    $w.Background = B '#0F171D'
+    $outer = New-Object Windows.Controls.Border
+    $outer.BorderBrush = $script:BrassBrush; $outer.BorderThickness = '1.5'; $outer.Padding = '28,24,28,22'
+    $sp = New-Object Windows.Controls.StackPanel
+    $outer.Child = $sp; $w.Content = $outer
+
+    $head = New-Object Windows.Controls.StackPanel; $head.Orientation = 'Horizontal'; $head.Margin = '0,0,0,18'
+    $ph = New-Object Windows.Controls.Border
+    $ph.Width = 92; $ph.Height = 104; $ph.Background = B '#0B1116'; $ph.BorderBrush = $script:BrassBrush; $ph.BorderThickness = '2'; $ph.ClipToBounds = $true
+    if (($man.PSObject.Properties.Name -contains 'portrait') -and "$($man.portrait)") {
+        $bmp = Load-Portrait -File "$($man.portrait)" -DecodeHeight 220
+        if ($bmp) { $im = New-Object Windows.Controls.Image; $im.Source = $bmp; $im.Stretch = 'UniformToFill'; $ph.Child = $im }
+    }
+    [void]$head.Children.Add($ph)
+    $ht = New-Object Windows.Controls.StackPanel; $ht.Margin = '20,2,0,0'; $ht.VerticalAlignment = 'Center'
+    [void]$ht.Children.Add((New-TB -Text 'PERSONAL RECORD' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    [void]$ht.Children.Add((New-TB -Text (Get-FullName $man) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    $isLw = (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -eq 'lw'))
+    $unitLine = if ($isLw) { "$($Pilot.unit)" } else { "No. $([int]$Pilot.sqn) Squadron" }
+    $seat = if (($man.PSObject.Properties.Name -contains 'role') -and "$($man.role)") { "$($man.role)" } else { "$($Pilot.actype)" }
+    [void]$ht.Children.Add((New-TB -Text "$($man.rank)   $([char]0x2022)   $unitLine   $([char]0x2022)   $seat" -Family $CondFam -Size 13 -Colour '#9FB0B8'))
+    [void]$head.Children.Add($ht)
+    [void]$sp.Children.Add($head)
+
+    $mkBox = {
+        param([string]$Text, [double]$Width)
+        $tb = New-Object Windows.Controls.TextBox
+        $tb.Text = $Text; $tb.Width = $Width; $tb.FontFamily = 'Georgia, serif'; $tb.FontSize = 15
+        $tb.Background = B '#101B22'; $tb.Foreground = B '#E9E3D4'; $tb.CaretBrush = B '#FFC24A'
+        $tb.BorderBrush = B '#2B3B47'; $tb.BorderThickness = '1'; $tb.Padding = '8,6'
+        $tb.SelectionBrush = B '#C8973F'
+        $tb
+    }
+    $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,16'
+    # the player's own first name, asked for here when his record predates the
+    # rule that a pilot has two names; his surname is the game's and is not
+    # changed from this window
+    $firstBox = $null
+    if ($CrewIndex -lt 0) {
+        $c0 = New-Object Windows.Controls.StackPanel; $c0.Margin = '0,0,22,0'
+        [void]$c0.Children.Add((New-TB -Text 'FIRST NAME' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+        $fn = ''; if ($man.PSObject.Properties.Name -contains 'first') { $fn = "$($man.first)" }
+        $firstBox = & $mkBox $fn 170; $firstBox.Margin = '0,5,0,0'; $firstBox.MaxLength = 20
+        [void]$c0.Children.Add($firstBox)
+        [void]$row.Children.Add($c0)
+    }
+    $c1 = New-Object Windows.Controls.StackPanel; $c1.Margin = '0,0,22,0'
+    [void]$c1.Children.Add((New-TB -Text 'BORN' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $bornBox = & $mkBox "$($bg.born)" 190; $bornBox.Margin = '0,5,0,0'
+    [void]$c1.Children.Add($bornBox)
+    $c2 = New-Object Windows.Controls.StackPanel
+    [void]$c2.Children.Add((New-TB -Text 'AT' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $placeBox = & $mkBox "$($bg.place)" $(if ($CrewIndex -lt 0) { 356 } else { 548 }); $placeBox.Margin = '0,5,0,0'
+    [void]$c2.Children.Add($placeBox)
+    [void]$row.Children.Add($c1); [void]$row.Children.Add($c2)
+    [void]$sp.Children.Add($row)
+
+    [void]$sp.Children.Add((New-TB -Text 'HOW HE CAME HERE' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+    $storyBox = & $mkBox "$($bg.story)" 760
+    $storyBox.Margin = '0,5,0,18'; $storyBox.Height = 380; $storyBox.HorizontalAlignment = 'Left'
+    $storyBox.TextWrapping = 'Wrap'; $storyBox.AcceptsReturn = $true; $storyBox.VerticalScrollBarVisibility = 'Auto'
+    $storyBox.FontSize = 14.5
+    [void]$sp.Children.Add($storyBox)
+
+
+    $btns = New-Object Windows.Controls.StackPanel; $btns.Orientation = 'Horizontal'; $btns.HorizontalAlignment = 'Right'
+    $mkBtn = {
+        param([string]$Label, [string]$Fill, [string]$Ink, [string]$Do)
+        $b = New-Object Windows.Controls.Border
+        $b.Background = B $Fill; $b.CornerRadius = '2'; $b.Padding = '18,9'; $b.Margin = '10,0,0,0'; $b.Cursor = 'Hand'
+        $b.BorderBrush = B '#2B3B47'; $b.BorderThickness = '1'; $b.Tag = $Do; $b.Focusable = $true
+        $b.Child = (New-TB -Text $Label -Family $CondFam -Size 13 -Colour $Ink -Bold)
+        # ON THE PRESS, and handled. The window used to start DragMove() on any
+        # left button down that was not in a text box; DragMove runs its own
+        # mouse loop until the button comes up, so a button never saw the
+        # release it was waiting for and none of the three did anything.
+        $b.Add_MouseLeftButtonDown({ param($sender, $e) $e.Handled = $true; Invoke-BackgroundAction "$($sender.Tag)" })
+        $b
+    }
+    [void]$btns.Children.Add((& $mkBtn 'WRITE ANOTHER' '#16222B' '#E9E3D4' 'another'))
+    [void]$btns.Children.Add((& $mkBtn 'CLOSE' '#16222B' '#E9E3D4' 'close'))
+    [void]$btns.Children.Add((& $mkBtn 'SAVE' '#C8973F' '#14100A' 'save'))
+    [void]$sp.Children.Add($btns)
+
+    $w.Add_KeyDown({ param($sender, $e) if ($e.Key -eq 'Escape') { Invoke-BackgroundAction 'close' } })
+    # only the header drags the window
+    $head.Background = B '#0F171D'
+    $head.Add_MouseLeftButtonDown({ param($sender, $e) try { [Windows.Window]::GetWindow($sender).DragMove() } catch { } })
+    # State the buttons read. Script scope and no closures: a closure in this
+    # file gets a module scope of its own and its writes never reach the Room.
+    # Generated: the text as the Room dealt it, so SAVE can tell a story the
+    # player left alone from one he wrote, and so a first name given later can
+    # be put into an untouched story instead of leaving 'Millin was born'.
+    $gen = ''; if (-not (($bg.PSObject.Properties.Name -contains 'custom') -and [bool]$bg.custom)) { $gen = "$($bg.story)" }
+    $script:BgDlg = @{ Generated = $gen; Win = $w; First = $firstBox; Born = $bornBox; Place = $placeBox; Story = $storyBox; CrewIndex = $CrewIndex; Salt = 0; Saved = $false }
+    $w
+}
+function Invoke-BackgroundAction {
+    param([string]$What)
+    $d = $script:BgDlg
+    if (-not $d) { return }
+    switch ($What) {
+        'close' { try { $d.Win.Close() } catch { } }
+        'another' {
+            $d.Salt = [int]$d.Salt + 1
+            $p = Get-Pilot
+            $man = Get-BackgroundMan -Pilot $p -CrewIndex ([int]$d.CrewIndex)
+            # the name in the story is the one in the box now, saved or not
+            if ($d.First -and "$($d.First.Text)".Trim()) {
+                $mo = [ordered]@{}
+                foreach ($pp in $man.PSObject.Properties) { $mo[$pp.Name] = $pp.Value }
+                $mo['first'] = "$($d.First.Text)".Trim()
+                $man = [pscustomobject]$mo
+                if ([int]$d.CrewIndex -lt 0) { $p = $man }
+            }
+            $n = New-PilotBackground -Man $man -Pilot $p -Salt ([int]$d.Salt)
+            if ($n) { $d.Born.Text = "$($n.born)"; $d.Place.Text = "$($n.place)"; $d.Story.Text = "$($n.story)"; $d.Generated = "$($n.story)" }
+        }
+        'save' {
+            $p = Get-Pilot
+            $untouched = ("$($d.Generated)" -and ("$($d.Story.Text)".Trim() -eq "$($d.Generated)".Trim()))
+            if ($p -and $untouched) {
+                # his own text was never typed over: deal it again under the name
+                # now in the box (same salt, so the same past), and keep it the Room's
+                $man = Get-BackgroundMan -Pilot $p -CrewIndex ([int]$d.CrewIndex)
+                if ($d.First -and "$($d.First.Text)".Trim() -and $man) {
+                    $mo = [ordered]@{}
+                    foreach ($pp in $man.PSObject.Properties) { $mo[$pp.Name] = $pp.Value }
+                    $mo['first'] = "$($d.First.Text)".Trim()
+                    $n = New-PilotBackground -Man ([pscustomobject]$mo) -Pilot ([pscustomobject]$mo) -Salt ([int]$d.Salt)
+                    if ($n) { $d.Story.Text = "$($n.story)" }
+                }
+                [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $false -First $(if ($d.First) { "$($d.First.Text)" } else { $null }))
+                $d.Saved = $true
+            }
+            elseif ($p) {
+                [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $true -First $(if ($d.First) { "$($d.First.Text)" } else { $null }))
+                $d.Saved = $true
+            }
+            try { $d.Win.Close() } catch { }
+        }
+    }
+}
+function Show-Background {
+    param([int]$CrewIndex = -1)
+    $p = Get-Pilot
+    if (-not $p) { return }
+    # the first look fixes his past in his record, so it cannot shift under him
+    $man = Get-BackgroundMan -Pilot $p -CrewIndex $CrewIndex
+    if ($man -and -not (Test-BackgroundKept $man)) {
+        $g = New-PilotBackground -Man $man -Pilot $p
+        if ($g) { $p = Save-PilotBackground -Pilot $p -CrewIndex $CrewIndex -Born $g.born -Place $g.place -Story $g.story -Custom $false }
+    }
+    $w = New-BackgroundWindow -Pilot $p -CrewIndex $CrewIndex
+    if (-not $w) { return }
+    try { $w.Owner = $Win } catch { }
+    [void]$w.ShowDialog()
+    $script:BgDlg = $null
 }
 
 # --- the player's aircraft: a Spitfire profile with live codes and serial --
@@ -922,11 +1698,145 @@ $SquadronMottoes = @{
 # start over, and the board's own button is the only thing to press.
 function Show-ChromeButtons {
     param([bool]$Show)
-    foreach ($n in @('RoomPlay', 'RoomNewCareer')) {
+    foreach ($n in @('RoomPlay', 'RoomNewCareer', 'RoomDeletePilot')) {
         $el = C $n
         if ($el) { $el.Visibility = $(if ($Show) { 'Visible' } else { 'Collapsed' }) }
     }
     if ($Show) { Set-ChromeAction -Text ''; Set-ChromeBack -Text '' }
+}
+# THE LAUNCH CARD: the clicks for this man, worked out from what the Room
+# knows. Shown on the board from PLAY CAMPAIGN until the flight is closed.
+$script:LaunchCard = $null
+# ---------------------------------------------------------------------
+#  AUTOSTART. The crash guard (dinput8.dll) reads SquadronRoom\autostart.txt
+#  once, renames it to autostart.done, and steers the game's front end
+#  straight into a new campaign with this pilot's side, role, phase and
+#  name. AUTOSTART.md says how. The Room is the only thing that writes the
+#  request, and only from PLAY CAMPAIGN, so the launcher's PLAY, quick
+#  missions and everyone else's game are untouched. Stage one is a NEW
+#  campaign; a pilot with a save keeps the guided card until mode=load is
+#  built.
+# ---------------------------------------------------------------------
+function Get-AutostartRoot {
+    if ($script:StateRootOverride) { return $script:StateRootOverride }
+    $StateRoot
+}
+function Write-AutostartRequest {
+    param($Pilot)
+    $root = Get-AutostartRoot
+    if (-not $root) { return $false }
+    $req = Join-Path $root 'autostart.txt'; $done = Join-Path $root 'autostart.done'
+    Remove-Item $done -Force -ErrorAction SilentlyContinue
+    if (-not $Pilot) { Remove-Item $req -Force -ErrorAction SilentlyContinue; return $false }
+    $phase = 0
+    switch ("$($Pilot.period)") { 'P2' { $phase = 1 } 'P3' { $phase = 2 } 'P4' { $phase = 3 } }
+    # his own unit as the game numbers it (SquadNum): the Gruppe's sqidx
+    # from oob.json, or the squadron's place in the RAF order from No. 32
+    # at 64. The guard writes it into the Begin page's favourite-unit
+    # panel, which is what choosing it there does. 0 leaves the default.
+    $unit = 0
+    if ($script:Side -eq 'lw') {
+        $g = @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq "$($Pilot.unit)" } | Select-Object -First 1
+        if ($g -and $g.sqidx) { $unit = [int]$g.sqidx }
+    } else {
+        $pos = [array]::IndexOf($RafSqOrder, [int]$Pilot.sqn)
+        if ($pos -ge 0) { $unit = $RafSqBase + $pos }
+    }
+    $lines = @(
+        'mode=begin'
+        'side=' + $(if ($script:Side -eq 'lw') { '1' } else { '0' })
+        'role=' + $(if ("$($Pilot.cmode)" -eq 'commander') { '5' } else { '4' })
+        "phase=$phase"
+        "unit=$unit"
+        'name=' + ("$($Pilot.pilot)".Trim())
+    )
+    try {
+        if (-not (Test-Path $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+        [System.IO.File]::WriteAllText($req, ($lines -join "`r`n") + "`r`n", [System.Text.Encoding]::GetEncoding(1252))
+        return $true
+    } catch { return $false }
+}
+# What the guard reported, read once the game has gone. The last status
+# line wins: armed, begin, ok on a good run; fallback, mismatch or the
+# like when the player was left at a menu.
+function Read-AutostartResult {
+    $root = Get-AutostartRoot
+    if (-not $root) { return $null }
+    $done = Join-Path $root 'autostart.done'
+    if (-not (Test-Path $done)) { return $null }
+    $st = ''
+    try { foreach ($l in (Get-Content $done -ErrorAction Stop)) { if ("$l" -match '^status=(.+)$') { $st = $matches[1].Trim() } } } catch { }
+    Remove-Item $done -Force -ErrorAction SilentlyContinue
+    $st
+}
+$script:AutostartNote = $null
+# The unit the game actually put him in on his last sortie, off the save.
+# The game cannot be told his Gruppe or squadron at start-up: it offers
+# the raid's units in the Frag screen and defaults to its own highlight.
+# So the board says what happened and what to press next time.
+function New-FlownNote {
+    param($Pilot)
+    if (-not $Pilot -or -not ($Pilot.PSObject.Properties.Name -contains 'lastFlown') -or -not $Pilot.lastFlown) { return $null }
+    $lf = $Pilot.lastFlown
+    $lw = ($script:Side -eq 'lw')
+    $own = if ($lw) { "$($Pilot.unit)" } else { "No. $($Pilot.sqn) Squadron" }
+    $ac = [int]$lf.acnum + 1
+    $txt = if ($lf.own) {
+        "Your last sortie was with your own $(if ($lw) { 'Gruppe' } else { 'squadron' }), $($lf.label), aircraft $ac."
+    } elseif ($lw) {
+        "On your last sortie the game put you in $($lf.label), aircraft $ac, not $own. The game picks the Gruppe for each sortie from the raid's escort and highlights its own choice: when the raid is planned, choose $own in the Frag screen's squadron list, and pick your position in the Schwarm there too, which is what sets the number on the fuselage."
+    } else {
+        "On your last sortie the game put you with $($lf.label), aircraft $ac, not $own. The game picks the squadron for each sortie from those scrambled and highlights its own choice: when the scramble comes, choose $own in the squadron list, and pick your position in the flight there too, which is what sets the letter on the fuselage."
+    }
+    $t = New-TB -Text $txt -Family 'Segoe UI' -Size 12.5 -Colour $(if ($lf.own) { '#9FB0B8' } else { '#D08A2E' }) -Wrap
+    $t.Margin = '0,0,0,14'; $t.MaxWidth = 940
+    $t
+}
+
+function New-LaunchCardData {
+    $p = Get-Pilot
+    if (-not $p) { return $null }
+    $lw = ($script:Side -eq 'lw')
+    $sp = Get-CampaignSavePath -Pilot $p
+    $unit = if ($lw) { "$($p.unit)" } else { "No. $($p.sqn) Squadron" }
+    $steps = @('From the game''s main menu choose CAMPAIGNS', $(if ($lw) { 'Choose LUFTWAFFE' } else { 'Choose RAF' }))
+    if ($sp -and (Test-Path $sp)) {
+        $steps += 'Choose LOAD GAME, then ' + (Split-Path $sp -Leaf) + ', then LOAD'
+    } else {
+        $per = $null
+        foreach ($d in $Periods) { if ("$($d.Id)" -eq "$($p.period)") { $per = $d } }
+        # The four tabs along the top of the campaign screen are named
+        # CONVOYS, EAGLE ATTACK, CRITICAL PERIOD and BLITZ, not by date, so
+        # the card says which tab, and what dates the game shows under it.
+        $steps += $(if ($per) { "Press the $($per.Game) tab along the top of the campaign screen; it shows $($per.GameDates). That is your period, $($per.Desc). Then BEGIN" }
+                    else { 'Choose the period along the top of the campaign screen, then BEGIN' })
+        $steps += 'Enter the name ' + "$($p.pilot)" + ' and press BEGIN'
+    }
+    [pscustomobject]@{ Name = "$($p.pilot)"; Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps; Auto = [bool]$script:AutostartArmed }
+}
+function New-LaunchCard {
+    $c = $script:LaunchCard
+    if (-not $c) { return $null }
+    $bd = New-Object Windows.Controls.Border
+    $bd.Background = B '#1A1710'; $bd.BorderBrush = $script:BrassBrush
+    $bd.BorderThickness = '3,0,0,0'; $bd.CornerRadius = '0,3,3,0'
+    $bd.Padding = '16,12'; $bd.Margin = '0,0,0,20'; $bd.HorizontalAlignment = 'Left'; $bd.MaxWidth = 940
+    $sp = New-Object Windows.Controls.StackPanel
+    [void]$sp.Children.Add((New-TB -Text $(if ($c.Auto) { 'THE GAME IS OPENING YOUR CAMPAIGN BY ITSELF. IF IT STOPS AT A MENU, YOUR CLICKS:' } else { 'THE GAME IS OPEN. YOUR CLICKS:' }) -Family $CondFam -Size 12 -Colour '#C8973F' -Bold -Wrap))
+    $i = 0
+    foreach ($st in $c.Steps) {
+        $i++
+        $t = New-TB -Text ("$i.  $st") -Family 'Segoe UI' -Size 13.5 -Colour '#E9E3D4' -Wrap
+        $t.Margin = '0,5,0,0'
+        [void]$sp.Children.Add($t)
+    }
+    $w = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
+        "$($c.Name), $($c.Unit), $($c.Side). Quick missions and training are not recorded; " +
+        'your aeroplane and your logbook are for the campaign only. This card clears when you come back.')
+    $w.Margin = '0,10,0,0'
+    [void]$sp.Children.Add($w)
+    $bd.Child = $sp
+    $bd
 }
 # the way out of a screen, in the header for the same reason
 $script:ChromeBackDo = $null
@@ -988,7 +1898,8 @@ function Set-Header {
 # gives the researched position; anything nudged by hand is kept here,
 # and kept PER TYPE, because a Hurricane's fuselage is not a Spitfire's
 # and a letter that sits right on one lands on the roundel of the other.
-$AcPosPath = Join-Path $StateDir 'acpos.json'
+# assigned by Set-StateSide, with every other state path, so a side
+# change cannot leave this one pointing at the other air force
 function Get-AcKey { param([string]$Type) if ("$Type" -match 'Hurricane') { 'Hurricane' } else { 'Spitfire' } }
 function Get-AcPos {
     $t = @{}
@@ -1005,6 +1916,9 @@ function Get-AcPos {
                 if ($x -ge -0.05 -and $x -le 1.05 -and $y -ge -0.05 -and $y -le 1.05) {
                     $rec = @{ x = $x; y = $y }
                     if ($sz -gt 0) { $rec['s'] = $sz }
+                    foreach ($bk in 'bx', 'by') {
+                        if ($p.Value.PSObject.Properties.Name -contains $bk) { $rec[$bk] = [double]$p.Value.$bk }
+                    }
                     $t[$p.Name] = $rec
                 }
             }
@@ -1044,6 +1958,21 @@ function New-Aircraft {
     $script:AcPos = Get-AcPos
     $acKey = Get-AcKey $ptype
 
+    # The RAF codes are DRAWN TEXT, as they always were.
+    #
+    # They were briefly switched to BOB2's own letter tiles, placed by the
+    # game's own MultiSkin coordinates, and Patrick's call is to leave the
+    # RAF as it was. The measurement stands and is worth keeping: it
+    # confirmed the horizontal placement here is right to within one or
+    # two per cent of what the game does. What it could not settle is the
+    # vertical, because the game positions a picture and this positions a
+    # TextBlock, whose leading sits above the glyphs, so the two numbers
+    # are not comparable without calibrating the font - and nobody had
+    # seen the tile version rendered.
+    #
+    # squadronroom/marking-positions.json keeps the RAF measurements, and
+    # dev/build_raf_markings.py will cut the tiles again if anyone wants
+    # to take it up. Nothing reads either on this side.
     $tSq  = Add-AcMark -Canvas $cv -Key "$acKey|sq"  -Text $sq  -Family $CodeFont   -Size ([double]$spec.CodeSize) `
                        -Colour $CodeColour   -DX ([double]$spec.SqX)  -DY ([double]$spec.SqY)  -W $AcW -H $acH
     $tInd = Add-AcMark -Canvas $cv -Key "$acKey|ind" -Text $ind -Family $CodeFont   -Size ([double]$spec.CodeSize) `
@@ -1258,33 +2187,72 @@ function Finalize-Flight {
     try { $mk = Get-Content $FlightOpen -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
     if (-not $mk) { Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue; return }
     $start = $null; try { $start = [datetime]$mk.start } catch { }
-    $end = $null
-    if ($GameDir) {
-        $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if ($sav) { $end = $sav.LastWriteTime }
+    # THE SAVE THE MARKER NAMES. It was recorded at Play and then never
+    # read; "newest" was re-derived here and could be a different file.
+    $savePath = "$($mk.savePath)"
+    if (-not $savePath -or -not (Test-Path $savePath)) { $savePath = Get-CampaignSavePath }
+    $beforeSnap = Join-Path $StateDir 'before.bsr'
+    $script:LaunchCard = $null
+    # DID THE CAMPAIGN SAVE CHANGE. That is the whole test for "was this a
+    # campaign sortie", and it is byte for byte, not every 97th byte.
+    #
+    # A quick mission never touches the campaign save. On 11 September
+    # 2026 a string of Basic Training take-offs changed exactly two files
+    # in SAVEGAME, settings.cfg and blank_nt.dat, and left both .BSR files
+    # dated the 8th. So an unchanged save means nothing happened to the
+    # campaign, whatever the clock says, and the old test - any minutes
+    # between Play and the newest save's timestamp - logged quick missions
+    # as campaign sorties.
+    $changed = $true
+    try {
+        if ((Test-Path $beforeSnap) -and $savePath -and (Test-Path $savePath)) {
+            $a = [System.IO.File]::ReadAllBytes($beforeSnap)
+            $b2 = [System.IO.File]::ReadAllBytes($savePath)
+            $changed = -not (($a.Length -eq $b2.Length) -and ([System.Linq.Enumerable]::SequenceEqual($a, $b2)))
+        }
+    } catch { }
+    if (-not $changed) {
+        Remove-Item $beforeSnap -Force -ErrorAction SilentlyContinue
+        Remove-Item $FlightOpen -Force -ErrorAction SilentlyContinue
+        return
     }
+    $end = $null
+    if ($savePath -and (Test-Path $savePath)) { $end = (Get-Item $savePath).LastWriteTime }
     if (-not $end) { $end = Get-Date }
     $mins = 0
     if ($start) { $mins = [int][math]::Max(0, ($end - $start).TotalMinutes) }
-    $after = Get-CampaignDate
-    # outcome: did the campaign move on while you flew? Compare the save the
-    # launcher snapshotted at Play against the newest one now.
-    $outcome = ''
-    $beforeSnap = Join-Path $StateDir 'before.bsr'
+    $after = Get-CampaignDate -Path $savePath
+    $outcome = 'Campaign progressed'
     try {
-        $newest = $null
-        if ($GameDir) { $newest = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | Select-Object -First 1 }
+        if (-not $mk.dateBefore -and $after) { $outcome = 'Campaign begun' }
         if ($mk.dateBefore) {
             $dAfter = if ($after) { $after.ToString('yyyy-MM-dd') } else { '' }
             if ($dAfter -and ($dAfter -gt "$($mk.dateBefore)")) { $outcome = 'Campaign day flown' }
-            elseif ((Test-Path $beforeSnap) -and $newest) {
-                $a = [System.IO.File]::ReadAllBytes($beforeSnap)
-                $b2 = [System.IO.File]::ReadAllBytes($newest.FullName)
-                $same = ($a.Length -eq $b2.Length)
-                if ($same) { for ($i = 0; $i -lt $a.Length; $i += 97) { if ($a[$i] -ne $b2[$i]) { $same = $false; break } } }
-                $outcome = if ($same) { 'No campaign progress' } else { 'Campaign progressed' }
+        }
+    } catch { }
+    # who the game put him with, and in which aeroplane, off the save
+    $flown = $null
+    try {
+        $pu = Get-SavePlayerUnit -Path $savePath
+        if ($pu) {
+            $flown = Get-UnitBySqIdx -Idx $pu.SqIdx
+            $flown | Add-Member -NotePropertyName AcNum -NotePropertyValue $pu.AcNum -Force
+            $outcome += ", with $($flown.Label), aircraft $($pu.AcNum + 1)"
+            $pf = Get-Pilot
+            if ($pf) {
+                $pf | Add-Member -NotePropertyName lastFlown -NotePropertyValue ([ordered]@{
+                    label = "$($flown.Label)"; unit = "$($flown.Unit)"; num = [int]$flown.Num; sqidx = [int]$pu.SqIdx
+                    acnum = [int]$pu.AcNum; own = [bool](Test-FlownIsOwn -Pilot $pf -Flown $flown); date = $end.ToString('yyyy-MM-dd') }) -Force
+                # RAF: the code letter is the game's to choose, by the same
+                # position. With his own squadron, the record takes the
+                # letter the game painted on that aeroplane.
+                if ($flown.Side -eq 'raf' -and $pf.lastFlown.own -and "$($pf.sqcode)") {
+                    $ltr = Get-RafLetter -Code "$($pf.sqcode)" -Type "$($pf.actype)" -PlaneId ([int]$pu.AcNum)
+                    if ($ltr) { $pf | Add-Member -NotePropertyName codes -NotePropertyValue "$($pf.sqcode)-$ltr" -Force }
+                }
+                Save-Pilot -Pilot $pf
             }
-        } else { $outcome = 'Practice flight' }
+        }
     } catch { }
     # ---- automatic claims -------------------------------------------
     # Level the record with the campaign's Log Book (see Sync-CampaignClaims);
@@ -1314,15 +2282,22 @@ function Finalize-Flight {
         minutes    = $mins
         dateBefore = "$($mk.dateBefore)"
         dateAfter  = if ($after) { $after.ToString('yyyy-MM-dd') } else { "$($mk.dateBefore)" }
-        mode       = if ($mk.dateBefore) { 'campaign' } else { 'instant' }
+        # a campaign sortie is one that left a dated campaign save behind,
+        # whether or not there was a save to date BEFORE it (a first sortie
+        # from PLAY CAMPAIGN has none, and used to be filed as 'instant')
+        mode       = if ($mk.dateBefore -or $after) { 'campaign' } else { 'instant' }
         outcome    = $outcome
         claims     = $autoAdded
+        flewWith   = $(if ($flown) { "$($flown.Label)" } else { '' })
+        flewAc     = $(if ($flown) { [int]$flown.AcNum } else { -1 })
     }
     # A marker is written at every Play, including the ones where nobody
     # flew. Only a flight is a sortie: time in the air, a new Log Book row,
     # or the campaign moved on. Everything else is dropped silently, which
     # is what used to fill the table with 0-minute duplicates.
-    $flew = ($mins -gt 0) -or ($autoAdded -gt 0) -or ($outcome -eq 'Campaign day flown')
+    # The save changed, or this function returned before here. That IS
+    # the sortie; the clock is only how long it took.
+    $flew = $true
     # A new row in the game's own Log Book is a flight - but only when
     # there WAS a before-count to compare against. rowsBefore is -1 when no
     # snapshot was taken, and "0 rows now is more than -1 rows then" used
@@ -1344,9 +2319,12 @@ function Get-Career {
     $mins = 0; foreach ($s in $Sessions) { $mins += [int]$s.minutes }
     $hours = [math]::Round($mins / 60.0, 1)
     if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) {
-        return @{ sorties = $sorties; hours = $hours; rank = 'Squadron Leader'; next = $null; nextAt = 0 }
+        # a Gruppenkommandeur was a Hauptmann; a Major would be a
+        # Kommodore, and a Geschwader is not on offer here
+        $cmd = if ($script:Side -eq 'lw') { 'Hauptmann' } else { 'Squadron Leader' }
+        return @{ sorties = $sorties; hours = $hours; rank = $cmd; next = $null; nextAt = 0 }
     }
-    $ladder = $RankLadder
+    $ladder = Get-RankLadder -Rank "$($Pilot.rank)"
     # The stored rank is a FLOOR, not a starting point: a man promoted at
     # twelve sorties keeps his rank even if a new campaign resets the count.
     $idx = [array]::IndexOf($ladder, "$($Pilot.rank)"); if ($idx -lt 0) { $idx = 0 }
@@ -1361,22 +2339,208 @@ function Get-Career {
     if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($curIdx + 1) * $step }
     @{ sorties = $sorties; hours = $hours; rank = $ladder[$curIdx]; next = $next; nextAt = $nextAt }
 }
+# THE SECOND MAN'S CAREER, on the same sorties as the first.
+#
+# He flies every sortie the pilot flies, so the count is shared and only
+# the ladder and the step differ. Everything here is invented; see the
+# note on $CrewByType. Nothing in it is read from the save, and no screen
+# that shows it may present it as though it were.
+function Get-CrewCareer {
+    param($Member, $Pilot, [int]$Sorties, [double]$Hours = 0)
+    $role = "$($Member.role)"
+    # sorties flown SINCE HE JOINED THE CREW. A man who replaces a lost
+    # Bordfunker does not inherit the sorties flown before he arrived.
+    $base = 0
+    if ($Member.PSObject.Properties.Name -contains 'sortiesBase') { $base = [int]$Member.sortiesBase }
+    $his = [math]::Max(0, $Sorties - $base)
+    $ladder = Get-CrewLadder -Role $role -Rank "$($Member.rank)"
+    $idx = [array]::IndexOf($ladder, "$($Member.rank)"); if ($idx -lt 0) { $idx = 0 }
+    $promos = [math]::Floor($his / $CrewRankStep)
+    $curIdx = [math]::Min($ladder.Count - 1, [math]::Max($idx, $promos))
+    $next = $null; $nextAt = 0
+    if ($curIdx -lt $ladder.Count - 1) { $next = $ladder[$curIdx + 1]; $nextAt = ($curIdx + 1) * $CrewRankStep + $base }
+    @{ sorties = $his; hours = $Hours; rank = $ladder[$curIdx]; next = $next; nextAt = $nextAt
+       role = $role; step = $CrewRankStep }
+}
+# What he is doing, which is his seat and nothing else. Rottenflieger,
+# Schwarmfuehrer and Staffelkapitaen are flying-leadership appointments
+# and none of them belongs to a man in the back.
+function Get-CrewAppointment {
+    param($Member, $Career)
+    $role = "$($Member.role)"
+    if ($role -eq 'Bordfunker' -and [int]$Career.sorties -ge 40) { return 'Bordfunkermeister' }
+    switch ($role) {
+        'Bordfunker'     { 'Bordfunker' }
+        'Beobachter'     { 'Beobachter' }
+        'Bordmechaniker' { 'Bordmechaniker' }
+        'Bordschuetze'   { 'Bordschuetze' }
+        default          { $role }
+    }
+}
+# His decorations, earned on SORTIES rather than on victories.
+#
+# Patrick's decision, and the right one: the save records one kill tally
+# per sortie with no gun position, so splitting it between the pilot and
+# the man on the rear MG would be a fabricated attribution sitting next to
+# figures that really are read from the save. He has no victories here, so
+# the Ritterkreuz and the Eichenlaub - both awarded on a score - are not
+# on his ladder at all. What is left is what a crewman actually got: the
+# Iron Cross, on sorties flown and a unit recommendation.
+function Get-CrewHonours {
+    param($Member, $Career)
+    $out = @()
+    if ($Member.PSObject.Properties.Name -contains 'honours') {
+        foreach ($h in @($Member.honours)) { if ("$($h.award)") { $out += "$($h.award)" } }
+    }
+    $n = [int]$Career.sorties
+    foreach ($a in @(
+        @{ At = 5;  Award = 'Eisernes Kreuz II. Klasse' },
+        @{ At = 25; Award = 'Eisernes Kreuz I. Klasse' },
+        @{ At = 60; Award = 'Ehrenpokal fuer besondere Leistungen im Luftkrieg' })) {
+        if ($n -ge $a.At -and ($out -notcontains $a.Award)) { $out += $a.Award }
+    }
+    # A PLAIN return, not ",$out". Every caller collects with @(...), and a
+    # comma return plus @() at the caller nests the array one level deeper,
+    # so the honour list arrives as a single element printing as
+    # "System.Object[]" and no award is ever matched. Get-PlayerHonours
+    # shipped with exactly this and put "Honours: System.Object[]" on the
+    # logbook. The rule in this file is: comma return XOR @() at the
+    # caller, never both.
+    $out
+}
 # Rank and decorations are PERSISTED the first time they are earned, with
 # the date, and never taken away. Without this a pilot who starts a fresh
 # campaign in the game drops from Flight Lieutenant back to Sergeant, and
 # his DFC silently becomes a DFM, because both were recomputed from the
 # sortie count every time the screen was drawn.
 $RankLadder = @('Sergeant','Pilot Officer','Flying Officer','Flight Lieutenant')
+# The German ladder is TWO ladders, which is the real difference from the
+# RAF and not a simplification.
+#
+# Fighter Command commissioned its sergeant pilots freely, and a man who
+# came up that way went on climbing the one ladder, which is why the RAF
+# side has a single list with Sergeant at the bottom. The Luftwaffe kept
+# its non-commissioned and commissioned pilots on separate tracks and
+# moved men between them rarely. So an Unteroffizier rises to
+# Oberfeldwebel and stops; a Leutnant rises to Hauptmann.
+#
+# Stacking them into one six-rung list, which is what I tried first, is
+# wrong twice over: it commissions an Unteroffizier automatically at
+# thirty-six sorties, and it makes a man who joins as a Leutnant wait
+# FORTY-EIGHT for his first step, because Get-Career counts from the rung
+# he stands on and he starts at index three. On his own ladder he starts
+# at index nought and is promoted at twelve, like everybody else.
+# Hauptmann is left off the ladder on purpose, exactly as Squadron Leader
+# is on the RAF side: it is a command, reached through cmode, not a rung
+# a man climbs to by flying. Left in, an officer made Hauptmann at
+# twenty-four sorties, where an RAF pilot reaches Flight Lieutenant at
+# thirty-six.
+$LwRankNCO     = @('Unteroffizier','Feldwebel','Oberfeldwebel')
+$LwRankOfficer = @('Leutnant','Oberleutnant')
+
+# =====================================================================
+#  THE CREW
+#
+#  A Bf 109 carries one man. A Bf 110 carries two, and the Room was built
+#  throughout on the assumption of one - one pilot.json, one name, one
+#  rank, one set of honours.
+#
+#  WHAT THE GAME KNOWS ABOUT THE SECOND MAN: nothing whatever. Not a
+#  detail, the whole thing. GunnerInfo in the game's own headers is a 3D
+#  shape and two eye angles, a camera station rather than a person. The
+#  110's four gunner slots are the placeholder shape CPT2 where the Ju 87
+#  has real turrets. SquadronBase counts numpilotslost, and the game's own
+#  Luftwaffe diary screen prints that counter under the heading "Air
+#  Crew", so a downed 110 cannot register two men even there.
+#  Diary::Player has one outcome per sortie and one kill tally with no gun
+#  position, and the save holds one pilot surname at offset 100. The words
+#  Bordfunker and crewman do not occur in the source at all.
+#
+#  So EVERY PART OF THE SECOND MAN IS INVENTED. That is a deliberate
+#  choice, and the price of it is that he must be marked as invention
+#  wherever he appears and never allowed to borrow the authority of the
+#  figures beside him that really are read out of the save.
+#
+#  The crew is a property of the AEROPLANE, keyed by the order of
+#  battle's own type string, so the bombers need no rework when their turn
+#  comes. A single-seat type returns one role and every screen behaves
+#  exactly as it did.
+# =====================================================================
+$CrewByType = [ordered]@{
+    'Bf 109E' = @('Flugzeugfuehrer')
+    'Bf 110'  = @('Flugzeugfuehrer','Bordfunker')
+    'Ju 87'   = @('Flugzeugfuehrer','Bordfunker')
+    'Do 17'   = @('Flugzeugfuehrer','Beobachter','Bordfunker','Bordmechaniker')
+    'Ju 88'   = @('Flugzeugfuehrer','Beobachter','Bordfunker','Bordschuetze')
+    'He 111'  = @('Flugzeugfuehrer','Beobachter','Bordfunker','Bordmechaniker','Bordschuetze')
+}
+function Get-CrewRoles {
+    param([string]$Type)
+    foreach ($k in $CrewByType.Keys) {
+        if ("$Type" -like "$k*") { return $CrewByType[$k] }
+    }
+    # An unknown type is flown single-handed rather than guessed at.
+    @('Flugzeugfuehrer')
+}
+# The men in the aeroplane besides the player. The player himself stays
+# where he has always been, at the top level of the record: every screen
+# and every write path already reads him there, and moving him would mean
+# touching all of them for no gain.
+# A crew member's NAME FIELD IS `pilot`, not `name`, so New-Frame and
+# New-LwRosterRow take one straight off the record. Both read .pilot, and
+# every roster man in squadronroom/lw/rosters uses `pilot` too, so one
+# spelling serves the player, his crew and the whole Staffel.
+function Get-Crew {
+    param($Pilot)
+    if (-not $Pilot) { return @() }
+    if ($Pilot.PSObject.Properties.Name -notcontains 'crew') { return @() }
+    @($Pilot.crew | Where-Object { $_ })
+}
+function Test-MultiCrew {
+    param($Pilot)
+    (@(Get-CrewRoles "$($Pilot.actype)").Count -gt 1)
+}
+# What a man in a given seat is called on the day he arrives.
+$CrewEntryRank = @{
+    'Bordfunker'      = 'Unteroffizier'
+    'Beobachter'      = 'Leutnant'
+    'Bordmechaniker'  = 'Unteroffizier'
+    'Bordschuetze'    = 'Unteroffizier'
+}
+# A crewman climbs the NCO ladder and no other. Leutnant, Oberleutnant and
+# Hauptmann are a pilot's, and cmode 'commander' means a Gruppe command,
+# which is not a thing a radio operator holds.
+#
+# The step is SIXTEEN sorties against the pilot's twelve, and that number
+# is invented. It is not from a source and there is no source to have: it
+# is chosen only so that two men flying the identical sortie do not step
+# up together at twelve, twenty-four and thirty-six, which reads as
+# machinery rather than as two careers.
+$CrewRankStep = 16
+function Get-CrewLadder {
+    param([string]$Role, [string]$Rank)
+    if ("$Role" -eq 'Beobachter' -and (($LwRankOfficer -contains "$Rank") -or -not "$Rank")) {
+        return $LwRankOfficer
+    }
+    $LwRankNCO
+}
+function Get-RankLadder {
+    param([string]$Rank)
+    if ($script:Side -ne 'lw') { return $RankLadder }
+    if (($LwRankOfficer -contains "$Rank") -or ("$Rank" -eq 'Hauptmann')) { return $LwRankOfficer }
+    return $LwRankNCO
+}
 function Update-CareerRecord {
     param($Pilot, $Career, $Honours)
     if (-not $Pilot -or -not $Career) { return $Pilot }
     $changed = $false
     $obj = [ordered]@{}
     foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
-    $storedIdx = [array]::IndexOf($RankLadder, "$($Pilot.rank)")
-    $earnedIdx = [array]::IndexOf($RankLadder, "$($Career.rank)")
+    $lad = Get-RankLadder -Rank "$($Pilot.rank)"
+    $storedIdx = [array]::IndexOf($lad, "$($Pilot.rank)")
+    $earnedIdx = [array]::IndexOf($lad, "$($Career.rank)")
     if ($earnedIdx -gt $storedIdx) {
-        $obj['rank'] = $RankLadder[$earnedIdx]
+        $obj['rank'] = $lad[$earnedIdx]
         $obj['rank_date'] = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
         $changed = $true
     }
@@ -1390,6 +2554,45 @@ function Update-CareerRecord {
             $obj['honours'] = @($had)
             $changed = $true
         }
+    }
+    # THE REST OF THE CREW, advanced in the same pass.
+    #
+    # Done here rather than in a second function with a second Save-Pilot,
+    # because two saves in one screen draw is how the autobackup ring used
+    # to eat itself, and because a crewman must never be written by a path
+    # that does not also carry the pilot: every other write in this file
+    # rebuilds the record by copying properties flat, so a crew updated on
+    # its own would be silently discarded by the next such write.
+    $crew = @(Get-Crew $Pilot)
+    if ($crew.Count) {
+        $newCrew = @()
+        foreach ($m in $crew) {
+            $mo = [ordered]@{}
+            foreach ($mp in $m.PSObject.Properties) { $mo[$mp.Name] = $mp.Value }
+            $cc = Get-CrewCareer -Member $m -Pilot $Pilot -Sorties ([int]$Career.sorties) -Hours ([double]$Career.hours)
+            $ml = Get-CrewLadder -Role "$($m.role)" -Rank "$($m.rank)"
+            $mStored = [array]::IndexOf($ml, "$($m.rank)")
+            $mEarned = [array]::IndexOf($ml, "$($cc.rank)")
+            if ($mEarned -gt $mStored) {
+                $mo['rank'] = $ml[$mEarned]
+                $mo['rank_date'] = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
+                $changed = $true
+            }
+            $mh = @(Get-CrewHonours -Member $m -Career $cc)
+            if ($mh.Count) {
+                $mhad = @(); if (($m.PSObject.Properties.Name -contains 'honours') -and $m.honours) { $mhad = @($m.honours) }
+                $mnames = @($mhad | ForEach-Object { "$($_.award)" })
+                $madd = @($mh | Where-Object { $mnames -notcontains "$_" })
+                if ($madd.Count) {
+                    $when = $(if ($script:CampaignDate) { $script:CampaignDate.ToString('yyyy-MM-dd') } else { '' })
+                    foreach ($a in $madd) { $mhad += [ordered]@{ award = "$a"; date = $when } }
+                    $mo['honours'] = @($mhad)
+                    $changed = $true
+                }
+            }
+            $newCrew += [pscustomobject]$mo
+        }
+        $obj['crew'] = @($newCrew)
     }
     if (-not $changed) { return $Pilot }
     Save-Pilot $obj
@@ -1531,6 +2734,9 @@ function Get-SquadronDiary {
             }
             $o++
         }
+        # kept so Get-GruppeDiary knows where to stop: the German table
+        # sits immediately below this one
+        $script:SqDiaryAt = $bestAt
         if ($bestN -ge 6) {
             for ($i = 0; $i -lt $bestN; $i++) {
                 $p = $bestAt + $i * $SquadronDiaryRow
@@ -1552,6 +2758,103 @@ function Get-SquadronDiary {
     $script:SqDiaryRows = $rows
     $rows
 }
+# The German squadron diary, which is a SEPARATE table from the RAF one.
+#
+# The game keeps two, side by side, and they are not the same shape. From
+# the disassembly notes in modernization/BSR_FORMAT.md and confirmed
+# against real saves by dev/lw_diary_probe.py:
+#
+#   RAF  Diary::Squadron  24-byte records  squadnum  64..116  7 bins at +17
+#   LW   Diary::Gruppen   17-byte records  squadnum 159..231  6 bins at +11
+#
+# In Patrick's save the German table held 122 rows at 89459 and the RAF
+# table began at 91533, and 89459 + 122 x 17 is 91533 exactly: they are
+# adjacent, which is what proves the record size.
+#
+# The German table is present in an RAF save too, because the campaign
+# tracks both air forces, so none of this needed a German career to work
+# out. What it did need was care about WHERE to look. Turned loose on the
+# whole file a 17-byte window finds two convincing frauds - a field of
+# zeros scoring thousands of empty rows, and a region whose squadnums
+# step by exactly two with every other value identical - and both beat
+# the real table on any score based on run length. So the search runs
+# immediately below the RAF table and scores on live squadrons.
+$LwDiaryRow = 17
+function Get-GruppeDiary {
+    if (-not $GameDir) { return @() }
+    $sav = Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue |
+           Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if (-not $sav) { return @() }
+    $stamp = "$($sav.FullName)|$($sav.LastWriteTime.Ticks)"
+    if ($script:LwDiaryStamp -eq $stamp) { return $script:LwDiaryRows }
+    $rows = @()
+    try {
+        $b = [System.IO.File]::ReadAllBytes($sav.FullName)
+        # the RAF table's start is the ceiling of the search
+        $rafAt = -1
+        $raf = @(Get-SquadronDiary)
+        if ($raf.Count) { $rafAt = [int]$script:SqDiaryAt }
+        if ($rafAt -le 0) { $rafAt = $b.Length }
+        $from = [math]::Max(40, $rafAt - 4000)
+        $bestAt = -1; $bestReal = 0; $bestN = 0
+        for ($o = $from; $o -lt $rafAt; $o++) {
+            $n = 0; $real = 0
+            while ($true) {
+                $p = $o + $n * $LwDiaryRow
+                if (($p + $LwDiaryRow) -gt $b.Length -or $p -ge $rafAt) { break }
+                $sq = [int]$b[$p]
+                if ($sq -eq 0) { $n++; continue }
+                $launched = [int]$b[$p+8]; $lost = [int]$b[$p+1]
+                if ($sq -ge 159 -and $sq -le 231 -and $launched -gt 0 -and $launched -le 60 -and $lost -le $launched) {
+                    $real++; $n++
+                } else { break }
+            }
+            if ($real -gt $bestReal) { $bestReal = $real; $bestN = $n; $bestAt = $o }
+        }
+        if ($bestReal -gt 0) {
+            for ($i = 0; $i -lt $bestN; $i++) {
+                $p = $bestAt + $i * $LwDiaryRow
+                $sq = [int]$b[$p]
+                if ($sq -eq 0) { continue }
+                $k = New-Object int[] 6
+                for ($j = 0; $j -lt 6; $j++) { $k[$j] = [int]$b[$p+11+$j] }
+                $rows += [pscustomobject]@{
+                    Idx      = $sq
+                    Launched = [int]$b[$p+8]
+                    AcLost   = [int]$b[$p+1]
+                    AcDamaged= [int]$b[$p+2]
+                    PilotsLost = [int]$b[$p+3]
+                    Kills    = $k
+                }
+            }
+        }
+    } catch { }
+    $script:LwDiaryStamp = $stamp
+    $script:LwDiaryRows = $rows
+    $rows
+}
+# What one Gruppe has done in this campaign, summed. $Idx is the save's
+# own index for it, carried in lw/oob.json as sqidx; the four
+# Lehrgeschwader Gruppen BOB2 added have none and get nothing rather than
+# somebody else's figures.
+function Get-GruppeRecord {
+    param($Idx)
+    if ($null -eq $Idx) { return $null }
+    $rows = @(Get-GruppeDiary | Where-Object { $_.Idx -eq [int]$Idx })
+    if ($rows.Count -eq 0) { return $null }
+    $k = New-Object int[] 6
+    foreach ($r in $rows) { for ($i = 0; $i -lt 6; $i++) { $k[$i] += $r.Kills[$i] } }
+    [pscustomobject]@{
+        Actions    = $rows.Count
+        Launched   = ($rows | Measure-Object Launched -Sum).Sum
+        AcLost     = ($rows | Measure-Object AcLost -Sum).Sum
+        AcDamaged  = ($rows | Measure-Object AcDamaged -Sum).Sum
+        PilotsLost = ($rows | Measure-Object PilotsLost -Sum).Sum
+        Kills      = $k
+        Total      = ($k | Measure-Object -Sum).Sum
+    }
+}
+
 # What one squadron has done in this campaign, summed.
 function Get-SquadronRecord {
     param([int]$Sqn)
@@ -1702,14 +3005,30 @@ function Get-UnnamedLosses {
 #  the save only grows after this block). It is verified by signature
 #  before use, and searched for when the check fails. Empty slots carry
 #  0xFFFF in the first and fourth fields.
-$AutoClaimPath   = Join-Path $StateDir 'autoclaim.json'
+# assigned by Set-StateSide (see the note beside AcPosPath)
 $DiaryRowSize    = 25
 $DiaryTableGuess = 99047
 $DiaryMaxRows    = 200
 # STATISTICS_TYPE bins for what an RAF pilot shoots down, and for a
 # Luftwaffe pilot (the last three of those are dummies in the game).
+# What each side shoots at. The counts are not the same and that is not a
+# detail: the save header carries ST_GERM_COUNT = 7 and ST_BRIT_COUNT = 6,
+# and the disassembly notes in modernization/BSR_FORMAT.md record that an
+# RAF squadron's tallies sit at record+0x11 over seven German types while
+# a Luftwaffe Gruppe's sit at record+0x0b over six British ones.
+#
+# $KillBinsLW used to be seven long, padded out with three "Other"
+# entries. That was a guess made to match the RAF list and it was wrong.
+# A German pilot has six bins, and a seventh read out of his record is
+# somebody else's data.
 $KillBinsRAF = @('Bf 109E','Bf 110','Ju 87','Do 17','Ju 88','He 111','He 59')
-$KillBinsLW  = @('Spitfire','Hurricane','Defiant','Blenheim','Other','Other','Other')
+$KillBinsLW  = @('Spitfire','Hurricane','Defiant','Blenheim','Beaufighter','Other')
+function Get-KillBins {
+    param($Pilot)
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -match '^(lw|luftwaffe|german)')) { return $KillBinsLW }
+    if ($script:Side -eq 'lw') { return $KillBinsLW }
+    $KillBinsRAF
+}
 function Get-AutoClaim {
     if (Test-Path $AutoClaimPath) {
         try { return (Get-Content $AutoClaimPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { }
@@ -1849,9 +3168,196 @@ function Get-CareerDiary {
 }
 # The newest campaign save's Log Book, for the logbook screen.
 # Every .BSR in the game's SAVEGAME folder, newest first.
+# BOTH EXTENSIONS. A Luftwaffe campaign autosaves as "Auto Save.BSL"
+# (MAINTBAR.CPP:678), and until 12 September 2026 nothing in this file had
+# ever looked for one: every reader globbed *.BSR. No .BSL had ever been
+# saved on the development machine either, so the German read path was
+# untested end to end, which is what the Flugbuch's warning was about.
+# Newest first, and when a RAF and a Luftwaffe save are equally new the
+# one for the side he is on wins.
 function Get-SaveFiles {
     if (-not $GameDir) { return @() }
-    @(Get-ChildItem (Join-Path $GameDir 'SAVEGAME') -Filter '*.BSR' -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)
+    $dir = Join-Path $GameDir 'SAVEGAME'
+    if (-not (Test-Path $dir)) { return @() }
+    $want = if ($script:Side -eq 'lw') { '.bsl' } else { '.bsr' }
+    @(Get-ChildItem $dir -File -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in @('.bsr', '.bsl', '.BSR', '.BSL') } |
+        Sort-Object @{ Expression = 'LastWriteTime'; Descending = $true },
+                    @{ Expression = { if ($_.Extension.ToLower() -eq $want) { 0 } else { 1 } } })
+}
+# Every campaign save the game has, for the adoption check, which must
+# look past the one this pilot has chosen.
+function Get-CampaignSaves {
+    @(Get-SaveFiles)
+}
+# WHAT A SAVE SAYS ABOUT ITSELF: who, when, which side. The side is the
+# extension, .BSR for the RAF and .BSL for the Luftwaffe. The squadron is
+# in the file too - Campaign::playersquadron, inside Miss_Man.camp, which
+# CFiling::SaveGame writes whole - but its offset is not pinned yet, so it
+# is not read. dev/bsr_probe.py is how it gets pinned, from one save of a
+# different squadron than 32.
+function Get-CampaignIdentity {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return $null }
+    $cp = Get-CampaignPilot -Path $Path
+    $cd = Get-CampaignDate -Path $Path
+    $ext = [IO.Path]::GetExtension($Path).ToLower()
+    [pscustomobject]@{
+        Path    = $Path
+        Name    = $(if ($cp) { "$($cp.Name)" } else { '' })
+        Date    = $cd
+        Side    = $(if ($ext -eq '.bsl') { 'lw' } else { 'raf' })
+        Saved   = (Get-Item $Path).LastWriteTimeUtc
+        Key     = ((Split-Path $Path -Leaf) + '|' + (Get-Item $Path).Length + '|' + $(if ($cp) { $cp.Name } else { '' }))
+    }
+}
+# Is this the pilot's own war? Side must agree, and the surname must, and
+# that is all that can be checked until the squadron offset is pinned.
+# ---------------------------------------------------------------------
+#  WHO THE GAME PUT HIM WITH. Campaign::playersquadron and playeracnum,
+#  int16 at file offsets 11344 and 11346 of the save (pinned 2026-09-12
+#  from the pilot-mode accel block LaunchMapFirstTime writes just after
+#  them; BSR_FORMAT.md). The game chooses the unit per sortie from the
+#  raid's package, with its own highlighted squadron as the default, so
+#  this is the only record of which Gruppe or squadron a man actually flew
+#  with, and which aeroplane. Luftwaffe units are 160 upward in the order
+#  of NODEBOB.H (oob.json carries that as sqidx; I./JG 3 = 160, read from
+#  a real save). RAF squadrons are the same enum's order from SQ_BR_32,
+#  and the one RAF data point to hand puts No. 32 at 64; that base is
+#  provisional until a save from another squadron confirms it.
+# ---------------------------------------------------------------------
+$RafSqOrder = @(32,610,501,56,151,85,64,615,111,1,54,65,74,266,43,601,145,17,85,1,257,303,87,213,238,609,152,234,92,310,19,66,242,222,611,46,229,72,249,253,605,603,41,607,602,73,504,79,302,616,3,232,245)
+$RafSqBase = 64
+function Get-SavePlayerUnit {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return $null }
+    try {
+        $b = [System.IO.File]::ReadAllBytes($Path)
+        if ($b.Length -lt 11348) { return $null }
+        if ([System.Text.Encoding]::ASCII.GetString($b, 1, 20) -notmatch '^Rowan Savegame: V 0') { return $null }
+        $sq = [BitConverter]::ToInt16($b, 11344)
+        $ac = [BitConverter]::ToInt16($b, 11346)
+        if ($sq -le 0) { return $null }          # 0: nobody has flown yet
+        return [pscustomobject]@{ SqIdx = [int]$sq; AcNum = [int]$ac }
+    } catch { return $null }
+}
+function Get-UnitBySqIdx {
+    param([int]$Idx)
+    if ($Idx -ge 160) {
+        $g = @(Get-LwGruppen) | Where-Object { "$($_.sqidx)" -eq "$Idx" } | Select-Object -First 1
+        if ($g) { return [pscustomobject]@{ Side = 'lw'; Label = "$($g.unit)"; Unit = "$($g.unit)"; Num = 0; Idx = $Idx } }
+        return [pscustomobject]@{ Side = 'lw'; Label = "Luftwaffe unit $Idx"; Unit = ''; Num = 0; Idx = $Idx }
+    }
+    $pos = $Idx - $RafSqBase
+    if ($pos -ge 0 -and $pos -lt $RafSqOrder.Count) {
+        $n = [int]$RafSqOrder[$pos]
+        return [pscustomobject]@{ Side = 'raf'; Label = "No. $n Squadron"; Unit = ''; Num = $n; Idx = $Idx }
+    }
+    [pscustomobject]@{ Side = 'raf'; Label = "squadron $Idx"; Unit = ''; Num = 0; Idx = $Idx }
+}
+# ADOPTING A SAVE ONLY BINDS A MAN OF THE SAME UNIT. Patrick said Yes to
+# "adopt the campaign in play" (a II./JG 26 war), then posted himself to
+# III./ZG 26: the Zerstoerer pilot was bound to a 109 campaign, counted as
+# a man with a war already, and PLAY CAMPAIGN asked the game for nothing.
+# The save says which unit it was flown with, so that is checked: another
+# unit means a new man and a new campaign, and the old save is left alone.
+# A save nobody has flown in yet names no unit and binds as before.
+function Test-AdoptFits {
+    param($Pilot)
+    if (-not $script:AdoptFrom) { return $false }
+    $fu = Get-SavePlayerUnit -Path "$($script:AdoptFrom.Path)"
+    if (-not $fu) { return $true }
+    $flown = Get-UnitBySqIdx -Idx ([int]$fu.SqIdx)
+    $pl = $Pilot; if ($pl -is [System.Collections.IDictionary]) { $pl = [pscustomobject]$pl }
+    [bool](Test-FlownIsOwn -Pilot $pl -Flown $flown)
+}
+# Does this man belong with the unit the game flew him in?
+function Test-FlownIsOwn {
+    param($Pilot, $Flown)
+    if (-not $Pilot -or -not $Flown) { return $true }
+    if ($Flown.Side -eq 'lw') { return ("$($Flown.Unit)" -eq "$($Pilot.unit)") }
+    ([int]$Flown.Num -eq [int]$Pilot.sqn)
+}
+# A man with no war of his own yet: no save on record, nothing in his log,
+# and no save of his side that carries his name. The newest save on the
+# disk is whoever flew last, which is why "a save exists" was wrong.
+function Test-FreshPilot {
+    param($Pilot)
+    if (-not $Pilot) { return $false }
+    if ("$($Pilot.savePath)") { return $false }
+    if (@(Get-Sessions).Count -gt 0) { return $false }
+    # A save written BEFORE this man was enrolled cannot be his war, whatever
+    # name it carries: a deleted career of the same name left it behind.
+    # Records made since 12 September 2026 carry the moment of enrollment;
+    # older ones fall back to the name alone.
+    $since = $null
+    if (($Pilot.PSObject.Properties.Name -contains 'createdAt') -and "$($Pilot.createdAt)") { try { $since = [datetime]$Pilot.createdAt } catch { } }
+    foreach ($f in @(Get-SaveFiles)) {
+        if ($since -and $f.LastWriteTime -lt $since) { continue }
+        $id = Get-CampaignIdentity -Path $f.FullName
+        if ($id -and $id.Name -and (Test-CampaignMatch -Pilot $Pilot -Identity $id)) { return $false }
+    }
+    $true
+}
+function Test-CampaignMatch {
+    param($Pilot, $Identity)
+    if (-not $Pilot -or -not $Identity) { return $false }
+    $pside = if ($Pilot.PSObject.Properties.Name -contains 'side' -and "$($Pilot.side)") { "$($Pilot.side)" } else { 'raf' }
+    if ($pside -ne $Identity.Side) { return $false }
+    if (-not $Identity.Name) { return $true }        # nothing to disagree with
+    ("$($Pilot.pilot)".Trim() -ieq "$($Identity.Name)".Trim())
+}
+# THE OTHER DOOR. A player who starts a campaign from the game's own menus
+# instead of the Room's PLAY CAMPAIGN comes back to a Room that knows
+# nothing about it. So on opening, and on coming back from the game, the
+# newest campaign save is compared with the pilot: if it is not his war,
+# he is asked whether to adopt it, and adopting posts him from the save.
+# He is asked, never moved silently: a man with two campaigns on the go
+# is exactly who the save chooser was built for. Never under a test
+# harness, which is what StateRootOverride means.
+$script:AdoptFrom = $null
+function Invoke-AdoptionCheck {
+    if ($script:StateRootOverride) { return }
+    if (-not $GameDir) { return }
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) { return }
+    $saves = @(Get-CampaignSaves)
+    if ($saves.Count -eq 0) { return }
+    $pilot = Get-Pilot
+    $id = Get-CampaignIdentity -Path $saves[0].FullName
+    if (-not $id -or -not $id.Name) { return }
+    if ($pilot) {
+        if (Test-CampaignMatch -Pilot $pilot -Identity $id) { return }
+        # asked and declined before, for this same file: leave him be
+        if ($pilot.PSObject.Properties.Name -contains 'declinedSaves' -and (@($pilot.declinedSaves) -contains $id.Key)) { return }
+        # older than his record: it is not news
+        if (Test-Path $PilotPath) {
+            if ($id.Saved -le (Get-Item $PilotPath).LastWriteTimeUtc) { return }
+        }
+    }
+    $sideName = if ($id.Side -eq 'lw') { 'a Luftwaffe' } else { 'an RAF' }
+    $when = if ($id.Date) { $id.Date.ToString('d MMMM yyyy') } else { 'an unknown date' }
+    $with = ''
+    $fu0 = Get-SavePlayerUnit -Path "$($id.Path)"
+    if ($fu0) { $with = ", flying with $((Get-UnitBySqIdx -Idx ([int]$fu0.SqIdx)).Label)" }
+    $msg = "The game has $sideName campaign in play: pilot $($id.Name)$with, $when, in " + (Split-Path $id.Path -Leaf) + "."
+    $msg += if ($pilot) { "`n`nThat is not $($pilot.pilot). Adopt it, and a new man is posted from that save, with its name, on its side; your current pilot is archived, not deleted. Keep yours, and the Room will not ask again about that file." }
+            else { "`n`nThere is no pilot in the Room yet. Adopt it, and he is posted from that save with its name and on its side. Say No to start a new man and a new campaign of your own." }
+    $ans = [System.Windows.MessageBox]::Show($Win, $msg, 'A campaign is under way', 'YesNo', 'Question')
+    if ($ans -eq 'Yes') {
+        $script:AdoptFrom = $id
+        $script:NewCareerPending = [bool]$pilot
+        if ($id.Side -ne $script:Side) { Set-StateSide $id.Side; Update-SideSwitch }
+        if ($id.Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
+        return $true
+    }
+    if ($pilot) {
+        $o = @{}
+        foreach ($pp in $pilot.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
+        $o['declinedSaves'] = @(@($pilot.declinedSaves) + $id.Key | Where-Object { $_ })
+        $o['saveAsked'] = $true
+        try { Save-Pilot ([pscustomobject]$o) } catch { }
+    }
+    $false
 }
 # WHICH save is this career's campaign. Newest-wins is only a guess: a man
 # with two campaigns on the go, or who saves under his own names, would
@@ -1901,11 +3407,14 @@ function Sync-CampaignClaims {
     }
     $lower = $false
     for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -lt $have[$k]) { $lower = $true } }
-    $bins = $KillBinsRAF
-    if (($p.PSObject.Properties.Name -contains 'side') -and ("$($p.side)" -match '^(lw|luftwaffe|german)')) { $bins = $KillBinsLW }
+    $bins = Get-KillBins $p
     $newTypes = @()
     if (-not $lower) {
-        for ($k = 0; $k -lt 7; $k++) {
+        # The player's own row holds seven tallies whichever side he flies,
+        # but a German pilot only has six types to shoot at. Running to
+        # seven would index past the end of his list and credit him a claim
+        # with no aircraft type on it at all.
+        for ($k = 0; $k -lt $bins.Count; $k++) {
             $d = [int]$ld.kills[$k] - $have[$k]
             for ($j = 0; $j -lt $d; $j++) { $newTypes += $bins[$k] }
         }
@@ -1975,7 +3484,19 @@ function New-Stat {
 function New-Nav {
     param([string]$Current)
     $nav = New-Object Windows.Controls.StackPanel; $nav.Orientation = 'Horizontal'; $nav.Margin = '0,0,0,22'
-    foreach ($t in @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'}, @{k='paper';l='MORNING BULLETIN'})) {
+    # Four tabs a side, and they answer each other: the room you sit in,
+    # your own book, the plotting table, and the morning's news. The German
+    # side ran three for a while because the RAF's paper is a hundred
+    # Allied front pages and its map is southern England, so neither could
+    # simply be pointed at a Luftwaffe pilot. Both now have a German
+    # counterpart of their own - Show-Morgenmeldung and the Kanalfront
+    # table - so the shapes match.
+    $tabs = if ($script:Side -eq 'lw') {
+        @(@{k='dispersal';l='THE READY ROOM'}, @{k='logbook';l='FLUGBUCH'}, @{k='gruppen';l='THE GRUPPEN'}, @{k='paper';l='MORGENMELDUNG'})
+    } else {
+        @(@{k='dispersal';l='THE DISPERSAL'}, @{k='logbook';l="PILOT'S LOGBOOK"}, @{k='map';l='MAP'}, @{k='paper';l='MORNING BULLETIN'})
+    }
+    foreach ($t in $tabs) {
         $active = ($t.k -eq $Current)
         $tb = New-Object Windows.Controls.Border
         $tb.Padding = '15,9'; $tb.Margin = '0,0,10,0'; $tb.CornerRadius = '3'; $tb.Cursor = 'Hand'; $tb.Tag = $t.k
@@ -2003,7 +3524,44 @@ function Start-NewCareer {
     # The old man is put away by Complete-NewCareer, when the new one is
     # actually posted.
     $script:NewCareerPending = $true
-    Show-SquadronSelect
+    # the board for HIS air force. This sent a German pilot to the Fighter
+    # Command plotting table, where he could have reported to No. 32 Squadron.
+    if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
+}
+# DELETE THIS PILOT. Everything the Room holds for the side he is on is
+# moved out of the way and the enrollment board comes up, so the next man
+# starts from nothing. Moved, not destroyed: it goes to
+# archive\deleted-<stamp>\ beside the autobackups, because a career was
+# destroyed on 9 September and nothing in this file deletes a record
+# outright since. The game's own campaign saves are NOT touched; those
+# are the game's, and the Room does not reach into SAVEGAME to remove
+# anything. -Force skips the question, for a harness.
+function Remove-PilotCareer {
+    param([switch]$Force)
+    $p = Get-Pilot
+    if (-not $p) { return }
+    if (Get-Process -Name 'Bob' -ErrorAction SilentlyContinue) {
+        [System.Windows.MessageBox]::Show($Win, 'Close the game first.', 'Delete this pilot') | Out-Null
+        return
+    }
+    $sideName = if ($script:Side -eq 'lw') { 'Luftwaffe' } else { 'RAF' }
+    if (-not $Force) {
+        $ans = [System.Windows.MessageBox]::Show($Win,
+            "Delete $($p.pilot), your $sideName pilot?`n`nHis record, logbook, claims and flight marker are removed from the Room and a copy is kept under archive\deleted-. The game's own campaign saves are left exactly as they are; delete or replace those in the game.`n`nThe $sideName enrollment board comes up next so you can post a new man.",
+            'Delete this pilot', 'YesNo', 'Warning')
+        if ($ans -ne 'Yes') { return }
+    }
+    try {
+        $arch = Join-Path $StateDir ('archive\deleted-' + (Get-Date).ToString('yyyyMMdd-HHmmss'))
+        New-Item -ItemType Directory -Path $arch -Force | Out-Null
+        foreach ($f in @($PilotPath, $SessionsPath, $AutoClaimPath, $FlightOpen, (Join-Path $StateDir 'before.bsr'))) {
+            if (Test-Path $f) { Move-Item $f (Join-Path $arch (Split-Path $f -Leaf)) -Force }
+        }
+    } catch { }
+    $script:AdoptFrom = $null
+    $script:NewCareerPending = $false
+    $script:LaunchCard = $null
+    if ($script:Side -eq 'lw') { Show-GruppeSelect } else { Show-SquadronSelect }
 }
 # Put the previous pilot away. Called at the moment a new man is posted.
 function Complete-NewCareer {
@@ -2080,7 +3638,10 @@ function New-DiaryRow {
         $occol = if ([int]$R.ended -in 1,2) { '#8FB56A' } elseif ([int]$R.ended -in 6,8) { '#D9534F' } elseif ([int]$R.ended -ge 3) { '#D9A441' } else { '#9FB0B8' }
         Add-Cell $g $oc 1 $CondFam 13.5 $occol
         $parts = @()
-        for ($k = 0; $k -lt 7; $k++) { if ([int]$R.kills[$k] -gt 0) { $parts += "$([int]$R.kills[$k]) x $($Bins[$k])" } }
+        # to the length of the SIDE's list, not to seven: a German pilot
+        # has six types and the seventh tally is not his to read
+        $nb = if ($Bins) { $Bins.Count } else { 7 }
+        for ($k = 0; $k -lt $nb; $k++) { if ([int]$R.kills[$k] -gt 0) { $parts += "$([int]$R.kills[$k]) x $($Bins[$k])" } }
         $cl = if ($parts.Count) { $parts -join ', ' } else { [string][char]0x2014 }
         Add-Cell $g $cl 2 $CondFam 13.5 $(if ($parts.Count) { '#E9E3D4' } else { '#6F828C' })
     }
@@ -2196,11 +3757,10 @@ function Show-Logbook {
     [void]$script:Stage.Children.Add($pnt)
 
     # ---- automatic claims: one statement, the campaign's own figure ----
-    $binsL = $KillBinsRAF
-    if (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -match '^(lw|luftwaffe|german)')) { $binsL = $KillBinsLW }
+    $binsL = Get-KillBins $Pilot
     if ($ld -and @($ld.rows).Count -gt 0) {
         $byType = @()
-        for ($k = 0; $k -lt 7; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($binsL[$k])" } }
+        for ($k = 0; $k -lt $binsL.Count; $k++) { if ([int]$ld.kills[$k] -gt 0) { $byType += "$([int]$ld.kills[$k]) x $($binsL[$k])" } }
         $acTxt = "Automatic claims are on: the campaign's Log Book credits you with " +
                  $(if ([int]$ld.total -eq 1) { 'one victory' } elseif ([int]$ld.total -eq 0) { 'no victories yet' } else { "$([int]$ld.total) victories" }) +
                  $(if ($byType.Count) { ', ' + ($byType -join ', ') } else { '' }) +
@@ -2273,7 +3833,7 @@ function Show-Roster {
     # Every screen counts sorties from the same place: the campaign's own
     # Log Book. The dispersal used to count the launcher's timed sessions,
     # so the hero card and the roster row could disagree about your rank.
-    $ld0 = Get-LatestSaveDiary
+    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     $sessions0 = Get-Sessions
     $flownCount = Get-SortieCount -Diary $ld0 -Sessions $sessions0 -Pilot $Pilot
     $career0 = Get-Career $Pilot $sessions0 -Sorties $flownCount
@@ -2319,10 +3879,11 @@ function Show-Roster {
 
     # the only photograph on the wall is yours
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,32'
-    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer))
+    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
-    [void]$d.Children.Add((New-TB -Text ("$($Pilot.pilot)") -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
-    $line = if ($flownCount -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
+    [void]$d.Children.Add((New-TB -Text (Get-FullName $Pilot) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    # his codes from the day he is posted, now the aeroplane that wears them is on the board too
+    $line = if ("$($Pilot.codes)") { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)" }
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
     [void]$d.Children.Add($lt)
     # worn on the tunic: rank cuff and wings, the ribbons beneath them
@@ -2358,16 +3919,40 @@ function Show-Roster {
         $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
         $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
         $os2 = New-Object Windows.Controls.StackPanel
+        $lc = New-LaunchCard
+        if ($script:AutostartNote) {
+            $an = New-TB -Text $script:AutostartNote -Family 'Segoe UI' -Size 12.5 -Colour '#D08A2E' -Wrap
+            $an.Margin = '0,0,0,14'; $an.MaxWidth = 940
+            [void]$script:Stage.Children.Add($an)
+        }
+        $fn = New-FlownNote -Pilot $Pilot
+        if ($fn) { [void]$script:Stage.Children.Add($fn) }
+        if ($lc) { [void]$script:Stage.Children.Add($lc) }
         [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
-        $ot = New-TB -Text "Press PLAY (top right). In the game, start or continue the Campaign and fly the day. When you come back here your first sortie will be in the logbook, and your aircraft, with your code letter and serial, will be waiting on the board." -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        # The letter is the game's, not ours, so say which aeroplane it
+        # belongs to. 33lima was told SD-R and flew SD-T, because the
+        # Room used to invent one; it now reads the game's own rules for
+        # aeroplane 0, which is what a man leading the squadron flies. If
+        # the game puts him further down the flight he gets that
+        # aeroplane's letter instead, and nothing here can know in
+        # advance which it will be.
+        $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign and fly the day. " +
+                            "When you come back here your first sortie will be in the logbook.`n`n" +
+                            "Your aircraft below wears the squadron's code and the letter the game paints on the leader's " +
+                            "aeroplane. If the game puts you further down the flight you will fly a different letter, and " +
+                            "after that sortie the board shows the one you actually flew.`n`n" +
+                            "Quick missions and training are not recorded here. Your aeroplane and your logbook are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
         $ot.Margin = '0,6,0,0'
         [void]$os2.Children.Add($ot)
         $ord.Child = $os2
         [void]$script:Stage.Children.Add($ord)
     }
     $Pilot = Ensure-Serial -Pilot $Pilot
-    $flown = ($flownCount -gt 0)
-    $ac = if ($flown) { New-Aircraft -Pilot $Pilot } else { $null }
+    # Shown from the day he is posted, as the German side always has been.
+    # It used to wait for the first sortie ("an aircraft earned by flying"),
+    # and a new British pilot looked at an empty board while his German
+    # counterpart already had his aeroplane. Patrick asked why.
+    $ac = New-Aircraft -Pilot $Pilot
     if ($ac) {
         [void]$script:Stage.Children.Add($ac)
         $acHint = New-TB -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Wrap -Text (
@@ -2458,7 +4043,9 @@ function Show-Roster {
         $h2.Margin = '0,26,0,0'
         [void]$script:Stage.Children.Add($h2)
         $byType = @()
-        for ($k = 0; $k -lt 7; $k++) { if ([int]$sqrec.Kills[$k] -gt 0) { $byType += "$([int]$sqrec.Kills[$k]) x $($KillBinsRAF[$k])" } }
+        # the squadron's own tally, in the types ITS side shoots at
+        $sqBins = Get-KillBins $Pilot
+        for ($k = 0; $k -lt $sqBins.Count; $k++) { if ([int]$sqrec.Kills[$k] -gt 0) { $byType += "$([int]$sqrec.Kills[$k]) x $($sqBins[$k])" } }
         $line = "$($sqrec.Actions) $(if ($sqrec.Actions -eq 1) { 'action' } else { 'actions' }), " +
                 "$($sqrec.Launched) sorties flown. " +
                 $(if ($sqrec.Total -gt 0) { "Claims: $($sqrec.Total) ($($byType -join ', ')). " } else { 'No claims yet. ' }) +
@@ -2588,7 +4175,7 @@ function Update-RankSegs {
     }
 }
 function Update-CreateValid {
-    $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
+    $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($script:FirstBox -and $script:FirstBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
     $script:SubmitBtn.IsEnabled = $ok
     Set-ChromeActionEnabled $ok
 }
@@ -2596,10 +4183,15 @@ function Invoke-Submit {
     Complete-NewCareer
     $isCmdr = $false
     $rank = if ($script:SelRank) { "$($script:SelRank)" } else { 'Sergeant' }
-    $letter = ('A','B','D','E','F','G','H','J','K','L','N','P','R','S','T','U','V','W','X','Y','Z' | Get-Random)
+    # A new man leads the squadron on his first sortie, which makes him
+    # aeroplane 0, and the game's own rules say what 0 wears. Random was
+    # what put 33lima in SD-R on the board and SD-T in the air.
+    $letter = Get-RafLetter -Code "$($script:SelSq.Code)" -Type "$($script:SelSq.Type)" -PlaneId 0
+    if (-not $letter) { $letter = 'T' }
     $serial = New-Serial -Type ("$($script:SelSq.Type)")
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
+        first   = $script:FirstBox.Text.Trim()
         rank    = $rank
         codes   = $(if ("$($script:SelSq.Code)") { "$($script:SelSq.Code)-$letter" } else { "$letter" })
         status  = 'On strength'
@@ -2614,11 +4206,15 @@ function Invoke-Submit {
         historical = $false
         portrait = $script:SelPortrait
         created = (Get-Date).ToString('yyyy-MM-dd')
+        createdAt = (Get-Date).ToString('s')
     }
     # Where the campaign stood the day he was posted. Everything already in
     # the Log Book belongs to the man before him; this pilot's own record
     # is what happens from here.
-    $ld0 = Get-LatestSaveDiary
+    # ADOPTED from a campaign the game already had: bind him to that file
+    # so every reader looks at the war he was posted from.
+    if (Test-AdoptFits -Pilot $pilot) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
     if ($ld0) {
         $pilot['campaignSorties'] = @($ld0.rows).Count
         $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
@@ -2626,7 +4222,12 @@ function Invoke-Submit {
         $pilot['campaignSorties'] = 0
         $pilot['campaignKills'] = @(0,0,0,0,0,0,0)
     }
-    Save-Pilot -Pilot $pilot
+    # The one write that is MEANT to replace a career with a smaller
+    # record: a new man starts with nothing but what he was posted with.
+    # Complete-NewCareer has already put the previous pilot away, so there
+    # should be nothing here to lose, but say so rather than relying on it.
+    Save-Pilot -Pilot $pilot -Shrink
+    $script:AdoptFrom = $null
     Show-Roster -Pilot (Get-Pilot)
 }
 
@@ -2744,6 +4345,19 @@ function Set-MapReadout {
 #  fields, so their plaque carries the name instead.
 # =====================================================================
 $PlaqueTileW = 29.0     # 28px tile plus its hairline
+# One place decides how wide a tile is, because the layout measures the
+# plaque BEFORE the tiles exist and the tiles are then drawn into it. Two
+# answers here and the label is clipped by the plaque it sits in, which is
+# exactly what a German Gruppe did: "III./JG 26" in a box sized for "266".
+function Get-TileWidth {
+    param($Sq)
+    $lab = ''
+    if ($Sq -is [System.Collections.IDictionary]) { if ($Sq.Contains('Label')) { $lab = "$($Sq.Label)" } }
+    elseif ($Sq.PSObject.Properties.Name -contains 'Label') { $lab = "$($Sq.Label)" }
+    if (-not $lab) { return 28.0 }
+    # Bahnschrift SemiCondensed at 11.5 runs about 5.6px a character
+    [math]::Max(28.0, [math]::Ceiling($lab.Length * 5.6) + 12.0)
+}
 $PlaqueH     = 24.0
 $PlaqueNameH = 13.0
 $PlaqueBundle = 22.0    # dots closer than this are one drawable anchor
@@ -2889,6 +4503,12 @@ function Short-Rank {
         'Pilot Officer'     { 'P/O'   ; break }
         'Sergeant'          { 'Sgt'   ; break }
         'Wing Commander'    { 'W/Cdr' ; break }
+        'Oberfeldwebel'     { 'Ofw.'  ; break }
+        'Oberleutnant'      { 'Oblt.' ; break }
+        'Unteroffizier'     { 'Uffz.' ; break }
+        'Feldwebel'         { 'Fw.'   ; break }
+        'Leutnant'          { 'Lt.'   ; break }
+        'Hauptmann'         { 'Hptm.' ; break }
         default             { "$R" }
     }
 }
@@ -2960,7 +4580,9 @@ function Add-SquadronPlaques {
     foreach ($g in $groups) {
         $g.Members = @($g.Members | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
         foreach ($m in $g.Members) {
-            $m.PW = $PlaqueTileW * $m.Sqns.Count + 1.0
+            $w0 = 0.0
+            foreach ($sq0 in @($m.Sqns)) { $w0 += (Get-TileWidth $sq0) + 1.0 }
+            $m.PW = $w0 + 1.0
             $m.Full = Format-FieldName "$($m.Base)"
             $m.Short = ''
             if ($Activity) {
@@ -2986,11 +4608,24 @@ function Add-SquadronPlaques {
 
     # ---- 3. what the placement has to keep clear of --------------------
     $obs = @()
+    # Every field on the sheet is ground a plaque may not sit on, and so is
+    # the name printed beside it.
+    #
+    # This used to skip anything whose key did not begin "RAF ", which was
+    # a way of ignoring the RAF table's duplicate aliases - each of its
+    # fields is stored under both "Biggin Hill" and "RAF Biggin Hill". The
+    # German table has no such keys, so the obstacle list came out EMPTY
+    # and the Gruppen plaques were laid straight over Cambrai, Epinoy and
+    # Arras. Duplicates are skipped by position now, which works for both
+    # sheets and depends on nothing being called anything in particular.
+    $seenPos = @{}
     foreach ($pp in $MapStations.GetEnumerator()) {
         $nm = "$($pp.Key)"
-        if ($nm -notmatch '^RAF ') { continue }
         $fx = [double]$pp.Value[0] * $W; $fy = [double]$pp.Value[1] * $H
         if ($fx -lt 0 -or $fx -gt $W -or $fy -lt 0 -or $fy -gt $H) { continue }
+        $key = '{0:0.0},{1:0.0}' -f $fx, $fy
+        if ($seenPos.ContainsKey($key)) { continue }
+        $seenPos[$key] = $true
         $obs += ,@(($fx - 11.0), ($fy - 11.0), ($fx + 11.0), ($fy + 11.0))
         # where the sheet still prints the field's name, that box is taken
         if (-not $MapUnnamed[$nm]) { $obs += ,@(($fx - 4.0), ($fy - 17.0), ($fx + 106.0), ($fy + 17.0)) }
@@ -3198,14 +4833,21 @@ function Add-SquadronPlaques {
                 $mineTile = ([int]$q2.Num -eq $Mine)
                 $tcol = if ($mineTile) { '#FFC24A' } elseif ($isSpit) { '#8FBEDA' } else { '#E0952F' }
                 $tile = New-Object Windows.Controls.Border
-                $tile.Width = 28; $tile.Height = 22; $tile.Cursor = 'Hand'
+                $tile.Width = (Get-TileWidth $q2); $tile.Height = 22; $tile.Cursor = 'Hand'
                 $tile.Background = B '#00000000'
                 $tile.BorderBrush = B $tcol; $tile.BorderThickness = '0,0,0,3'
-                $tb = New-TB -Text "$($q2.Num)" -Family $CondFam -Size 11.5 -Colour $tcol -Bold
+                # A German Gruppe has no number to show, so an entry may
+                # carry a Label. Num is still there and still unique, which
+                # is what the sorting, the bundling and the "is this mine"
+                # test all key on; only the words change.
+                $lab = if ($q2.PSObject.Properties.Name -contains 'Label' -and "$($q2.Label)") { "$($q2.Label)" }
+                       elseif ($q2 -is [System.Collections.IDictionary] -and $q2.Contains('Label')) { "$($q2.Label)" }
+                       else { "$($q2.Num)" }
+                $tb = New-TB -Text $lab -Family $CondFam -Size 11.5 -Colour $tcol -Bold
                 $tb.IsHitTestVisible = $false; $tb.TextAlignment = 'Center'
                 $tb.VerticalAlignment = 'Center'; $tb.HorizontalAlignment = 'Stretch'
                 $tile.Child = $tb
-                $tile.Tag = @{ Asm = $asm; Text = $tb; Colour = $tcol; Num = [int]$q2.Num
+                $tile.Tag = @{ Asm = $asm; Text = $tb; Colour = $tcol; Num = [int]$q2.Num; Label = $lab
                                Type = "$($q2.Type)"; Base = "$($m.Base)"; Mine = $mineTile; Date = $Date
                                Sqn = $q2; Sel = $false }
                 if ($OnSelect) {
@@ -3216,7 +4858,12 @@ function Add-SquadronPlaques {
                     param($sender, $e)
                     $t = $sender.Tag
                     if (-not $sender.ToolTip) {
-                        $sender.ToolTip = New-SquadronTip (New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date)
+                        $cardCtl = if ($script:Side -eq 'lw') {
+                            New-GruppeCard (@(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq "$($t.Label)" } | Select-Object -First 1) $t.Mine
+                        } else {
+                            New-SquadronCard -Num $t.Num -Type $t.Type -Base $t.Base -Mine $t.Mine -Date $t.Date
+                        }
+                        if ($cardCtl) { $sender.ToolTip = New-SquadronTip $cardCtl }
                         [Windows.Controls.ToolTipService]::SetInitialShowDelay($sender, 90)
                         [Windows.Controls.ToolTipService]::SetShowDuration($sender, 90000)
                         [Windows.Controls.ToolTipService]::SetBetweenShowDelay($sender, 0)
@@ -3228,7 +4875,7 @@ function Add-SquadronPlaques {
                     Set-MapFocus $a
                     $a.Lead.Stroke = $hot; $a.Lead.StrokeThickness = 2
                     Set-DotSize $a 12; $a.Dot.Fill = $hot
-                    Set-MapReadout @{ Title = "No. $($t.Num) Squadron"
+                    Set-MapReadout @{ Title = $(if ($script:Side -eq 'lw') { "$($t.Label)" } else { "No. $($t.Num) Squadron" })
                                       Where = "$($t.Base)   $([char]0x2022)   $($t.Type)"
                                       Note  = 'Hold the pointer still for the squadron card.'
                                       Mine  = $t.Mine }
@@ -3393,6 +5040,141 @@ function Show-Map {
         [void]$script:Stage.Children.Add($wrap)
     }
 }
+# =====================================================================
+#  THE DAYBOOK: what actually happened yesterday, on both papers
+# =====================================================================
+#  Patrick asked for more in the papers, historically correct and yet
+#  like a paper. squadronroom/daybook.json is one record for each day of
+#  the Battle, 10 July to 31 October 1940, researched from the published
+#  day by day histories (dev/daybook/*.json keeps the sources for every
+#  date): the weather, what happened in the air, the figures Fighter
+#  Command claimed that evening beside what the records showed after
+#  the war, and the other news a British or a German reader would have
+#  found in his paper that morning.
+#
+#  A morning paper prints YESTERDAY, so the page for a campaign date
+#  carries the record of the day before. And it is labelled as the record
+#  of 1940 every time, because the player's own campaign is not 1940: his
+#  squadron may have had a quiet day on the real 15 September. The
+#  campaign's own figures stay where they were, in their own column.
+#
+#  A figure nobody could source is absent, never estimated.
+$DaybookPath = Join-Path $ModDir 'daybook.json'
+function Get-Daybook {
+    if ($null -ne $script:Daybook) { return $script:Daybook }
+    $t = @{}
+    if (Test-Path $DaybookPath) {
+        try {
+            $j = @(Get-Content $DaybookPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+            while ($j.Count -eq 1 -and ($j[0] -is [System.Array])) { $j = $j[0] }
+            foreach ($e in $j) { if ("$($e.date)") { $t["$($e.date)"] = $e } }
+        } catch { }
+    }
+    $script:Daybook = $t
+    $t
+}
+function Get-DaybookFor {
+    param($Date)
+    if (-not $Date) { return $null }
+    $k = $Date.AddDays(-1).ToString('yyyy-MM-dd')
+    $b = Get-Daybook
+    if ($b.ContainsKey($k)) { return $b[$k] }
+    $null
+}
+# The band under the two columns. -Side 'raf' prints the home news and the
+# Air Ministry's figures as a British paper did; 'lw' prints the items a
+# German reader had. Both print the later count, labelled as later.
+function Add-DaybookBand {
+    param($Col, [string]$Side, $Date)
+    $d = Get-DaybookFor $Date
+    if (-not $d) { return $false }
+    $ink = '#1C1810'; $soft = '#4A4436'; $brass = '#7A5E2E'
+    $when = [datetime]::ParseExact("$($d.date)", 'yyyy-MM-dd', [Globalization.CultureInfo]::InvariantCulture)
+    $hd = New-Object Windows.Controls.Grid; $hd.Margin = '0,14,0,6'
+    foreach ($i in 0, 1) { $cd = New-Object Windows.Controls.ColumnDefinition; $cd.Width = New-Object Windows.GridLength(1, ([Windows.GridUnitType]::Star)); [void]$hd.ColumnDefinitions.Add($cd) }
+    $h1 = New-TB -Text ('YESTERDAY, ' + $when.ToString('dddd d MMMM', [Globalization.CultureInfo]::InvariantCulture).ToUpper()) -Family $CondFam -Size 12 -Colour $brass -Bold
+    $h2 = New-TB -Text 'FROM THE RECORD OF 1940, NOT FROM YOUR CAMPAIGN' -Family $CondFam -Size 11 -Colour '#6B6250' -Bold
+    $h2.HorizontalAlignment = 'Right'
+    [Windows.Controls.Grid]::SetColumn($h1, 0); [Windows.Controls.Grid]::SetColumn($h2, 1)
+    [void]$hd.Children.Add($h1); [void]$hd.Children.Add($h2)
+    [void]$Col.Children.Add($hd)
+    [void]$Col.Children.Add((New-Rule $brass 1))
+
+    $g = New-Object Windows.Controls.Grid; $g.Margin = '0,10,0,12'
+    foreach ($wd in @(1.55, 0, 1.0, 0, 1.25)) {
+        $cd = New-Object Windows.Controls.ColumnDefinition
+        $cd.Width = if ($wd -eq 0) { New-Object Windows.GridLength(24) } else { New-Object Windows.GridLength($wd, ([Windows.GridUnitType]::Star)) }
+        [void]$g.ColumnDefinitions.Add($cd)
+    }
+    foreach ($ci in 1, 3) {
+        $vr = New-Object Windows.Controls.Border; $vr.Width = 1; $vr.Background = B '#3A3324'; $vr.HorizontalAlignment = 'Center'
+        [Windows.Controls.Grid]::SetColumn($vr, $ci); [void]$g.Children.Add($vr)
+    }
+    $sub = { param([string]$T) $x = New-TB -Text $T -Family $CondFam -Size 11.5 -Colour $brass -Bold; $x.Margin = '0,0,0,5'; $x }
+    $para = { param([string]$T, [double]$Size = 14) $x = New-TB -Wrap -Text $T -Family 'Georgia, Cambria, serif' -Size $Size -Colour '#2A2620'; $x.LineHeight = $Size + 7.5; $x }
+
+    # --- the air war ---
+    $a = New-Object Windows.Controls.StackPanel
+    [void]$a.Children.Add((& $sub 'THE AIR WAR'))
+    if ("$($d.air)") { $p = & $para "$($d.air)"; $p.TextAlignment = 'Justify'; [void]$a.Children.Add($p) }
+    if ("$($d.weather)") {
+        $wx = & $para ("Weather: " + "$($d.weather)") 12.5
+        $wx.FontStyle = 'Italic'; $wx.Foreground = B $soft; $wx.Margin = '0,8,0,0'
+        [void]$a.Children.Add($wx)
+    }
+    [Windows.Controls.Grid]::SetColumn($a, 0); [void]$g.Children.Add($a)
+
+    # --- the figures: what was said then, and what was counted afterwards ---
+    $f = New-Object Windows.Controls.StackPanel
+    $has = { param($v) ($null -ne $v) -and ("$v" -ne '') }
+    $fig = {
+        param([string]$Big, [string]$Small)
+        $s = New-Object Windows.Controls.StackPanel; $s.Margin = '0,0,0,9'
+        [void]$s.Children.Add((New-TB -Text $Big -Family 'Georgia, serif' -Size 19 -Colour $ink -Bold -Wrap))
+        [void]$s.Children.Add((New-TB -Text $Small -Family $CondFam -Size 11 -Colour '#6B6250' -Bold -Wrap))
+        $s
+    }
+    if ($Side -eq 'raf') {
+        [void]$f.Children.Add((& $sub 'CLAIMED AT THE TIME'))
+        $any = $false
+        if (& $has $d.raf_claimed) { [void]$f.Children.Add((& $fig "$([int]$d.raf_claimed) raiders" 'claimed destroyed')); $any = $true }
+        if (& $has $d.raf_lost_announced) { [void]$f.Children.Add((& $fig "$([int]$d.raf_lost_announced) of our fighters" 'announced lost')); $any = $true }
+        if (-not $any) { [void]$f.Children.Add((& $para 'No figures were found for this day.' 12.5)) }
+    }
+    else {
+        [void]$f.Children.Add((& $sub 'LONDON SAID'))
+        if (& $has $d.raf_claimed) { [void]$f.Children.Add((& $fig "$([int]$d.raf_claimed) German aircraft" 'claimed by Fighter Command that night')) }
+        else { [void]$f.Children.Add((& $para 'No British figure was found for this day.' 12.5)) }
+    }
+    if ((& $has $d.lw_lost_actual) -or (& $has $d.raf_lost_actual)) {
+        $lt = & $sub 'THE RECORDS, AFTER THE WAR'; $lt.Margin = '0,6,0,5'
+        [void]$f.Children.Add($lt)
+        $bits = @()
+        if (& $has $d.lw_lost_actual) { $bits += "$([int]$d.lw_lost_actual) German aircraft lost" }
+        if (& $has $d.raf_lost_actual) { $bits += "$([int]$d.raf_lost_actual) British" }
+        $lr = & $para (($bits -join ', ') + '. Both sides claimed more than they shot down.') 12.5
+        $lr.Foreground = B $soft
+        [void]$f.Children.Add($lr)
+    }
+    [Windows.Controls.Grid]::SetColumn($f, 2); [void]$g.Children.Add($f)
+
+    # --- the rest of the paper ---
+    $n = New-Object Windows.Controls.StackPanel
+    $items = if ($Side -eq 'raf') { @($d.home) } else { @($d.reich) }
+    [void]$n.Children.Add((& $sub $(if ($Side -eq 'raf') { 'OTHER NEWS' } else { 'ELSEWHERE' })))
+    $shown = 0
+    foreach ($it in $items) {
+        if (-not "$it") { continue }
+        $x = & $para "$it" 13.5; $x.Margin = '0,0,0,9'
+        [void]$n.Children.Add($x); $shown++
+    }
+    if (-not $shown) { [void]$n.Children.Add((& $para 'Nothing further.' 12.5)) }
+    [Windows.Controls.Grid]::SetColumn($n, 4); [void]$g.Children.Add($n)
+
+    [void]$Col.Children.Add($g)
+    $true
+}
+
 # =====================================================================
 #  The Morning Bulletin: the day's paper, from the real 1940 cables
 # =====================================================================
@@ -3599,6 +5381,7 @@ function Show-Paper {
     [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
 
     [void]$col.Children.Add($bodyG)
+    [void](Add-DaybookBand -Col $col -Side 'raf' -Date $script:CampaignDate)
     [void]$col.Children.Add((New-Rule '#1A1712' 2))
     $paper.Child = $col
     [void]$script:Stage.Children.Add($paper)
@@ -3606,6 +5389,2479 @@ function Show-Paper {
 # =====================================================================
 #  Postings: choose your squadron on the plotting map
 # =====================================================================
+# =====================================================================
+#  THE LUFTWAFFE SIDE
+#
+#  The order of battle is the game's own, out of English\TEXT\LW_OOB.htm
+#  and extracted by dev\build_lw_oob.py: 66 Gruppen over Luftflotte 2 and
+#  3, of which 32 are fighter units and those are the ones a man can be
+#  posted to. The rest fly bombers, which is a crew and a different sort
+#  of career, and is not built.
+# =====================================================================
+$LwOobPath = Join-Path (Join-Path $ModDir 'lw') 'oob.json'
+function Get-LwGruppen {
+    if ($null -ne $script:LwList) { return $script:LwList }
+    $out = @()
+    if (Test-Path $LwOobPath) {
+        try {
+            $all = @(Get-Content $LwOobPath -Raw -Encoding UTF8 | ConvertFrom-Json)
+            while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
+            $out = @($all | Where-Object { $_.fighter })
+        } catch { }
+    }
+    $script:LwList = $out
+    $out
+}
+# A Gruppe is on the Kanalfront from the day it was activated. Before that
+# it is not there to be posted to, which is the German equivalent of the
+# RAF board's "resting in the north".
+function Test-GruppeInLine {
+    param($G, $Date)
+    if (-not $Date -or -not $G.activation) { return $true }
+    try { return ([datetime]::ParseExact("$($G.activation)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) -le $Date) } catch { }
+    $true
+}
+function Format-LwDate {
+    param([string]$s)
+    try { return ([datetime]::ParseExact($s,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)).ToString('d MMMM') } catch { return $s }
+}
+# How hard a Gruppe was worked, in the same three-arrow shorthand the RAF
+# board uses for its sectors. Luftflotte 2 flew from the Pas de Calais
+# against London and the south east, which is where the battle was.
+function Get-LwActivity { param($G) if ([int]$G.luftflotte -eq 2) { 3 } else { 2 } }
+
+# The Gruppe's own aircraft. Forty side views arrived, one per Gruppe of
+# each fighter Geschwader, named exactly as the Room names a unit's
+# roster file - I_JG26 for I./JG 26 - so the lookup is the unit's own key
+# and nothing has to be mapped by hand.
+#
+# The Zerstoerer Gruppen fly Bf 110s and there is no 110 art, so they get
+# NOTHING rather than a 109 with somebody else's emblem on it.
+# Whether the Gruppe has a profile painted in ITS OWN markings, or is
+# falling back to the plain factory scheme. It matters because the unit
+# profiles already carry their Geschwader's badge: II./JG 26's aeroplane
+# has the Schlageter S on it before the Room draws anything, and drawing
+# ours on top puts two of them on one cowling.
+# WHICH Bf 110 PROFILE, and it is not a lookup by unit.
+#
+# The 109 profiles are named for units, so a Gruppe's aeroplane is its own
+# key and there is nothing to work out. The twelve 110 profiles are named
+# for the game's BASE SKINS, and Me110_MainSkin.ms says which unit flies
+# which on which dates - so a Zerstoerer's aeroplane is chosen the way the
+# game chooses it, by unit, Staffel and the campaign date.
+#
+# skins110.json is that file parsed, by dev/build_lw_110_skins.py. Its
+# rules are in FILE ORDER and the first that matches wins, because the
+# game's conditions overlap and that is how MultiSkin reads them.
+$Skins110Path = Join-Path (Join-Path $ModDir 'lw') 'skins110.json'
+$Skins109Path = Join-Path (Join-Path $ModDir 'lw') 'skins109.json'
+function Get-Skins109 {
+    if ($null -ne $script:Skins109) { return $script:Skins109 }
+    $m = $null
+    if (Test-Path $Skins109Path) {
+        try { $m = Get-Content $Skins109Path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:Skins109 = $m
+    $m
+}
+# WHICH AEROPLANE, OUT OF 126, AND THE GAME DECIDES
+#
+# Until 11 September 2026 this was forty plates named per Gruppe, chosen
+# by unit name with no reference to the date, and they were Bf 109Fs.
+# Patrick redrew all of them from the game's own textures, 162 side views
+# named for the .DDS each came from, which is what makes this possible:
+# Me109MainSkin.ms can be read straight through and the Room shows the
+# aeroplane the game will actually put him in.
+#
+# 178 rules, in file order, and THE FIRST MATCH WINS. The conditions
+# overlap on purpose - a unit-and-aeroplane rule above a planeid-only
+# rule above "if 1 == 1" - so the order is the evaluation model and must
+# not be sorted.
+function Get-Profile109 {
+    param($G, $Pilot, $Date)
+    $m = Get-Skins109
+    if (-not $m) { return $null }
+    $unit = "$($G.unit)"
+    # NOT $pid: that is PowerShell's own read-only process id, and
+    # assigning to it throws. The smoke test caught it.
+    $planeId = Get-PlaneId -Pilot $Pilot
+    foreach ($r in @($m.rules)) {
+        if ($r.PSObject.Properties.Name -contains 'units') {
+            if (@($r.units) -notcontains $unit) { continue }
+        }
+        if ($r.PSObject.Properties.Name -contains 'planeids' -and $planeId -gt 0) {
+            if (@($r.planeids) -notcontains $planeId) { continue }
+        }
+        if ($Date) {
+            $ok = $true
+            if ("$($r.from)") { try { if ($Date -lt [datetime]::ParseExact("$($r.from)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+            if ($ok -and "$($r.to)") { try { if ($Date -gt [datetime]::ParseExact("$($r.to)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+            if (-not $ok) { continue }
+        }
+        if (-not "$($r.file)") { continue }
+        $f = Join-Path $script:AircraftDir "$($r.file)"
+        if (Test-Path $f) { return $f }
+    }
+    $null
+}
+# The aeroplane's place in its Gruppe, 1 to 36, which is what the rules
+# key on. It is NOT the number painted on the side: planeid 25 wears "1",
+# 26 wears "2" and 36 wears "14". What the Room knows is the Staffel and
+# the number the man chose, so the two are put back together the way the
+# rules lay them out, twelve aeroplanes to a Staffel.
+#
+# The top of each band is not a clean run - 34, 35, 36 wear 10, 12, 14 -
+# so a number above 12 is clamped. It lands on the same Staffel's block
+# either way, which is what chooses the skin.
+# ---------------------------------------------------------------------
+#  THE AEROPLANE THE GAME GAVE HIM. The game has no notion of a man's own
+#  aeroplane: each sortie it takes some of the Gruppe's 36 aircraft,
+#  counted from 1, and puts him in one. The save records which
+#  (playeracnum, zero based; the rules' planeid is that plus one, and
+#  planeid 1 is the Kommandeur's machine, whose number tile is blank
+#  because the chevron is in the skin). A raid that takes twelve
+#  aircraft can only ever give him one of the first Staffel's, so a
+#  number chosen at enrollment is a wish the game often cannot grant.
+#  Patrick chose the Room mirroring the game: once he has flown with his
+#  own Gruppe, the aeroplane on the board is the one he was given, in
+#  the skin, number and colour the game's own rules paint on it
+#  (planeid-numbers.json, from Me109_PlaneID_1.ms).
+# ---------------------------------------------------------------------
+$LwNumbersPath = Join-Path (Join-Path $ModDir 'lw') 'planeid-numbers.json'
+function Get-LwNumberRules {
+    if ($null -ne $script:LwNumberRules) { return $script:LwNumberRules }
+    $r = @()
+    if (Test-Path $LwNumbersPath) {
+        try { $r = @((Get-Content $LwNumbersPath -Raw -Encoding UTF8 | ConvertFrom-Json).rules) } catch { }
+    }
+    $script:LwNumberRules = $r
+    $r
+}
+function Get-FlownMark {
+    param($Pilot)
+    if (-not $Pilot -or -not ($Pilot.PSObject.Properties.Name -contains 'lastFlown') -or -not $Pilot.lastFlown) { return $null }
+    $lf = $Pilot.lastFlown
+    if (-not $lf.own -or "$($Pilot.side)" -ne 'lw' -or "$($Pilot.actype)" -notmatch '109') { return $null }
+    $planeId = [int]$lf.acnum + 1
+    if ($planeId -lt 1 -or $planeId -gt 36) { return $null }
+    $d = ''
+    if ($script:CampaignDate) { $d = $script:CampaignDate.ToString('yyyy-MM-dd') } elseif ("$($lf.date)") { $d = "$($lf.date)" }
+    $unit = "$($Pilot.unit)"
+    $hit = $null
+    foreach ($r in (Get-LwNumberRules)) {
+        if ($r.PSObject.Properties.Name -contains 'units') { if (@($r.units) -notcontains $unit) { continue } }
+        if ($r.PSObject.Properties.Name -contains 'planeids') { if (@($r.planeids | ForEach-Object { [int]$_ }) -notcontains $planeId) { continue } }
+        if ($d) {
+            if (($r.PSObject.Properties.Name -contains 'from') -and $d -lt "$($r.from)") { continue }
+            if (($r.PSObject.Properties.Name -contains 'to') -and $d -gt "$($r.to)") { continue }
+        } elseif (($r.PSObject.Properties.Name -contains 'from') -or ($r.PSObject.Properties.Name -contains 'to')) { continue }
+        $hit = $r; break
+    }
+    [pscustomobject]@{
+        PlaneId = $planeId
+        Blank   = [bool]($hit -and ($hit.PSObject.Properties.Name -contains 'blank') -and $hit.blank)
+        Number  = $(if ($hit -and ($hit.PSObject.Properties.Name -contains 'number')) { [int]$hit.number } else { 0 })
+        Colour  = $(if ($hit -and ($hit.PSObject.Properties.Name -contains 'colour')) { "$($hit.colour)" } else { '' })
+    }
+}
+function Get-PlaneId {
+    param($Pilot)
+    if (-not $Pilot) { return 0 }
+    $fm = Get-FlownMark -Pilot $Pilot
+    if ($fm) { return $fm.PlaneId }
+    $slot = Get-StaffelSlot $(if ($Pilot.staffel) { $Pilot.staffel } else { 1 })
+    if ($slot -lt 1) { $slot = 1 }
+    $within = (($slot - 1) % 3) + 1
+    $n = Get-AcNumber -Pilot $Pilot
+    if ($n -lt 1) { $n = 1 }
+    if ($n -gt 12) { $n = 12 }
+    ($within - 1) * 12 + $n
+}
+function Get-Skins110 {
+    if ($null -ne $script:Skins110) { return $script:Skins110 }
+    $m = $null
+    if (Test-Path $Skins110Path) {
+        try { $m = Get-Content $Skins110Path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:Skins110 = $m
+    $m
+}
+# The Staffel's slot in its Gruppe, 1 to 9, which is what the game's rules
+# key on. A man's staffel is already stored as 1-15 by Invoke-GruppeSubmit
+# ((gruppe index x 3) + 1..3), so V./LG 1 lands on 13-15 and folds back to
+# the 7-8-9 slot, which is exactly what the game does with it.
+function Get-StaffelSlot {
+    param($Staffel)
+    $n = [int]$Staffel
+    if ($n -lt 1) { return 1 }
+    (($n - 1) % 9) + 1
+}
+function Get-Profile110 {
+    param($G, $Pilot, $Date)
+    $m = Get-Skins110
+    if (-not $m) { return $null }
+    $slot = Get-StaffelSlot $(if ($Pilot) { $Pilot.staffel } else { 1 })
+    $key = "$($G.unit)|$slot"
+    $rules = @()
+    if ($m.by_unit_staffel.PSObject.Properties.Name -contains $key) { $rules += @($m.by_unit_staffel.$key) }
+    if ($m.by_unit_staffel.PSObject.Properties.Name -contains '*')   { $rules += @($m.by_unit_staffel.'*') }
+    $d = $Date
+    foreach ($r in ($rules | Sort-Object { [int]$_.order })) {
+        $ok = $true
+        if ($d) {
+            if ("$($r.from)") { try { if ($d -lt [datetime]::ParseExact("$($r.from)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+            if ($ok -and "$($r.to)") { try { if ($d -ge [datetime]::ParseExact("$($r.to)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)) { $ok = $false } } catch { } }
+        }
+        if (-not $ok) { continue }
+        $f = Join-Path $script:AircraftDir "$($r.skin)"
+        if (Test-Path $f) { return $f }
+    }
+    $f = Join-Path $script:AircraftDir "$($m.default)"
+    if (Test-Path $f) { return $f }
+    $null
+}
+function Test-GruppeOwnProfile {
+    param($G)
+    # Nothing does any more, and that is the point.
+    #
+    # There were forty of these, one per Gruppe, each carrying its unit's
+    # camouflage and its Geschwader badge already painted on, so the Room
+    # had to be told not to draw a badge over the top of one. They were
+    # also all Bf 109Fs, which 33lima spotted on 10 September 2026, and a
+    # 109F did not fight this battle.
+    #
+    # They are replaced by ONE bare Bf 109E, the way the RAF side has
+    # always worked: spitfire.png and hurricane.png arrive bare and the
+    # Room paints the code, the letter and the serial on. So every unit
+    # marking is now drawn rather than baked, which is why this is false
+    # for everybody.
+    $false
+}
+function Get-GruppeAircraftPath {
+    param($G, $Pilot)
+    if (-not $G) { return $null }
+    if ("$($G.type)" -match '110') { return (Get-Profile110 -G $G -Pilot $Pilot -Date $script:CampaignDate) }
+    if ("$($G.type)" -notmatch '109') { return $null }
+    # The game's own choice, out of 126 skins, by unit, by which
+    # aeroplane of the Gruppe he has, and by the date. See Get-Profile109.
+    $f = Get-Profile109 -G $G -Pilot $Pilot -Date $script:CampaignDate
+    if ($f) { return $f }
+    # A career whose skins are not installed still gets an aeroplane
+    # rather than an empty frame.
+    foreach ($n in @('M109ULF_Replacement_sideview.png', 'bf109e.png')) {
+        $p = Join-Path $script:AircraftDir $n
+        if (Test-Path $p) { return $p }
+    }
+    $null
+}
+# The card that comes up under the pointer on the plotting table, the
+# same idea as Fighter Command's: which Gruppe, what it flies, where it
+# stands and how the campaign rates it.
+function New-GruppeCard {
+    param($G, [bool]$Mine = $false)
+    if (-not $G) { return $null }
+    $card = New-Object Windows.Controls.Border
+    $card.Background = B '#F20B141B'; $card.BorderBrush = B $(if ($Mine) { '#FFE28A' } else { '#2C3A52' })
+    $card.BorderThickness = '1'; $card.CornerRadius = '3'; $card.Padding = '0'; $card.MaxWidth = 460
+    $col = New-Object Windows.Controls.StackPanel
+
+    $head = New-Object Windows.Controls.Border
+    $head.Background = B '#14202B'; $head.Padding = '16,12,16,11'
+    $hrow = New-Object Windows.Controls.StackPanel; $hrow.Orientation = 'Horizontal'
+    # no pilot here: the hover card on the postings board is about the
+    # Gruppe, not about a man, so a 110 falls to its 1. Staffel scheme
+    $ap = Get-GruppeAircraftPath -G $G
+    if ($ap) {
+        $sil = Load-Image -Path $ap -DecodeWidth 340
+        if ($sil) {
+            $im = New-Object Windows.Controls.Image
+            $im.Source = $sil; $im.Width = 130; $im.Stretch = 'Uniform'
+            $im.Opacity = 0.92; $im.Margin = '0,0,14,0'; $im.VerticalAlignment = 'Center'
+            [void]$hrow.Children.Add($im)
+        }
+    }
+    $hc = New-Object Windows.Controls.StackPanel; $hc.VerticalAlignment = 'Center'
+    [void]$hc.Children.Add((New-TB -Text "$($G.unit)" -Family $SerifFam -Size 19 -Colour $(if ($Mine) { '#FFE28A' } else { '#E9E3D4' })))
+    [void]$hc.Children.Add((New-TB -Text "$($G.type)   $([char]0x2022)   Luftflotte $($G.luftflotte)" -Family $CondFam -Size 12.5 -Colour '#F8C87E'))
+    [void]$hrow.Children.Add($hc)
+    $head.Child = $hrow
+    [void]$col.Children.Add($head)
+
+    $body = New-Object Windows.Controls.StackPanel; $body.Margin = '16,12,16,14'
+    $t = "At $($G.field) since $(Format-LwDate "$($G.activation)"). The campaign rates it " +
+         "$("$($G.skill)".ToLower()) with $("$($G.fatigue)".ToLower()) fatigue."
+    $tb = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text $t
+    $tb.MaxWidth = 420
+    [void]$body.Children.Add($tb)
+    # what it has done in this campaign, if the save knows the unit
+    $rec = Get-GruppeRecord $G.sqidx
+    if ($rec) {
+        $r2 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text (
+            "In this campaign: $($rec.Launched) sorties, $($rec.AcLost) aircraft and " +
+            "$($rec.PilotsLost) pilots lost, $($rec.Total) claims.")
+        $r2.Margin = '0,8,0,0'; $r2.MaxWidth = 420
+        [void]$body.Children.Add($r2)
+    }
+    $col.Children.Add($body) | Out-Null
+    $card.Child = $col
+    $card
+}
+
+function Show-GruppeSelect {
+    # Two jobs on one sheet. With no pilot, or a new career under way, this
+    # is the enrollment board: choose a Gruppe and report to it. With a
+    # pilot it is THE GRUPPEN tab of his ready room: the same order of
+    # battle, opened at the date his campaign stands at, his own Gruppe in
+    # gold and no REPORT button, because he already belongs to one. It
+    # used to draw the enrollment board either way, so a man with a career
+    # was asked to choose a Gruppe every time he opened the map.
+    $me = $null
+    if (-not $script:NewCareerPending) { $me = Get-Pilot }
+    $script:GruppeView = [bool]$me
+    if ($me -and -not $script:SelPeriod) {
+        $script:CampaignDate = Get-CampaignDate
+        $script:SelPeriod = "$($me.period)"
+        if ($script:CampaignDate) {
+            foreach ($per in $Periods) {
+                try { if ([datetime]::ParseExact($per.Key,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) -le $script:CampaignDate) { $script:SelPeriod = $per.Id } } catch { }
+            }
+        }
+    }
+    if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
+    $script:Stage.Children.Clear()
+    if ($me) {
+        [void]$script:Stage.Children.Add((New-Nav 'gruppen'))
+        Show-ChromeButtons $true
+        Set-ChromeAction -Text ''
+        Set-ChromeBack -Text ''
+        $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($me.unit)" }
+        $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTE $($me.luftflotte)" }
+        $eyebrow = if ($script:CampaignDate) { "THE CHANNEL FRONT  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { 'THE CHANNEL FRONT' }
+        [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "$($me.unit) at $($me.base)"))
+    } else {
+        Show-ChromeButtons $false
+        Set-ChromeAction -Text 'REPORT TO THIS GRUPPE' -Enabled ([bool]$script:SelSq) -OnClick { if ($script:SelSq) { Show-GruppeCreate } }
+        $h = C 'HdrSquadron'; if ($h) { $h.Text = 'Jagdwaffe' }
+        $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTEN 2 UND 3" }
+        if (Get-Pilot) { Set-ChromeBack 'BACK TO THE READY ROOM' { $script:NewCareerPending = $false; Show-Tab 'dispersal' } }
+        else { Set-ChromeBack -Text '' }
+        [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'THE CHANNEL FRONT' -Title 'The fighter Gruppen'))
+    }
+
+    $segRow = New-Object Windows.Controls.StackPanel; $segRow.Orientation = 'Horizontal'; $segRow.Margin = '0,-10,0,10'
+    foreach ($per in $Periods) {
+        $seg = New-Object Windows.Controls.Border
+        $seg.Padding = '14,8'; $seg.Margin = '0,0,10,0'; $seg.CornerRadius = '3'; $seg.Cursor = 'Hand'; $seg.Tag = $per.Id
+        $active = ($per.Id -eq $script:SelPeriod)
+        $seg.Background = if ($active) { B '#213540' } else { B '#101B22' }
+        $seg.BorderThickness = '0,0,0,2'
+        $seg.BorderBrush = if ($active) { Res 'Brass' } else { B '#101B22' }
+        $seg.Child = (New-TB -Text $per.Label -Family $CondFam -Size 12.5 -Colour $(if ($active) { '#E9E3D4' } else { '#6F828C' }) -Bold)
+        $seg.Add_MouseLeftButtonUp({ param($sender,$e) $script:SelPeriod = "$($sender.Tag)"; Show-GruppeSelect })
+        [void]$segRow.Children.Add($seg)
+    }
+    [void]$script:Stage.Children.Add($segRow)
+
+    $perDef = $Periods | Where-Object { $_.Id -eq $script:SelPeriod } | Select-Object -First 1
+    $pd = $null; try { $pd = [datetime]::ParseExact($perDef.Key,'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) } catch { }
+
+    $all = @(Get-LwGruppen)
+    $inLine = @($all | Where-Object { Test-GruppeInLine $_ $pd })
+    $lead = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text (
+        "The order of battle for $($perDef.Desc), taken from the game's own. " +
+        "$($inLine.Count) of the $($all.Count) fighter Gruppen are on the Kanalfront by this date; " +
+        'the rest have not been moved up yet. Luftflotte 2 flew from the Pas de Calais against London ' +
+        'and the south east, Luftflotte 3 from Normandy and Brittany against the west. ' +
+        $(if ($me) { 'Your own Gruppe is in gold. Click any other for its particulars. ' }
+          else { 'Click a Gruppe on the table to choose it, then report to it. ' }) +
+        'The wheel zooms, a drag moves the sheet and a double-click puts it back.')
+    $lead.Margin = '0,0,0,16'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($lead)
+
+    # The plotting table. Same sheet, same plaque machinery and same zoom
+    # as Fighter Command's board: only the projection and the labels
+    # differ, and both of those come out of the map's own json.
+    $W = 1180.0; $H = [math]::Round($W * 1600.0 / 2560.0)
+    $mapWrap = New-Object Windows.Controls.Border
+    $mapWrap.Width = $W + 2; $mapWrap.Height = $H + 2; $mapWrap.HorizontalAlignment = 'Left'
+    $mapWrap.Background = B '#0B141B'; $mapWrap.BorderBrush = Res 'Rule'; $mapWrap.BorderThickness = '1'; $mapWrap.CornerRadius = '3'
+    $grid = New-Object Windows.Controls.Grid
+    $bg = New-Object Windows.Controls.Image
+    $bmp = Load-Image -Path $script:MapImagePath -DecodeWidth 2560
+    if ($bmp) { $bg.Source = $bmp }
+    $bg.Stretch = 'Uniform'; $bg.Width = $W; $bg.Height = $H
+    [void]$grid.Children.Add($bg)
+    $cv = New-Object Windows.Controls.Canvas; $cv.Width = $W; $cv.Height = $H; $cv.ClipToBounds = $true
+    [void]$grid.Children.Add($cv)
+    $mapWrap.Child = $grid
+    Enable-MapZoom -Frame $mapWrap -Content $grid
+
+    $script:MapTiles = @()
+    $script:GruppeDetail = New-TB -Text $(if ($me) { "Your Gruppe: $($me.unit), $($me.actype), at $($me.base). Luftflotte $($me.luftflotte)." }
+                                          elseif ($script:SelSq) { "$($script:SelSq.Unit), $($script:SelSq.Type), at $($script:SelSq.Base)." } else { 'No Gruppe selected.' }) `
+                     -Family 'Segoe UI' -Size 14 -Colour '#9FB0B8' -Wrap
+    $script:GruppeDetail.Margin = '2,0,0,12'; $script:GruppeDetail.MaxWidth = 1100; $script:GruppeDetail.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($script:GruppeDetail)
+
+    # No .GetNewClosure() and the detail line kept in a script variable,
+    # which is how the RAF board does it. A closure gets its own module
+    # scope, so "$script:SelSq = ..." inside one writes to the CLOSURE and
+    # never reaches the Room: clicking a Gruppe lit the REPORT button and
+    # left the selection empty, so nothing could be joined. Same trap that
+    # silently ignored -Side lw in the awards preview.
+    $script:SelectSq = {
+        param($q2)
+        $script:SelSq = @{
+            Unit = "$($q2.Label)"; Gesch = "$($q2.Gesch)"; Gruppe = "$($q2.Gruppe)"
+            Type = "$($q2.Type)"; Base = "$($q2.Base)"; Skill = "$($q2.Skill)"
+            Luftflotte = [int]$q2.Luftflotte; Period = "$($script:SelPeriod)"
+        }
+        foreach ($t in $script:MapTiles) {
+            $tg = $t.Tag
+            $tg.Sel = ([int]$tg.Num -eq [int]$q2.Num)
+            $t.Background = if ($tg.Sel) { B '#33FFC24A' } else { B '#00000000' }
+            $tg.Text.Foreground = if ($tg.Sel) { B '#FFE28A' } else { B $tg.Colour }
+        }
+        foreach ($a in $script:MapAssemblies) { $a.Sel = $false }
+        foreach ($t in $script:MapTiles) { if ($t.Tag.Sel) { $t.Tag.Asm.Sel = $true } }
+        Set-MapFocus $null
+        if ($script:GruppeDetail) {
+            $script:GruppeDetail.Text = "$($q2.Label), $($q2.Type), at $($q2.Base). Luftflotte $($q2.Luftflotte), rated $("$($q2.Skill)".ToLower())."
+        }
+        if (-not $script:GruppeView) { Set-ChromeActionEnabled $true }
+    }
+
+    # gather the Gruppen by field, the way the RAF board gathers squadrons
+    $byField = @{}
+    $offTable = @()
+    $num = 0
+    $mine = 0
+    foreach ($g in ($inLine | Sort-Object { "$($_.geschwader)" }, { @('I','II','III','IV','V').IndexOf("$($_.gruppe)") })) {
+        $num++
+        if ($me -and "$($g.unit)" -eq "$($me.unit)") { $mine = $num }
+        # Num is a unique integer the plaque machinery sorts and compares
+        # on; Label is what it prints. A Gruppe has no number of its own.
+        $qt = @{ Num = $num; Label = "$($g.unit)"; Type = "$($g.type)"; Base = "$($g.field)"
+                 Gesch = "$($g.geschwader)"; Gruppe = "$($g.gruppe)"; Skill = "$($g.skill)"
+                 Luftflotte = [int]$g.luftflotte; Act = $(if ([int]$g.luftflotte -eq 2) { 'H' } else { 'M' }) }
+        $st = $MapStations["$($g.field)"]
+        if (-not $st) { $offTable += $qt; continue }
+        $k = "$($g.field)"
+        if (-not $byField.ContainsKey($k)) {
+            $byField[$k] = @{ Base = $k; X = [double]$st[0] * $W; Y = [double]$st[1] * $H; Sqns = @() }
+        }
+        $byField[$k].Sqns = @($byField[$k].Sqns) + @($qt)
+    }
+    $fields = @($byField.Values | Sort-Object @{ e = { $_.X } }, @{ e = { $_.Y } })
+    Add-SquadronPlaques -Canvas $cv -Fields $fields -W $W -H $H -Mine $mine -Date $pd `
+                        -OnSelect $true -AlwaysName
+    [void]$script:Stage.Children.Add($mapWrap)
+
+    if ($offTable.Count) {
+        $fl = New-TB -Text 'FIELDS NOT ON THIS SHEET' -Family $CondFam -Size 11.5 -Colour '#8A9689' -Bold
+        $fl.Margin = '2,12,0,6'
+        [void]$script:Stage.Children.Add($fl)
+        $chips = New-Object Windows.Controls.WrapPanel; $chips.HorizontalAlignment = 'Left'
+        foreach ($qt in $offTable) {
+            $chip = New-Object Windows.Controls.Border
+            $chip.Padding = '12,7'; $chip.Margin = '0,0,10,10'; $chip.CornerRadius = '3'; $chip.Cursor = 'Hand'
+            $chip.Background = B '#101B22'; $chip.BorderBrush = Res 'Rule'; $chip.BorderThickness = '1.5'
+            $chip.Child = (New-TB -Text "$($qt.Label)  $([char]0x2022)  $($qt.Base)" -Family $CondFam -Size 12 -Colour '#F8C87E' -Bold)
+            $chip.Tag = $qt
+            $chip.Add_MouseLeftButtonUp({ param($sender,$e) & $script:SelectSq $sender.Tag })
+            [void]$chips.Children.Add($chip)
+        }
+        [void]$script:Stage.Children.Add($chips)
+    }
+
+}
+
+# ---------------------------------------------------------------------
+#  Reporting to a Gruppe, and the ready room he reports to.
+#
+#  Written as their own screens rather than as branches inside
+#  Show-Create and Show-Roster. Those two are three hundred lines of RAF
+#  furniture apiece - the roster of real men, the losses board, the record
+#  of service - and none of it has a German equivalent yet. Threading a
+#  side test through all of it would leave two screens that are mostly
+#  dead code on either side. The parts that ARE shared, New-Heading,
+#  New-Frame, New-Stat, New-BadgeImage and the chrome, are called from
+#  here exactly as the RAF screens call them.
+# ---------------------------------------------------------------------
+# ---------------------------------------------------------------------
+#  The Iron Cross ladder.
+#
+#  Dated with the same care the RAF ladder is. That one leaves out the
+#  CGM (Flying) because it was not instituted until November 1942, and
+#  the AFC and AFM because they were for non-operational flying. The same
+#  test throws three well-known German awards out of a 1940 career:
+#
+#    Deutsches Kreuz in Gold   instituted 28 September 1941
+#    Frontflugspange           instituted 30 January 1941
+#    Winterschlacht im Osten   instituted 26 May 1942, and for the East
+#
+#  The last of those was among the images to hand and is the easiest
+#  mistake to make, being unmistakably German and unmistakably a medal.
+#  A man flying the Channel in 1940 could not have had any of them.
+#
+#  What is left, and when:
+#
+#    Eisernes Kreuz II. Klasse   a first victory, or three sorties
+#    Eisernes Kreuz I. Klasse    five victories, or twenty sorties
+#    Ritterkreuz                 twenty victories
+#
+#  Twenty is the right benchmark for the second half of 1940. It was
+#  raised to forty in 1941, which is the figure most often quoted and the
+#  wrong one for this campaign.
+#
+#  The Eichenlaub is in, at forty victories. It was instituted on 3 June
+#  1940 and Moelders and Galland both had it that September, which is
+#  inside this campaign, so it belongs. It REPLACES the plain Ritterkreuz
+#  in the row rather than sitting beside it: the oak leaves clasp onto the
+#  cross a man already wears, and drawing two would be showing him with
+#  two Knight's Crosses.
+#
+#  Three further grades were to hand and are all out on date. The swords
+#  came on 21 June 1941 and the diamonds later still.
+$LwHonourSpec = @(
+    # Heights are set by how each one READS, not by how big the thing is.
+    # The neck orders are tall narrow pictures, cross and ribbon, so at the
+    # same height as the others they come out much the smallest on screen.
+    @{ Award = 'Eichenlaub'; File = 'eichenlaub.png';  Height = 70; Tip = 'Ritterkreuz des Eisernen Kreuzes mit Eichenlaub' }
+    @{ Award = 'Ritterkreuz'; File = 'ritterkreuz.png'; Height = 66; Tip = 'Ritterkreuz des Eisernen Kreuzes' }
+    @{ Award = 'EK I';        File = 'ek1.png';         Height = 44; Tip = 'Eisernes Kreuz I. Klasse' }
+    @{ Award = 'EK II';       File = 'ek2.png';         Height = 58; Tip = 'Eisernes Kreuz II. Klasse' }
+)
+function Get-LwHonours {
+    param($Pilot, $Career)
+    $v = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $v = [int]$Pilot.victories }
+    $sorties = 0; if ($Career) { $sorties = [int]$Career.sorties }
+    $h = @()
+    # what he already holds is kept, exactly as on the RAF side: a
+    # decoration is not taken away because a new campaign reset the count
+    if (($Pilot.PSObject.Properties.Name -contains 'honours') -and $Pilot.honours) {
+        foreach ($a in @($Pilot.honours)) { $h += "$($a.award)" }
+    }
+    if ((($v -ge 1) -or ($sorties -ge 3))  -and ($h -notcontains 'EK II'))       { $h += 'EK II' }
+    if ((($v -ge 5) -or ($sorties -ge 20)) -and ($h -notcontains 'EK I'))        { $h += 'EK I' }
+    if (($v -ge 20)                        -and ($h -notcontains 'Ritterkreuz')) { $h += 'Ritterkreuz' }
+    if (($v -ge 40)                        -and ($h -notcontains 'Eichenlaub'))  { $h += 'Eichenlaub' }
+    $h
+}
+# Worn, rather than laid out as ribbon chips.
+#
+# New-RibbonRow puts every RAF decoration in one bar of 15px ribbons, in
+# order of precedence, and that is right for the RAF: they ARE ribbons.
+# These are not. The EK II hangs from a ribbon, the EK I is pinned flat to
+# the breast and has no ribbon at all, and the Ritterkreuz is worn at the
+# throat. Rendering the three as identical little strips would be wrong in
+# a way anybody who cares about this period would see at once, so they are
+# drawn as the objects they are, at the sizes they are.
+function New-LwHonourRow {
+    param($Honours, [double]$Scale = 1.0)
+    $set = @($Honours)
+    if (-not $set.Count) { return $null }
+    $row = New-Object Windows.Controls.StackPanel
+    $row.Orientation = 'Horizontal'; $row.VerticalAlignment = 'Center'
+    foreach ($spec in $LwHonourSpec) {
+        if ($set -notcontains $spec.Award) { continue }
+        # a man with the oak leaves wears one Knight's Cross, not two
+        if ($spec.Award -eq 'Ritterkreuz' -and ($set -contains 'Eichenlaub')) { continue }
+        $bmp = Load-Image -Path (Join-Path $script:BadgeDir $spec.File)
+        if (-not $bmp) { continue }
+        $img = New-Object Windows.Controls.Image
+        $img.Source = $bmp; $img.Stretch = 'Uniform'; $img.Height = [double]$spec.Height * $Scale
+        $img.Margin = '0,0,12,0'; $img.ToolTip = $spec.Tip
+        [void]$row.Children.Add($img)
+    }
+    if (-not $row.Children.Count) { return $null }
+    $row
+}
+
+function Show-GruppeCreate {
+    $script:Stage.Children.Clear()
+    $script:SelPortrait = $null; $script:SelBorder = $null; $script:SelAcNum = 0
+    if (-not $script:SelSq) { Show-GruppeSelect; return }
+    Show-ChromeButtons $false
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($script:SelSq.Unit)" }
+    $m = C 'HdrMotto'
+    if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  $($script:SelSq.Type.ToUpper()) AT $($script:SelSq.Base.ToUpper())" }
+    Set-ChromeBack 'BACK TO THE BOARD' { Show-GruppeSelect }
+    Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-GruppeSubmit }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE GRUPPE' -Title "A new pilot for $($script:SelSq.Unit)"))
+    $lead = New-TB -Wrap -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Text (
+        'Summer 1940, on the Channel coast. Give your first name and your surname, say whether you come to the Gruppe as a ' +
+        'non-commissioned pilot or with a commission, and pick your photograph.')
+    $lead.Margin = '0,-14,0,22'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($lead)
+
+    $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,26'
+    # TWO NAMES, BOTH REQUIRED (Patrick, 21 September 2026). The surname is
+    # the one the boards, the game and its saves have always used; the first
+    # name is his own and is what his personal record calls him.
+    $firstCol = New-Object Windows.Controls.StackPanel; $firstCol.Margin = '0,0,18,0'
+    [void]$firstCol.Children.Add((New-TB -Text 'FIRST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $script:FirstBox = New-Object Windows.Controls.TextBox
+    $script:FirstBox.Width = 190; $script:FirstBox.Margin = '0,7,0,0'; $script:FirstBox.MaxLength = 20
+    [void]$firstCol.Children.Add($script:FirstBox)
+    [void]$row.Children.Add($firstCol)
+    $nameCol = New-Object Windows.Controls.StackPanel; $nameCol.Margin = '0,0,36,0'
+    [void]$nameCol.Children.Add((New-TB -Text 'LAST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $script:NameBox = New-Object Windows.Controls.TextBox
+    $script:NameBox.Width = 230; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 20
+    # The campaign save's pilot name is offered on the RAF side. It is NOT
+    # offered here: that name belongs to whichever campaign is loaded, and
+    # a German career started while an RAF campaign is open would take an
+    # English name by default, which is worse than an empty box.
+    [void]$nameCol.Children.Add($script:NameBox)
+    $script:NameBox.Add_TextChanged({ Update-GruppeCreateValid })
+    $script:FirstBox.Add_TextChanged({ Update-GruppeCreateValid })
+    [void]$row.Children.Add($nameCol)
+
+    # Unteroffizier or Leutnant. The two are separate careers in the
+    # Luftwaffe rather than two ends of one ladder, so this choice decides
+    # how far a man can rise, not merely where he starts.
+    $rkCol = New-Object Windows.Controls.StackPanel
+    [void]$rkCol.Children.Add((New-TB -Text 'YOU JOIN AS' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $rkRow = New-Object Windows.Controls.StackPanel; $rkRow.Orientation = 'Horizontal'; $rkRow.Margin = '0,7,0,0'
+    $script:LwRankBtns = @{}
+    foreach ($r in @('Unteroffizier','Leutnant')) {
+        $b = New-Object Windows.Controls.Border
+        $b.Padding = '14,9'; $b.Margin = '0,0,10,0'; $b.CornerRadius = '3'; $b.Cursor = 'Hand'; $b.Tag = $r
+        $b.BorderThickness = '1'
+        $inner = New-Object Windows.Controls.StackPanel; $inner.Orientation = 'Horizontal'
+        $bf = Get-RankBadgeFile $r
+        if ($bf) {
+            $bi = New-BadgeImage -File $bf -Height 30 -Tip $r
+            if ($bi) { $bi.Margin = '0,0,9,0'; [void]$inner.Children.Add($bi) }
+        }
+        [void]$inner.Children.Add((New-TB -Text $r -Family $CondFam -Size 14 -Colour '#E9E3D4'))
+        $b.Child = $inner
+        $b.Add_MouseLeftButtonUp({ param($sender,$e) $script:SelRank = "$($sender.Tag)"; Update-LwRankButtons; Update-GruppeCreateValid })
+        $script:LwRankBtns[$r] = $b
+        [void]$rkRow.Children.Add($b)
+    }
+    [void]$rkCol.Children.Add($rkRow)
+    [void]$row.Children.Add($rkCol)
+    [void]$script:Stage.Children.Add($row)
+    if (-not $script:SelRank -or ($script:SelRank -notin @('Unteroffizier','Leutnant'))) { $script:SelRank = 'Unteroffizier' }
+    Update-LwRankButtons
+
+    # THE ONE MARKING THAT WAS HIS. The Gruppe symbol, the Geschwader
+    # emblem and any Stab chevron all follow the unit and the
+    # appointment, so there is nothing to ask about them. The individual
+    # number is the pilot's own and is painted in his Staffel's colour,
+    # so the choice is shown as the numbers themselves rather than as a
+    # list of bare numerals.
+    #
+    # The Staffel is not settled until he is posted, so these are shown
+    # in white, which is what the 1st, 4th and 7th Staffel wore. Which of
+    # the three he lands in is decided in Invoke-GruppeSubmit a moment
+    # later, and the number keeps its meaning whichever it is.
+    $pickCol = 'white'
+    # A ZERSTOERER IS ASKED FOR A LETTER, NOT A NUMBER. A Bf 110 wears a
+    # bomber's code - the Geschwader's two characters, the Balkenkreuz,
+    # his own letter and the Staffel's - so the one thing that is his is a
+    # letter. The picker is the same tiles-in-a-row; only the alphabet
+    # changes, and acnum stores the position either way.
+    $is110 = ("$($script:SelSq.Type)" -match '110')
+    $pickN = if ($is110) { 11 } else { 15 }
+    [void]$script:Stage.Children.Add((New-TB -Text $(if ($is110) { 'YOUR LETTER' } else { 'YOUR NUMBER' }) `
+                                     -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $numNote = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text $(if ($is110) {
+        'The letter painted aft of the Balkenkreuz, between the Geschwader''s code and your ' +
+        'Staffel''s letter. It is the only part of the code that was ever the pilot''s own: the ' +
+        'other two follow the unit. It will be painted in your Staffel''s colour once you have one.'
+    } else {
+        'The number painted forward of the Balkenkreuz. It is the only marking on the aeroplane that ' +
+        'was ever the pilot''s own: the Gruppe symbol, the Geschwader emblem and a staff officer''s ' +
+        'chevron all followed the unit. It will be painted in your Staffel''s colour once you have one.'
+    })
+    $numNote.Margin = '0,6,0,10'; $numNote.MaxWidth = 860; $numNote.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($numNote)
+    $numRow = New-Object Windows.Controls.WrapPanel; $numRow.Margin = '0,0,0,18'; $numRow.HorizontalAlignment = 'Left'
+    $numRow.MaxWidth = 900
+    $script:NumBtns = @{}
+    $mk0 = Get-LwMarkings
+    foreach ($n in 1..$pickN) {
+        $nb = New-Object Windows.Controls.Border
+        $nb.Width = 54; $nb.Height = 54; $nb.Margin = '0,0,8,8'; $nb.CornerRadius = '3'
+        $nb.BorderThickness = 2; $nb.Background = B '#101B22'; $nb.Cursor = 'Hand'; $nb.Tag = $n
+        $nb.BorderBrush = B '#22303C'
+        $nf = if (-not $mk0) { $null }
+              elseif ($is110) { Get-MarkFile "$($mk0.letters110.($Letters110[$n - 1]).$pickCol)" }
+              else { Get-MarkFile "$($mk0.numbers.$n.$pickCol)" }
+        $nbmp = if ($nf) { Load-Image -Path $nf -DecodeWidth 96 } else { $null }
+        if ($nbmp) {
+            $ni = New-Object Windows.Controls.Image
+            $ni.Source = $nbmp; $ni.Stretch = 'Uniform'; $ni.Margin = '8'
+            $nb.Child = $ni
+        } else {
+            $nb.Child = (New-TB -Text $(if ($is110) { $Letters110[$n - 1] } else { "$n" }) `
+                                -Family $CondFam -Size 18 -Colour '#E9E3D4' -Bold)
+        }
+        $nb.Add_MouseLeftButtonUp({
+            param($sender,$e)
+            $script:SelAcNum = [int]$sender.Tag
+            Update-NumButtons
+            Update-GruppeCreateValid
+        })
+        $script:NumBtns[$n] = $nb
+        [void]$numRow.Children.Add($nb)
+    }
+    [void]$script:Stage.Children.Add($numRow)
+    Update-NumButtons
+
+    [void]$script:Stage.Children.Add((New-TB -Text 'YOUR PHOTOGRAPH' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $wrap = New-Object Windows.Controls.WrapPanel; $wrap.Margin = '0,10,0,0'; $wrap.HorizontalAlignment = 'Left'
+    foreach ($pf in (Get-Portraits)) {
+        $pb = New-Object Windows.Controls.Border
+        $pb.Width = 96; $pb.Height = 120; $pb.Margin = '0,0,12,12'
+        $pb.CornerRadius = '2'; $pb.BorderThickness = 3; $pb.BorderBrush = $script:FrameBrush
+        $pb.Background = B '#0B1116'; $pb.Cursor = 'Hand'; $pb.Tag = $pf; $pb.ClipToBounds = $true
+        $bmp = Load-Portrait -File $pf -DecodeHeight 150
+        if ($bmp) {
+            $img = New-Object Windows.Controls.Image; $img.Source = $bmp; $img.Stretch = 'UniformToFill'
+            $pb.Child = $img
+        }
+        $pb.Add_MouseLeftButtonUp({
+            param($sender,$e)
+            if ($script:SelBorder) { $script:SelBorder.BorderBrush = $script:FrameBrush }
+            $script:SelBorder = $sender; $sender.BorderBrush = $script:BrassBrush
+            $script:SelPortrait = "$($sender.Tag)"
+            Update-GruppeCreateValid
+        })
+        [void]$wrap.Children.Add($pb)
+    }
+    [void]$script:Stage.Children.Add($wrap)
+    Update-GruppeCreateValid
+}
+function Update-LwRankButtons {
+    if (-not $script:LwRankBtns) { return }
+    foreach ($k in $script:LwRankBtns.Keys) {
+        $on = ($k -eq $script:SelRank)
+        $script:LwRankBtns[$k].Background = if ($on) { Res 'PanelHi' } else { B '#101B22' }
+        $script:LwRankBtns[$k].BorderBrush = if ($on) { $script:BrassBrush } else { B '#22303C' }
+    }
+}
+function Update-NumButtons {
+    if (-not $script:NumBtns) { return }
+    foreach ($k in $script:NumBtns.Keys) {
+        $on = ([int]$k -eq [int]$script:SelAcNum)
+        $script:NumBtns[$k].Background = if ($on) { Res 'PanelHi' } else { B '#101B22' }
+        $script:NumBtns[$k].BorderBrush = if ($on) { $script:BrassBrush } else { B '#22303C' }
+    }
+}
+function Update-GruppeCreateValid {
+    # The number is part of reporting now, so it is part of the test. A
+    # man who has not picked one would otherwise be given one worked out
+    # from his own name, which is the right answer for a record made
+    # before there was a choice and the wrong one for a new man: he was
+    # asked, and he should answer.
+    $ok = ($script:NameBox -and $script:NameBox.Text.Trim().Length -ge 2) -and
+          ($script:FirstBox -and $script:FirstBox.Text.Trim().Length -ge 2) -and
+          ($null -ne $script:SelPortrait) -and ([int]$script:SelAcNum -gt 0)
+    Set-ChromeActionEnabled $ok
+}
+function Invoke-GruppeSubmit {
+    Complete-NewCareer
+    $q = $script:SelSq
+    $rank = if ($script:SelRank) { "$($script:SelRank)" } else { 'Unteroffizier' }
+    # A Staffel number, because a man belongs to one and the Gruppe is
+    # three of them: I. Gruppe holds 1., 2. and 3. Staffel, II. holds 4.
+    # to 6., III. holds 7. to 9.
+    $gi = @('I','II','III','IV','V').IndexOf("$($q.Gruppe)"); if ($gi -lt 0) { $gi = 0 }
+    $staffel = ($gi * 3) + (Get-Random -Minimum 1 -Maximum 4)
+    $pilot = [ordered]@{
+        pilot   = $script:NameBox.Text.Trim()
+        first   = $script:FirstBox.Text.Trim()
+        rank    = $rank
+        side    = 'lw'
+        status  = 'On strength'
+        note    = "Posted to $($q.Unit) at $($q.Base)."
+        cmode   = 'pilot'
+        unit    = "$($q.Unit)"
+        gesch   = "$($q.Gesch)"
+        gruppe  = "$($q.Gruppe)"
+        staffel = $staffel
+        sqn     = 0
+        actype  = "$($q.Type)"
+        base    = "$($q.Base)"
+        luftflotte = [int]$q.Luftflotte
+        period  = "$($q.Period)"
+        historical = $false
+        portrait = $script:SelPortrait
+        acnum   = [int]$script:SelAcNum
+        created = (Get-Date).ToString('yyyy-MM-dd')
+        createdAt = (Get-Date).ToString('s')
+    }
+    # THE REST OF THE CREW, for a type that carries one. A 109 gets an
+    # empty array and the record is what it has always been.
+    $pilot['crew'] = @(New-CrewFor -Unit "$($q.Unit)" -Type "$($q.Type)" `
+                                   -Date $script:CampaignDate `
+                                   -Seed "$($script:NameBox.Text)$($q.Unit)" -SortiesBase 0)
+    # ADOPTED from a campaign the game already had: bind him to that file
+    # so every reader looks at the war he was posted from.
+    if (Test-AdoptFits -Pilot $pilot) { $pilot['savePath'] = "$($script:AdoptFrom.Path)"; $pilot['saveAsked'] = $true }
+    $ld0 = Get-LatestSaveDiary -Pilot ([pscustomobject]$pilot)
+    if ($ld0) {
+        $pilot['campaignSorties'] = @($ld0.rows).Count
+        $pilot['campaignKills'] = @(0..6 | ForEach-Object { [int]$ld0.kills[$_] })
+    } else {
+        $pilot['campaignSorties'] = 0
+        $pilot['campaignKills'] = @(0,0,0,0,0,0,0)
+    }
+    Save-Pilot -Pilot $pilot -Shrink
+    $script:AdoptFrom = $null
+    Show-ReadyRoom -Pilot (Get-Pilot)
+}
+
+# The Flugbuch. The German pilot's own Log Book, read out of the campaign
+# save exactly as the RAF one is: the same Diary::Player table, the same
+# rows, the same New-DiaryRow. Only the aircraft types differ, and those
+# come from Get-KillBins.
+#
+# WHAT IS NOT PROVED HERE, and it matters. Everything below is built on a
+# player record read from RAF saves, because no Luftwaffe save exists to
+# test against. The squadron tables are settled - two of them, 24 bytes
+# and 17, verified against real files by dev/lw_diary_probe.py - but
+# whether Diary::Player is laid out the same for a German career is an
+# assumption. The save header carries seven German tallies and six
+# British ones, so the likeliest shape is the same 25-byte row with only
+# the first six used, which is what this reads.
+#
+# If it turns out otherwise the symptom will be a Flugbuch full of
+# nonsense rather than an empty one, so it says plainly at the top that
+# it has not been checked against a German campaign.
+# The men of the Staffel.
+#
+# Two different things live in these files and the screen must never
+# blur them. A man marked historical was really there and his unit and
+# appointment are ordinary record; nothing else is claimed for him, no
+# fate and no score, because naming a man who was there is one thing and
+# writing him a death he did not have is quite another. Everyone else is
+# a period-correct name dealt out from the unit's own seed, and the
+# screen says so in as many words.
+function Get-LwRoster {
+    param([string]$Unit)
+    if (-not $Unit) { return @() }
+    $f = Join-Path (Join-Path $script:SideModDir 'rosters') (($Unit -replace '\.','' -replace '/','_' -replace ' ','') + '.json')
+    if (-not (Test-Path $f)) { return @() }
+    try {
+        $all = @(Get-Content $f -Raw -Encoding UTF8 | ConvertFrom-Json)
+        while ($all.Count -eq 1 -and ($all[0] -is [System.Array])) { $all = $all[0] }
+        return $all
+    } catch { }
+    @()
+}
+# One man on the board: rank, name, what he is doing, his score and how
+# his war ended. The last two are empty for the men of record, because
+# nothing beyond their unit and appointment is claimed for them.
+function New-LwRosterRow {
+    param($Man, [switch]$IsPlayer, [switch]$Header, [int]$Vics = -1)
+    $bd = New-Object Windows.Controls.Border
+    $bd.Padding = '14,9'; $bd.BorderBrush = Res 'Rule'; $bd.BorderThickness = '0,0,0,1'
+    if ($Header) { $bd.Background = B '#101B22' }
+    $g = New-Object Windows.Controls.Grid
+    foreach ($wd in @('96','*','200','74','150')) {
+        $c = New-Object Windows.Controls.ColumnDefinition
+        $c.Width = [Windows.GridLength]$(if ($wd -eq '*') { [Windows.GridLength]::new(1,'Star') } else { [Windows.GridLength]::new([double]$wd) })
+        [void]$g.ColumnDefinitions.Add($c)
+    }
+    if ($Header) {
+        $i = 0
+        foreach ($t in @('', 'PILOT', 'SEAT', 'VICTORIES', 'STATUS')) {
+            $tb = New-TB -Text $t -Family $CondFam -Size 11 -Colour '#6F828C' -Bold
+            if ($i -ge 2) { $tb.Margin = '14,0,0,0' }
+            [Windows.Controls.Grid]::SetColumn($tb, $i); [void]$g.Children.Add($tb); $i++
+        }
+        $bd.Child = $g
+        return $bd
+    }
+    $col = if ($IsPlayer) { '#FFC24A' } elseif ($Man.historical) { '#E9E3D4' } else { '#9FB0B8' }
+    $r0 = New-TB -Text (Short-Rank "$($Man.rank)") -Family $CondFam -Size 12.5 -Colour '#6F828C'
+    [Windows.Controls.Grid]::SetColumn($r0, 0); [void]$g.Children.Add($r0)
+    $nm = New-TB -Text "$($Man.pilot)" -Family $CondFam -Size 14 -Colour $col -Bold
+    [Windows.Controls.Grid]::SetColumn($nm, 1); [void]$g.Children.Add($nm)
+    # The seat comes before the Staffel now, because on a Zerstoerer board
+    # half the men are Bordfunker and a column of Staffel numbers does not
+    # say which half is which.
+    $seat = ''
+    if (($Man.PSObject.Properties.Name -contains 'role') -and "$($Man.role)" -and "$($Man.role)" -ne 'Flugzeugfuehrer') {
+        $seat = "$($Man.role)"
+    }
+    $rt = if ($IsPlayer) { 'you' }
+          elseif ($Man.appointment) { "$($Man.appointment)" }
+          elseif ($seat) { $seat }
+          elseif ($Man.staffel) { "$($Man.staffel). Staffel" } else { '' }
+    $r2 = New-TB -Text $rt -Family 'Segoe UI' -Size 12 -Colour $(if ($Man.historical) { '#C8973F' } else { '#6F828C' }) -Wrap
+    $r2.Margin = '14,0,0,0'
+    [Windows.Controls.Grid]::SetColumn($r2, 2); [void]$g.Children.Add($r2)
+
+    $v = if ($IsPlayer) { $Vics } elseif ($null -ne $Man.victories_total) { [int]$Man.victories_total } else { -1 }
+    $vt = New-TB -Text $(if ($v -gt 0) { "$v" } else { '' }) -Family $CondFam -Size 13 -Colour $(if ($IsPlayer) { '#FFC24A' } else { '#C8973F' }) -Bold
+    $vt.Margin = '14,0,0,0'
+    [Windows.Controls.Grid]::SetColumn($vt, 3); [void]$g.Children.Add($vt)
+
+    $st = if ($IsPlayer) { 'On strength' }
+          elseif ($Man.fate -and "$($Man.fate.status)") { "$($Man.fate.status)" }
+          elseif ($Man.historical) { '' } else { 'On strength' }
+    $stc = switch ("$st") {
+        'Killed'   { '#E2685A' }
+        'Missing'  { '#E2685A' }
+        'Prisoner' { '#D9A441' }
+        'Wounded'  { '#D9A441' }
+        default    { '#8FB56A' }
+    }
+    $sd = if ($Man.fate -and "$($Man.fate.date)") { ' ' + (Format-ShortDate "$($Man.fate.date)") } else { '' }
+    $s4 = New-TB -Text "$st$sd" -Family 'Segoe UI' -Size 12 -Colour $(if ($st) { $stc } else { '#6F828C' })
+    $s4.Margin = '14,0,0,0'
+    [Windows.Controls.Grid]::SetColumn($s4, 4); [void]$g.Children.Add($s4)
+    $bd.Child = $g
+    $bd
+}
+
+function Show-Flugbuch {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'logbook'))
+    Show-ChromeButtons $true
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($Pilot.unit)" }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  FLUGBUCH" }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'FLUGBUCH' -Title "$($Pilot.pilot)"))
+
+    $cp = Get-CampaignPilot
+    if ($cp) {
+        $cpl = New-TB -Text "Campaign pilot on record: $($cp.Name)" -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
+        $cpl.Margin = '0,-12,0,14'
+        [void]$script:Stage.Children.Add($cpl)
+    }
+    # WHO ELSE IS IN THE AEROPLANE. Every sortie in this book was flown by
+    # both of them, so both are named at the top of it.
+    $crewF = @(Get-Crew $Pilot)
+    if ($crewF.Count) {
+        $who = @($crewF | ForEach-Object { "$(Short-Rank "$($_.rank)") $($_.pilot), $($_.role)" })
+        $cw = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text (
+            'Flying with him: ' + ($who -join '; ') + '.')
+        $cw.Margin = '0,-8,0,4'; $cw.MaxWidth = 900; $cw.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($cw)
+        # Patrick's decision, said on the screen rather than buried in a
+        # commit: the save keeps ONE kill tally per sortie and no gun
+        # position, so there is nothing to divide between the two of them
+        # and nothing here pretends otherwise.
+        $cn = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+            'The claims below are the aircraft''s. The save records one tally for the sortie and ' +
+            'does not record which gun fired, so they are not split between the two men. His ' +
+            'crewman''s rank and decorations come off sorties flown, and are this Room''s invention.')
+        $cn.Margin = '0,0,0,14'; $cn.MaxWidth = 900; $cn.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($cn)
+    }
+
+    $sessions = Get-Sessions
+    $ld = Sync-CampaignClaims
+    $p2 = Get-Pilot; if ($p2) { $Pilot = $p2 }
+    $career = Get-Career $Pilot $sessions -Sorties (Get-SortieCount -Diary $ld -Sessions $sessions -Pilot $Pilot)
+    $ld = Get-CareerDiary -Diary $ld -Pilot $Pilot
+    $vics = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $vics = [int]$Pilot.victories }
+    $bins = Get-KillBins $Pilot
+
+    $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,-6,0,12'
+    [void]$tiles.Children.Add((New-Stat 'FEINDFLUEGE' "$($career.sorties)"))
+    [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
+    [void]$tiles.Children.Add((New-Stat 'ABSCHUESSE' "$vics"))
+    $honours = @(Get-LwHonours -Pilot $Pilot -Career $career)
+    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours $honours
+    $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
+    [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile -Chip (New-LwHonourRow $honours -Scale 0.30)))
+    [void]$tiles.Children.Add((New-Stat 'RANK' (Short-Rank "$($career.rank)") -Chip $(
+        $f = Get-RankBadgeFile "$($career.rank)"
+        if ($f) { New-BadgeImage -File $f -Height 38 -Tip "$($career.rank)" }
+    )))
+    [void]$script:Stage.Children.Add($tiles)
+
+    $pn = if ($career.next) { "Next promotion to $($career.next) at $($career.nextAt) Feindfluege." } else { 'At the top of his ladder.' }
+    $pnt = New-TB -Text $pn -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Wrap
+    $pnt.Margin = '0,2,0,14'; $pnt.MaxWidth = 860; $pnt.HorizontalAlignment = 'Left'
+    [void]$script:Stage.Children.Add($pnt)
+
+    # Said out loud, because it is the one part of the German side that
+    # rests on an assumption rather than on something checked.
+    $warn = New-Object Windows.Controls.Border
+    $warn.Background = B '#1A1710'; $warn.BorderBrush = $script:BrassBrush
+    $warn.BorderThickness = '3,0,0,0'; $warn.CornerRadius = '0,3,3,0'
+    $warn.Padding = '16,11'; $warn.Margin = '0,0,0,18'; $warn.HorizontalAlignment = 'Left'; $warn.MaxWidth = 940
+    $ws = New-Object Windows.Controls.StackPanel
+    [void]$ws.Children.Add((New-TB -Text 'NOT YET CHECKED AGAINST A GERMAN CAMPAIGN' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
+    $wt = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#9FB0B8' -Text (
+        'This reads the campaign save the same way the RAF Log Book does, and that part is proved. ' +
+        'What is not is whether the game lays a German pilot out identically: no Luftwaffe save has ' +
+        'been available to check. If the figures below look like nonsense rather than merely empty, ' +
+        'that is why, and it is worth saying so.')
+    $wt.Margin = '0,5,0,0'
+    [void]$ws.Children.Add($wt)
+    $warn.Child = $ws
+    [void]$script:Stage.Children.Add($warn)
+
+    [void]$script:Stage.Children.Add((New-TB -Text 'FEINDFLUEGE' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
+    if ($ld -and @($ld.rows).Count -gt 0) {
+        $lw = New-Object Windows.Controls.Border
+        $lw.BorderBrush = Res 'Rule'; $lw.BorderThickness = '1'; $lw.CornerRadius = '3'
+        $lw.Margin = '0,10,0,0'; $lw.ClipToBounds = $true
+        $ls = New-Object Windows.Controls.StackPanel
+        [void]$ls.Children.Add((New-DiaryRow -Header))
+        $arr = @($ld.rows); $i = 0
+        for ($k = $arr.Count - 1; $k -ge 0; $k--) {
+            [void]$ls.Children.Add((New-DiaryRow -R $arr[$k] -Number ($k + 1) -Index $i -Bins $bins)); $i++
+        }
+        $lw.Child = $ls
+        [void]$script:Stage.Children.Add($lw)
+    }
+    else {
+        $none = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#6F828C' -Text (
+            'Nothing flown yet. The campaign keeps its own Log Book inside the save, one line a sortie ' +
+            'with how it ended and what was shot down, and this fills itself from it.')
+        $none.Margin = '0,10,0,0'; $none.MaxWidth = 860; $none.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($none)
+    }
+}
+
+# =====================================================================
+#  The markings on a Bf 109
+#
+#  An RAF fighter carries two squadron code letters, an individual
+#  letter and a serial, and New-Aircraft paints all four onto the
+#  Spitfire as draggable text. A 109 is a different problem, and only
+#  one part of it was ever the pilot's own:
+#
+#    THE INDIVIDUAL NUMBER, forward of the Balkenkreuz, in his STAFFEL's
+#    colour: white for the 1st, 4th and 7th Staffel, red for the 2nd,
+#    5th and 8th, yellow for the 3rd, 6th and 9th. He picks this.
+#
+#    THE GRUPPE SYMBOL, aft of the cross. I. Gruppe wore nothing at all,
+#    II. a horizontal bar, III. a vertical bar or a wavy line depending
+#    on the Geschwader. Follows the unit.
+#
+#    THE GESCHWADER EMBLEM on the cowling, or, for JG 53, a red band
+#    round the rear fuselage. Follows the unit.
+#
+#    A STAB CHEVRON in place of the number, for the men on the staff.
+#    Follows the appointment.
+#
+#  So the Room offers the number and works the rest out, which is the
+#  right way round and happens to be the historically true one.
+#
+#  These are images rather than glyphs, so they cannot go through
+#  Add-AcMark. Add-AcImage is the same idea for a picture: drawn where
+#  the table says or where it was last dragged to, moved with the mouse,
+#  sized with the wheel, put back with a double-click, and remembered in
+#  the same acpos.json under the same per-side key.
+# =====================================================================
+$MarkPath = Join-Path (Join-Path $ModDir 'lw') 'markings.json'
+# Where each marking goes, measured off the game's own MultiSkin rules by
+# dev/measure_markings.py rather than placed by eye. Patrick asked the
+# obvious question - the game puts these in the right place, is the right
+# place written down? It is, in MultiSkin\*.ms, as
+#
+#     use <tile>.dds, 2048, 2048, <scaleX>, <scaleY>, <x>, <y> if <unit...>
+#
+# and the measuring script converts those texture coordinates onto each
+# profile drawing using the Balkenkreuz as the ruler. Per profile, because
+# there are forty of them and they do not all put the cross in the same
+# place.
+# When the yellow recognition markings go on. See Get-GruppeAircraftPath.
+$LwYellowFrom = [datetime]'1940-08-21'
+# WHICH LETTER AN AEROPLANE WEARS, and the game decides it.
+#
+# 33lima created a pilot in 501 Squadron, the Room told him SD-R, and he
+# took off in SD-T. The Room was picking the letter with Get-Random, so
+# it was never going to agree with the game about anything.
+#
+# Hurri_PlaneID_Letter.ms and Spit_PlaneID_Letter.ms map an aeroplane's
+# PLANEID to a letter, the same way Me109_PlaneID_1.ms does for the 109s.
+# 21 Hurricane and 11 Spitfire squadrons have their own table; the rest
+# fall through to a generic one where aeroplane 0 is T. 501's code is SD
+# and it is not among them, and 33lima was leading the squadron, which
+# makes him aeroplane 0. T is exactly what the game gave him.
+$RafLetterPath = Join-Path $ModDir 'raf-letters.json'
+function Get-RafLetters {
+    if ($null -ne $script:RafLetters) { return $script:RafLetters }
+    $m = $null
+    if (Test-Path $RafLetterPath) {
+        try { $m = Get-Content $RafLetterPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:RafLetters = $m
+    $m
+}
+# The letter for one aeroplane of a squadron. PlaneId 0 is the leader.
+function Get-RafLetter {
+    param([string]$Code, [string]$Type, [int]$PlaneId = 0)
+    $m = Get-RafLetters
+    if (-not $m) { return $null }
+    $kind = if ("$Type" -match 'Spit') { 'spitfire' } else { 'hurricane' }
+    foreach ($tbl in @($m.$kind, $m.generic)) {
+        if (-not $tbl) { continue }
+        $t = if ($tbl.PSObject.Properties.Name -contains $Code) { $tbl.$Code } else { $tbl }
+        if ($t -and $t.PSObject.Properties.Name -contains "$PlaneId") { return "$($t.$PlaneId)" }
+    }
+    $null
+}
+$MarkPosPath = Join-Path $ModDir 'marking-positions.json'
+function Get-MarkPositions {
+    if ($null -ne $script:MarkPos) { return $script:MarkPos }
+    $m = $null
+    if (Test-Path $MarkPosPath) {
+        try { $m = Get-Content $MarkPosPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:MarkPos = $m
+    $m
+}
+function Get-LwMarkings {
+    if ($null -ne $script:LwMarks) { return $script:LwMarks }
+    $m = $null
+    if (Test-Path $MarkPath) {
+        try { $m = Get-Content $MarkPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+    }
+    $script:LwMarks = $m
+    $m
+}
+# White, red or yellow. The Staffel's colour, not the Gruppe's: 1., 4.
+# and 7. Staffel all wore white, and they sit in different Gruppen.
+function Get-StaffelColour {
+    param($Pilot)
+    $n = 1
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'staffel') -and $Pilot.staffel) {
+        $n = [int]$Pilot.staffel
+    }
+    $col = switch ((($n - 1) % 3) + 1) { 1 { 'white' } 2 { 'red' } default { 'yellow' } }
+
+    # Three Gruppen do not follow their Staffel's colour all campaign, and
+    # Me109_PlaneID_1.ms is where that is written down. II./JG 26 and
+    # I./JG 51 paint their third Staffel brown on black until 18 August;
+    # III./JG 27's 8. Staffel is red until 21 August and black on white
+    # after it. The rules are read out of the file by
+    # dev/build_lw_markings.py rather than typed in here.
+    #
+    # This is the whole reason the 109 needed the campaign date at all. It
+    # never had it: Get-GruppeAircraftPath picks a 109 plate by unit name
+    # alone, where a 110 goes through Get-Profile110 with the date, so
+    # every one of these was being drawn in the wrong colour before its
+    # date. Raised by 33lima on 10 September 2026.
+    $m = Get-LwMarkings
+    if ($m -and $m.PSObject.Properties.Name -contains 'number_dates' -and $script:CampaignDate) {
+        $unit = "$($Pilot.unit)"
+        foreach ($r in @($m.number_dates)) {
+            if ("$($r.unit)" -ne $unit) { continue }
+            if ([int]$r.staffel -ne $n) { continue }
+            $d = $null
+            try { $d = [datetime]::ParseExact("$($r.date)", 'yyyy-MM-dd', $null) } catch { }
+            if (-not $d) { continue }
+            $pick = if ($script:CampaignDate -lt $d) { "$($r.before)" } else { "$($r.after)" }
+            if ($pick) { $col = $pick }
+            break
+        }
+    }
+    $col
+}
+# The number he flies. Chosen when he reports to the Gruppe; an older
+# record made before there was a choice gets one from his own name, so
+# it is the same every time rather than a fresh number each opening.
+function Get-AcNumber {
+    param($Pilot)
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'acnum') -and [int]$Pilot.acnum -gt 0) {
+        return [int]$Pilot.acnum
+    }
+    $seed = 0
+    foreach ($c in "$($Pilot.pilot)$($Pilot.unit)".ToCharArray()) { $seed = ($seed * 31 + [int]$c) % 100000 }
+    ($seed % 15) + 1
+}
+# WHO FLIES WITH HIM, drawn from the Gruppe's own roster.
+#
+# The roster now carries a role on every man, so a Zerstoerer Gruppe has
+# twelve pilots and twelve Bordfunker rather than twelve men. This picks
+# one for each further seat the aeroplane has.
+#
+# The choice is SEEDED FROM THE PLAYER'S OWN NAME, so the same man gets
+# the same crew every time the Room is opened rather than a fresh one
+# each visit. Men whose invented fate has already passed are skipped:
+# there is no sense being posted alongside somebody who was killed in
+# July when it is September.
+function Get-CrewCandidate {
+    param($Unit, [string]$Role, $Date, $Seed, $Taken = @())
+    $men = @(Get-LwRoster -Unit $Unit | Where-Object {
+        ("$($_.role)" -eq $Role) -and ($Taken -notcontains "$($_.pilot)")
+    })
+    if (-not $men.Count) { return $null }
+    $alive = @($men | Where-Object {
+        if (-not $_.left -or -not $Date) { return $true }
+        try { return ([datetime]::ParseExact("$($_.left)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture) -gt $Date) } catch { return $true }
+    })
+    if ($alive.Count) { $men = $alive }
+    $h = 0
+    foreach ($c in "$Seed$Role".ToCharArray()) { $h = ($h * 31 + [int]$c) % 100000 }
+    $men[$h % $men.Count]
+}
+# His photograph, settled the same way: from his own name, so it is the
+# same face every time and nothing has to be stored beyond the name.
+function Get-CrewPortrait {
+    param([string]$Name)
+    # FLATTENED, with the loop this file uses everywhere else.
+    # ConvertFrom-Json hands the portrait list back as ONE element that
+    # IS the array, so @(Get-Portraits) counts 1 and index 0 is all 92
+    # names - which came out as a portrait field holding every filename
+    # joined by spaces. The RAF morning paper shipped broken once for
+    # exactly this, with a single flatten where a loop was needed.
+    $ps = @(Get-Portraits)
+    while ($ps.Count -eq 1 -and ($ps[0] -is [System.Array])) { $ps = $ps[0] }
+    if (-not $ps.Count) { return $null }
+    $h = 0
+    foreach ($c in "$Name".ToCharArray()) { $h = ($h * 31 + [int]$c) % 100000 }
+    return [string]$ps[$h % $ps.Count]
+}
+# The crew a man gets on the day he is posted, one member per further
+# seat. Returns an empty array for a single-seat type, so a 109 career is
+# exactly what it always was.
+function New-CrewFor {
+    param($Unit, [string]$Type, $Date, [string]$Seed, [int]$SortiesBase = 0)
+    $roles = @(Get-CrewRoles $Type)
+    if ($roles.Count -le 1) { return @() }
+    $out = @(); $taken = @()
+    foreach ($r in $roles[1..($roles.Count - 1)]) {
+        $m = Get-CrewCandidate -Unit $Unit -Role $r -Date $Date -Seed $Seed -Taken $taken
+        if (-not $m) { continue }
+        $taken += "$($m.pilot)"
+        # Built with plain statements rather than inline $(if ...) inside
+        # the hashtable. Written that way, `rank` came out as the string
+        # "1" - the branch's own boolean leaking into the value - and the
+        # fault is invisible until a screen shows a man whose rank is a
+        # number.
+        $mName = "$($m.pilot)"
+        $mRank = "$($m.rank)"
+        if (-not $mRank) {
+            $mRank = 'Unteroffizier'
+            if ($CrewEntryRank.ContainsKey($r)) { $mRank = [string]$CrewEntryRank[$r] }
+        }
+        $mPort = Get-CrewPortrait $mName
+        $mJoin = ''
+        if ($Date) { $mJoin = $Date.ToString('yyyy-MM-dd') }
+        $out += [ordered]@{
+            role        = [string]$r
+            pilot       = [string]$mName
+            rank        = [string]$mRank
+            rank_date   = ''
+            portrait    = [string]$mPort
+            honours     = @()
+            sortiesBase = [int]$SortiesBase
+            joined      = [string]$mJoin
+            src         = 'invented'
+        }
+    }
+    # A PLAIN return. Comma-returning here and collecting with @() at the
+    # caller nests the crew one level deep, and the whole array then
+    # arrives as a single "member" whose rank reads as 1. Same rule as
+    # everywhere else in this file: comma return XOR @() at the caller.
+    $out
+}
+# WHEN A CREWMAN DOES NOT COME BACK.
+#
+# Every man on the roster carries an invented fate on a dated day, and
+# the Bordfunker is drawn from that roster, so his day comes like anyone
+# else's. Patrick's decision was that he is replaced and the Room says
+# so, rather than being quietly swapped or made unkillable - every other
+# man on the board can be killed, and one who cannot reads oddly.
+#
+# The replacement's sortiesBase is set to the count SO FAR, so he starts
+# at nought and does not inherit sorties he did not fly.
+#
+# Returns the list of losses, so the Ready Room can name them.
+function Update-CrewLosses {
+    param($Pilot, [int]$Sorties)
+    $crew = @(Get-Crew $Pilot)
+    if (-not $crew.Count) { return @() }
+    $d = $script:CampaignDate
+    if (-not $d) { return @() }
+    $roster = @(Get-LwRoster -Unit "$($Pilot.unit)")
+    $lost = @(); $newCrew = @(); $changed = $false
+    $taken = @($crew | ForEach-Object { "$($_.pilot)" })
+    foreach ($m in $crew) {
+        $man = $roster | Where-Object { "$($_.pilot)" -eq "$($m.pilot)" } | Select-Object -First 1
+        $gone = $false; $when = $null; $how = 'did not come back'
+        if ($man -and "$($man.left)") {
+            try {
+                $ld = [datetime]::ParseExact("$($man.left)",'yyyy-MM-dd',[Globalization.CultureInfo]::InvariantCulture)
+                if ($ld -le $d) {
+                    $gone = $true; $when = $ld
+                    if ($man.fate -and "$($man.fate.status)") { $how = "$($man.fate.status)".ToLower() }
+                }
+            } catch { }
+        }
+        if (-not $gone) { $newCrew += $m; continue }
+        $rep = Get-CrewCandidate -Unit "$($Pilot.unit)" -Role "$($m.role)" -Date $d `
+                                 -Seed "$($Pilot.pilot)$($m.pilot)" -Taken $taken
+        $lost += [ordered]@{ pilot = "$($m.pilot)"; rank = "$($m.rank)"; role = "$($m.role)"
+                             date = $when.ToString('yyyy-MM-dd'); how = $how
+                             replacedBy = $(if ($rep) { "$($rep.pilot)" } else { '' }) }
+        $changed = $true
+        if (-not $rep) { continue }
+        $taken += "$($rep.pilot)"
+        $rk = "$($rep.rank)"
+        if (-not $rk) { $rk = 'Unteroffizier' }
+        $newCrew += [pscustomobject]([ordered]@{
+            role        = [string]$m.role
+            pilot       = [string]$rep.pilot
+            rank        = [string]$rk
+            rank_date   = ''
+            portrait    = [string](Get-CrewPortrait "$($rep.pilot)")
+            honours     = @()
+            sortiesBase = [int]$Sorties
+            joined      = [string]$d.ToString('yyyy-MM-dd')
+            src         = 'invented'
+        })
+    }
+    if (-not $changed) { return @() }
+    $obj = [ordered]@{}
+    foreach ($pp in $Pilot.PSObject.Properties) { $obj[$pp.Name] = $pp.Value }
+    $obj['crew'] = @($newCrew)
+    # -Shrink because a man lost and not replaced makes the record
+    # genuinely smaller, and that is a real event rather than a mistake.
+    Save-Pilot -Pilot $obj -Shrink
+    $lost
+}
+# A Zerstoerer's own letter. The same acnum the adjutant asks for, read
+# as a letter instead of a numeral: the fuselage rules run A to K and
+# stop there, so eleven letters and no more.
+$Letters110 = @('A','B','C','D','E','F','G','H','I','J','K')
+function Get-Ac110Letter {
+    param($Pilot)
+    $n = Get-AcNumber $Pilot
+    $i = [math]::Max(0, [math]::Min($Letters110.Count - 1, [int]$n - 1))
+    $Letters110[$i]
+}
+function Get-MarkFile {
+    param([string]$Rel)
+    if (-not $Rel) { return $null }
+    $f = Join-Path (Join-Path (Join-Path $ModDir 'lw') 'markings') ($Rel -replace '/','\')
+    if (Test-Path $f) { return $f }
+    $null
+}
+# One picture on the aeroplane. The twin of Add-AcMark, which does the
+# same for text: same acpos.json, same drag, same wheel, same
+# double-click to put it back. The wheel changes WIDTH here where the
+# text version changes FontSize, and the height follows the picture's
+# own shape so a chevron cannot be squashed into a square.
+# WHERE THE SKIN ALREADY CARRIES THE MARKING, DRAW NOTHING.
+#
+# MultiSkin composites: camouflage and national markings in the main
+# skin, then the number, the Gruppe symbol and the Geschwader badge laid
+# over it. Where a skin has one painted in, the game points the overlay
+# at blank.dds, and the Room has to do the same or it draws a second one
+# on top.
+#
+# The big case is the Stab aeroplane: planeid 1 of fifteen units is
+# blanked, because a Kommandeur's chevron is part of his skin. Galland's
+# is the one you would notice, since he would otherwise wear a chevron
+# and a number at once. Read from Me109_PlaneID_1.ms and Me109_Emblem.ms
+# by dev/build_lw_markings.py.
+function Test-MarkBlank {
+    param([string]$Kind, [string]$Unit, [int]$PlaneId)
+    if ($PlaneId -le 0) { return $false }
+    $m = Get-LwMarkings
+    if (-not $m) { return $false }
+    if ($m.PSObject.Properties.Name -notcontains 'blanks') { return $false }
+    if ($m.blanks.PSObject.Properties.Name -notcontains $Kind) { return $false }
+    foreach ($r in @($m.blanks.$Kind)) {
+        if (@($r.units) -notcontains $Unit) { continue }
+        if (@($r.planeids) -contains $PlaneId) { return $true }
+    }
+    $false
+}
+function Add-AcImage {
+    param($Canvas, [string]$Key, [string]$File, [double]$DX, [double]$DY,
+          [double]$DW, [double]$DH = 0, [double]$W, [double]$H, [string]$Tip)
+    if (-not $File) { return $null }
+    $bmp = Load-Image -Path $File -DecodeWidth 320
+    if (-not $bmp) { return $null }
+    # HOW TALL A MARKING IS COMES FROM THE RULE, NOT FROM THE TILE.
+    #
+    # MultiSkin scales x and y separately, and measure_markings.py says so
+    # in as many words: "One combined scale puts everything at the wrong
+    # height." It works both out and writes dw AND dh into
+    # marking-positions.json. This function then used the tile's own pixel
+    # aspect instead and never read dh.
+    #
+    # Every tile is a square 128 x 128 canvas, so that was invisible
+    # wherever the rule happened to be square too, which the number and
+    # the emblem are. The Gruppe symbol is not: its rule asks for 106 x 71
+    # on the 109 plate, so the bar was drawn 106 x 106 and came out half
+    # as tall again as it should be. Patrick spotted the white stripe.
+    $ratio = if ($DH -gt 0 -and $DW -gt 0 -and $W -gt 0) {
+        ($DH * $H) / ($DW * $W)
+    } elseif ($bmp.PixelWidth -gt 0) {
+        [double]$bmp.PixelHeight / [double]$bmp.PixelWidth
+    } else { 1.0 }
+    $fx = $DX; $fy = $DY; $wf = $DW
+    if ($script:AcPos.ContainsKey($Key)) {
+        $rec = $script:AcPos[$Key]
+        # A NUDGE BELONGS TO THE PICTURE IT WAS MADE ON. Each saved nudge now
+        # carries the measured position it started from (bx, by). When the
+        # side view is redrawn the measured position moves, and a nudge made
+        # against the old drawing is thrown away rather than obeyed: on 20
+        # September 2026 the 110s were repainted with the cross 10 px higher
+        # and Patrick's code letters stayed where the old picture had them.
+        # A record with no base predates every painted side view, so on this
+        # side it is stale by definition.
+        $fresh = $rec.ContainsKey('bx') -and $rec.ContainsKey('by') -and
+                 ([math]::Abs([double]$rec.bx - $DX) -lt 0.002) -and ([math]::Abs([double]$rec.by - $DY) -lt 0.002)
+        if ($fresh) {
+            $fx = [double]$rec.x; $fy = [double]$rec.y
+            if ($rec.ContainsKey('s') -and [double]$rec.s -gt 0) { $wf = [double]$rec.s }
+        } else {
+            $script:AcPos.Remove($Key); Save-AcPos $script:AcPos
+        }
+    }
+    $img = New-Object Windows.Controls.Image
+    $img.Source = $bmp; $img.Stretch = 'Fill'
+    $img.Width = $wf * $W; $img.Height = $img.Width * $ratio
+    $img.Cursor = 'SizeAll'
+    $img.ToolTip = $(if ($Tip) { "$Tip  Drag to move, roll the wheel to size it, double-click to put it back." }
+                     else { 'Drag to move, roll the wheel to size it, double-click to put it back.' })
+    [Windows.Controls.Canvas]::SetLeft($img, $fx * $W)
+    [Windows.Controls.Canvas]::SetTop($img,  $fy * $H)
+    # Everything the handlers need travels in the Tag. A closure would
+    # get its own module scope and the $script: writes inside it would
+    # never reach the Room.
+    $img.Tag = @{ Key = $Key; W = $W; H = $H; DX = $DX; DY = $DY; DW = $DW; Ratio = $ratio
+                  Drag = $false; Moved = $false; OX = 0.0; OY = 0.0 }
+    $img.Add_MouseWheel({
+        param($sender, $e)
+        $t = $sender.Tag
+        $wf = ($sender.Width / $t.W) * $(if ($e.Delta -gt 0) { 1.06 } else { 1.0 / 1.06 })
+        $wf = [math]::Max(0.006, [math]::Min(0.45, $wf))
+        $sender.Width = $wf * $t.W; $sender.Height = $sender.Width * $t.Ratio
+        Save-AcImage $sender
+        $e.Handled = $true
+    })
+    $img.Add_MouseLeftButtonDown({
+        param($sender, $e)
+        $t = $sender.Tag
+        if ($e.ClickCount -ge 2) {
+            [Windows.Controls.Canvas]::SetLeft($sender, $t.DX * $t.W)
+            [Windows.Controls.Canvas]::SetTop($sender,  $t.DY * $t.H)
+            $sender.Width = $t.DW * $t.W; $sender.Height = $sender.Width * $t.Ratio
+            $script:AcPos.Remove($t.Key); Save-AcPos $script:AcPos
+            $e.Handled = $true; return
+        }
+        $p = $e.GetPosition($sender.Parent)
+        $t.OX = $p.X - [Windows.Controls.Canvas]::GetLeft($sender)
+        $t.OY = $p.Y - [Windows.Controls.Canvas]::GetTop($sender)
+        $t.Drag = $true; $t.Moved = $false
+        [void]$sender.CaptureMouse(); $e.Handled = $true
+    })
+    $img.Add_MouseMove({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $p = $e.GetPosition($sender.Parent)
+        $nx = $p.X - $t.OX; $ny = $p.Y - $t.OY
+        if (-not $t.Moved -and ([math]::Abs($nx - [Windows.Controls.Canvas]::GetLeft($sender)) -le 2) `
+                          -and ([math]::Abs($ny - [Windows.Controls.Canvas]::GetTop($sender)) -le 2)) { return }
+        $t.Moved = $true
+        $nx = [math]::Max(-20.0, [math]::Min($t.W - 10.0, $nx))
+        $ny = [math]::Max(-20.0, [math]::Min($t.H - 10.0, $ny))
+        [Windows.Controls.Canvas]::SetLeft($sender, $nx)
+        [Windows.Controls.Canvas]::SetTop($sender, $ny)
+    })
+    $img.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        $t = $sender.Tag
+        if (-not $t.Drag) { return }
+        $t.Drag = $false; [void]$sender.ReleaseMouseCapture()
+        if (-not $t.Moved) { return }
+        Save-AcImage $sender
+    })
+    [void]$Canvas.Children.Add($img)
+    $img
+}
+function Save-AcImage {
+    param($Mark)
+    $t = $Mark.Tag
+    $script:AcPos[$t.Key] = @{
+        x = [math]::Round([Windows.Controls.Canvas]::GetLeft($Mark) / $t.W, 4)
+        y = [math]::Round([Windows.Controls.Canvas]::GetTop($Mark)  / $t.H, 4)
+        s = [math]::Round($Mark.Width / $t.W, 4)
+        bx = [math]::Round([double]$t.DX, 4)
+        by = [math]::Round([double]$t.DY, 4)
+    }
+    Save-AcPos $script:AcPos
+}
+# Which chevron, if any. Only the men on the staff wore one, and only in
+# place of a number: a Kommandeur's machine has no individual number at
+# all. Get-Appointment already works out what a man is doing from his
+# rank and his sorties, so the two agree without a second rule.
+function Get-StabChevron {
+    param($Pilot, $Career)
+    $m = Get-LwMarkings
+    if (-not $m) { return $null }
+    $appt = ''
+    try { $appt = "$(Get-Appointment -Pilot $Pilot -Career $Career)" } catch { }
+    $key = switch -Regex ($appt) {
+        'Kommodore'   { 'kommandeur2'; break }
+        'Kommandeur'  { 'kommandeur';  break }
+        'Adjutant'    { 'adjutant';    break }
+        'Technischer' { 'technical';   break }
+        default       { $null }
+    }
+    if (-not $key) { return $null }
+    Get-MarkFile "$($m.stab.$key)"
+}
+# The aeroplane with his markings on it. Where each mark starts is a
+# fraction of the profile's width, taken off the drawings: the number
+# sits just forward of the cross, the Gruppe symbol just aft of it, the
+# emblem on the cowling below the exhausts, and the band round the rear
+# fuselage. All four can be dragged, because no two of these profiles
+# put the cross in quite the same place.
+function New-LwAircraft {
+    param($Pilot, $Career, $Gruppe)
+    $acFile = Get-GruppeAircraftPath -G $Gruppe -Pilot $Pilot
+    if (-not $acFile) { return $null }
+    $bmp = Load-Image -Path $acFile -DecodeWidth 900
+    if (-not $bmp) { return $null }
+    $ratio = if ($bmp.PixelWidth -gt 0) { [double]$bmp.PixelHeight / [double]$bmp.PixelWidth } else { 0.29 }
+    $acH = $AcW * $ratio
+    $wrap = New-Object Windows.Controls.Grid
+    $wrap.Width = $AcW; $wrap.Height = $acH; $wrap.HorizontalAlignment = 'Left'; $wrap.Margin = '0,2,0,10'
+    $img = New-Object Windows.Controls.Image
+    $img.Source = $bmp; $img.Stretch = 'Fill'; $img.Width = $AcW; $img.Height = $acH
+    [void]$wrap.Children.Add($img)
+
+    $cv = New-Object Windows.Controls.Canvas; $cv.Width = $AcW; $cv.Height = $acH
+    $script:AcPos = Get-AcPos
+    $m = Get-LwMarkings
+    # the measured placement for THIS profile
+    $mp = Get-MarkPositions
+    $pk = Split-Path $acFile -Leaf
+
+    # A Bf 110 WEARS LETTERS, NOT A NUMBER, and they are laid out like a
+    # bomber's: the Geschwader's two characters, the Balkenkreuz, the
+    # individual aircraft letter and the Staffel letter - U8+DH. So it
+    # takes a branch of its own rather than the number path with different
+    # numbers in it.
+    #
+    # The individual letter's colour follows the Staffel exactly as the
+    # 109's number does, so Get-StaffelColour serves both. The Staffel
+    # letter is always black: there is no other colour of one anywhere in
+    # the game's rules.
+    if ("$($Gruppe.type)" -match '110') {
+        $P110 = if ($mp -and $mp.lw -and $mp.lw.profiles110) { $mp.lw.profiles110.$pk } else { $null }
+        if ($m -and $P110) {
+            $unit = "$($Pilot.unit)"
+            $key = 'lw110|' + ($unit -replace '[^A-Za-z0-9]','')
+            $col = Get-StaffelColour $Pilot
+            $slot = Get-StaffelSlot $Pilot.staffel
+            # the Geschwader's two characters, forward of the cross
+            $cf = Get-MarkFile "$($m.codes110.$unit)"
+            if ($cf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|code" -File $cf `
+                                   -DX ([double]$P110.code.dx) -DY ([double]$P110.code.dy) `
+                                   -DW ([double]$P110.code.dw) -DH ([double]$P110.code.dh) -W $AcW -H $acH `
+                                   -Tip "The Geschwader code.")
+            }
+            # his own letter, aft of the cross
+            $L = Get-Ac110Letter $Pilot
+            $lf = Get-MarkFile "$($m.letters110.$L.$col)"
+            if ($lf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|ind" -File $lf `
+                                   -DX ([double]$P110.individual.dx) -DY ([double]$P110.individual.dy) `
+                                   -DW ([double]$P110.individual.dw) -DH ([double]$P110.individual.dh) -W $AcW -H $acH `
+                                   -Tip "Your letter, $L, in the $col of the $($Pilot.staffel). Staffel.")
+            }
+            # and the Staffel's letter behind it, always black
+            $sl = "$($m.staffel_letter."$slot")"
+            $sf = Get-MarkFile "$($m.letters110.$sl.black)"
+            if ($sf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|stf" -File $sf `
+                                   -DX ([double]$P110.staffel.dx) -DY ([double]$P110.staffel.dy) `
+                                   -DW ([double]$P110.staffel.dw) -DH ([double]$P110.staffel.dh) -W $AcW -H $acH `
+                                   -Tip "$($Pilot.staffel). Staffel, which is the letter $sl.")
+            }
+        }
+        [void]$wrap.Children.Add($cv)
+        return $wrap
+    }
+    $P = if ($mp -and $mp.lw -and $mp.lw.profiles) { $mp.lw.profiles.$pk } else { $null }
+    # Falling back to a guess would put a marking somewhere plausible and
+    # wrong, and nothing on screen would say which it was. A profile that
+    # has not been measured gets a bare aeroplane and the note says so.
+    if ($m -and $P) {
+        $unit = "$($Pilot.unit)"
+        $key = 'lw|' + ($unit -replace '[^A-Za-z0-9]','')
+        $u = $m.units.$unit
+        $col = Get-StaffelColour $Pilot
+
+        # the number, or a chevron in its place for a staff officer,
+        # unless his own skin already has one painted on
+        $pid109 = Get-PlaneId -Pilot $Pilot
+        $fm = Get-FlownMark -Pilot $Pilot
+        $blankNum = (Test-MarkBlank -Kind 'number' -Unit $unit -PlaneId $pid109) -or ($fm -and $fm.Blank)
+        # a mirrored aeroplane wears what the game painted, so the Room
+        # adds no chevron of its own to it
+        $chev = if ($blankNum -or $fm) { $null } else { Get-StabChevron -Pilot $Pilot -Career $Career }
+        if ($chev) {
+            [void](Add-AcImage -Canvas $cv -Key "$key|chev" -File $chev `
+                               -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
+                               -DW ([double]$P.number.dw) -DH ([double]$P.number.dh) -W $AcW -H $acH `
+                               -Tip 'The Stab chevron, worn in place of an individual number.')
+        }
+        elseif (-not $blankNum) {
+            $n = Get-AcNumber $Pilot
+            if ($fm -and $fm.Number -gt 0) {
+                $n = $fm.Number
+                if ($fm.Colour -and "$($m.numbers.$n.$($fm.Colour))") { $col = $fm.Colour }
+            }
+            $nf = Get-MarkFile "$($m.numbers.$n.$col)"
+            if ($nf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|num" -File $nf `
+                                   -DX ([double]$P.number.dx) -DY ([double]$P.number.dy) `
+                                   -DW ([double]$P.number.dw) -DH ([double]$P.number.dh) -W $AcW -H $acH `
+                                   -Tip "Your number, in the $col of the $($Pilot.staffel). Staffel.")
+            }
+        }
+        # THE GRUPPE SYMBOL, aft of the cross, taken from the game's own
+        # rule FOR THIS UNIT rather than from a table of my own.
+        #
+        # The table was wrong. It said JG 3, JG 52 and JG 53 wore the
+        # wavy line; Me109_PlaneID_2.ms gives III./JG 3, III./JG 51 and
+        # III./JG 53 the vertical bar, and names III./JG 2 as the only
+        # wavy unit in the file. The three symbols also sit at three
+        # different positions - the II. bar at (1500, 202), the III. bar
+        # at (1470, 199), the wavy at (1520, 199) - so a single figure
+        # was wrong even where the symbol happened to be right. That is
+        # what Patrick was looking at.
+        #
+        # A unit the rules do not name, or name with blank.dds, gets
+        # nothing. Its own artwork carries whatever it wore.
+        $gu = if ($P.gruppe_by_unit) { $P.gruppe_by_unit.$unit } else { $null }
+        if ($gu -and "$($gu.symbol)") {
+            $gf = Get-MarkFile "$($m.gruppe."$($gu.symbol)_$col")"
+            if (-not $gf) { $gf = Get-MarkFile "$($m.gruppe."$($gu.symbol)_white")" }
+            if ($gf) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|grp" -File $gf `
+                                   -DX ([double]$gu.dx) -DY ([double]$gu.dy) `
+                                   -DW ([double]$gu.dw) -DH ([double]$gu.dh) -W $AcW -H $acH `
+                                   -Tip "The $($gu.symbol -replace 'IIIwavy','III') Gruppe symbol.")
+            }
+        }
+        # The Geschwader emblem. The main skins carry camouflage and
+        # national markings and no badge, so it is drawn, except on the
+        # two aeroplanes whose own skin has one and whose overlay the
+        # game therefore blanks.
+        $ownArt = (Test-GruppeOwnProfile $Gruppe) -or
+                  (Test-MarkBlank -Kind 'emblem' -Unit $unit -PlaneId $pid109)
+        if ((-not $ownArt) -and $u -and "$($u.emblem)") {
+            $ef = Get-MarkFile "$($u.emblem)"
+            if ($ef) {
+                [void](Add-AcImage -Canvas $cv -Key "$key|emb" -File $ef `
+                                   -DX ([double]$P.emblem.dx) -DY ([double]$P.emblem.dy) `
+                                   -DW ([double]$P.emblem.dw) -DH ([double]$P.emblem.dh) -W $AcW -H $acH `
+                                   -Tip 'The Geschwader emblem.')
+            }
+        }
+        # JG 53's red band is NOT DRAWN, and that is deliberate.
+        #
+        # Every other marking here has a MultiSkin rule saying exactly
+        # where it goes. The band has none: the game does not place it as
+        # a decal at all, it swaps the entire skin, in Me109_Markings.ms:
+        #
+        #   use ...M109ULF_BARE_DETAIL MARKINGS_JG53.dds, 2048, 2048,
+        #       1.000, 1.000, 0, 0 if unit == IJG53 ... and date >= Oct1st1940
+        #
+        # so there is no position to read. Putting it somewhere plausible
+        # is the very thing this whole exercise replaced, and the guess
+        # showed: it sat on top of the Gruppe's wavy line. The tile is
+        # kept in markings/bands so it can be drawn the day somebody
+        # measures where it belongs. The Geschwader still reads from its
+        # Gruppe symbol in the meantime.
+    }
+    [void]$wrap.Children.Add($cv)
+    $wrap
+}
+# =====================================================================
+#  What Berlin claimed: the OKW communique, in English, labelled
+#
+#  Patrick's decision, and it is the right one: an English rendering of
+#  what Berlin claimed rather than the German text, with the material
+#  labelled for what it is.
+#
+#  squadronroom/lw/okw.json is built by dev/harvest_okw.py and
+#  dev/render_okw.py. The chain is worth knowing before anybody changes
+#  a word of what follows.
+#
+#  There is no free digital edition of the Wehrmachtbericht: both
+#  complete printed editions are in copyright as editions, and the
+#  Bundesarchiv's own file of them is not digitised. So the text comes
+#  from the newspapers that printed it verbatim every morning, out of
+#  the Deutsches Zeitungsportal of the Deutsche Digitale Bibliothek,
+#  from twelve papers that carry Public Domain Mark 1.0, CC BY-SA 4.0
+#  or CC BY-NC-SA 4.0. Most days have five to seven independent
+#  readings of the same words.
+#
+#  The pages are Fraktur and the OCR is imperfect, so NOTHING here is a
+#  paraphrase. What is shown is the two figures - British aircraft
+#  claimed, German aircraft admitted missing - and the British places
+#  named, all pulled out by pattern and checked against a fixed list of
+#  real places. A machine paraphrase of a propaganda communique written
+#  out in confident English prose is the one thing this must never
+#  produce, because it would read as a report of what happened. Each
+#  record keeps the German it was read from so any reading can be
+#  checked.
+#
+#  A day with no figures shows nothing rather than a guess.
+# =====================================================================
+$OkwPath = Join-Path (Join-Path $ModDir 'lw') 'okw.json'
+function Get-Okw {
+    $out = @()
+    if (Test-Path $OkwPath) {
+        try { $out = @(Get-Content $OkwPath -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { $out = @() }
+    }
+    ,$out
+}
+# ConvertFrom-Json plus the pipeline nests the array several layers deep.
+# The RAF paper shipped broken once for exactly this, with a single
+# flatten where a loop was needed.
+function Get-OkwEntries {
+    if ($null -ne $script:OkwCache) { return $script:OkwCache }
+    $e = @(Get-Okw)
+    while ($e.Count -eq 1 -and ($e[0] -is [System.Array])) { $e = $e[0] }
+    $script:OkwCache = $e
+    ,$e
+}
+# The communique for the campaign's day, or the nearest earlier one. The
+# same rule the RAF paper uses, and for the same reason: a campaign day
+# with no entry should show the last thing that was said, not a blank.
+function Get-OkwForDate {
+    param($Date)
+    $e = Get-OkwEntries
+    if (-not $e.Count) { return $null }
+    $i = Get-LeadBulletinIndex -Entries $e -Date $Date
+    if ($i -lt 0) { return $null }
+    $r = $e[$i]
+    # A day with no figures can still have named its targets, and what
+    # Berlin said it had attacked is worth as much as what it said it had
+    # shot down. Only a record with neither is nothing to show.
+    if (($null -eq $r.claimed_british) -and ($null -eq $r.admitted_german) -and
+        (-not @($r.targets).Count)) { return $null }
+    $r
+}
+# The caption under the heading. Short, unmissable, and on the screen
+# every time the column is: a warning at the foot of a page is a warning
+# somebody reads after they have already believed the numbers.
+$OkwCaption = 'Nazi propaganda. The figures were inflated on purpose.'
+# The note is FOLDED AWAY behind a line you click, because open it ran
+# to two paragraphs and a source credit and swamped the page it was
+# meant to caption. What stays on the screen unfolded is the short
+# caption above the figures, which is the part that has to be read
+# before the numbers are.
+#
+# Whether it is open is remembered for the session, so a man who opens
+# it once does not have to open it again every time he changes day.
+function New-OkwNote {
+    param($Rec)
+    $b = New-Object Windows.Controls.Border
+    $b.Background = B '#241A17'; $b.BorderBrush = B '#7A3E32'; $b.BorderThickness = '3,0,0,0'
+    $b.CornerRadius = '0,3,3,0'; $b.Padding = '18,12'; $b.Margin = '0,16,0,0'
+    $b.HorizontalAlignment = 'Left'; $b.MaxWidth = 940
+    $s = New-Object Windows.Controls.StackPanel
+
+    $hdr = New-Object Windows.Controls.Border
+    $hdr.Background = B '#00000000'; $hdr.Cursor = 'Hand'
+    $hrow = New-Object Windows.Controls.StackPanel; $hrow.Orientation = 'Horizontal'
+    $open = [bool]$script:OkwNoteOpen
+    $chev = New-TB -Text $(if ($open) { [string][char]0x25BE } else { [string][char]0x25B8 }) `
+                   -Family $CondFam -Size 12 -Colour '#D98E7E' -Bold
+    $chev.Margin = '0,0,8,0'
+    [void]$hrow.Children.Add($chev)
+    [void]$hrow.Children.Add((New-TB -Text 'DISCLAIMER & HISTORICAL CONTEXT' -Family $CondFam -Size 12 -Colour '#D98E7E' -Bold))
+    # the hint has to agree with the state it is drawn in, not just with
+    # the state the click handler leaves behind
+    $hint = New-TB -Text $(if ($open) { 'click to close' } else { 'click to read' }) `
+                   -Family $CondFam -Size 11.5 -Colour '#8A7C77'
+    $hint.Margin = '12,0,0,0'
+    [void]$hrow.Children.Add($hint)
+    $hdr.Child = $hrow
+    [void]$s.Children.Add($hdr)
+
+    $body = New-Object Windows.Controls.StackPanel
+    $body.Visibility = $(if ($open) { 'Visible' } else { 'Collapsed' })
+    $t1 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#C9BDB8' -Text (
+        'The Wehrmachtbericht was the daily communique of the German Armed Forces High Command, ' +
+        'written by the propaganda department of the OKW and broadcast every day of the war. It was ' +
+        'an instrument of the Nazi state and it is not a record of what happened. Victories were ' +
+        'inflated on purpose and losses were understated. On 11 August 1940 it claimed 73 British ' +
+        'aircraft shot down for 14 German aircraft missing. The real figures were nothing like that, ' +
+        'and the men reading it had no way of knowing.')
+    $t1.Margin = '0,10,0,0'; $t1.MaxWidth = 880; $t1.LineHeight = 18
+    [void]$body.Children.Add($t1)
+    $t2 = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#C9BDB8' -Text (
+        'It is here for one reason: this is what a Luftwaffe pilot was told that morning, and the ' +
+        'distance between what he was told and what his own Gruppe''s diary records is the honest ' +
+        'thing to put in front of you. It is shown to be understood, not believed, and nothing in ' +
+        'it is endorsed.')
+    $t2.Margin = '0,8,0,0'; $t2.MaxWidth = 880; $t2.LineHeight = 18
+    [void]$body.Children.Add($t2)
+    if ($Rec) {
+        $src = New-TB -Wrap -Family 'Segoe UI' -Size 11.5 -Colour '#8A7C77' -Text (
+            "Rendered into English from the communique as printed in $($Rec.paper), " +
+            "$(Format-ShortDate "$($Rec.date)"), held by the Deutsches Zeitungsportal of the " +
+            "Deutsche Digitale Bibliothek under $($Rec.licence).")
+        $src.Margin = '0,10,0,0'; $src.MaxWidth = 880; $src.FontStyle = 'Italic'
+        [void]$body.Children.Add($src)
+    }
+    [void]$s.Children.Add($body)
+
+    # The two controls the handler needs travel in the Tag. A scriptblock
+    # cannot simply close over them: .GetNewClosure() gives it its own
+    # module scope and a $script: write inside one never reaches the Room,
+    # which is what made it impossible to join a Gruppe for a while.
+    $hdr.Tag = @{ Body = $body; Chev = $chev; Hint = $hint }
+    $hdr.Add_MouseLeftButtonUp({
+        param($sender, $e)
+        $t = $sender.Tag
+        $was = ($t.Body.Visibility -eq 'Visible')
+        $t.Body.Visibility = $(if ($was) { 'Collapsed' } else { 'Visible' })
+        $t.Chev.Text = $(if ($was) { [string][char]0x25B8 } else { [string][char]0x25BE })
+        $t.Hint.Text = $(if ($was) { 'click to read' } else { 'click to close' })
+        $script:OkwNoteOpen = (-not $was)
+    })
+    $b.Child = $s
+    $b
+}
+# =====================================================================
+#  The Morgenmeldung: the German side's morning bulletin
+#
+#  Patrick asked where the German morning bulletin was, and said the two
+#  sides must be the same. They now are, in shape: same cream page, same
+#  masthead, same dateline row, same two columns, same unread strip on the
+#  ready room. What is ON the page is necessarily different, and the
+#  reason is worth writing down because somebody will otherwise try to
+#  "fix" it by pointing the German side at paper.json.
+#
+#  paper.json is 104 real front pages from New Zealand papers under
+#  CC BY-NC-SA. It is Allied press. Running it at a Luftwaffe pilot as HIS
+#  morning paper would be nonsense.
+#
+#  The obvious counterpart is the Wehrmachtbericht, the OKW's daily
+#  communique. It is exactly the right thing and it is not in this repo,
+#  and writing German communiques myself and putting OKW's name on them
+#  would be inventing propaganda and passing it off as the record. So the
+#  page is built from two things that are both true:
+#
+#    THE LEFT COLUMN is the campaign's own figures, read out of the German
+#    diary table in the save by Get-GruppeDiary. Sorties put up, aircraft
+#    lost, claims by British type, for the whole Jagdwaffe and for your own
+#    Gruppe. It is not history, it is the war the player is actually
+#    flying, which is the one thing on the page that is his.
+#
+#    THE RIGHT COLUMN is the British press of that date, out of the same
+#    paper.json, and it says so: headed WAS LONDON MELDET and captioned as
+#    the British reports monitored that morning. Monitoring the enemy's
+#    press and broadcasts is what both sides actually did, so it earns its
+#    place rather than being a reuse of convenience.
+#
+#  Nothing on this page claims to be a German communique.
+# =====================================================================
+# The day's figures. Cumulative over the campaign, because that is what
+# the save records: there is no per-day breakdown in the German table.
+function Get-LwDayReport {
+    param($Pilot)
+    $rows = @(Get-GruppeDiary)
+    $all = @(Get-LwGruppen)
+    $out = @{
+        Rows = $rows.Count; Launched = 0; AcLost = 0; AcDamaged = 0; PilotsLost = 0
+        Kills = (New-Object int[] 6); Total = 0
+        Mine = $null; MineUnit = "$($Pilot.unit)"; InLine = 0; Fighters = $all.Count
+    }
+    # Only the fighter Gruppen. The diary carries the bombers and the
+    # Stukas too, and folding those in would credit the Jagdwaffe with
+    # somebody else's sorties.
+    $fighterIdx = @{}
+    foreach ($q in $all) { if ($null -ne $q.sqidx) { $fighterIdx["$([int]$q.sqidx)"] = $q } }
+    foreach ($r in $rows) {
+        if (-not $fighterIdx.ContainsKey("$([int]$r.Idx)")) { continue }
+        $out.Launched   += [int]$r.Launched
+        $out.AcLost     += [int]$r.AcLost
+        $out.AcDamaged  += [int]$r.AcDamaged
+        $out.PilotsLost += [int]$r.PilotsLost
+        for ($j = 0; $j -lt 6; $j++) { $out.Kills[$j] += [int]$r.Kills[$j]; $out.Total += [int]$r.Kills[$j] }
+    }
+    $g = $all | Where-Object { "$($_.unit)" -eq "$($Pilot.unit)" } | Select-Object -First 1
+    if ($g) { $out.Mine = Get-GruppeRecord $g.sqidx }
+    $out.InLine = @($all | Where-Object { Test-GruppeInLine $_ $script:CampaignDate }).Count
+    $out
+}
+# The line the ready room's strip carries, and the page's own headline.
+# Built from the largest thing that is actually true this morning, so a
+# quiet campaign says so instead of shouting.
+function Get-LwLead {
+    param($Rep, $Pilot)
+    # IN ENGLISH, Patrick's instruction. The masthead and the unit names
+    # stay German because they are names; a headline is there to be read,
+    # and the man reading it reads English.
+    if ($Rep.Mine -and [int]$Rep.Mine.Total -gt 0) {
+        $n = [int]$Rep.Mine.Total
+        return "$($Rep.MineUnit) claims $n $(if ($n -eq 1) { 'victory' } else { 'victories' })"
+    }
+    if ([int]$Rep.Total -gt 0) {
+        $n = [int]$Rep.Total
+        return "Fighter Gruppen claim $n $(if ($n -eq 1) { 'victory' } else { 'victories' }) over the Channel"
+    }
+    if ([int]$Rep.Launched -gt 0) {
+        $n = [int]$Rep.Launched
+        return "$n $(if ($n -eq 1) { 'sortie' } else { 'sorties' }) flown, no victories claimed"
+    }
+    'The Gruppen stand at readiness'
+}
+# Today's report counts as unread until it has been opened. The RAF flag
+# keys on the front page's own date because the papers are dated; there
+# is one report a day here, so it keys on the campaign date. State is
+# split per side, so the two flags cannot tread on each other.
+function Get-UnreadMeldung {
+    param($Pilot)
+    if (-not $script:CampaignDate) { return $null }
+    $d = $script:CampaignDate.ToString('yyyy-MM-dd')
+    $seen = $null
+    if ($Pilot -and ($Pilot.PSObject.Properties.Name -contains 'paperRead')) { $seen = "$($Pilot.paperRead)" }
+    if ($seen -and ($seen -eq $d)) { return $null }
+    $d
+}
+function Show-Morgenmeldung {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'paper'))
+    Show-ChromeButtons $true
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($Pilot.unit)" }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  MORGENMELDUNG" }
+
+    $rep = Get-LwDayReport -Pilot $Pilot
+    $lead = Get-LwLead -Rep $rep -Pilot $Pilot
+    # opening it is what marks it read, exactly as the RAF page does
+    $today = Get-UnreadMeldung -Pilot $Pilot
+    if ($today) { Set-BulletinRead -Pilot $Pilot -Date $today }
+
+    $paper = New-Object Windows.Controls.Border
+    $paper.Background = B '#E9E0CA'; $paper.CornerRadius = '2'; $paper.Padding = '40,26,40,34'
+    $paper.MaxWidth = 940; $paper.HorizontalAlignment = 'Left'
+    $paper.BorderBrush = B '#2A2418'; $paper.BorderThickness = '1'
+    $col = New-Object Windows.Controls.StackPanel
+
+    # ---- masthead, the same furniture as the RAF page ----
+    [void]$col.Children.Add((New-Rule '#1A1712' 3))
+    $mh = New-TB -Text 'Morgenmeldung' -Family "Old English Text MT, Blackadder ITC, Georgia, 'Times New Roman', serif" -Size 50 -Colour '#141109'
+    $mh.HorizontalAlignment = 'Center'; $mh.Margin = '0,6,0,2'
+    [void]$col.Children.Add($mh)
+    [void]$col.Children.Add((New-Rule '#1A1712' 1))
+
+    $dstr = if ($script:CampaignDate) { $script:CampaignDate.ToString('dddd, d MMMM yyyy').ToUpper() } else { 'DIE LUFTSCHLACHT UM ENGLAND, 1940' }
+    $dl = New-Object Windows.Controls.Grid; $dl.Margin = '0,5,0,5'
+    foreach ($w in @('*','*','*')) { $cd=New-Object Windows.Controls.ColumnDefinition; $cd.Width=New-Object Windows.GridLength(1,([Windows.GridUnitType]::Star)); [void]$dl.ColumnDefinitions.Add($cd) }
+    $dLeft  = New-TB -Text "$($Pilot.unit)" -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dLeft.VerticalAlignment='Center'
+    $dCent  = New-TB -Text ("GEFECHTSSTAND $("$($Pilot.base)".ToUpper())") -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dCent.HorizontalAlignment='Center'; $dCent.VerticalAlignment='Center'
+    $dRight = New-TB -Text $dstr -Family $CondFam -Size 11.5 -Colour '#4A4436' -Bold; $dRight.HorizontalAlignment='Right'; $dRight.VerticalAlignment='Center'
+    [Windows.Controls.Grid]::SetColumn($dLeft,0); [Windows.Controls.Grid]::SetColumn($dCent,1); [Windows.Controls.Grid]::SetColumn($dRight,2)
+    [void]$dl.Children.Add($dLeft); [void]$dl.Children.Add($dCent); [void]$dl.Children.Add($dRight)
+    [void]$col.Children.Add($dl)
+    [void]$col.Children.Add((New-Rule '#1A1712' 2.5))
+
+    # ---- two columns: the front's own figures | what London is saying ----
+    $bodyG = New-Object Windows.Controls.Grid; $bodyG.Margin = '0,12,0,0'
+    $g0=New-Object Windows.Controls.ColumnDefinition; $g0.Width=New-Object Windows.GridLength(2,([Windows.GridUnitType]::Star))
+    $g1=New-Object Windows.Controls.ColumnDefinition; $g1.Width=New-Object Windows.GridLength(26)
+    $g2=New-Object Windows.Controls.ColumnDefinition; $g2.Width=New-Object Windows.GridLength(1.15,([Windows.GridUnitType]::Star))
+    [void]$bodyG.ColumnDefinitions.Add($g0); [void]$bodyG.ColumnDefinitions.Add($g1); [void]$bodyG.ColumnDefinitions.Add($g2)
+
+    $lc = New-Object Windows.Controls.StackPanel
+    $hl = New-TB -Text $lead -Family 'Georgia, Cambria, serif' -Size 31 -Colour '#120F08' -Bold -Wrap
+    $hl.LineHeight = 34
+    [void]$lc.Children.Add($hl)
+    [void]$lc.Children.Add((New-Rule '#7A5E2E' 1))
+
+    $bins = Get-KillBins $Pilot
+    $byType = @()
+    for ($k = 0; $k -lt $bins.Count; $k++) { if ([int]$rep.Kills[$k] -gt 0) { $byType += "$([int]$rep.Kills[$k]) $($bins[$k])" } }
+    # A zero is a sentence, not a number. "0 machines have not come back
+    # and 0 were brought home damaged. 0 pilots are gone" is what counting
+    # into a template reads like, and it is worse than saying nothing.
+    $para = @()
+    if ([int]$rep.Launched -gt 0) {
+        $claims = if ([int]$rep.Total -gt 0) { "and claim $([int]$rep.Total) British aircraft" + $(if ($byType.Count) { ": $($byType -join ', ')." } else { '.' }) }
+                  else { 'and have nothing to claim for them yet.' }
+        $para += "The fighter Gruppen have put up $([int]$rep.Launched) sorties in this campaign $claims"
+        $loss = @()
+        if ([int]$rep.AcLost -gt 0)     { $loss += "$([int]$rep.AcLost) machines have not come back" }
+        if ([int]$rep.AcDamaged -gt 0)  { $loss += "$([int]$rep.AcDamaged) were brought home damaged" }
+        if ([int]$rep.PilotsLost -gt 0) { $loss += "$([int]$rep.PilotsLost) pilots are gone" }
+        $para += $(if ($loss.Count) { 'Against that, ' + ($loss -join ', ') + '.' } else { 'Nothing has been lost.' })
+    } else {
+        $para += 'Nothing has been flown from this Gefechtsstand yet. The figures fill in as the campaign runs.'
+    }
+    if ($rep.Mine -and [int]$rep.Mine.Launched -gt 0) {
+        $mb = @()
+        for ($k = 0; $k -lt $bins.Count; $k++) { if ([int]$rep.Mine.Kills[$k] -gt 0) { $mb += "$([int]$rep.Mine.Kills[$k]) $($bins[$k])" } }
+        $mine = "$($rep.MineUnit) itself has flown $([int]$rep.Mine.Launched) of them"
+        $mine += if ([int]$rep.Mine.Total -gt 0) { ", for $([int]$rep.Mine.Total) claims" + $(if ($mb.Count) { " ($($mb -join ', '))" } else { '' }) } else { ' without a claim so far' }
+        $ml = @()
+        if ([int]$rep.Mine.AcLost -gt 0)     { $ml += "$([int]$rep.Mine.AcLost) aircraft" }
+        if ([int]$rep.Mine.PilotsLost -gt 0) { $ml += "$([int]$rep.Mine.PilotsLost) pilots" }
+        $mine += $(if ($ml.Count) { " and the loss of $($ml -join ' and ')." } else { ' and has lost nothing.' })
+        $para += $mine
+    }
+    $para += "$($rep.InLine) of the $($rep.Fighters) fighter Gruppen stand on the Kanalfront this morning."
+    $bd = New-TB -Text ($para -join '  ') -Family 'Georgia, Cambria, serif' -Size 15 -Colour '#2A2620' -Wrap
+    $bd.LineHeight = 24; $bd.Margin = '0,8,0,0'; $bd.TextAlignment = 'Justify'
+    [void]$lc.Children.Add($bd)
+    $src = New-TB -Text ("$([char]0x2014) from the campaign's own Gruppen diary, not from the record of 1940") `
+                  -Family 'Georgia, Cambria, serif' -Size 12.5 -Colour '#6B6250'
+    $src.Margin = '0,10,0,0'; $src.FontStyle = 'Italic'
+    [void]$lc.Children.Add($src)
+    [Windows.Controls.Grid]::SetColumn($lc,0); [void]$bodyG.Children.Add($lc)
+
+    $vr = New-Object Windows.Controls.Border; $vr.Width=1; $vr.Background=B '#3A3324'; $vr.HorizontalAlignment='Center'
+    [Windows.Controls.Grid]::SetColumn($vr,1); [void]$bodyG.Children.Add($vr)
+
+    # What Berlin claimed that morning, in English, and said plainly to
+    # be propaganda. This column used to carry the British press instead,
+    # which was a stopgap: it was the only thing in the repo that was
+    # both dated and honest. Patrick's decision was to go and get the
+    # actual OKW communique, render it in English, and label it.
+    $okw = Get-OkwForDate $script:CampaignDate
+    $sc = New-Object Windows.Controls.StackPanel
+    [void]$sc.Children.Add((New-TB -Text 'WHAT BERLIN CLAIMED' -Family $CondFam -Size 12 -Colour '#8C3A2A' -Bold))
+    [void]$sc.Children.Add((New-Rule '#8C3A2A' 1))
+    # The caption sits ABOVE the figures, not under them. A warning at
+    # the foot of a column is a warning somebody reads after they have
+    # already believed the numbers.
+    $capTop = New-TB -Wrap -Family 'Georgia, serif' -Size 12 -Colour '#8C3A2A' -Text $OkwCaption
+    $capTop.FontStyle = 'Italic'; $capTop.Margin = '0,0,0,12'
+    [void]$sc.Children.Add($capTop)
+    if ($okw) {
+        if ($null -ne $okw.claimed_british) {
+            $k1 = New-TB -Text "$([int]$okw.claimed_british) British aircraft" -Family 'Georgia, serif' -Size 21 -Colour '#1C1810' -Bold -Wrap
+            [void]$sc.Children.Add($k1)
+            $k1b = New-TB -Text 'claimed shot down' -Family $CondFam -Size 11.5 -Colour '#6B6250' -Bold
+            $k1b.Margin = '0,0,0,12'
+            [void]$sc.Children.Add($k1b)
+        }
+        if ($null -ne $okw.admitted_german) {
+            $k2 = New-TB -Text "$([int]$okw.admitted_german) German aircraft" -Family 'Georgia, serif' -Size 21 -Colour '#1C1810' -Bold -Wrap
+            [void]$sc.Children.Add($k2)
+            $k2b = New-TB -Text 'admitted missing' -Family $CondFam -Size 11.5 -Colour '#6B6250' -Bold
+            $k2b.Margin = '0,0,0,12'
+            [void]$sc.Children.Add($k2b)
+        }
+        $tg = @($okw.targets)
+        if ($tg.Count) {
+            $tt = New-TB -Wrap -Family 'Georgia, serif' -Size 13.5 -Colour '#2A2620' -Text (
+                'Targets named: ' + (($tg | Select-Object -First 7) -join ', ') + '.')
+            $tt.Margin = '0,0,0,10'; $tt.LineHeight = 18
+            [void]$sc.Children.Add($tt)
+        }
+        # The communique is dated the morning AFTER the fighting it
+        # describes, because that is when the papers carried it. Saying
+        # so stops the figures being read against the wrong day.
+        $dl = New-TB -Wrap -Family $CondFam -Size 11 -Colour '#7A6A62' -Text (
+            "Communique of $(Format-ShortDate "$($okw.date)"), covering the day before.")
+        [void]$sc.Children.Add($dl)
+    }
+    else {
+        [void]$sc.Children.Add((New-TB -Wrap -Family 'Georgia, serif' -Size 13 -Colour '#4A4436' -Text (
+            'No communique has been read for this date. Nothing is shown rather than a guess.')))
+    }
+    [Windows.Controls.Grid]::SetColumn($sc,2); [void]$bodyG.Children.Add($sc)
+
+    [void]$col.Children.Add($bodyG)
+    [void](Add-DaybookBand -Col $col -Side 'lw' -Date $script:CampaignDate)
+    [void]$col.Children.Add((New-Rule '#1A1712' 2))
+    $paper.Child = $col
+    [void]$script:Stage.Children.Add($paper)
+    # The full note, on the page every time, below the sheet where there
+    # is room for it to be read properly.
+    [void]$script:Stage.Children.Add((New-OkwNote $okw))
+}
+function Show-ReadyRoom {
+    param($Pilot)
+    $script:Stage.Children.Clear()
+    $script:CampaignDate = Get-CampaignDate
+    [void]$script:Stage.Children.Add((New-Nav 'dispersal'))
+    Show-ChromeButtons $true
+    $unit = "$($Pilot.unit)"
+    # The Gruppe's own record out of the order of battle. Looked up HERE,
+    # at the top, because it is wanted by three blocks below and the first
+    # of them is the aeroplane. It used to be looked up further down, after
+    # the aircraft block had already asked for it, so $g was still null
+    # there and the Ready Room drew no aeroplane at all while the RAF
+    # dispersal drew its Spitfire. That is one of the differences Patrick
+    # was looking at.
+    $g = @(Get-LwGruppen) | Where-Object { "$($_.unit)" -eq $unit } | Select-Object -First 1
+    $h = C 'HdrSquadron'; if ($h) { $h.Text = $unit }
+    $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  LUFTFLOTTE $($Pilot.luftflotte)" }
+
+    $sessions = Get-Sessions
+    $career = Get-Career $Pilot $sessions
+    $honours = @(Get-LwHonours -Pilot $Pilot -Career $career)
+    $Pilot = Update-CareerRecord -Pilot $Pilot -Career $career -Honours $honours
+
+    $base = "$($Pilot.base)".ToUpper()
+    $eyebrow = if ($script:CampaignDate) { "$base  $([char]0x2022)  $($script:CampaignDate.ToString('dddd d MMMM yyyy').ToUpper())" } else { $base }
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow $eyebrow -Title "$unit at readiness"))
+
+    # This morning's Meldung, if he has not read it. Same strip, same
+    # newspaper block, same click-to-open as the RAF dispersal: it carries
+    # the line itself rather than "you have unread news", because the line
+    # is the reason to go and read it.
+    $mday = Get-UnreadMeldung -Pilot $Pilot
+    if ($mday) {
+        $nb = New-Object Windows.Controls.Border
+        $nb.Background = B '#1A1710'; $nb.BorderBrush = $script:BrassBrush
+        $nb.BorderThickness = '3,0,0,0'; $nb.CornerRadius = '0,3,3,0'
+        $nb.Padding = '16,12'; $nb.Margin = '0,0,0,20'
+        $nb.HorizontalAlignment = 'Stretch'; $nb.Cursor = 'Hand'
+        $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'
+        $ic = New-NewspaperIcon
+        $ic.Margin = '2,3,18,0'; $ic.VerticalAlignment = 'Top'
+        [void]$row.Children.Add($ic)
+        $ns = New-Object Windows.Controls.StackPanel
+        $eb = New-TB -Text ('DIE MORGENMELDUNG  ' + [char]0x2022 + '  ' + (Format-ShortDate $mday)) `
+                     -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold
+        [void]$ns.Children.Add($eb)
+        $hl0 = New-TB -Text (Get-LwLead -Rep (Get-LwDayReport -Pilot $Pilot) -Pilot $Pilot) -Family $SerifFam -Size 17 -Colour '#E9E3D4' -Wrap
+        $hl0.Margin = '0,4,0,0'
+        [void]$ns.Children.Add($hl0)
+        $go = New-TB -Text 'not yet read - click to open it' -Family $CondFam -Size 12 -Colour '#6F828C'
+        $go.Margin = '0,5,0,0'
+        [void]$ns.Children.Add($go)
+        [void]$row.Children.Add($ns)
+        $nb.Child = $row
+        $nb.Add_MouseLeftButtonUp({ param($s,$e) Show-Tab 'paper' })
+        [void]$script:Stage.Children.Add($nb)
+    }
+
+    # the man himself
+    # -22 at the foot: New-Frame carries a 26px bottom margin of its own,
+    # for the roster grid it was built for, and left alone it opens a hole
+    # between the photograph and the counters
+    $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,-22'
+    [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
+    $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,44,0'; $d.VerticalAlignment = 'Top'
+    [void]$d.Children.Add((New-TB -Text (Get-FullName $Pilot) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    $appt = Get-Appointment -Pilot $Pilot -Career $career
+    $line = "$($Pilot.rank)   $([char]0x2022)   $appt   $([char]0x2022)   $($Pilot.staffel). Staffel"
+    $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
+    [void]$d.Children.Add($lt)
+    $chipRow = New-Object Windows.Controls.StackPanel; $chipRow.Orientation = 'Horizontal'; $chipRow.Margin = '0,14,0,0'
+    $rbf = Get-RankBadgeFile "$($Pilot.rank)"
+    if ($rbf) {
+        $cuff = New-BadgeImage -File $rbf -Height 52 -Tip "$($Pilot.rank)"
+        if ($cuff) { $cuff.Margin = '0,0,10,0'; [void]$chipRow.Children.Add($cuff) }
+    }
+    # The pilot's badge, which is the German answer to the RAF's wings.
+    # Taller than it is wide where the wings are the opposite, so at the
+    # same 52 pixels it reads as much the smaller thing; 62 puts them
+    # about level by area.
+    $fb = New-BadgeImage -File 'pilot-badge.png' -Height 62 -Tip 'Flugzeugfuehrerabzeichen, the pilot badge'
+    if ($fb) { [void]$chipRow.Children.Add($fb) }
+    if ($chipRow.Children.Count -gt 0) { [void]$d.Children.Add($chipRow) }
+    $hr = New-LwHonourRow $honours
+    if ($hr) { $hr.Margin = '0,14,0,0'; [void]$d.Children.Add($hr) }
+    [void]$hero.Children.Add($d)
+
+    # Anyone who did not come back is replaced first, so the men drawn
+    # below are the men on strength today.
+    $lost = @(Update-CrewLosses -Pilot $Pilot -Sorties ([int]$career.sorties))
+    if ($lost.Count) {
+        $p2 = Get-Pilot; if ($p2) { $Pilot = $p2 }
+    }
+
+    # THE REST OF THE CREW, beside him and in the same frame.
+    #
+    # New-Frame takes a man and reads .pilot and .portrait, which is why a
+    # crew member's name field is `pilot` and not `name`: one spelling
+    # serves the player, his crew and every man on the Staffel roster.
+    # Without -IsPlayer the frame comes out dark rather than brass, which
+    # says who the screen is about without a label doing it.
+    $crewIx = -1
+    foreach ($m in (Get-Crew $Pilot)) {
+        $crewIx++
+        $cc = Get-CrewCareer -Member $m -Pilot $Pilot -Sorties ([int]$career.sorties) -Hours ([double]$career.hours)
+        [void]$hero.Children.Add((New-Frame -Pilot $m -CrewIndex $crewIx))
+        $cd = New-Object Windows.Controls.StackPanel; $cd.Margin = '30,4,44,0'; $cd.VerticalAlignment = 'Top'
+        [void]$cd.Children.Add((New-TB -Text "$($m.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+        $cl = "$($cc.rank)   $([char]0x2022)   $(Get-CrewAppointment -Member $m -Career $cc)"
+        $clt = New-TB -Text $cl -Family $CondFam -Size 15 -Colour '#9FB0B8'; $clt.Margin = '0,7,0,0'
+        [void]$cd.Children.Add($clt)
+        $cRow = New-Object Windows.Controls.StackPanel; $cRow.Orientation = 'Horizontal'; $cRow.Margin = '0,14,0,0'
+        $crb = Get-RankBadgeFile "$($cc.rank)"
+        if ($crb) {
+            $ccuff = New-BadgeImage -File $crb -Height 52 -Tip "$($cc.rank)"
+            if ($ccuff) { $ccuff.Margin = '0,0,10,0'; [void]$cRow.Children.Add($ccuff) }
+        }
+        # NOT the pilot's badge. The Flugzeugfuehrerabzeichen is for a man
+        # who flies the aeroplane; the man in the back wore the
+        # Fliegerschuetzenabzeichen, and giving him the pilot's badge would
+        # be as wrong as putting RAF wings on an air gunner.
+        $cb = New-BadgeImage -File 'crew-badge.png' -Height 62 -Tip 'Fliegerschuetzenabzeichen, the air crew badge'
+        if ($cb) { [void]$cRow.Children.Add($cb) }
+        if ($cRow.Children.Count -gt 0) { [void]$cd.Children.Add($cRow) }
+        $chr = New-LwHonourRow (@(Get-CrewHonours -Member $m -Career $cc))
+        if ($chr) { $chr.Margin = '0,14,0,0'; [void]$cd.Children.Add($chr) }
+        $inv = New-TB -Wrap -Family 'Segoe UI' -Size 11.5 -Colour '#6F828C' -Text (
+            'Invented. The game keeps no record of a second crewman, so his rank, ' +
+            'his sorties and his decorations are this Room''s and not the save''s.')
+        $inv.Margin = '0,12,0,0'; $inv.MaxWidth = 260
+        [void]$cd.Children.Add($inv)
+        [void]$hero.Children.Add($cd)
+    }
+    [void]$script:Stage.Children.Add($hero)
+
+    # WHO WAS LOST, named, with the day and who took his place.
+    foreach ($l in $lost) {
+        $lb = New-Object Windows.Controls.Border
+        $lb.Background = B '#241A17'; $lb.BorderBrush = B '#7A3E32'
+        $lb.BorderThickness = '3,0,0,0'; $lb.CornerRadius = '0,3,3,0'
+        $lb.Padding = '16,12'; $lb.Margin = '0,0,0,18'
+        $lb.HorizontalAlignment = 'Left'; $lb.MaxWidth = 940
+        $txt = "$(Short-Rank "$($l.rank)") $($l.pilot) $($l.how) on $(Format-ShortDate "$($l.date)")."
+        if ("$($l.replacedBy)") { $txt += "  $($l.replacedBy) has taken the back seat." }
+        else { $txt += '  There is nobody left in the Staffel to replace him.' }
+        $lt2 = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#D9C9C4' -Text $txt
+        $lt2.MaxWidth = 880
+        $lb.Child = $lt2
+        [void]$script:Stage.Children.Add($lb)
+    }
+
+    # the counters
+    $tiles = New-Object Windows.Controls.StackPanel; $tiles.Orientation = 'Horizontal'; $tiles.Margin = '0,0,0,26'
+    [void]$tiles.Children.Add((New-Stat 'SORTIES' "$($career.sorties)"))
+    [void]$tiles.Children.Add((New-Stat 'FLYING HOURS' "$($career.hours)"))
+    [void]$tiles.Children.Add((New-Stat 'RANK' (Short-Rank "$($Pilot.rank)")))
+    $awTile = if ($honours.Count) { $honours[$honours.Count-1] } else { 'None yet' }
+    [void]$tiles.Children.Add((New-Stat 'AWARDS' $awTile -Chip (New-LwHonourRow $honours -Scale 0.30)))
+    [void]$script:Stage.Children.Add($tiles)
+    if ($career.next) {
+        $nx = New-TB -Text "Next promotion: $($career.next) at $($career.nextAt) sorties." -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C'
+        $nx.Margin = '0,-16,0,22'
+        [void]$script:Stage.Children.Add($nx)
+    }
+
+    # First-timer's orders, the same box the RAF dispersal puts up until a
+    # sortie is in the book. A man posted to a Gruppe has no more idea
+    # what to press than a man posted to a squadron does.
+    if ([int]$career.sorties -eq 0) {
+        $ord = New-Object Windows.Controls.Border
+        $ord.Background = B '#1E2A18'; $ord.BorderBrush = B '#4A6B3A'; $ord.BorderThickness = '1'
+        $ord.CornerRadius = '3'; $ord.Padding = '16,12'; $ord.Margin = '0,-14,0,24'; $ord.HorizontalAlignment = 'Left'; $ord.MaxWidth = 760
+        $os2 = New-Object Windows.Controls.StackPanel
+        $lc = New-LaunchCard
+        if ($script:AutostartNote) {
+            $an = New-TB -Text $script:AutostartNote -Family 'Segoe UI' -Size 12.5 -Colour '#D08A2E' -Wrap
+            $an.Margin = '0,0,0,14'; $an.MaxWidth = 940
+            [void]$script:Stage.Children.Add($an)
+        }
+        $fn = New-FlownNote -Pilot $Pilot
+        if ($fn) { [void]$script:Stage.Children.Add($fn) }
+        if ($lc) { [void]$script:Stage.Children.Add($lc) }
+        [void]$os2.Children.Add((New-TB -Text 'YOUR ORDERS' -Family $CondFam -Size 12 -Colour '#8FB56A' -Bold))
+        # the same paragraph the RAF card carries: the mark is the one he chose,
+        # the game decides which aeroplane he actually flies, and the board then
+        # follows the game (Get-FlownMark)
+        $mk = if ("$($Pilot.actype)" -match '110') { 'letter' } else { 'number' }
+        $ot = New-TB -Text ("Press PLAY CAMPAIGN (top right). In the game, start or continue the Campaign as the Luftwaffe and fly the day. When you come back here your first Feindflug will be in the Flugbuch.`n`n" +
+                            "Your aircraft below wears the $mk you chose. The game decides which aeroplane of the Gruppe you fly on each sortie, " +
+                            "and after your first sortie with your own Gruppe the board shows the one you actually flew.`n`n" +
+                            "Quick missions and training are not recorded here. Your aeroplane and your Flugbuch are for the campaign only.") -Family 'Segoe UI' -Size 13.5 -Colour '#C9D4CE' -Wrap
+        $ot.Margin = '0,6,0,0'
+        [void]$os2.Children.Add($ot)
+        $ord.Child = $os2
+        [void]$script:Stage.Children.Add($ord)
+    }
+
+    # his aircraft, with his markings on it
+    $ac = New-LwAircraft -Pilot $Pilot -Career $career -Gruppe $g
+    if ($ac) {
+        # Bare on the page, exactly as New-Aircraft puts the Spitfire and
+        # the Hurricane. It was in a Panel-coloured card with a border, and
+        # that read as the aeroplane sitting on a grey box while the RAF's
+        # sits on the room itself. Same Room, same treatment.
+        [void]$script:Stage.Children.Add($ac)
+        $col = Get-StaffelColour $Pilot
+        $parts = @()
+        $chev = Get-StabChevron -Pilot $Pilot -Career $career
+        $fmCap = Get-FlownMark -Pilot $Pilot
+        if ($fmCap -and $fmCap.Blank) { $parts += "the aeroplane the game gave you on your last sortie, aircraft $($fmCap.PlaneId) of the Gruppe: the leader's machine, its chevron part of the skin" }
+        elseif ($fmCap -and $fmCap.Number -gt 0) { $parts += "the aeroplane the game gave you on your last sortie, aircraft $($fmCap.PlaneId) of the Gruppe: number $($fmCap.Number)$(if ($fmCap.Colour) { " in $($fmCap.Colour)" })" }
+        elseif ($chev) { $parts += 'your Stab chevron, worn in place of a number' }
+        else { $parts += "your number $(Get-AcNumber $Pilot) in the $col of the $($Pilot.staffel). Staffel" }
+        $mk = Get-LwMarkings
+        $u = if ($mk) { $mk.units."$($Pilot.unit)" } else { $null }
+        $mp2 = Get-MarkPositions
+        $pk2 = Split-Path (Get-GruppeAircraftPath -G $g -Pilot $Pilot) -Leaf
+        $P2 = if ($mp2 -and $mp2.lw -and $mp2.lw.profiles) { $mp2.lw.profiles.$pk2 } else { $null }
+        $ownArt = Test-GruppeOwnProfile $g
+        $gu = if ($P2 -and $P2.gruppe_by_unit) { $P2.gruppe_by_unit."$($Pilot.unit)" } else { $null }
+        if ($gu -and "$($gu.symbol)") { $parts += 'the Gruppe symbol aft of the cross' }
+        if ((-not $ownArt) -and $u -and "$($u.emblem)") { $parts += 'the Geschwader emblem on the cowling' }
+
+        if ($ownArt) { $parts += 'and the Geschwader badge already in its paint' }
+        $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
+            "$($Pilot.unit) in its own markings, with " + ($parts -join ', ') + '. ' +
+            'Only the number was ever the pilot''s own; the rest followed the unit and the appointment. ' +
+            'Each can be dragged to sit better on the aeroplane, and the wheel sizes it. Where you put ' +
+            'them is remembered.')
+        $note.Margin = '0,-4,0,18'; $note.MaxWidth = 860; $note.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($note)
+    }
+
+    # where the Gruppe stands
+    if ($g) {
+        $rec = New-Object Windows.Controls.Border
+        $rec.Background = Res 'Panel'; $rec.BorderBrush = Res 'Rule'; $rec.BorderThickness = '1'
+        $rec.CornerRadius = '3'; $rec.Padding = '20,16'; $rec.Margin = '0,0,0,22'
+        $rec.HorizontalAlignment = 'Left'; $rec.MaxWidth = 1080
+        $rs = New-Object Windows.Controls.StackPanel
+        [void]$rs.Children.Add((New-TB -Text 'THE GRUPPE' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold))
+        $txt = "$($g.unit), $($g.type), of $($g.geschwader) in Luftflotte $($g.luftflotte). " +
+               "At $($g.field) since $(Format-LwDate "$($g.activation)"). " +
+               "The campaign rates it $($g.skill.ToLower()) with $($g.fatigue.ToLower()) fatigue."
+        $t = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text $txt
+        $t.Margin = '0,8,0,0'; $t.MaxWidth = 900
+        [void]$rs.Children.Add($t)
+        $rec.Child = $rs
+        [void]$script:Stage.Children.Add($rec)
+    }
+
+    # What the Gruppe has done in THIS campaign, out of the game's own
+    # German diary. Not history: this is the war the player is flying.
+    $gr = if ($g) { Get-GruppeRecord $g.sqidx } else { $null }
+    if ($gr) {
+        $card = New-Object Windows.Controls.Border
+        $card.Background = Res 'Panel'; $card.BorderBrush = Res 'Rule'; $card.BorderThickness = '1'
+        $card.CornerRadius = '3'; $card.Padding = '20,16'; $card.Margin = '0,0,0,22'
+        $card.HorizontalAlignment = 'Left'; $card.MaxWidth = 1080
+        $cs = New-Object Windows.Controls.StackPanel
+        [void]$cs.Children.Add((New-TB -Text 'THE GRUPPE IN THIS CAMPAIGN' -Family $CondFam -Size 13 -Colour '#C8973F' -Bold))
+        $gb = Get-KillBins $Pilot
+        $byType = @()
+        for ($k = 0; $k -lt $gb.Count; $k++) { if ([int]$gr.Kills[$k] -gt 0) { $byType += "$([int]$gr.Kills[$k]) x $($gb[$k])" } }
+        # Zeros written out as sentences, not counted into a template.
+        # "0 aircraft lost and 0 damaged, 0 pilots gone" is what the
+        # template produced and it reads like a form rather than a report.
+        $ls = @()
+        if ([int]$gr.AcLost -gt 0)     { $ls += "$($gr.AcLost) aircraft lost" }
+        if ([int]$gr.AcDamaged -gt 0)  { $ls += "$($gr.AcDamaged) damaged" }
+        if ([int]$gr.PilotsLost -gt 0) { $ls += "$($gr.PilotsLost) pilots gone" }
+        $t1 = "$($gr.Actions) action$(if ($gr.Actions -ne 1) { 's' } else { '' }) flown, $($gr.Launched) sorties put up. " +
+              $(if ($ls.Count) { ($ls -join ', ') + '. ' } else { 'Nothing lost. ' }) +
+              $(if ($gr.Total -gt 0) { "Claims: $($gr.Total), $($byType -join ', ')." } else { 'No claims yet.' })
+        $tb1 = New-TB -Wrap -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8' -Text $t1
+        $tb1.Margin = '0,8,0,0'; $tb1.MaxWidth = 900
+        [void]$cs.Children.Add($tb1)
+        $card.Child = $cs
+        [void]$script:Stage.Children.Add($card)
+    }
+
+    # the men he flies with
+    $roster = @(Get-LwRoster -Unit $unit)
+    if ($roster.Count) {
+        [void]$script:Stage.Children.Add((New-TB -Text 'THE STAFFEL' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
+        $nHist = @($roster | Where-Object { $_.historical }).Count
+        $note = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text $(
+            if ($nHist) {
+                "The $nHist name$(if ($nHist -ne 1) { 's' } else { '' }) in white below flew with this unit and held the appointment shown, " +
+                'and that is all that is claimed for them: no score and no ending, because those are matters of ' +
+                'record and the record is not mine to write. Everyone else is invented, scores and fates and all. ' +
+                'There is no German equivalent of the Air Ministry list of the Few, so unlike the RAF boards, ' +
+                'where every man is real, this is a Staffel rather than a roll.'
+            } else {
+                'These men are invented, scores and fates and all. There is no German equivalent of the Air ' +
+                'Ministry list of the Few, so unlike the RAF boards, where every man is real, this is a ' +
+                'Staffel rather than a roll.'
+            })
+        $note.Margin = '0,8,0,10'; $note.MaxWidth = 900; $note.HorizontalAlignment = 'Left'
+        [void]$script:Stage.Children.Add($note)
+
+        $tbl = New-Object Windows.Controls.Border
+        $tbl.BorderBrush = Res 'Rule'; $tbl.BorderThickness = '1'; $tbl.CornerRadius = '3'
+        # Width, not MaxWidth: aligned Left with only a maximum, the table
+        # shrank to its widest row and the columns collapsed together.
+        $tbl.Margin = '0,0,0,20'; $tbl.HorizontalAlignment = 'Left'; $tbl.Width = 1000
+        $ts = New-Object Windows.Controls.StackPanel
+        [void]$ts.Children.Add((New-LwRosterRow -Header))
+        $myV = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $myV = [int]$Pilot.victories }
+        [void]$ts.Children.Add((New-LwRosterRow -Man ([pscustomobject]@{
+            pilot = "$($Pilot.pilot)"; rank = "$($Pilot.rank)"; historical = $false
+            appointment = $null; staffel = $Pilot.staffel; victories_total = $null; fate = $null }) -IsPlayer -Vics $myV))
+        foreach ($man in ($roster | Sort-Object @{ e = { -[int][bool]$_.historical } }, @{ e = { "$($_.pilot)" } })) {
+            [void]$ts.Children.Add((New-LwRosterRow -Man $man))
+        }
+        $tbl.Child = $ts
+        [void]$script:Stage.Children.Add($tbl)
+
+        # Losses. Not historical fates - there are none for these men -
+        # but the pilots the campaign has actually taken from this Gruppe,
+        # given names from the Staffel so the cost has faces on it. The
+        # RAF board does the same thing for the losses its own records do
+        # not name. Seeded on the unit, so the same men are lost each time
+        # rather than a fresh draw every time the screen is drawn.
+        $lost = if ($gr) { [int]$gr.PilotsLost } else { 0 }
+        if ($lost -gt 0) {
+            $pool = @($roster | Where-Object { -not $_.historical })
+            if ($pool.Count) {
+                $take = [math]::Min($lost, $pool.Count)
+                $rnd = New-Object System.Random ([int]([math]::Abs("$unit".GetHashCode()) % 100000))
+                $picked = @($pool | Sort-Object { $rnd.Next() } | Select-Object -First $take)
+                [void]$script:Stage.Children.Add((New-TB -Text 'LOSSES IN THIS CAMPAIGN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
+                $ln = New-TB -Wrap -Family 'Segoe UI' -Size 12.5 -Colour '#6F828C' -Text $(
+                    "The campaign has taken $lost pilot$(if ($lost -ne 1) { 's' } else { '' }) from this Gruppe. " +
+                    'They are named from the Staffel so the cost is not just a number, and they are lost in ' +
+                    'YOUR campaign rather than in history.')
+                $ln.Margin = '0,8,0,10'; $ln.MaxWidth = 900; $ln.HorizontalAlignment = 'Left'
+                [void]$script:Stage.Children.Add($ln)
+                $lb = New-Object Windows.Controls.Border
+                $lb.BorderBrush = Res 'Rule'; $lb.BorderThickness = '1'; $lb.CornerRadius = '3'
+                $lb.Margin = '0,0,0,20'; $lb.HorizontalAlignment = 'Left'; $lb.Width = 760
+                $lst = New-Object Windows.Controls.StackPanel
+                foreach ($man in $picked) {
+                    $row = New-Object Windows.Controls.Border
+                    $row.Padding = '14,9'; $row.BorderBrush = Res 'Rule'; $row.BorderThickness = '0,0,0,1'
+                    $rg = New-Object Windows.Controls.StackPanel; $rg.Orientation = 'Horizontal'
+                    [void]$rg.Children.Add((New-TB -Text (Short-Rank "$($man.rank)") -Family $CondFam -Size 12.5 -Colour '#6F828C'))
+                    $nm2 = New-TB -Text "$($man.pilot)" -Family $CondFam -Size 14 -Colour '#E2685A' -Bold
+                    $nm2.Margin = '14,0,0,0'
+                    [void]$rg.Children.Add($nm2)
+                    $row.Child = $rg
+                    [void]$lst.Children.Add($row)
+                }
+                $lb.Child = $lst
+                [void]$script:Stage.Children.Add($lb)
+            }
+        }
+    }
+    # nothing is returned on purpose: an uncaptured $Pilot here goes down
+    # the pipeline and the whole record prints itself into whatever called
+    # this, which is how it turned up in the middle of a test run
+}
+# What a man is doing in the Staffel, as against what he is called. The
+# two are different things in the Luftwaffe and the RAF alike, and the
+# rank alone reads oddly without it.
+function Get-Appointment {
+    param($Pilot, $Career)
+    if (($Pilot.PSObject.Properties.Name -contains 'cmode') -and ("$($Pilot.cmode)" -eq 'commander')) { return 'Gruppenkommandeur' }
+    $n = 0; if ($Career) { $n = [int]$Career.sorties }
+    if ($n -ge 24) { return 'Staffelkapitaen' }
+    if ($n -ge 12) { return 'Schwarmfuehrer' }
+    if ($n -ge 6)  { return 'Rottenfuehrer' }
+    'Rottenflieger'
+}
+
 function Show-SquadronSelect {
     if (-not $script:SelPeriod) { $script:SelPeriod = 'P1' }
     $script:Stage.Children.Clear()
@@ -3757,19 +8013,28 @@ function Show-Create {
     Set-ChromeBack 'BACK TO THE BOARD' { Show-SquadronSelect }
     Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-Submit }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
-    $lead = New-TB -Text 'Summer 1940. Give your name, say whether you come to the squadron as a sergeant pilot or with a commission, and pick your photograph. Your aircraft and code letter are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
+    $lead = New-TB -Text 'Summer 1940. Give your first name and your surname, say whether you come to the squadron as a sergeant pilot or with a commission, and pick your photograph. Your aircraft and code letter are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
     [void]$script:Stage.Children.Add($lead)
 
     # form row
     $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,26'
 
+    # TWO NAMES, BOTH REQUIRED (Patrick, 21 September 2026). The surname is
+    # the one the boards, the game and its saves have always used; the first
+    # name is his own and is what his personal record calls him.
+    $firstCol = New-Object Windows.Controls.StackPanel; $firstCol.Margin = '0,0,18,0'
+    [void]$firstCol.Children.Add((New-TB -Text 'FIRST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $script:FirstBox = New-Object Windows.Controls.TextBox
+    $script:FirstBox.Width = 190; $script:FirstBox.Margin = '0,7,0,0'; $script:FirstBox.MaxLength = 20
+    [void]$firstCol.Children.Add($script:FirstBox)
+    [void]$row.Children.Add($firstCol)
     $nameCol = New-Object Windows.Controls.StackPanel; $nameCol.Margin = '0,0,36,0'
-    [void]$nameCol.Children.Add((New-TB -Text 'NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    [void]$nameCol.Children.Add((New-TB -Text 'LAST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
     $script:NameBox = New-Object Windows.Controls.TextBox
-    $script:NameBox.Width = 320; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 40
+    $script:NameBox.Width = 230; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 20
     # one man, one name: if a campaign is under way, offer its pilot's name
-    $cp0 = Get-CampaignPilot
+    $cp0 = Get-CampaignPilot -Path $(if ($script:AdoptFrom) { $script:AdoptFrom.Path } else { $null })
     if ($cp0 -and $cp0.Name) { $script:NameBox.Text = "$($cp0.Name)" }
     [void]$nameCol.Children.Add($script:NameBox)
     [void]$row.Children.Add($nameCol)
@@ -3842,11 +8107,36 @@ function Show-Create {
     [void]$script:Stage.Children.Add($foot)
 
     $script:NameBox.Add_TextChanged({ Update-CreateValid })
+    $script:FirstBox.Add_TextChanged({ Update-CreateValid })
     $script:SubmitBtn.Add_Click({ Invoke-Submit })
 }
 
 # =====================================================================
 Finalize-Flight
-$existing = Get-Pilot
-if ($existing) { Show-Roster -Pilot $existing } else { Show-SquadronSelect }
+# Paint the side switch once before anything is shown. It was only ever
+# painted BY a side change, and the markup happens to start on the RAF
+# segment, so it looked right by luck rather than by saying so.
+# ONE LINE, so the test harnesses can take it out.
+#
+# This used to be three loose statements and each harness stripped them
+# with its own regex. Growing it to open on the last side would have left
+# those regexes matching nothing, and the harnesses would then have run
+# the bootstrap for real: Set-StateSide against the LIVE install, before
+# StateRootOverride is set, which is how a pilot record was destroyed
+# once already. A named function cannot drift out from under them.
+function Start-Room {
+    # Open on the side he was last flying, not always on the RAF.
+    Set-StateSide (Get-LastSide)
+    Update-SideSwitch
+    # A campaign started from the game's own menus is offered for adoption
+    # before anything is drawn; if he takes it, the board is already up.
+    if (Invoke-AdoptionCheck) { return }
+    $existing = Get-Pilot
+    if ($script:Side -eq 'lw') {
+        if ($existing) { Show-ReadyRoom -Pilot $existing } else { Show-GruppeSelect }
+    } else {
+        if ($existing) { Show-Roster -Pilot $existing } else { Show-SquadronSelect }
+    }
+}
+Start-Room
 [void]$Win.ShowDialog()

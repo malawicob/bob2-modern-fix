@@ -1,0 +1,2654 @@
+{
+ "note": "Which number and colour each Bf 109 of each Gruppe wears, from the game's own Me109_PlaneID_1.ms. Rules are IN FILE ORDER and the first match wins; a rule with no units applies to any unit, one with no planeids to any aeroplane; from/to are inclusive dates; planeid is the save's playeracnum + 1. Built by dev/build_lw_numbers.py.",
+ "rules": [
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    25
+   ],
+   "to": "1940-08-17",
+   "number": 1,
+   "colour": "brown",
+   "tex": "1_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    26
+   ],
+   "to": "1940-08-17",
+   "number": 2,
+   "colour": "brown",
+   "tex": "2_brown blackv3.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    27
+   ],
+   "to": "1940-08-17",
+   "number": 3,
+   "colour": "brown",
+   "tex": "3_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    28
+   ],
+   "to": "1940-08-17",
+   "number": 4,
+   "colour": "brown",
+   "tex": "4_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    29
+   ],
+   "to": "1940-08-17",
+   "number": 5,
+   "colour": "brown",
+   "tex": "5_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    30
+   ],
+   "to": "1940-08-17",
+   "number": 6,
+   "colour": "brown",
+   "tex": "6_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    31
+   ],
+   "to": "1940-08-17",
+   "number": 7,
+   "colour": "brown",
+   "tex": "7_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    32
+   ],
+   "to": "1940-08-17",
+   "number": 8,
+   "colour": "brown",
+   "tex": "8_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    33
+   ],
+   "to": "1940-08-17",
+   "number": 9,
+   "colour": "brown",
+   "tex": "9_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    34
+   ],
+   "to": "1940-08-17",
+   "number": 10,
+   "colour": "brown",
+   "tex": "10_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    36
+   ],
+   "to": "1940-08-17",
+   "number": 14,
+   "colour": "brown",
+   "tex": "14_brown black.dds"
+  },
+  {
+   "units": [
+    "II./JG 26",
+    "I./JG 51"
+   ],
+   "planeids": [
+    35
+   ],
+   "to": "1940-08-17",
+   "number": 12,
+   "colour": "brown",
+   "tex": "12_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    25
+   ],
+   "number": 1,
+   "colour": "brown",
+   "tex": "1_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    26
+   ],
+   "number": 2,
+   "colour": "brown",
+   "tex": "2_brown blackv3.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    27
+   ],
+   "number": 3,
+   "colour": "brown",
+   "tex": "3_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    28
+   ],
+   "number": 4,
+   "colour": "brown",
+   "tex": "4_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    29
+   ],
+   "number": 5,
+   "colour": "brown",
+   "tex": "5_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    30
+   ],
+   "number": 6,
+   "colour": "brown",
+   "tex": "6_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    31
+   ],
+   "number": 7,
+   "colour": "brown",
+   "tex": "7_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    32
+   ],
+   "number": 8,
+   "colour": "brown",
+   "tex": "8_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    33
+   ],
+   "number": 9,
+   "colour": "brown",
+   "tex": "9_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    34
+   ],
+   "number": 10,
+   "colour": "brown",
+   "tex": "10_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    36
+   ],
+   "number": 14,
+   "colour": "brown",
+   "tex": "14_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 52"
+   ],
+   "planeids": [
+    35
+   ],
+   "number": 12,
+   "colour": "brown",
+   "tex": "12_brown black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    1
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    2
+   ],
+   "number": 1,
+   "colour": "white",
+   "tex": "1_white black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "colour": "white",
+   "tex": "3_white black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    4
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "colour": "white",
+   "tex": "5_white black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "colour": "white",
+   "tex": "6_white black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "colour": "white",
+   "tex": "7_white black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "colour": "white",
+   "tex": "8_white black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "colour": "white",
+   "tex": "9_white black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    11
+   ],
+   "number": 10,
+   "colour": "white",
+   "tex": "10_white black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    10
+   ],
+   "number": 11,
+   "colour": "white",
+   "tex": "11_white black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "colour": "white",
+   "tex": "12_white black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    13
+   ],
+   "number": 1,
+   "colour": "black",
+   "tex": "1_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    14
+   ],
+   "number": 2,
+   "colour": "black",
+   "tex": "2_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    15
+   ],
+   "number": 3,
+   "colour": "black",
+   "tex": "3_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    16
+   ],
+   "number": 4,
+   "colour": "black",
+   "tex": "4_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    17
+   ],
+   "number": 5,
+   "colour": "black",
+   "tex": "5_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    18
+   ],
+   "number": 6,
+   "colour": "black",
+   "tex": "6_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    19
+   ],
+   "number": 7,
+   "colour": "black",
+   "tex": "7_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    20
+   ],
+   "number": 8,
+   "colour": "black",
+   "tex": "8_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    21
+   ],
+   "number": 9,
+   "colour": "black",
+   "tex": "9_black white_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    22
+   ],
+   "number": 10,
+   "colour": "black",
+   "tex": "10_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    23
+   ],
+   "number": 11,
+   "colour": "black",
+   "tex": "11_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    24
+   ],
+   "number": 13,
+   "colour": "black",
+   "tex": "13_black white alternative.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    25
+   ],
+   "number": 1,
+   "colour": "yellow",
+   "tex": "1_yellow black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    26
+   ],
+   "number": 2,
+   "colour": "yellow",
+   "tex": "2_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    27
+   ],
+   "number": 3,
+   "colour": "yellow",
+   "tex": "3_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    28
+   ],
+   "number": 4,
+   "colour": "yellow",
+   "tex": "4_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    29
+   ],
+   "number": 5,
+   "colour": "yellow",
+   "tex": "5_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    30
+   ],
+   "number": 6,
+   "colour": "yellow",
+   "tex": "6_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    31
+   ],
+   "number": 7,
+   "colour": "yellow",
+   "tex": "7_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    32
+   ],
+   "number": 8,
+   "colour": "yellow",
+   "tex": "8_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    33
+   ],
+   "number": 9,
+   "colour": "yellow",
+   "tex": "9_yellow black_iiijg26.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    34
+   ],
+   "number": 10,
+   "colour": "yellow",
+   "tex": "10_yellow black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    36
+   ],
+   "number": 11,
+   "colour": "yellow",
+   "tex": "11_yellow black.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    35
+   ],
+   "number": 12,
+   "colour": "yellow",
+   "tex": "12_yellow black.dds"
+  },
+  {
+   "planeids": [
+    0
+   ],
+   "number": 0,
+   "tex": "0.dds"
+  },
+  {
+   "units": [
+    "I./JG 2",
+    "II./JG 2",
+    "III./JG 2",
+    "I./JG 3",
+    "II./JG 3",
+    "I./JG 26",
+    "III./JG 26",
+    "I./JG 27",
+    "II./JG 27",
+    "III./JG 27",
+    "I./JG 51",
+    "I./JG 53",
+    "II./JG 53",
+    "I./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    1
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "I./JG 3"
+   ],
+   "planeids": [
+    13
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "I./JG 2"
+   ],
+   "planeids": [
+    25
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "III./JG 26"
+   ],
+   "planeids": [
+    2
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    1
+   ],
+   "number": 1,
+   "colour": "white",
+   "tex": "1_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    2
+   ],
+   "number": 2,
+   "colour": "white",
+   "tex": "2_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "colour": "white",
+   "tex": "3_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    4
+   ],
+   "number": 4,
+   "colour": "white",
+   "tex": "4_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "colour": "white",
+   "tex": "5_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "colour": "white",
+   "tex": "6_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "colour": "white",
+   "tex": "7_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "colour": "white",
+   "tex": "8_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "colour": "white",
+   "tex": "9_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    10
+   ],
+   "number": 10,
+   "colour": "white",
+   "tex": "10_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    11
+   ],
+   "number": 13,
+   "colour": "white",
+   "tex": "13_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "colour": "white",
+   "tex": "12_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    1
+   ],
+   "number": 1,
+   "tex": "1.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    2
+   ],
+   "number": 2,
+   "tex": "2.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "tex": "3.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    4
+   ],
+   "number": 4,
+   "tex": "4.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "tex": "5.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "tex": "6.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "tex": "7.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "tex": "8.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "tex": "9.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    10
+   ],
+   "number": 10,
+   "tex": "10.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    11
+   ],
+   "number": 11,
+   "tex": "11.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "tex": "12.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    13
+   ],
+   "to": "1940-08-20",
+   "number": 1,
+   "colour": "red",
+   "tex": "1_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    14
+   ],
+   "to": "1940-08-20",
+   "number": 2,
+   "colour": "red",
+   "tex": "2_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    15
+   ],
+   "to": "1940-08-20",
+   "number": 3,
+   "colour": "red",
+   "tex": "3_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    16
+   ],
+   "to": "1940-08-20",
+   "number": 4,
+   "colour": "red",
+   "tex": "4_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    17
+   ],
+   "to": "1940-08-20",
+   "number": 5,
+   "colour": "red",
+   "tex": "5_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    18
+   ],
+   "to": "1940-08-20",
+   "number": 6,
+   "colour": "red",
+   "tex": "6_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    19
+   ],
+   "to": "1940-08-20",
+   "number": 7,
+   "colour": "red",
+   "tex": "7_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    20
+   ],
+   "to": "1940-08-20",
+   "number": 8,
+   "colour": "red",
+   "tex": "8_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    21
+   ],
+   "to": "1940-08-20",
+   "number": 9,
+   "colour": "red",
+   "tex": "9_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    22
+   ],
+   "to": "1940-08-20",
+   "number": 10,
+   "colour": "red",
+   "tex": "10_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    23
+   ],
+   "to": "1940-08-20",
+   "number": 11,
+   "colour": "red",
+   "tex": "11_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    24
+   ],
+   "to": "1940-08-20",
+   "number": 12,
+   "colour": "red",
+   "tex": "12_red.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    13
+   ],
+   "number": 1,
+   "colour": "black",
+   "tex": "1_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    14
+   ],
+   "number": 2,
+   "colour": "black",
+   "tex": "2_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    15
+   ],
+   "number": 3,
+   "colour": "black",
+   "tex": "3_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    16
+   ],
+   "number": 4,
+   "colour": "black",
+   "tex": "4_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    17
+   ],
+   "number": 5,
+   "colour": "black",
+   "tex": "5_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    18
+   ],
+   "number": 6,
+   "colour": "black",
+   "tex": "6_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    19
+   ],
+   "number": 7,
+   "colour": "black",
+   "tex": "7_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    20
+   ],
+   "number": 8,
+   "colour": "black",
+   "tex": "8_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    21
+   ],
+   "number": 9,
+   "colour": "black",
+   "tex": "9_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    22
+   ],
+   "number": 10,
+   "colour": "black",
+   "tex": "10_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    23
+   ],
+   "number": 11,
+   "colour": "black",
+   "tex": "11_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    24
+   ],
+   "number": 12,
+   "colour": "black",
+   "tex": "12_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    25
+   ],
+   "number": 1,
+   "colour": "yellow",
+   "tex": "1_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    26
+   ],
+   "number": 2,
+   "colour": "yellow",
+   "tex": "2_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    27
+   ],
+   "number": 3,
+   "colour": "yellow",
+   "tex": "3_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    28
+   ],
+   "number": 4,
+   "colour": "yellow",
+   "tex": "4_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    29
+   ],
+   "number": 5,
+   "colour": "yellow",
+   "tex": "5_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    30
+   ],
+   "number": 6,
+   "colour": "yellow",
+   "tex": "6_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    31
+   ],
+   "number": 7,
+   "colour": "yellow",
+   "tex": "7_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    32
+   ],
+   "number": 8,
+   "colour": "yellow",
+   "tex": "8_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    33
+   ],
+   "number": 9,
+   "colour": "yellow",
+   "tex": "9_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    34
+   ],
+   "number": 10,
+   "colour": "yellow",
+   "tex": "10_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    35
+   ],
+   "number": 11,
+   "colour": "yellow",
+   "tex": "11_yellow.dds"
+  },
+  {
+   "units": [
+    "III./JG 27"
+   ],
+   "planeids": [
+    36
+   ],
+   "number": 12,
+   "colour": "yellow",
+   "tex": "12_yellow.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 53",
+    "III./JG 54"
+   ],
+   "planeids": [
+    1
+   ],
+   "blank": true,
+   "tex": "blank.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    1
+   ],
+   "number": 1,
+   "colour": "white",
+   "tex": "1_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    2
+   ],
+   "number": 2,
+   "colour": "white",
+   "tex": "2_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "colour": "white",
+   "tex": "3_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    4
+   ],
+   "number": 4,
+   "colour": "white",
+   "tex": "4_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "colour": "white",
+   "tex": "5_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "colour": "white",
+   "tex": "6_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "colour": "white",
+   "tex": "7_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "colour": "white",
+   "tex": "8_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "colour": "white",
+   "tex": "9_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    10
+   ],
+   "number": 10,
+   "colour": "white",
+   "tex": "10_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    11
+   ],
+   "number": 11,
+   "colour": "white",
+   "tex": "11_white red.dds"
+  },
+  {
+   "units": [
+    "II./JG 51"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "colour": "white",
+   "tex": "12_white red.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    13
+   ],
+   "number": 1,
+   "colour": "black",
+   "tex": "1_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    14
+   ],
+   "number": 2,
+   "colour": "black",
+   "tex": "2_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    15
+   ],
+   "number": 3,
+   "colour": "black",
+   "tex": "3_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    16
+   ],
+   "number": 4,
+   "colour": "black",
+   "tex": "4_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    17
+   ],
+   "number": 5,
+   "colour": "black",
+   "tex": "5_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    18
+   ],
+   "number": 6,
+   "colour": "black",
+   "tex": "6_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    19
+   ],
+   "number": 7,
+   "colour": "black",
+   "tex": "7_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    20
+   ],
+   "number": 8,
+   "colour": "black",
+   "tex": "8_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    21
+   ],
+   "number": 9,
+   "colour": "black",
+   "tex": "9_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    22
+   ],
+   "number": 10,
+   "colour": "black",
+   "tex": "10_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3",
+    "II./JG 3",
+    "II./JG 27",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    23
+   ],
+   "number": 11,
+   "colour": "black",
+   "tex": "11_black white.dds"
+  },
+  {
+   "units": [
+    "II./JG 3",
+    "II./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 53",
+    "III./JG 53",
+    "II./JG 54",
+    "III./JG 54"
+   ],
+   "planeids": [
+    24
+   ],
+   "number": 12,
+   "colour": "black",
+   "tex": "12_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 3"
+   ],
+   "planeids": [
+    24
+   ],
+   "number": 13,
+   "colour": "black",
+   "tex": "13_black white alternative.dds"
+  },
+  {
+   "units": [
+    "II./JG 27"
+   ],
+   "planeids": [
+    24
+   ],
+   "number": 13,
+   "colour": "black",
+   "tex": "13_black white.dds"
+  },
+  {
+   "units": [
+    "I./JG 52"
+   ],
+   "planeids": [
+    15
+   ],
+   "number": 14,
+   "colour": "black",
+   "tex": "14_black white.dds"
+  },
+  {
+   "units": [
+    "II./JG 53"
+   ],
+   "planeids": [
+    18
+   ],
+   "number": 15,
+   "colour": "black",
+   "tex": "15_black white.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    1
+   ],
+   "number": 1,
+   "tex": "1.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    2
+   ],
+   "number": 2,
+   "tex": "2.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "tex": "3.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    4
+   ],
+   "number": 4,
+   "tex": "4.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "tex": "5.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "tex": "6.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "tex": "7.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "tex": "8.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "tex": "9.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    10
+   ],
+   "number": 10,
+   "tex": "10.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "I./JG 51",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    11
+   ],
+   "number": 11,
+   "tex": "11.dds"
+  },
+  {
+   "units": [
+    "III./JG 27",
+    "III./JG 51",
+    "I./JG 52",
+    "II./JG 52",
+    "I./JG 53",
+    "II./JG 53",
+    "III./JG 53",
+    "I./JG 54",
+    "II./JG 54"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "tex": "12.dds"
+  },
+  {
+   "units": [
+    "I./JG 51"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 13,
+   "tex": "13.dds"
+  },
+  {
+   "planeids": [
+    1
+   ],
+   "number": 1,
+   "colour": "white",
+   "tex": "1_white black.dds"
+  },
+  {
+   "planeids": [
+    2
+   ],
+   "number": 2,
+   "colour": "white",
+   "tex": "2_white black.dds"
+  },
+  {
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "colour": "white",
+   "tex": "3_white black.dds"
+  },
+  {
+   "planeids": [
+    4
+   ],
+   "number": 4,
+   "colour": "white",
+   "tex": "4_white black.dds"
+  },
+  {
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "colour": "white",
+   "tex": "5_white black.dds"
+  },
+  {
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "colour": "white",
+   "tex": "6_white black.dds"
+  },
+  {
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "colour": "white",
+   "tex": "7_white black.dds"
+  },
+  {
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "colour": "white",
+   "tex": "8_white black.dds"
+  },
+  {
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "colour": "white",
+   "tex": "9_white black.dds"
+  },
+  {
+   "planeids": [
+    10
+   ],
+   "number": 10,
+   "colour": "white",
+   "tex": "10_white black.dds"
+  },
+  {
+   "planeids": [
+    11
+   ],
+   "number": 11,
+   "colour": "white",
+   "tex": "11_white black.dds"
+  },
+  {
+   "units": [
+    "I./JG 2"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 13,
+   "colour": "white",
+   "tex": "13_white black.dds"
+  },
+  {
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "colour": "white",
+   "tex": "12_white black.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    1
+   ],
+   "number": 1,
+   "colour": "white",
+   "tex": "1_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    2
+   ],
+   "number": 2,
+   "colour": "white",
+   "tex": "2_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    3
+   ],
+   "number": 3,
+   "colour": "white",
+   "tex": "3_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    4
+   ],
+   "number": 4,
+   "colour": "white",
+   "tex": "4_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    5
+   ],
+   "number": 5,
+   "colour": "white",
+   "tex": "5_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    6
+   ],
+   "number": 6,
+   "colour": "white",
+   "tex": "6_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    7
+   ],
+   "number": 7,
+   "colour": "white",
+   "tex": "7_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    8
+   ],
+   "number": 8,
+   "colour": "white",
+   "tex": "8_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    9
+   ],
+   "number": 9,
+   "colour": "white",
+   "tex": "9_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    10
+   ],
+   "number": 10,
+   "colour": "white",
+   "tex": "10_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    11
+   ],
+   "number": 13,
+   "colour": "white",
+   "tex": "13_white black_jg54_7.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    12
+   ],
+   "number": 12,
+   "colour": "white",
+   "tex": "12_white black_jg54_7.dds"
+  },
+  {
+   "planeids": [
+    13
+   ],
+   "number": 1,
+   "colour": "red",
+   "tex": "1_red white.dds"
+  },
+  {
+   "planeids": [
+    14
+   ],
+   "number": 2,
+   "colour": "red",
+   "tex": "2_red white.dds"
+  },
+  {
+   "planeids": [
+    15
+   ],
+   "number": 3,
+   "colour": "red",
+   "tex": "3_red white.dds"
+  },
+  {
+   "planeids": [
+    16
+   ],
+   "number": 4,
+   "colour": "red",
+   "tex": "4_red white.dds"
+  },
+  {
+   "planeids": [
+    17
+   ],
+   "number": 5,
+   "colour": "red",
+   "tex": "5_red white.dds"
+  },
+  {
+   "planeids": [
+    18
+   ],
+   "number": 6,
+   "colour": "red",
+   "tex": "6_red white.dds"
+  },
+  {
+   "planeids": [
+    19
+   ],
+   "number": 7,
+   "colour": "red",
+   "tex": "7_red white.dds"
+  },
+  {
+   "units": [
+    "II./JG 52"
+   ],
+   "planeids": [
+    20
+   ],
+   "number": 14,
+   "colour": "red",
+   "tex": "14_red white alternative.dds"
+  },
+  {
+   "planeids": [
+    20
+   ],
+   "number": 8,
+   "colour": "red",
+   "tex": "8_red white.dds"
+  },
+  {
+   "planeids": [
+    21
+   ],
+   "number": 9,
+   "colour": "red",
+   "tex": "9_red white.dds"
+  },
+  {
+   "units": [
+    "II./JG 2"
+   ],
+   "planeids": [
+    22
+   ],
+   "number": 14,
+   "colour": "red",
+   "tex": "14_red white alternative.dds"
+  },
+  {
+   "planeids": [
+    22
+   ],
+   "number": 10,
+   "colour": "red",
+   "tex": "10_red white.dds"
+  },
+  {
+   "planeids": [
+    23
+   ],
+   "number": 11,
+   "colour": "red",
+   "tex": "11_red white.dds"
+  },
+  {
+   "planeids": [
+    24
+   ],
+   "number": 12,
+   "colour": "red",
+   "tex": "12_red white.dds"
+  },
+  {
+   "planeids": [
+    25
+   ],
+   "number": 1,
+   "colour": "yellow",
+   "tex": "1_yellow black.dds"
+  },
+  {
+   "planeids": [
+    26
+   ],
+   "number": 2,
+   "colour": "yellow",
+   "tex": "2_yellow black.dds"
+  },
+  {
+   "planeids": [
+    27
+   ],
+   "number": 3,
+   "colour": "yellow",
+   "tex": "3_yellow black.dds"
+  },
+  {
+   "planeids": [
+    28
+   ],
+   "number": 4,
+   "colour": "yellow",
+   "tex": "4_yellow black.dds"
+  },
+  {
+   "units": [
+    "I./JG 52"
+   ],
+   "planeids": [
+    29
+   ],
+   "number": 15,
+   "colour": "yellow",
+   "tex": "15_yellow black.dds"
+  },
+  {
+   "planeids": [
+    29
+   ],
+   "number": 5,
+   "colour": "yellow",
+   "tex": "5_yellow black.dds"
+  },
+  {
+   "planeids": [
+    30
+   ],
+   "number": 6,
+   "colour": "yellow",
+   "tex": "6_yellow black.dds"
+  },
+  {
+   "planeids": [
+    31
+   ],
+   "number": 7,
+   "colour": "yellow",
+   "tex": "7_yellow black.dds"
+  },
+  {
+   "planeids": [
+    32
+   ],
+   "number": 8,
+   "colour": "yellow",
+   "tex": "8_yellow black.dds"
+  },
+  {
+   "planeids": [
+    33
+   ],
+   "number": 9,
+   "colour": "yellow",
+   "tex": "9_yellow black.dds"
+  },
+  {
+   "planeids": [
+    34
+   ],
+   "number": 10,
+   "colour": "yellow",
+   "tex": "10_yellow black.dds"
+  },
+  {
+   "units": [
+    "III./JG 51"
+   ],
+   "planeids": [
+    35
+   ],
+   "number": 13,
+   "colour": "yellow",
+   "tex": "13_yellow black.dds"
+  },
+  {
+   "units": [
+    "III./JG 54"
+   ],
+   "planeids": [
+    35
+   ],
+   "number": 13,
+   "colour": "yellow",
+   "tex": "13_yellow black alternative.dds"
+  },
+  {
+   "planeids": [
+    35
+   ],
+   "number": 11,
+   "colour": "yellow",
+   "tex": "11_yellow black.dds"
+  },
+  {
+   "units": [
+    "I./JG 2"
+   ],
+   "planeids": [
+    36
+   ],
+   "number": 14,
+   "colour": "yellow",
+   "tex": "14_yellow black.dds"
+  },
+  {
+   "planeids": [
+    36
+   ],
+   "number": 12,
+   "colour": "yellow",
+   "tex": "12_yellow black.dds"
+  },
+  {
+   "planeids": [
+    37
+   ],
+   "number": 1,
+   "tex": "1.dds"
+  },
+  {
+   "planeids": [
+    38
+   ],
+   "number": 2,
+   "tex": "2.dds"
+  },
+  {
+   "planeids": [
+    39
+   ],
+   "number": 3,
+   "tex": "3.dds"
+  },
+  {
+   "planeids": [
+    40
+   ],
+   "number": 4,
+   "tex": "4.dds"
+  },
+  {
+   "planeids": [
+    41
+   ],
+   "number": 5,
+   "tex": "5.dds"
+  },
+  {
+   "planeids": [
+    42
+   ],
+   "number": 6,
+   "tex": "6.dds"
+  },
+  {
+   "planeids": [
+    43
+   ],
+   "number": 7,
+   "tex": "7.dds"
+  },
+  {
+   "planeids": [
+    44
+   ],
+   "number": 8,
+   "tex": "8.dds"
+  },
+  {
+   "planeids": [
+    45
+   ],
+   "number": 9,
+   "tex": "9.dds"
+  },
+  {
+   "planeids": [
+    46
+   ],
+   "number": 10,
+   "tex": "10.dds"
+  },
+  {
+   "planeids": [
+    47
+   ],
+   "number": 11,
+   "tex": "11.dds"
+  },
+  {
+   "planeids": [
+    48
+   ],
+   "number": 12,
+   "tex": "12.dds"
+  },
+  {
+   "number": 13,
+   "tex": "13.dds"
+  }
+ ]
+}

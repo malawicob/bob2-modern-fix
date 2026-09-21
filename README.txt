@@ -1,6 +1,6 @@
 ﻿========================================================================
   Battle of Britain II - Windows 10/11 Compatibility Fix
-  Fix package v1.7.8  (2026-09-07)
+  Fix package v1.9.2  (2026-09-21)
   For the v2.13 executable
 ========================================================================
 
@@ -46,6 +46,10 @@ QUICK START
 
   4. The launcher opens. Run the SETUP WIZARD - it walks you through the
      rest and tells you what it is changing at every step.
+
+  5. Open "Modern Fix Handbook.html" in this folder for a guide to
+     everything the mod does, with pictures: installing, what is new,
+     and flying a career in the Squadron Room.
 
 
 WHAT YOU NEED TO SUPPLY
@@ -714,9 +718,13 @@ In dgVoodoo.conf (defaults are already optimized):
   Filtering = appdriven           (let the game control filtering)
   Antialiasing = appdriven        (let the game control AA)
 
-NOTE: Forcing Antialiasing to 2x/4x/8x in dgVoodoo.conf can break
-the game's options menu display. Leave it as "appdriven" for best
-compatibility.
+NOTE: Leave Antialiasing as "appdriven". Forcing 2x/4x/8x draws bright
+straight lines along the terrain tile grid, more of them the higher you
+fly (flown and photographed at 2x and 4x, 20 September 2026; with
+appdriven they are gone). For smooth edges use ReShade instead: its
+SMAA pass, in the Balanced preset and above, works on the finished
+picture and cannot touch the terrain. Keep Filtering = 16; that is the
+ground texture filtering and has nothing to do with the lines.
 
 
 UNINSTALL
@@ -767,8 +775,8 @@ A: Run dgVoodooCpl.exe, go to the DirectX tab, and uncheck
 
 Q: Poor frame rate on a powerful PC
 A: Make sure Windows is using your dedicated GPU, not integrated
-   graphics (see GPU Assignment section above). Also try reducing
-   Antialiasing from 4x/8x to 2x in dgVoodoo.conf.
+   graphics (see GPU Assignment section above). Antialiasing should be
+   "appdriven" in dgVoodoo.conf in any case (see the note on terrain lines).
 
 Q: bob2guard.log appears in my game folder
 A: This is a diagnostic log from the crash guard DLL. It shows

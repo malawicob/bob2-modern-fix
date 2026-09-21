@@ -1,0 +1,657 @@
+[
+ {
+  "date": "1940-10-01",
+  "weather": "Mainly fair but generally cloudy.",
+  "air": "Bf 109s of JG 2 and JG 53 with Bf 110s of ZG 26 swept the Portsmouth and Southampton area in the morning, and three waves of fighters and fighter bombers came in over Kent towards London in the afternoon. RAF Carew Cheriton in Wales was bombed at dawn. At night London was the main target, with Manchester, Birkenhead and other towns also hit.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 9,
+  "raf_lost_actual": 7,
+  "home": [
+   "The first of the American destroyers transferred to the Royal Navy reached Britain on 28 September.",
+   "British warships bombarded the coastal road in Italian Libya on 29 September."
+  ],
+  "reich": [
+   "U-38 torpedoed and sank the British motor ship Highland Patriot, 14,172 tons, in the Atlantic on 1 October.",
+   "Berlin schoolchildren were told on 30 September that holidays would be extended for those whose parents placed them in the country."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/tuesday-1-october-1940/",
+   "https://en.wikipedia.org/wiki/September_1940",
+   "https://en.wikipedia.org/wiki/List_of_shipwrecks_in_October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-02",
+  "weather": "Clear skies by day, with cloud building up later.",
+  "air": "Six raids, mostly of Bf 109s and Bf 110s with some Ju 88s and Do 17s, crossed south east England and bombs fell on Woolwich, Camberwell, Rochester and several coastal towns. A Ju 88 on a weather and reconnaissance flight lost its way and landed intact at Brightlingsea in Essex. London was again the main night target, and Manchester and Aberdeen were also raided.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 18,
+  "raf_lost_actual": 2,
+  "home": [
+   "British destroyers attacked the Italian submarine Berillo in the Mediterranean on 2 October and her crew scuttled her."
+  ],
+  "reich": [
+   "Night bombers again made London their main target on the night of 2 October, with Manchester also attacked."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/wednesday-2-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-03",
+  "weather": "Rain and drizzle in the Channel, with visibility down to 500 yards in places.",
+  "air": "In poor weather single aircraft made scattered low level raids on airfields, factories and railways. A Ju 88 bombed the de Havilland works at Hatfield, killing 21 people, and was shot down by the ground defences. Night activity was much reduced, with London the main target and the General Aircraft works at Feltham damaged.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 9,
+  "raf_lost_actual": 1,
+  "home": [
+   "Mr Neville Chamberlain resigned as Lord President of the Council on 3 October because of failing health."
+  ],
+  "reich": [],
+  "sources": [
+   "https://battleofbritain1940.com/entry/thursday-3-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://www.battleofbritainmemorial.org/history-stories/battle-of-britain-day-by-day/"
+  ]
+ },
+ {
+  "date": "1940-10-04",
+  "weather": "Mist, rain and poor visibility all day, with fog at night.",
+  "air": "Single aircraft and small formations raided London and the south east through the murk, with activity heaviest around mid afternoon. Bombs hit the New Cross telephone exchange, Euston station and the Hawker factory at Kingston. After dark more than 100 bombers crossed in a stream towards London, and Liverpool and Bristol were also raided.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 15,
+  "raf_lost_actual": 1,
+  "home": [
+   "In the Cabinet changes Sir John Anderson became Lord President and Mr Herbert Morrison became Home Secretary.",
+   "Mr Ernest Bevin and Sir Kingsley Wood joined the War Cabinet."
+  ],
+  "reich": [
+   "Hitler and Mussolini met at the Brenner Pass on 4 October to discuss the conduct of the war, including the position of Spain."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/friday-4-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/John_Anderson,_1st_Viscount_Waverley"
+  ]
+ },
+ {
+  "date": "1940-10-05",
+  "weather": "Local showers in most parts with bright periods, winds light and variable.",
+  "air": "Six attacks were made on Kent, London and the Portsmouth and Southampton area, the largest of about 150 aircraft crossing near Lympne in the morning. No. 303 (Polish) Squadron fought Bf 110s and Bf 109s over West Malling, and Ju 88s with a Bf 109 escort attacked Southampton in the afternoon. Fighter Command flew 1,175 sorties. London was raided again at night.",
+  "raf_claimed": 22,
+  "raf_lost_announced": 7,
+  "lw_lost_actual": 14,
+  "raf_lost_actual": 7,
+  "home": [
+   "Hitler and Mussolini conferred at the Brenner Pass on 4 October."
+  ],
+  "reich": [
+   "Helmut Wick of JG 2 claimed five British fighters in the fighting over the south coast on 5 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/saturday-5-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-06",
+  "weather": "Dull, with continuous rain all day.",
+  "air": "Poor visibility ruled out formation attacks, and lone aircraft raided airfields, towns and convoys in East Anglia, Kent and Sussex. A Ju 88 bombed Northolt, destroying a Hurricane of No. 303 Squadron and killing Sergeant Siudak, and Biggin Hill, Croydon and Tangmere were also attacked. Heavy cloud made the night very quiet.",
+  "raf_claimed": 1,
+  "raf_lost_announced": 1,
+  "lw_lost_actual": 9,
+  "raf_lost_actual": 2,
+  "home": [
+   "Air Marshal Sir Richard Peirse took over Bomber Command from Sir Charles Portal on 5 October."
+  ],
+  "reich": [
+   "Mussolini inspected units of the Italian armed forces in northern Italy on 6 October.",
+   "Werner Moelders of JG 51 flew the new Bf 109 F on operations for the first time on 6 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/sunday-6-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-07",
+  "weather": "Occasional showers, fair visibility and variable cloud.",
+  "air": "Large fighter and fighter bomber formations crossed Kent towards London and Biggin Hill from mid morning, and No. 11 Group put up 16 squadrons against the first sweep. In the afternoon Ju 88s of KG 51 escorted by Bf 110s and Bf 109s bombed the Westland works at Yeovil, where an air raid shelter was hit. At night raids reached the Midlands, Lancashire, Tyneside and the Forth as well as London.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 19,
+  "raf_lost_actual": 17,
+  "home": [
+   "Heavy cloud on the night of 6 October kept raiding over London to a few scattered aircraft."
+  ],
+  "reich": [
+   "Oberleutnant Viktor Moelders of JG 51 was shot down over England on 7 October during a fighter bomber attack on London and taken prisoner."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/monday-7-october-1940/",
+   "https://www.pen-and-sword.co.uk/blog/author-guest-post-dilip-sarkar-mbe-19/"
+  ]
+ },
+ {
+  "date": "1940-10-08",
+  "weather": "Cloudy but fair in the south east, with high winds.",
+  "air": "Fighter bombers reached central London soon after 8.30 am, followed by a second wave of more than 100 aircraft. Bombs fell near Charing Cross, the Air Ministry and BBC buildings, and on Bermondsey, Lewisham and West Ham. Sergeant Josef Frantisek of No. 303 Squadron was killed in a crash at Ewell. No. 312 (Czech) Squadron shot down a Ju 88 near Speke. London was the main target at night.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 17,
+  "raf_lost_actual": 8,
+  "home": [
+   "Mr Churchill reviewed the war in the Commons on 8 October, dealing with the air battle, Dakar, Vichy France and the Burma Road.",
+   "RAF bombers attacked targets in Berlin on the night of 7 October, the heaviest raid on the city so far."
+  ],
+  "reich": [
+   "German troops entered Romania to train the Romanian army and guard the oilfields.",
+   "British bombers attacked Berlin on the night of 7 to 8 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/tuesday-8-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://www.memorialflightclub.com/blog/80-years-ago-%E2%80%93-largest-raf-bomber-command-berlin-raid-so-far",
+   "https://hansard.parliament.uk/commons/1940-10-08/debates/ba17febc-ce20-4558-ab87-c440190ff9f8/BurmaRoad"
+  ]
+ },
+ {
+  "date": "1940-10-09",
+  "weather": "Cloudy in the Channel, with rain over northern France and the Straits of Dover.",
+  "air": "No. 1 Squadron shot down a Ju 88 over the Wash in the morning. The main attack came in mid afternoon, when 160 to 180 aircraft headed for east London, Hornchurch and Biggin Hill, and fighter bombers hit Maidstone, Hastings and East Ham. At night about 90 bombers attacked London, where railways were hit and St Paul's Cathedral was damaged. Mines were laid off the east coast.",
+  "raf_claimed": 4,
+  "raf_lost_announced": 3,
+  "lw_lost_actual": 9,
+  "raf_lost_actual": 3,
+  "home": [
+   "Mr Churchill was elected leader of the Conservative Party on 9 October in succession to Mr Chamberlain.",
+   "General de Gaulle arrived at Douala in the French Cameroons on 8 October."
+  ],
+  "reich": [
+   "U-103 sank three ships from convoy SC 6 in the North Atlantic on 9 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/wednesday-9-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom",
+   "https://en.wikipedia.org/wiki/List_of_shipwrecks_in_October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-10",
+  "weather": "Showery with bright intervals, haze in the Thames Estuary and East Anglia.",
+  "air": "Hastings and Dover were bombed early, and fighter formations crossed Kent through the day. No. 92 Squadron lost three Spitfires near Brighton. Around midday more than 100 aircraft approached the Dorset coast near Lulworth and were met by No. 10 Group squadrons. At night London, Manchester and fifteen airfields were attacked.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 12,
+  "raf_lost_actual": 8,
+  "home": [
+   "A bomb struck St Paul's Cathedral in the night raid of 9 October, damaging the choir and the high altar."
+  ],
+  "reich": [
+   "Hitler ordered an emergency programme of air raid shelter building for German cities on 10 October.",
+   "U-48 torpedoed ships of convoy HX 77 in the North Atlantic on 10 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/thursday-10-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/List_of_shipwrecks_in_October_1940",
+   "https://battleofbritain1940.com/entry/wednesday-9-october-1940/"
+  ]
+ },
+ {
+  "date": "1940-10-11",
+  "weather": "Mainly fair apart from coastal showers, with fog forming at night.",
+  "air": "Several waves of fighters and fighter bombers, more than 190 aircraft in all, came in over Kent, Sussex and the Thames Estuary, with JG 26 and JG 53 aircraft bombing Hastings, Folkestone and Whitstable. Afternoon raids headed for London and Portland. At night London, Liverpool, Manchester and Tyneside were bombed, and the Centre Court at Wimbledon was hit.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 10,
+  "raf_lost_actual": 9,
+  "home": [
+   "The battleship HMS Revenge and six destroyers bombarded the harbour at Cherbourg in the night of 10 to 11 October."
+  ],
+  "reich": [
+   "British warships shelled Cherbourg in the night of 10 to 11 October.",
+   "Marshal Petain spoke on French radio on 11 October about France's future relations with her neighbours."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/friday-11-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-12",
+  "weather": "Widespread mist and fog, clearing later.",
+  "air": "Once the fog lifted Bf 109 fighter bombers made repeated attacks on London and the Home Counties, with fighting over north Kent, Hastings and the Thames Estuary. No. 145 Squadron destroyed an Arado 196 seaplane and was in action with Bf 109s of JG 51. At night London was bombed from 7.20 pm, a bomb in Trafalgar Square killing seven people, and Coventry was heavily attacked.",
+  "raf_claimed": 10,
+  "raf_lost_announced": 11,
+  "lw_lost_actual": 13,
+  "raf_lost_actual": 11,
+  "home": [
+   "The Centre Court at Wimbledon was hit by a bomb during the night raid of 11 October."
+  ],
+  "reich": [
+   "A directive of 12 October put off the planned landing in England until the spring of 1941 at the earliest.",
+   "Werner Moelders of JG 51 claimed three Hurricanes on 12 October, bringing his total to 45."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/saturday-12-october-1940/",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/Operation_Sea_Lion"
+  ]
+ },
+ {
+  "date": "1940-10-13",
+  "weather": "Early fog clearing to blue skies, cloud later.",
+  "air": "From about 12.45 pm to 4 pm waves of 25 to 30 Bf 109s attacked London, hitting Woolwich and railway junctions at Dalston and Hackney. At night about 60 raids were plotted against London, Merseyside, Birmingham, Bristol and the north east. A shelter under flats in Stoke Newington collapsed, and 21 people died when a communal shelter in Middlesbrough was hit.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 6,
+  "raf_lost_actual": 4,
+  "home": [
+   "Princess Elizabeth made her first broadcast on 13 October, speaking to evacuated children on the BBC Children's Hour.",
+   "The Royal Navy sank the Italian ships Airone, Ariel and Artigliere off Cape Passero, south east of Sicily, on 12 October."
+  ],
+  "reich": [
+   "U-48, U-59 and U-101 sank ships of convoy HX 77 in the North Atlantic on 12 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/sunday-13-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/List_of_shipwrecks_in_October_1940",
+   "https://www.royal.uk/wartime-broadcast-1940"
+  ]
+ },
+ {
+  "date": "1940-10-14",
+  "weather": "Occasional rain or drizzle spreading to the south east, clearing to a moonlit night.",
+  "air": "Poor weather kept daylight activity to scattered raids on airfields including North Weald, Hawkinge, Duxford and Brize Norton, and an afternoon attack on Portsmouth. Under a clear moonlit sky London, Birmingham and Coventry were heavily bombed at night. A bomb in Balham High Street broke through into the Underground station, which was in use as a shelter.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 4,
+  "raf_lost_actual": 1,
+  "home": [
+   "The King and Queen visited Mr Neville Chamberlain, who was gravely ill, on 14 October."
+  ],
+  "reich": [
+   "Night bombers attacked London, Birmingham and Coventry in strength under a clear moonlit sky on 14 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/monday-14-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-15",
+  "weather": "Fair but cloudy in the Straits, with a clear moonlit night.",
+  "air": "Five Bf 109 sweeps by JG 26, JG 51, JG 52 and JG 54 came over at height against London, Kent and the Thames Estuary, hitting Waterloo station and the King George V Dock. From 6.30 pm London was bombed for about six hours in bright moonlight. The Royal Docks were set alight, Morley College and Broadcasting House were hit, and more than 900 fires were recorded. Birmingham and Bristol were also raided.",
+  "raf_claimed": 16,
+  "raf_lost_announced": 15,
+  "lw_lost_actual": 16,
+  "raf_lost_actual": 15,
+  "home": [
+   "At least 66 people sheltering in Balham Underground station were killed when a bomb burst through from the road above on 14 October."
+  ],
+  "reich": [
+   "Mussolini and his service chiefs decided in Rome on 15 October to attack Greece.",
+   "Werner Moelders and Adolf Galland both claimed further victories over England on 15 October, Moelders his 47th."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/tuesday-15-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom"
+  ]
+ },
+ {
+  "date": "1940-10-16",
+  "weather": "Widespread fog over France and Germany, a wet and misty night.",
+  "air": "Fog reduced German activity. Bf 109 fighter bombers raided Kent and the London suburbs from about 8 am, and a second wave made for the Thames Estuary late in the morning. RAF Ternhill in Shropshire was bombed and training aircraft were destroyed. At night more than 200 bombers attacked London, Birmingham, Liverpool and South Wales.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 15,
+  "raf_lost_actual": 3,
+  "home": [
+   "Broadcasting House in London was hit by a bomb during the nine o'clock news on 15 October.",
+   "Two ARP rescue workers were each sentenced to a year in prison at the Old Bailey on 16 October for looting."
+  ],
+  "reich": [
+   "Ramon Serrano Suner was appointed Foreign Minister of Spain on 16 October.",
+   "U-124 sank the steamer Trevisa, a straggler from convoy SC 7, in the North Atlantic on 16 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/wednesday-16-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Convoy_SC_7",
+   "https://battleofbritain1940.com/entry/tuesday-15-october-1940/"
+  ]
+ },
+ {
+  "date": "1940-10-17",
+  "weather": "Bright intervals with some showers.",
+  "air": "Four sweeps, in all more than 300 aircraft and mostly Bf 109s carrying light bomb loads, crossed Kent towards London, and some reached the centre of the capital. Fighter Command scrambled nearly two dozen squadrons. Kenley airfield was bombed in the evening. At night London, Liverpool and Birmingham were raided, with government buildings in Whitehall damaged.",
+  "raf_claimed": 4,
+  "raf_lost_announced": 3,
+  "lw_lost_actual": 16,
+  "raf_lost_actual": 5,
+  "home": [
+   "Registration for the first peacetime military draft in the United States began on 16 October."
+  ],
+  "reich": [
+   "German destroyers sighted west of Brest on 17 October were engaged at extreme range by a British cruiser and withdrew into Brest.",
+   "U-38 sank the Greek steamer Aenos from convoy SC 7 on 17 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/thursday-17-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Convoy_SC_7",
+   "https://www.iwm.org.uk/collections/item/object/205135772"
+  ]
+ },
+ {
+  "date": "1940-10-18",
+  "weather": "Fog in the Straits of Dover and the Thames Estuary, poor visibility.",
+  "air": "Fog limited the Luftwaffe to reconnaissance and single raiders, and Hurricanes of No. 229 Squadron engaged Ju 88s over Kent. Four Hurricanes of No. 302 (Polish) Squadron, lost in fog on return from patrol, crashed in Surrey and all four pilots were killed. At night London and Birmingham were bombed.",
+  "raf_claimed": 4,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 14,
+  "raf_lost_actual": 6,
+  "home": [
+   "The British government reopened the Burma Road supply route to China on 18 October.",
+   "British light forces engaged German destroyers about 100 miles west of Land's End on 17 October, and the enemy withdrew into Brest."
+  ],
+  "reich": [
+   "U-boats directed from Lorient, among them U-99 under Kretschmer and U-100 under Schepke, attacked convoy SC 7 in the night of 18 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/friday-18-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Convoy_SC_7",
+   "https://www.iwm.org.uk/collections/item/object/205135772"
+  ]
+ },
+ {
+  "date": "1940-10-19",
+  "weather": "Cloudy in the Channel, mist over northern France clearing later.",
+  "air": "No. 229 Squadron shot down a reconnaissance Ju 88 over Kent in the morning. About 3 pm nearly 60 aircraft, including bomb carrying Bf 109s, crossed at Dungeness for London and were met by five squadrons. From 6.30 pm more than 120 bombers attacked London, Liverpool, Manchester, Bristol, Coventry and Birmingham, with I/KG 27 and KGr 606 over Merseyside.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 6,
+  "raf_lost_actual": 2,
+  "home": [
+   "The destroyer HMS Venetia struck a mine and sank in the Thames Estuary on 19 October."
+  ],
+  "reich": [
+   "Convoy SC 7 lost 20 of its 35 ships to U-boat attack in the Western Approaches, and no U-boat was lost.",
+   "U-47 under Guenther Prien sighted convoy HX 79 on 19 October and reported its position."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/saturday-19-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Convoy_SC_7",
+   "https://en.wikipedia.org/wiki/Convoy_HX_79"
+  ]
+ },
+ {
+  "date": "1940-10-20",
+  "weather": "Mainly cloudy in most districts.",
+  "air": "Five main waves of Bf 109 fighter bombers crossed the Kent and Sussex coasts and some reached London and the Thames Estuary, with Hurricane and Spitfire squadrons engaging over Maidstone and the approaches to the capital. At night nearly 300 bombers attacked London, Birmingham and Coventry, where the Armstrong Siddeley and Singer works were damaged.",
+  "raf_claimed": 7,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 11,
+  "raf_lost_actual": 5,
+  "home": [
+   "Three British destroyers sank the Italian submarine Lafole in the Mediterranean on 20 October.",
+   "Italian aircraft bombed oil installations at Bahrain and in Saudi Arabia."
+  ],
+  "reich": [
+   "U-boats including U-47, U-46, U-48, U-38 and U-100 sank 12 of the 49 ships of convoy HX 79 in the night of 19 to 20 October.",
+   "Heinrich Himmler visited Madrid on 20 October and met General Franco."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/sunday-20-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Convoy_HX_79"
+  ]
+ },
+ {
+  "date": "1940-10-21",
+  "weather": "Mainly cloudy with fog and intermittent rain, poor visibility.",
+  "air": "Single raiders used the cloud to reach London, the Midlands and airfields as far as Duxford. A Ju 88 that machine gunned Old Sarum was shot down near Lymington by No. 609 Squadron, and anti aircraft guns brought down a bomber off Harwich. At night Coventry was heavily bombed and London, Birmingham, Wolverhampton and Liverpool were raided. Mines were laid off the east coast.",
+  "raf_claimed": 2,
+  "raf_lost_announced": 0,
+  "lw_lost_actual": 7,
+  "raf_lost_actual": 2,
+  "home": [
+   "Purchase tax came into force on 21 October, at one third on goods classed as luxuries.",
+   "Mr Churchill broadcast in French to the people of France on 21 October."
+  ],
+  "reich": [
+   "Liverpool had its 200th air raid of the war on the night of 21 October.",
+   "No U-boat was lost in the attacks on convoys SC 7 and HX 79."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/monday-21-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom",
+   "https://en.wikipedia.org/wiki/Convoy_SC_7",
+   "https://en.wikipedia.org/wiki/Convoy_HX_79"
+  ]
+ },
+ {
+  "date": "1940-10-22",
+  "weather": "Widespread fog in the south, clearing to rain later.",
+  "air": "The morning was quiet apart from reconnaissance flights and shelling of Dover. A Dornier bombed Eastbourne, killing two people. In the afternoon Bf 109 formations crossed at Dungeness and were intercepted over Kent. At night Coventry was bombed for two hours, damaging several motor and aircraft works, and London and Liverpool were also raided.",
+  "raf_claimed": 3,
+  "raf_lost_announced": 6,
+  "lw_lost_actual": 12,
+  "raf_lost_actual": 6,
+  "home": [
+   "The Belgian Prime Minister, M. Hubert Pierlot, arrived in London on 22 October.",
+   "The Canadian destroyer Margaree sank on 22 October after a collision with a merchant ship while escorting an Atlantic convoy."
+  ],
+  "reich": [
+   "Hitler met Pierre Laval, deputy head of the Vichy government, at Montoire-sur-le-Loir on 22 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/tuesday-22-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom"
+  ]
+ },
+ {
+  "date": "1940-10-23",
+  "weather": "Low cloud and drizzle, poor visibility.",
+  "air": "Activity was very slight and consisted mainly of reconnaissance flights over the south east and East Anglia. Hurricanes of No. 145 Squadron met Bf 109s over Sussex and lost two aircraft. At night small numbers of bombers attacked London, where a bomb cratered the main line at St Pancras, and mines were dropped on Tyneside and off the Yorkshire and Lincolnshire coasts.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 4,
+  "raf_lost_actual": 1,
+  "home": [
+   "The Belgian government in exile began to assemble in London after the arrival of M. Pierlot."
+  ],
+  "reich": [
+   "Hitler met General Franco at Hendaye on the Spanish frontier on 23 October. The talks lasted some seven hours without agreement on Spain entering the war."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/wednesday-23-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom"
+  ]
+ },
+ {
+  "date": "1940-10-24",
+  "weather": "Overcast and hazy in the Channel, clearing to a starlit night.",
+  "air": "Daylight activity was light. Hurricanes of No. 1 Squadron shot down a Dornier 215 near St Neots, and bombs on Hayes damaged the Fairey works. At night London and Birmingham were raided, with about 90 fires in Birmingham and damage to New Street and Snow Hill stations. Italian BR.20 bombers flying from Belgium attacked the Harwich area, their first operation against Britain.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 12,
+  "raf_lost_actual": 3,
+  "home": [
+   "British Summer Time was extended on 24 October to run on through the winter."
+  ],
+  "reich": [
+   "Hitler met Marshal Petain at Montoire on 24 October. Petain agreed in principle to collaborate with Germany but not to enter the war.",
+   "The Italian Air Corps in Belgium flew its first operation against England on the night of 24 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/thursday-24-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)"
+  ]
+ },
+ {
+  "date": "1940-10-25",
+  "weather": "Fair but overcast.",
+  "air": "From dawn to dusk successive high altitude sweeps of Bf 109 fighters and fighter bombers crossed Kent and Sussex towards London and Fighter Command was engaged all day. A Bf 109 of JG 54 force landed near Lydd. At night London, Birmingham, Liverpool and South Wales were bombed, KG 26 made a low level attack on RAF Montrose in Scotland, and mines were laid from Scotland to the Thames.",
+  "raf_claimed": 14,
+  "raf_lost_announced": 14,
+  "lw_lost_actual": 24,
+  "raf_lost_actual": 14,
+  "home": [
+   "RAF bombers attacked Hamburg and Berlin."
+  ],
+  "reich": [
+   "British bombers attacked Hamburg and Berlin.",
+   "Aircraft of KG 26 made a low level attack on the British airfield at Montrose on the evening of 25 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/friday-25-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom"
+  ]
+ },
+ {
+  "date": "1940-10-26",
+  "weather": "Cloudy, with local showers chiefly in the north and east.",
+  "air": "Dispersed Bf 109 sweeps and fighter bomber raids came over Kent and London through the day, the largest of more than 80 aircraft crossing near Lympne late in the morning. At dusk the airfields at Wick and Lossiemouth in Scotland were attacked. At night London, Birmingham for the third night running, Liverpool, Manchester and Bristol were raided.",
+  "raf_claimed": 4,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 10,
+  "raf_lost_actual": 8,
+  "home": [
+   "Air Chief Marshal Sir Charles Portal succeeded Sir Cyril Newall as Chief of the Air Staff on 25 October."
+  ],
+  "reich": [
+   "A Focke-Wulf 200 flown by Oberleutnant Bernhard Jope bombed and set on fire the 42,348 ton liner Empress of Britain north west of Ireland on 26 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/saturday-26-october-1940/",
+   "https://en.wikipedia.org/wiki/1940_in_the_United_Kingdom",
+   "https://en.wikipedia.org/wiki/RMS_Empress_of_Britain_(1930)"
+  ]
+ },
+ {
+  "date": "1940-10-27",
+  "weather": "Cloudy all day, apart from a brighter spell in the late morning.",
+  "air": "Fighter and fighter bomber sweeps over Kent, London and the south east went on from morning to late afternoon, and No. 603 Squadron lost three Spitfires south of Maidstone. Towards dusk airfields in East Anglia, Lincolnshire and Yorkshire were raided, and a Ju 88 of KG 4 was brought down after attacking Driffield. At night London was the main target, with the Midlands and Liverpool also bombed.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 16,
+  "raf_lost_actual": 14,
+  "home": [
+   "General de Gaulle issued a manifesto at Brazzaville on 27 October setting up a Council of Defence of the Empire for Free France."
+  ],
+  "reich": [
+   "The Soviet Union occupied islands in the Danube delta on 26 October, stating that they belonged to Bessarabia."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/sunday-27-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Empire_Defense_Council"
+  ]
+ },
+ {
+  "date": "1940-10-28",
+  "weather": "Mist over northern France, fog in the Thames Estuary and the Straits clearing later.",
+  "air": "The day opened with attacks on shipping off Dover and in the Thames Estuary. Bf 109 sweeps crossed at Dungeness and Dover in the early afternoon without going far inland, and later formations headed for London and Portsmouth. At night raids were widely scattered, falling most heavily on the London suburbs and Birmingham, and a public shelter in Southwark was hit.",
+  "raf_claimed": 4,
+  "raf_lost_announced": 0,
+  "lw_lost_actual": 14,
+  "raf_lost_actual": 0,
+  "home": [
+   "Italy invaded Greece from Albania on the morning of 28 October after the Greek government rejected an Italian ultimatum."
+  ],
+  "reich": [
+   "U-32 under Hans Jenisch torpedoed and sank the damaged liner Empress of Britain north west of Ireland early on 28 October.",
+   "Hitler and Mussolini met in Florence on 28 October, the day Italian troops crossed into Greece."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/monday-28-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/Timeline_of_World_War_II_(1940)",
+   "https://en.wikipedia.org/wiki/RMS_Empress_of_Britain_(1930)"
+  ]
+ },
+ {
+  "date": "1940-10-29",
+  "weather": "Overcast in the Channel, with haze over northern France and the Dover Straits.",
+  "air": "Fighter bomber attacks were made on London, and Bf 109s bombed North Weald as Nos. 249 and 257 Squadrons were taking off. Portsmouth was raided, and Italian BR.20 bombers escorted by CR.42 and G.50 fighters bombed Ramsgate. Towards dusk airfields in East Anglia, Lincolnshire and Yorkshire were attacked. At night London, Birmingham and Coventry were heavily raided.",
+  "raf_claimed": 27,
+  "raf_lost_announced": 7,
+  "lw_lost_actual": 28,
+  "raf_lost_actual": 12,
+  "home": [
+   "British forces landed on Crete on 29 October following the Italian attack on Greece.",
+   "The first number in the United States draft lottery was drawn in Washington on 29 October."
+  ],
+  "reich": [
+   "Italian BR.20 bombers with CR.42 and G.50 fighter escort attacked Ramsgate by daylight on 29 October."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/tuesday-29-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://historynet.com/another-italian-misadventure-in-the-battle-of-britain/"
+  ]
+ },
+ {
+  "date": "1940-10-30",
+  "weather": "Low cloud and continuous drizzle in all regions.",
+  "air": "Two fighter bomber attacks were made over Kent, Sussex and the Thames Estuary, about 150 aircraft in three waves around midday and about 130 Bf 109s in the late afternoon, and ten squadrons went up against each. No. 222 Squadron lost two pilots killed. At night London and the Home Counties were raided until about 1 am, and mines were laid off the Thames Estuary and Harwich.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 8,
+  "raf_lost_actual": 9,
+  "home": [
+   "Marshal Petain told the French people in a broadcast on 30 October that he was entering on the path of collaboration with Germany."
+  ],
+  "reich": [
+   "U-32 was sunk north west of Ireland on 30 October by depth charges from the British destroyers Harvester and Highlander.",
+   "Marshal Petain announced in a broadcast on 30 October that France would follow a policy of collaboration."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/wednesday-30-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940"
+  ]
+ },
+ {
+  "date": "1940-10-31",
+  "weather": "Drizzle in the Channel, haze in the Thames Estuary and the Dover Straits.",
+  "air": "It was one of the quietest days for months. No formations or fighter sweeps crossed the coast and there was no air combat, only reconnaissance flights and single raiders that bombed airfields including Bassingbourn and the ordnance factory at Glascoed. Night raids on London and the Midlands were light and were broken off for some hours by the weather.",
+  "raf_claimed": null,
+  "raf_lost_announced": null,
+  "lw_lost_actual": 2,
+  "raf_lost_actual": 0,
+  "home": [
+   "The destroyers HMS Harvester and HMS Highlander sank a German U-boat north west of Ireland on 30 October."
+  ],
+  "reich": [
+   "The heavy cruiser Admiral Scheer passed through the Denmark Strait into the Atlantic on the night of 31 October.",
+   "The Italian submarine Scire made an attempt on Gibraltar harbour with manned torpedoes, without result."
+  ],
+  "sources": [
+   "https://battleofbritain1940.com/entry/thursday-31-october-1940/",
+   "https://en.wikipedia.org/wiki/October_1940",
+   "https://en.wikipedia.org/wiki/German_cruiser_Admiral_Scheer"
+  ]
+ }
+]

@@ -26,3 +26,7 @@ BOB2-Win11-Fix.tar.gz
 
 # Squadron Room state when run standalone: a personal pilot record, never shipped
 squadronroom/state/
+
+# Python bytecode from the dev scripts. These were tracked by mistake.
+dev/__pycache__/
+*.pyc

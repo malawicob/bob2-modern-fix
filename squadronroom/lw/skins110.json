@@ -1,0 +1,758 @@
+{
+ "note": "Which Bf 110 profile a Zerstoerer Gruppe flies, and when, read out of MultiSkin/Me110_MainSkin.ms. Keys are '<unit>|<staffel slot 1-9>'; '*' holds the date-only fallbacks the file ends with. Rules are in FILE ORDER and the first that matches wins, because the conditions overlap. Built by dev/build_lw_110_skins.py.",
+ "default": "Bf110_70_71_1940.png",
+ "by_unit_staffel": {
+  "I./ZG 2|1": [
+   {
+    "order": 0,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-08"
+   },
+   {
+    "order": 1,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-08",
+    "to": null
+   },
+   {
+    "order": 7,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 8,
+    "skin": "bf110-IZG26.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "I./ZG 2|2": [
+   {
+    "order": 2,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 3,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-21",
+    "to": "1940-09-10"
+   },
+   {
+    "order": 4,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-10",
+    "to": null
+   },
+   {
+    "order": 9,
+    "skin": "bf110-later.png",
+    "from": "1940-05-01",
+    "to": "1940-09-09"
+   },
+   {
+    "order": 10,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-08",
+    "to": null
+   }
+  ],
+  "I./ZG 2|3": [
+   {
+    "order": 5,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-05"
+   },
+   {
+    "order": 6,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-05",
+    "to": null
+   },
+   {
+    "order": 11,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-14"
+   },
+   {
+    "order": 12,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-14",
+    "to": null
+   }
+  ],
+  "II./ZG 2|4": [
+   {
+    "order": 13,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-08-31"
+   },
+   {
+    "order": 14,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-08-31",
+    "to": null
+   },
+   {
+    "order": 19,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 20,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "II./ZG 2|5": [
+   {
+    "order": 15,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-07"
+   },
+   {
+    "order": 16,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-07",
+    "to": null
+   },
+   {
+    "order": 21,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-10"
+   },
+   {
+    "order": 22,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-10",
+    "to": null
+   }
+  ],
+  "II./ZG 2|6": [
+   {
+    "order": 17,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 18,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-08-21",
+    "to": null
+   },
+   {
+    "order": 23,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-05"
+   },
+   {
+    "order": 24,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-05",
+    "to": null
+   }
+  ],
+  "V./LG 1|7": [
+   {
+    "order": 25,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 26,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-21",
+    "to": null
+   },
+   {
+    "order": 31,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-04"
+   },
+   {
+    "order": 32,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-04",
+    "to": null
+   }
+  ],
+  "V./LG 1|8": [
+   {
+    "order": 27,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 28,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 33,
+    "skin": "bf110-later.png",
+    "from": "1940-05-01",
+    "to": "1940-09-11"
+   },
+   {
+    "order": 34,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-11",
+    "to": null
+   }
+  ],
+  "V./LG 1|9": [
+   {
+    "order": 29,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-31"
+   },
+   {
+    "order": 30,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-31",
+    "to": null
+   },
+   {
+    "order": 35,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-04"
+   },
+   {
+    "order": 36,
+    "skin": "bf110-IZG26.png",
+    "from": "1940-09-04",
+    "to": null
+   }
+  ],
+  "I./ZG 26|1": [
+   {
+    "order": 37,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 38,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 44,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 45,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "I./ZG 26|2": [
+   {
+    "order": 39,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 40,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 41,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 46,
+    "skin": "bf110-later.png",
+    "from": "1940-05-01",
+    "to": "1940-08-19"
+   },
+   {
+    "order": 47,
+    "skin": "bf110-IZG26.png",
+    "from": "1940-08-19",
+    "to": "1940-09-06"
+   },
+   {
+    "order": 48,
+    "skin": "bf110-WN_Trans.png",
+    "from": "1940-09-06",
+    "to": null
+   }
+  ],
+  "I./ZG 26|3": [
+   {
+    "order": 42,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 43,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 49,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 50,
+    "skin": "bf110-IZG26.png",
+    "from": "1940-08-21",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 51,
+    "skin": "Bf110_WN_Late.png",
+    "from": "1940-09-10",
+    "to": null
+   }
+  ],
+  "II./ZG 26|4": [
+   {
+    "order": 52,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 53,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 54,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 59,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 60,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "II./ZG 26|5": [
+   {
+    "order": 55,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 56,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-21",
+    "to": null
+   },
+   {
+    "order": 61,
+    "skin": "bf110-later.png",
+    "from": "1940-05-01",
+    "to": "1940-09-03"
+   },
+   {
+    "order": 62,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-03",
+    "to": null
+   }
+  ],
+  "II./ZG 26|6": [
+   {
+    "order": 57,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 58,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 63,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 64,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-21",
+    "to": null
+   }
+  ],
+  "III./ZG 26|7": [
+   {
+    "order": 65,
+    "skin": "Bf110_trans.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 66,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 73,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-19"
+   },
+   {
+    "order": 74,
+    "skin": "bf110-IZG26.png",
+    "from": "1940-08-19",
+    "to": "1940-09-07"
+   },
+   {
+    "order": 75,
+    "skin": "bf110-WN_Trans.png",
+    "from": "1940-09-07",
+    "to": null
+   }
+  ],
+  "III./ZG 26|8": [
+   {
+    "order": 67,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 68,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 69,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 76,
+    "skin": "bf110-later.png",
+    "from": "1940-05-01",
+    "to": "1940-08-11"
+   },
+   {
+    "order": 77,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-11",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 78,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "III./ZG 26|9": [
+   {
+    "order": 70,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 71,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-01",
+    "to": "1940-09-05"
+   },
+   {
+    "order": 72,
+    "skin": "bf110-highdemark.png",
+    "from": "1940-09-05",
+    "to": null
+   },
+   {
+    "order": 79,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 80,
+    "skin": "Bf110_trans.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "EG 210|1": [
+   {
+    "order": 81,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": null
+   },
+   {
+    "order": 86,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-19"
+   },
+   {
+    "order": 87,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-08-19",
+    "to": "1940-08-28"
+   },
+   {
+    "order": 88,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-19",
+    "to": "1940-08-28"
+   },
+   {
+    "order": 89,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-28",
+    "to": null
+   },
+   {
+    "order": 90,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ],
+  "EG 210|2": [
+   {
+    "order": 82,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 83,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 91,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-03"
+   },
+   {
+    "order": 92,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-03",
+    "to": null
+   }
+  ],
+  "EG 210|3": [
+   {
+    "order": 84,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-07"
+   },
+   {
+    "order": 85,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-07",
+    "to": null
+   },
+   {
+    "order": 93,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-05-01",
+    "to": "1940-09-08"
+   },
+   {
+    "order": 94,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-08",
+    "to": null
+   }
+  ],
+  "II./ZG 76|4": [
+   {
+    "order": 95,
+    "skin": "bf110_Shark.png",
+    "from": null,
+    "to": null
+   }
+  ],
+  "II./ZG 76|5": [
+   {
+    "order": 95,
+    "skin": "bf110_Shark.png",
+    "from": null,
+    "to": null
+   }
+  ],
+  "II./ZG 76|6": [
+   {
+    "order": 95,
+    "skin": "bf110_Shark.png",
+    "from": null,
+    "to": null
+   }
+  ],
+  "III./ZG 76|7": [
+   {
+    "order": 96,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 97,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-01",
+    "to": "1940-08-28"
+   },
+   {
+    "order": 98,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-28",
+    "to": null
+   },
+   {
+    "order": 105,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-10"
+   },
+   {
+    "order": 106,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-10",
+    "to": null
+   }
+  ],
+  "III./ZG 76|8": [
+   {
+    "order": 99,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 100,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-01",
+    "to": "1940-08-20"
+   },
+   {
+    "order": 101,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-20",
+    "to": null
+   },
+   {
+    "order": 107,
+    "skin": "bf110-later.png",
+    "from": "1940-05-01",
+    "to": "1940-08-15"
+   },
+   {
+    "order": 108,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-15",
+    "to": null
+   }
+  ],
+  "III./ZG 76|9": [
+   {
+    "order": 102,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 103,
+    "skin": "Bf110_trans.png",
+    "from": "1940-08-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 104,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-09-01",
+    "to": null
+   },
+   {
+    "order": 109,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-21"
+   },
+   {
+    "order": 110,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-21",
+    "to": null
+   }
+  ],
+  "*": [
+   {
+    "order": 111,
+    "skin": "Bf110_70_71_1940.png",
+    "from": "1940-05-01",
+    "to": "1940-08-01"
+   },
+   {
+    "order": 112,
+    "skin": "bf110-greygreen2.png",
+    "from": "1940-08-01",
+    "to": "1940-09-01"
+   },
+   {
+    "order": 113,
+    "skin": "bf110-GreyGreen_Late.png",
+    "from": "1940-09-01",
+    "to": null
+   }
+  ]
+ }
+}

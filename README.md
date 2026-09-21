@@ -29,6 +29,8 @@ A companion app for **Battle of Britain II: Wings of Victory** — gets the 2005
 
 **Takes you to Dunkirk.** An optional pack of four Battle of France missions over the evacuation. It adds Dunkerque to the game's map, the first new named place on it, dresses the harbour and the beaches, and puts the little ships in the Channel.
 
+**Puts something on the German airfields.** Forty of the forty six fields the Luftwaffe flies from ship with nothing on them at all, so a German career takes off from bare grass. An optional step dresses every one of them: tents and revetments, a barn or two, a flak piece, ground crew and a few vehicles, about twenty three static objects a field and not a single tree. Every object is lifted from one of the six French fields that were dressed by hand twenty years ago, and set down where it stays well clear of the runway. It is one file, so if your frame rate ever suffers it is one file to delete. A second optional step points the Basic Training and Familiarisation take-off lists at them, so there is a way to go and look: the game only ever offers four airfields at a time, but there are nine of those missions, so giving each a different four reaches thirty six of them.
+
 ---
 
 ## What you need
@@ -96,6 +98,7 @@ DXVK is excluded by default: 7.5 MB, two thirds of the package, for a wrapper th
 | **Sector map** | Drawn, not photographed. Coastlines, land and rivers from [Natural Earth](https://www.naturalearthdata.com) (public domain), shaded from public elevation data. Every airfield placed from its own latitude and longitude, and squadrons plotted from the same projection. |
 | **Order of battle** | Which squadron stood where, and how Fighter Command rated it, read out of the game's own files. |
 | **Morning Bulletin headlines** | Genuine 1940 headlines and extracts from New Zealand newspapers, digitised by Papers Past, National Library of New Zealand — <https://paperspast.natlib.govt.nz>. CC BY-NC-SA 4.0, non-commercial use with attribution; each front page credits its source paper. |
+| **Morgenmeldung: what Berlin claimed** | The OKW daily communique, rendered into English. There is no free digital edition of it, so the text comes from the newspapers that printed it verbatim, held by the [Deutsches Zeitungsportal](https://www.deutsche-digitale-bibliothek.de/newspaper) of the Deutsche Digitale Bibliothek, from papers carrying Public Domain Mark 1.0, CC BY-SA 4.0 or CC BY-NC-SA 4.0. Each day names the paper it was read from and its licence. This material is Nazi propaganda whose figures were inflated on purpose; the screen carries a note saying so, and it is there to be understood rather than believed. |
 | **PresentMon** | Intel, not shipped — a separate download |
 
 ---

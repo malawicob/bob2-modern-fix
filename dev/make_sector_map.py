@@ -175,6 +175,68 @@ GROUP_LABELS = [
     ('No. 13 GROUP', 53.66, -0.90),
 ]
 
+# =====================================================================
+#  THE OTHER SIDE OF THE CHANNEL
+#
+#  The same sheet, drawn for the Luftwaffe. The extent is the only real
+#  decision: it has to hold Lannion in the west, Sint-Truiden in the east
+#  and Orleans-Bricy in the south, and still show enough of England for a
+#  German pilot to see what he was flying at.
+#
+#  The proportions follow the RAF sheet rather than being picked. That one
+#  covers 9.6 degrees of longitude and 3.8 of latitude in a 2560 x 1600
+#  frame, which is a longitude-to-latitude ratio of 2.53 against an image
+#  ratio of 1.6 - in other words the extent, not the code, carries the
+#  cosine correction, and at 52 north 1/cos is 1.62. At 49.5 north it is
+#  1.54, so this sheet wants 1.6 x 1.54 = 2.46 degrees of longitude for
+#  every one of latitude. 4.35 x 2.46 is 10.7. Drawn any other shape,
+#  France comes out visibly stretched beside an England that is not.
+LW_WEST, LW_EAST = -4.5, 6.2
+LW_SOUTH, LW_NORTH = 47.6, 51.95
+
+LW_SEAS = [
+    ('ENGLISH CHANNEL', 50.05, -1.30), ('NORTH SEA', 51.75, 3.30),
+    ('STRAIT OF DOVER', 50.95, 1.55), ('BAY OF BISCAY', 47.95, -4.10),
+]
+
+# The Pas de Calais fields are a dozen villages inside twenty miles, and
+# their names collide exactly as the London approaches do on the RAF
+# sheet. The Room prints the name on the plaque instead.
+LW_SUPPRESS = {
+    'Audembert', 'Caffiers', 'Marquise', 'Guines', 'Peuplingues', 'Cocquelles',
+    'Marck (Calais)', 'Hermelinghen', 'Colombert', 'Desvres', 'Samer', 'St. Omer',
+    'Tramecourt', 'Barley', 'Yvrench',
+}
+
+# Towns for shape and for orientation. The English south coast is kept:
+# the Channel is the point of this map.
+LW_TOWNS = [
+    ('CALAIS', 50.9513, 1.8587), ('BOULOGNE', 50.7264, 1.6139),
+    ('DUNKIRK', 51.0343, 2.3768), ('OSTEND', 51.2247, 2.9075),
+    ('BRUSSELS', 50.8503, 4.3517), ('BRUGES', 51.2093, 3.2247),
+    ('LILLE', 50.6292, 3.0573), ('ARRAS', 50.2910, 2.7772),
+    ('AMIENS', 49.8942, 2.2957), ('ABBEVILLE', 50.1061, 1.8337),
+    ('ROUEN', 49.4432, 1.0993), ('LE HAVRE', 49.4944, 0.1079),
+    ('DIEPPE', 49.9229, 1.0777), ('CHERBOURG', 49.6337, -1.6221),
+    ('CAEN', 49.1829, -0.3707), ('PARIS', 48.8566, 2.3522),
+    ('ORLEANS', 47.9029, 1.9093), ('CHARTRES', 48.4439, 1.4881),
+    ('RENNES', 48.1113, -1.6800), ('BREST', 48.3904, -4.4861),
+    ('LONDON', 51.5074, -0.1278), ('SOUTHAMPTON', 50.9097, -1.4044),
+    ('PORTSMOUTH', 50.8198, -1.0880), ('DOVER', 51.1279, 1.3134),
+    ('BRIGHTON', 50.8225, -0.1372), ('PLYMOUTH', 50.3755, -4.1427),
+    ('EXETER', 50.7184, -3.5339),
+]
+
+
+def lw_airfields(path):
+    """The Gruppen's fields, from the coordinates dev/build_lw_fields.py
+    resolved. Read rather than listed here, so the map and the postings
+    board can never disagree about where a field is."""
+    with open(path, encoding='utf-8') as fh:
+        d = json.load(fh)
+    return [(name, v[0], v[1]) for name, v in sorted(d.items())]
+
+
 def load(path, want):
     with open(path, encoding='utf-8') as f:
         gj = json.load(f)
@@ -194,7 +256,26 @@ def main():
     ap.add_argument('--data', default='/tmp')
     ap.add_argument('--relief', default='/tmp/relief.npz')
     ap.add_argument('--out', required=True)
+    ap.add_argument('--side', choices=['raf', 'lw'], default='raf')
+    ap.add_argument('--fields', default='squadronroom/lw/fields.json')
     a = ap.parse_args()
+
+    # The drawing reads these as module globals throughout, so the German
+    # sheet is made by swapping them once here rather than by threading a
+    # side through forty call sites.
+    global WEST, EAST, SOUTH, NORTH, AIRFIELDS, TOWNS, SEAS, SUPPRESS_NAMES, SECTORS, GROUP_LABELS
+    if a.side == 'lw':
+        WEST, EAST = LW_WEST, LW_EAST
+        SOUTH, NORTH = LW_SOUTH, LW_NORTH
+        AIRFIELDS = lw_airfields(a.fields)
+        TOWNS = LW_TOWNS
+        SEAS = LW_SEAS
+        SUPPRESS_NAMES = LW_SUPPRESS
+        # The Luftwaffe had no sector letters and no Group boundaries.
+        # Emptying these is what stops the German sheet drawing Fighter
+        # Command's organisation across northern France.
+        SECTORS = {}
+        GROUP_LABELS = []
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
     SS = 2                      # draw at double size and shrink: cheap antialiasing
@@ -229,6 +310,20 @@ def main():
     if os.path.exists(a.relief):
         import numpy as np
         z = np.load(a.relief)
+        # The file records the ground it covers. Sampling it by plain
+        # index scaling assumes that ground is THIS map's ground, and the
+        # first German sheet was drawn with the RAF sheet's relief
+        # stretched across northern France: it read as flat, dull shading
+        # rather than as an obvious fault.
+        if all(k in z for k in ('west', 'east', 'south', 'north')):
+            rw, re_, rs, rn = (float(z['west']), float(z['east']),
+                               float(z['south']), float(z['north']))
+            if (abs(rw - WEST) > 0.01 or abs(re_ - EAST) > 0.01 or
+                    abs(rs - SOUTH) > 0.01 or abs(rn - NORTH) > 0.01):
+                print('  ! relief covers %.2f..%.2f / %.2f..%.2f but this map is '
+                      '%.2f..%.2f / %.2f..%.2f - drawing flat instead of wrong'
+                      % (rw, re_, rs, rn, WEST, EAST, SOUTH, NORTH))
+                raise SystemExit(2)
         elev = z['elev']
         eh, ew = elev.shape
         # to the output grid
@@ -429,7 +524,13 @@ def main():
             missed += 1
 
     # then the towns, which give way to them
+    # A town that is also one of the fields is drawn once, as the field.
+    # Abbeville, Amiens, Arras, Lille, Caen, Le Havre, Chartres and Rennes
+    # are all both, and the first German sheet printed each of them twice,
+    # a couple of millimetres apart.
+    _fieldnames = {n.upper() for n, _, _ in AIRFIELDS}
     for name, la, lo in TOWNS:
+        if name.upper() in _fieldnames: continue
         if not (WEST < lo < EAST and SOUTH < la < NORTH): continue
         x, y = px(lo, la)
         if name == 'LONDON':
@@ -442,11 +543,18 @@ def main():
         x, y = px(lo, la)
         d.text((x, y), label, font=f_grp, fill=INK['boundary'])
 
-    d.text((30 * SS, 24 * SS), 'FIGHTER COMMAND', font=f_title, fill=INK['title'])
-    d.text((30 * SS, 55 * SS), 'SECTOR AND FIGHTER AIRFIELDS, 1940', font=f_grp, fill=INK['title'])
-    d.line([(30 * SS, 80 * SS), (352 * SS, 80 * SS)], fill=INK['title'], width=int(1.5 * SS))
-    d.text((30 * SS, 90 * SS), 'A RINGED FIELD IS A SECTOR STATION, LETTERED AS FIGHTER COMMAND LETTERED IT',
-           font=f_tick, fill=INK['tick'])
+    if a.side == 'lw':
+        d.text((30 * SS, 24 * SS), 'LUFTFLOTTEN 2 UND 3', font=f_title, fill=INK['title'])
+        d.text((30 * SS, 55 * SS), 'THE FIELDS ON THE CHANNEL FRONT, 1940', font=f_grp, fill=INK['title'])
+        d.line([(30 * SS, 80 * SS), (352 * SS, 80 * SS)], fill=INK['title'], width=int(1.5 * SS))
+        d.text((30 * SS, 90 * SS), 'EVERY FIELD NAMED IN THE CAMPAIGN ORDER OF BATTLE, PLACED FROM ITS OWN COORDINATES',
+               font=f_tick, fill=INK['tick'])
+    else:
+        d.text((30 * SS, 24 * SS), 'FIGHTER COMMAND', font=f_title, fill=INK['title'])
+        d.text((30 * SS, 55 * SS), 'SECTOR AND FIGHTER AIRFIELDS, 1940', font=f_grp, fill=INK['title'])
+        d.line([(30 * SS, 80 * SS), (352 * SS, 80 * SS)], fill=INK['title'], width=int(1.5 * SS))
+        d.text((30 * SS, 90 * SS), 'A RINGED FIELD IS A SECTOR STATION, LETTERED AS FIGHTER COMMAND LETTERED IT',
+               font=f_tick, fill=INK['tick'])
 
     img = img.resize((W, H), Image.LANCZOS)
     os.makedirs(os.path.dirname(os.path.abspath(a.out)), exist_ok=True)
@@ -470,7 +578,9 @@ def main():
         fy = (NORTH - la) / (NORTH - SOUTH)
         for n in [name] + ALIASES.get(name, []):
             stations[n] = [round(fx, 5), round(fy, 5)]
-            stations['RAF ' + n] = [round(fx, 5), round(fy, 5)]
+            # only the RAF's are ever written "RAF Biggin Hill"
+            if a.side == 'raf':
+                stations['RAF ' + n] = [round(fx, 5), round(fy, 5)]
     proj = os.path.splitext(a.out)[0] + '.json'
     with open(proj, 'w', encoding='utf-8') as f:
         json.dump({'west': WEST, 'east': EAST, 'south': SOUTH, 'north': NORTH,

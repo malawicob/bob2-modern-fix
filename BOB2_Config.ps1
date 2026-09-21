@@ -13,7 +13,7 @@
 #                            comment, which is the best documentation there is.
 #    KEYBOARD\keys.txt       236 actions (190 bound, 46 unbound on this install)
 #    KEYBOARD\default.txt    269 actions - read-only, used for "reset"
-#    SAVEGAME\settings.cfg   1786-byte binary, four known offsets
+#    SAVEGAME\settings.cfg   binary, 1766 fixed bytes then three names (so 1786 only while the last save is "Bob"), four known offsets
 #    Weather\Weather.cfg     3 plain-text lines
 #
 #  RULES OBSERVED WHEN WRITING
@@ -400,7 +400,7 @@ $script:Pages = [ordered]@{
       I=@(
       (S 'OBJECT_DENSITY' 'Ground object density' 'How much is drawn on the ground. This is the single biggest frame-rate cost in the game - setting 4 roughly halves the frame rate compared with 2, for detail you will almost never look at.' -Choices $D4 -Rec '2' -Level perf -RecMsg 'Density above 2 is the most expensive setting in the game. Drop it to 2 before touching anything else.')
       (S 'PARTICLE_DENSITY' 'Particle density' 'Smoke, fire, dust and debris. The cost lands during heavy combat, which is exactly when you can least afford it.' -Choices $D4)
-      (S 'LANDSCAPE_TEXTURE_SIZE' 'Terrain texture size' 'The larger set looks better. 1024 is the BDG team''s own documented remedy for a low frame rate and halves terrain texture memory.' -Choices @('2048|2048  -  Full detail','1024|1024  -  Half (the documented fix for low FPS)'))
+      (S 'LANDSCAPE_TEXTURE_SIZE' 'Terrain texture size' 'Use 2048. 1024 is the BDG team''s remedy for a weak graphics card: it quarters the detail of every ground tile and the ground goes blurry. On a modern card it buys nothing, because this game is limited by the processor and the graphics card sits idle half of every frame (measured).' -Choices @('2048|2048  -  Full detail (recommended)','1024|1024  -  Quarter detail, for a weak graphics card only') -Rec '2048' -RecMsg '2048 is recommended. 1024 blurs the ground and does not raise the frame rate on a modern graphics card.')
       (S 'ENABLE_AUTO_GEN' 'Auto-generated scenery' 'Procedural ground clutter scattered over the landscape. Costs frame rate and adds nothing you will notice at combat speed.')
       (S 'ADD_SHEEP_COWS_AND_HAYSTACKS' 'Sheep, cows and haystacks' 'Charming, and pure cost. Only ever visible at very low level.')
       (S 'Render_Sheep_View_Radius' 'Livestock draw radius' 'How far out the animals above are drawn. Irrelevant if they are switched off.')
@@ -961,7 +961,7 @@ function Read-Weather {
 }
 
 # -----------------------------------------------------------------------------
-#  settings.cfg - 1786 bytes, banner "Rowan Savegame: V 002".
+#  settings.cfg - 1766 fixed bytes plus the last save's name, Bob.cam and Bob.prf; banner "Rowan Savegame: V 002".
 #  Offsets established by differential analysis (change one option in game,
 #  quit cleanly, diff the file).  Recorded in mod92/tools/SETTINGS_CFG_MAP.md.
 #  Everything not listed here is copied through untouched.
@@ -2780,7 +2780,7 @@ function Build-GfxPage {
     }
 
     [void]$list.Children.Add((New-SectionHeader 'Decoded GFX options' (
-        'settings.cfg is a 1786-byte binary with no field names in it. These four offsets were established by ' +
+        'settings.cfg is a binary with no field names in it (1766 fixed bytes, then the name of the last saved game). These four offsets were established by ' +
         'differential analysis: change one option in game, quit cleanly, then compare the file byte for byte. ' +
         'Every other byte is written back exactly as found.')))
 
@@ -2996,12 +2996,13 @@ function Build-GfxPage {
     #  setting to put back if it costs too much.
     # ------------------------------------------------------------------
     [void]$list.Children.Add((New-SectionHeader 'Antialiasing' (
-        'Smooths the jagged edges on wings and along the horizon. Each button also sets the ground texture ' +
-        'filtering to match, which is what stops the ground going to mush when you look along it. 4x is the ' +
-        'setting to use: 8x costs more and puts visible seams along the edges of the terrain tiles. This is ' +
-        'the graphics translator doing the work, so it costs frame rate on an older card. Turn it on, fly a ' +
-        'mission, and you will know what it costs before you add anything else. Takes effect next time the ' +
-        'game starts.')))
+        'Leave this OFF. Forced antialiasing draws bright straight lines along the terrain tile grid, more ' +
+        'of them the higher you fly: on a pixel a tile only partly covers, the texture is sampled just past ' +
+        'the tile''s edge. Flown and photographed on 20 September 2026 at 2x and at 4x; with it off the ' +
+        'lines are gone. 8x was already known to do it. For smooth edges use ReShade below instead: its ' +
+        'SMAA pass (Balanced preset and above) works on the finished picture and cannot touch the terrain. ' +
+        'Every button keeps the ground texture filtering at 16x, which is what stops the ground going to ' +
+        'mush when you look along it and has nothing to do with the lines. Takes effect next time the game starts.')))
 
     $aaConf = Join-Path $script:GameFolder 'dgVoodoo.conf'
     $aaRead = {
@@ -3045,14 +3046,16 @@ function Build-GfxPage {
     # the button itself. Offering 8x and warning against it in prose only is
     # how you get a player who picks 8x.
     $aaRow = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,10,0,0))
-    foreach ($aaChoice in @(@('Off','Off'), @('2x','2x'), @('4x','4x  recommended'), @('8x','8x'))) {
+    foreach ($aaChoice in @(@('Off','Off  recommended'), @('2x','2x  (terrain lines)'), @('4x','4x  (terrain lines)'), @('8x','8x  (terrain lines)'))) {
         $aaThis = $aaChoice[0]
         $b = New-Btn $aaChoice[1] 'BtnGhost' $null {
             try {
                 if (-not (Test-Path -LiteralPath $aaConf)) {
                     [System.Windows.MessageBox]::Show('dgVoodoo.conf was not found. Install the graphics translator first.','Antialiasing') | Out-Null; return
                 }
-                if ($aaThis -eq 'Off') { & $aaWrite 'appdriven' 'appdriven' }
+                # Off keeps the 16x filtering: the two were tied together and
+                # turning the antialiasing off blurred the distance as well
+                if ($aaThis -eq 'Off') { & $aaWrite 'appdriven' '16' }
                 else { & $aaWrite $aaThis '16' }
                 $aaState.Text = (& $aaDescribe)
                 & $aaMarkActive $aaThis
@@ -3587,6 +3590,11 @@ public static class BOB2CfgJoy {
         $d = '{0:X4}' -f $c.wPid          # not $pid, which PowerShell owns
         $key = "VID_$v&PID_$d"
         $out += [pscustomobject]@{
+            # winmm's id for it, which is what joyGetPosEx wants. It is
+            # NOT 0 for the first stick found: on Patrick's machine the CH
+            # kit answers on 1 and 2 and nothing on 0, so a live test that
+            # polled 0 sat dead while the sticks moved.
+            Index   = $i
             Name    = $(if ($oem.ContainsKey($key.ToUpper())) { $oem[$key.ToUpper()] } else { $c.szPname })
             Guid    = ('{{{0}{1}-0000-0000-0000-504944564944}}' -f $d, $v)
             Buttons = [int]$c.wNumButtons
@@ -3801,6 +3809,26 @@ function Build-JoystickPage {
     if ($devs.Count -gt 0) {
         [void]$p.Children.Add((New-SectionHeader 'LIVE TEST' 'Move the stick and press its buttons - this updates as you do.'))
 
+        # Which device the bars watch. The first one found unless the
+        # player has picked another; a stick and a throttle are two
+        # devices and each has its own bars and buttons.
+        $live = $devs | Where-Object { $_.Index -eq $script:JoyLive.Dev } | Select-Object -First 1
+        if (-not $live) { $live = $devs[0]; $script:JoyLive.Dev = $live.Index }
+        if ($devs.Count -gt 1) {
+            $pick = New-Stack -Orientation 'Horizontal' -Margin ([System.Windows.Thickness]::new(0,0,0,8))
+            foreach ($d in $devs) {
+                $b = New-Btn $d.Name $(if ($d.Index -eq $live.Index) { 'BtnPrimary' } else { 'BtnGhost' }) $d.Index {
+                    param($s, $e)
+                    $script:JoyLive.Dev = [int]$s.Tag
+                    Invalidate-Page 'Joystick and axes'
+                    Select-Nav 'Joystick and axes'
+                }
+                $b.Margin = [System.Windows.Thickness]::new(0,0,8,0)
+                [void]$pick.Children.Add($b)
+            }
+            [void]$p.Children.Add($pick)
+        }
+
         if ($joy.Count -eq 0) {
             [void]$p.Children.Add((New-Note ('The bars below show raw hardware. Nothing is mapped in the game yet - ' +
                 'press "Set up my stick" further down, then start the game once.') 'perf'))
@@ -3822,7 +3850,7 @@ function Build-JoystickPage {
             @{ N = 'U'; H = 'fifth axis' }
             @{ N = 'V'; H = 'sixth axis' }
         )
-        $nAx = $(if ($devs.Count -gt 0) { [math]::Min(6, [math]::Max(2, $devs[0].Axes)) } else { 4 })
+        $nAx = [math]::Min(6, [math]::Max(2, $live.Axes))
         for ($i = 0; $i -lt $nAx; $i++) {
             [void]$p.Children.Add((New-AxisBar ("{0}   {1}" -f $axisNames[$i].N, $axisNames[$i].H) $i))
         }
@@ -3843,7 +3871,7 @@ function Build-JoystickPage {
         $bl.Margin = [System.Windows.Thickness]::new(0,14,0,6)
         [void]$p.Children.Add($bl)
         $wrap = New-Object System.Windows.Controls.WrapPanel
-        $count = $(if ($devs.Count -gt 0) { [math]::Min(32, $devs[0].Buttons) } else { 16 })
+        $count = [math]::Min(32, $live.Buttons)
         for ($i = 0; $i -lt $count; $i++) {
             $b = New-Object System.Windows.Controls.Border
             $b.Width = 30; $b.Height = 26; $b.Margin = [System.Windows.Thickness]::new(0,0,5,5)
@@ -3962,7 +3990,7 @@ function Build-JoystickPage {
     [void]$p.Children.Add((New-SectionHeader 'SET UP' 'Detect the stick and write a sensible starting point.'))
     $b1 = New-Stack -Orientation 'Horizontal'
     [void]$b1.Children.Add((New-Btn 'Set up my stick' 'BtnPrimary' $null {
-        if (Invoke-JoyTool 'BOB2_Controls.ps1' @('-Apply')) {
+        if (Invoke-JoyTool 'BOB2_Controls.ps1' @('-Apply','-GameDir',"`"$($script:GameFolder)`"")) {
             Invalidate-Page 'Joystick and axes'
             Select-Nav 'Joystick and axes'
         }

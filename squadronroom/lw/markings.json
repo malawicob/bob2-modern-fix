@@ -1,0 +1,521 @@
+{
+ "note": "Markings for the Bf 109. The individual number is the pilot's own choice; the Gruppe symbol, the Geschwader emblem and any Stab chevron follow the unit and the appointment. Built by dev/build_lw_markings.py from Patrick's skin-preview tiles.",
+ "staffel_colours": {
+  "1": "white",
+  "2": "red",
+  "3": "yellow",
+  "4": "white",
+  "5": "red",
+  "6": "yellow",
+  "7": "white",
+  "8": "red",
+  "9": "yellow"
+ },
+ "numbers": {
+  "1": {
+   "white": "numbers/1_white.png",
+   "red": "numbers/1_red.png",
+   "yellow": "numbers/1_yellow.png",
+   "black": "numbers/1_black.png",
+   "brown": "numbers/1_brown.png"
+  },
+  "2": {
+   "white": "numbers/2_white.png",
+   "red": "numbers/2_red.png",
+   "yellow": "numbers/2_yellow.png",
+   "black": "numbers/2_black.png",
+   "brown": "numbers/2_brown.png"
+  },
+  "3": {
+   "white": "numbers/3_white.png",
+   "red": "numbers/3_red.png",
+   "yellow": "numbers/3_yellow.png",
+   "black": "numbers/3_black.png",
+   "brown": "numbers/3_brown.png"
+  },
+  "4": {
+   "white": "numbers/4_white.png",
+   "red": "numbers/4_red.png",
+   "yellow": "numbers/4_yellow.png",
+   "black": "numbers/4_black.png",
+   "brown": "numbers/4_brown.png"
+  },
+  "5": {
+   "white": "numbers/5_white.png",
+   "red": "numbers/5_red.png",
+   "yellow": "numbers/5_yellow.png",
+   "black": "numbers/5_black.png",
+   "brown": "numbers/5_brown.png"
+  },
+  "6": {
+   "white": "numbers/6_white.png",
+   "red": "numbers/6_red.png",
+   "yellow": "numbers/6_yellow.png",
+   "black": "numbers/6_black.png",
+   "brown": "numbers/6_brown.png"
+  },
+  "7": {
+   "white": "numbers/7_white.png",
+   "red": "numbers/7_red.png",
+   "yellow": "numbers/7_yellow.png",
+   "black": "numbers/7_black.png",
+   "brown": "numbers/7_brown.png"
+  },
+  "8": {
+   "white": "numbers/8_white.png",
+   "red": "numbers/8_red.png",
+   "yellow": "numbers/8_yellow.png",
+   "black": "numbers/8_black.png",
+   "brown": "numbers/8_brown.png"
+  },
+  "9": {
+   "white": "numbers/9_white.png",
+   "red": "numbers/9_red.png",
+   "yellow": "numbers/9_yellow.png",
+   "black": "numbers/9_black.png",
+   "brown": "numbers/9_brown.png"
+  },
+  "10": {
+   "white": "numbers/10_white.png",
+   "red": "numbers/10_red.png",
+   "yellow": "numbers/10_yellow.png",
+   "black": "numbers/10_black.png",
+   "brown": "numbers/10_brown.png"
+  },
+  "11": {
+   "white": "numbers/11_white.png",
+   "red": "numbers/11_red.png",
+   "yellow": "numbers/11_yellow.png",
+   "black": "numbers/11_black.png"
+  },
+  "12": {
+   "white": "numbers/12_white.png",
+   "red": "numbers/12_red.png",
+   "yellow": "numbers/12_yellow.png",
+   "black": "numbers/12_black.png",
+   "brown": "numbers/12_brown.png"
+  },
+  "13": {
+   "white": "numbers/13_white.png",
+   "red": "numbers/13_red.png",
+   "yellow": "numbers/13_yellow.png",
+   "black": "numbers/13_black.png"
+  },
+  "14": {
+   "white": "numbers/14_white.png",
+   "red": "numbers/14_red.png",
+   "yellow": "numbers/14_yellow.png",
+   "black": "numbers/14_black.png",
+   "brown": "numbers/14_brown.png"
+  },
+  "15": {
+   "white": "numbers/15_white.png",
+   "red": "numbers/15_red.png",
+   "yellow": "numbers/15_yellow.png",
+   "black": "numbers/15_black.png"
+  }
+ },
+ "number_dates": [
+  {
+   "unit": "I./JG 51",
+   "staffel": 3,
+   "date": "1940-08-18",
+   "before": "brown",
+   "after": "white"
+  },
+  {
+   "unit": "II./JG 26",
+   "staffel": 6,
+   "date": "1940-08-18",
+   "before": "brown",
+   "after": "white"
+  },
+  {
+   "unit": "III./JG 27",
+   "staffel": 8,
+   "date": "1940-08-21",
+   "before": "red",
+   "after": "black"
+  }
+ ],
+ "blanks": {
+  "number": [
+   {
+    "units": [
+     "III./JG 26"
+    ],
+    "planeids": [
+     1
+    ]
+   },
+   {
+    "units": [
+     "III./JG 26"
+    ],
+    "planeids": [
+     4
+    ]
+   },
+   {
+    "units": [
+     "I./JG 2",
+     "II./JG 2",
+     "III./JG 2",
+     "I./JG 3",
+     "II./JG 3",
+     "I./JG 26",
+     "III./JG 26",
+     "I./JG 27",
+     "II./JG 27",
+     "III./JG 27",
+     "I./JG 51",
+     "I./JG 53",
+     "II./JG 53",
+     "I./JG 54",
+     "III./JG 54"
+    ],
+    "planeids": [
+     1
+    ]
+   },
+   {
+    "units": [
+     "I./JG 3"
+    ],
+    "planeids": [
+     13
+    ]
+   },
+   {
+    "units": [
+     "I./JG 2"
+    ],
+    "planeids": [
+     25
+    ]
+   },
+   {
+    "units": [
+     "III./JG 26"
+    ],
+    "planeids": [
+     2
+    ]
+   },
+   {
+    "units": [
+     "I./JG 3",
+     "II./JG 53",
+     "III./JG 54"
+    ],
+    "planeids": [
+     1
+    ]
+   }
+  ],
+  "emblem": [
+   {
+    "units": [
+     "II./JG 3"
+    ],
+    "planeids": [
+     36
+    ]
+   },
+   {
+    "units": [
+     "III./JG 3"
+    ],
+    "planeids": [
+     29
+    ]
+   }
+  ]
+ },
+ "gruppe": {
+  "II_white": "gruppe/II_white.png",
+  "II_red": "gruppe/II_red.png",
+  "II_yellow": "gruppe/II_yellow.png",
+  "II_black": "gruppe/II_black.png",
+  "III_white": "gruppe/III_white.png",
+  "III_red": "gruppe/III_red.png",
+  "III_yellow": "gruppe/III_yellow.png",
+  "III_black": "gruppe/III_black.png",
+  "IIIwavy_white": "gruppe/IIIwavy_white.png",
+  "IIIwavy_red": "gruppe/IIIwavy_red.png",
+  "IIIwavy_yellow": "gruppe/IIIwavy_yellow.png"
+ },
+ "stab": {
+  "kommandeur": "stab/kommandeur.png",
+  "kommandeur2": "stab/kommandeur2.png",
+  "technical": "stab/technical.png",
+  "adjutant": "stab/adjutant.png",
+  "adjutant2": "stab/adjutant2.png"
+ },
+ "emblems": {
+  "I./JG 27": "emblems/IJG27.png",
+  "II./JG 27": "emblems/IIJG27.png",
+  "III./JG 27": "emblems/IIIJG27.png",
+  "II./JG 3": "emblems/IIJG3.png",
+  "II./JG 51": "emblems/IIJG51.png",
+  "I./JG 54": "emblems/IJG54.png",
+  "II./JG 54": "emblems/IIJG54.png",
+  "III./JG 54": "emblems/IIIJG54.png",
+  "III./JG 52": "emblems/IIIJG52.png",
+  "I./ZG 26": "emblems/IZG26.png",
+  "II./ZG 26": "emblems/IIZG26.png",
+  "I./ZG 2": "emblems/IZG2.png",
+  "II./ZG 2": "emblems/IIZG2.png",
+  "I./ZG 52": "emblems/IZG52.png",
+  "III./ZG 76": "emblems/IIIZG76.png",
+  "III./JG 3": "emblems/IIIJG3.png",
+  "II./JG 52": "emblems/IIJG52.png",
+  "JG 26": "emblems/JG26.png",
+  "JG 2": "emblems/JG2.png",
+  "JG 51": "emblems/JG51.png"
+ },
+ "bands": {
+  "JG 53": "bands/JG53.png"
+ },
+ "letters110": {
+  "A": {
+   "white": "letters110/A_white.png",
+   "red": "letters110/A_red.png",
+   "yellow": "letters110/A_yellow.png",
+   "black": "letters110/A_black.png"
+  },
+  "B": {
+   "white": "letters110/B_white.png",
+   "red": "letters110/B_red.png",
+   "yellow": "letters110/B_yellow.png",
+   "black": "letters110/B_black.png"
+  },
+  "C": {
+   "white": "letters110/C_white.png",
+   "red": "letters110/C_red.png",
+   "yellow": "letters110/C_yellow.png",
+   "black": "letters110/C_black.png"
+  },
+  "D": {
+   "white": "letters110/D_white.png",
+   "red": "letters110/D_red.png",
+   "yellow": "letters110/D_yellow.png",
+   "black": "letters110/D_black.png"
+  },
+  "E": {
+   "white": "letters110/E_white.png",
+   "red": "letters110/E_red.png",
+   "yellow": "letters110/E_yellow.png",
+   "black": "letters110/E_black.png"
+  },
+  "F": {
+   "white": "letters110/F_white.png",
+   "red": "letters110/F_red.png",
+   "yellow": "letters110/F_yellow.png",
+   "black": "letters110/F_black.png"
+  },
+  "G": {
+   "white": "letters110/G_white.png",
+   "red": "letters110/G_red.png",
+   "yellow": "letters110/G_yellow.png",
+   "black": "letters110/G_black.png"
+  },
+  "H": {
+   "white": "letters110/H_white.png",
+   "red": "letters110/H_red.png",
+   "yellow": "letters110/H_yellow.png",
+   "black": "letters110/H_black.png"
+  },
+  "I": {
+   "white": "letters110/I_white.png",
+   "red": "letters110/I_red.png",
+   "yellow": "letters110/I_yellow.png",
+   "black": "letters110/I_black.png"
+  },
+  "J": {
+   "white": "letters110/J_white.png",
+   "red": "letters110/J_red.png",
+   "yellow": "letters110/J_yellow.png",
+   "black": "letters110/J_black.png"
+  },
+  "K": {
+   "white": "letters110/K_white.png",
+   "red": "letters110/K_red.png",
+   "yellow": "letters110/K_yellow.png",
+   "black": "letters110/K_black.png"
+  },
+  "L": {
+   "black": "letters110/L_black.png"
+  },
+  "M": {
+   "black": "letters110/M_black.png"
+  },
+  "N": {
+   "black": "letters110/N_black.png"
+  },
+  "P": {
+   "black": "letters110/P_black.png"
+  },
+  "R": {
+   "black": "letters110/R_black.png"
+  },
+  "S": {
+   "black": "letters110/S_black.png"
+  },
+  "T": {
+   "black": "letters110/T_black.png"
+  }
+ },
+ "codes110": {
+  "I./ZG 2": "codes110/IZG2.png",
+  "II./ZG 2": "codes110/IIZG2.png",
+  "V./LG 1": "codes110/VLG1.png",
+  "I./ZG 26": "codes110/IZG26.png",
+  "II./ZG 26": "codes110/IIZG26.png",
+  "III./ZG 26": "codes110/IIIZG26.png",
+  "EG 210": "codes110/EG210.png",
+  "II./ZG 76": "codes110/IIZG76.png",
+  "III./ZG 76": "codes110/IIIZG76.png"
+ },
+ "staffel_letter": {
+  "1": "H",
+  "2": "K",
+  "3": "L",
+  "4": "M",
+  "5": "N",
+  "6": "P",
+  "7": "R",
+  "8": "S",
+  "9": "T"
+ },
+ "units": {
+  "I./JG 3": {
+   "emblem": null,
+   "band": null
+  },
+  "II./JG 3": {
+   "emblem": "emblems/IIJG3.png",
+   "band": null
+  },
+  "III./JG 3": {
+   "emblem": "emblems/IIIJG3.png",
+   "band": null
+  },
+  "I./JG 26": {
+   "emblem": "emblems/JG26.png",
+   "band": null
+  },
+  "II./JG 26": {
+   "emblem": "emblems/JG26.png",
+   "band": null
+  },
+  "III./JG 26": {
+   "emblem": "emblems/JG26.png",
+   "band": null
+  },
+  "I./JG 51": {
+   "emblem": "emblems/JG51.png",
+   "band": null
+  },
+  "II./JG 51": {
+   "emblem": "emblems/IIJG51.png",
+   "band": null
+  },
+  "III./JG 51": {
+   "emblem": "emblems/JG51.png",
+   "band": null
+  },
+  "I./JG 52": {
+   "emblem": null,
+   "band": null
+  },
+  "II./JG 52": {
+   "emblem": "emblems/IIJG52.png",
+   "band": null
+  },
+  "I./LG 2": {
+   "emblem": null,
+   "band": null
+  },
+  "I./JG 54": {
+   "emblem": "emblems/IJG54.png",
+   "band": null
+  },
+  "II./JG 54": {
+   "emblem": "emblems/IIJG54.png",
+   "band": null
+  },
+  "III./JG 54": {
+   "emblem": "emblems/IIIJG54.png",
+   "band": null
+  },
+  "I./ZG 26": {
+   "emblem": "emblems/IZG26.png",
+   "band": null
+  },
+  "II./ZG 26": {
+   "emblem": "emblems/IIZG26.png",
+   "band": null
+  },
+  "III./ZG 26": {
+   "emblem": null,
+   "band": null
+  },
+  "II./ZG 76": {
+   "emblem": null,
+   "band": null
+  },
+  "III./ZG 76": {
+   "emblem": "emblems/IIIZG76.png",
+   "band": null
+  },
+  "I./JG 2": {
+   "emblem": "emblems/JG2.png",
+   "band": null
+  },
+  "II./JG 2": {
+   "emblem": "emblems/JG2.png",
+   "band": null
+  },
+  "III./JG 2": {
+   "emblem": "emblems/JG2.png",
+   "band": null
+  },
+  "I./JG 27": {
+   "emblem": "emblems/IJG27.png",
+   "band": null
+  },
+  "II./JG 27": {
+   "emblem": "emblems/IIJG27.png",
+   "band": null
+  },
+  "III./JG 27": {
+   "emblem": "emblems/IIIJG27.png",
+   "band": null
+  },
+  "I./JG 53": {
+   "emblem": null,
+   "band": "bands/JG53.png"
+  },
+  "II./JG 53": {
+   "emblem": null,
+   "band": "bands/JG53.png"
+  },
+  "III./JG 53": {
+   "emblem": null,
+   "band": "bands/JG53.png"
+  },
+  "I./ZG 2": {
+   "emblem": "emblems/IZG2.png",
+   "band": null
+  },
+  "II./ZG 2": {
+   "emblem": "emblems/IIZG2.png",
+   "band": null
+  },
+  "V./LG 1": {
+   "emblem": null,
+   "band": null
+  }
+ }
+}
