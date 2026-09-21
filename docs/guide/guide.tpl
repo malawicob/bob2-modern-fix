@@ -90,7 +90,7 @@ footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-si
 
 <header class="mast">
   <div>
-    <div class="kicker"><span class="label">Battle of Britain II</span><span class="label" style="color:var(--muted)">2.13 Modern Fix, version 1.9.2</span></div>
+    <div class="kicker"><span class="label">Battle of Britain II</span><span class="label" style="color:var(--muted)">2.13 Modern Fix, version 1.9.3</span></div>
     <h1>The Modern Fix Handbook</h1>
     <p class="lede measure">Everything the mod does, how to install it, and how to fly a career with it: from a fresh Windows 11 install to your first sortie, and your pilot's record after it. Written for new players and for anyone coming from version 1.8.</p>
     <nav class="paths" aria-label="Where to start">
@@ -117,7 +117,7 @@ footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-si
       <span class="label">One click into your war</span>
       <h3>PLAY CAMPAIGN opens the game on the campaign map</h3>
       <p>Create your pilot in the Squadron Room and press PLAY CAMPAIGN. The game starts, skips its menus and lands you on the campaign map with everything already set: your side, your squadron or Gruppe, the phase of the war, your role and your name.</p>
-      <p>No more working through the campaign screens and preferences by hand, and no more flying with a squadron you did not choose. This works for a new pilot starting his war. For a pilot whose campaign is already under way, the Room tells you which save to load.</p>
+      <p>No more working through the campaign screens and preferences by hand, and no more flying with a squadron you did not choose. A pilot whose campaign is already under way goes straight back into his own save, and when you leave the campaign the game closes and you are back in the Squadron Room.</p>
     </div>
     <div>
       <div class="shot"><img src="@@raf@@" alt="The RAF dispersal in the Squadron Room for a new pilot of No. 610 Squadron, with his Spitfire DW-E"></div>
@@ -221,7 +221,7 @@ footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-si
   <ol class="steps">
     <li><div><h3>Delete the old BOB2-Win11-Fix folder</h3><p>It holds nothing of yours. Your pilots and their records are kept in the <span class="path">SquadronRoom</span> folder beside <span class="path">Bob.exe</span>, and your backups and joystick settings are kept elsewhere too, so none of them are touched.</p></div></li>
     <li><div><h3>Put the new folder in its place</h3><p>Unblock and extract the new zip exactly as in the steps above.</p></div></li>
-    <li><div><h3>Start the launcher and click the upgrade line</h3><p>At the foot of the launcher it will say <b>Mod 1.8.4 installed, 1.9.2 available, click here to upgrade</b>. Click it, and the game folder is brought up to date. Your settings and pilots carry over.</p></div></li>
+    <li><div><h3>Start the launcher and click the upgrade line</h3><p>At the foot of the launcher it will say <b>Mod 1.9.2 installed, 1.9.3 available, click here to upgrade</b>. Click it, and the game folder is brought up to date. Your settings and pilots carry over.</p></div></li>
   </ol>
 </section>
 
@@ -236,8 +236,8 @@ footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);font-si
       <li><div><h3>Open the Squadron Room</h3><p>From the launcher. Choose the RAF or the Luftwaffe with the switch at the top.</p></div></li>
       <li><div><h3>Choose your unit and your date</h3><p>Pick a phase of the Battle, then a squadron on the Fighter Command board, or a Gruppe on the map of the Channel front.</p></div></li>
       <li><div><h3>Report for duty</h3><p>Give your first name and your surname (both are needed), choose whether you arrive as an NCO or with a commission, and pick your photograph. On the German side you also choose your aircraft's number, or its letter on a Bf 110.</p></div></li>
-      <li><div><h3>Press PLAY CAMPAIGN</h3><p>The game opens on the campaign map with your squadron, phase and name already set. Fly the day.</p></div></li>
-      <li><div><h3>Come back to the Room</h3><p>Your sortie is in the log book, your aircraft shows the letter or number you actually flew, and rank and awards follow from what you do.</p></div></li>
+      <li><div><h3>Press PLAY CAMPAIGN</h3><p>The game opens on the campaign map with your squadron, phase and name already set. Fly the day, then leave the campaign: the game closes and you are back in the Room.</p></div></li>
+      <li><div><h3>Say which save is his</h3><p>The first time you come back, the Room asks which save is this pilot's campaign. It shows on his card as CAMPAIGN SAVE, and from then on PLAY CAMPAIGN loads it by itself. Your sortie is in the log book, your aircraft shows the letter or number you actually flew, and rank and awards follow from what you do.</p></div></li>
     </ol>
     <div style="display:flex;flex-direction:column;gap:16px">
       <div class="orders">

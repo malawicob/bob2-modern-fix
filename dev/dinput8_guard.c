@@ -28,7 +28,7 @@
 
 /* Must match $FixVersion in BOB2_Setup.ps1 - the log line is how you tell
  * which build is actually deployed in the game folder. */
-#define BOB2FIX_VERSION "1.9.2"
+#define BOB2FIX_VERSION "1.9.3"
 
 /* ==================== LOGGING ==================== */
 
