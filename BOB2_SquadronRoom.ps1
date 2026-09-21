@@ -1428,6 +1428,29 @@ $BackgroundsPath = Join-Path $ModDir 'backgrounds.json'
 # boards and the one the game is given and its saves are matched by: his
 # surname. `first` is new on 21 September 2026 and required at enrolment.
 # A record made before that has none, and the personal record asks for it.
+# THE NAME THE GAME IS GIVEN: his full name, which is what its own Log Book
+# and campaign screens show (Patrick, 21 September 2026: "should be Patrick
+# Millin, not just Millin"). The game holds 20 characters; a longer name
+# becomes the initial and the surname.
+function Get-GameName {
+    param($Man)
+    $n = (Get-FullName $Man).Trim()
+    if ($n.Length -le 20) { return $n }
+    $f = ''; if ($Man.PSObject.Properties.Name -contains 'first') { $f = "$($Man.first)".Trim() }
+    $n = if ($f) { "$($f.Substring(0,1)). $("$($Man.pilot)".Trim())" } else { "$($Man.pilot)".Trim() }
+    if ($n.Length -gt 20) { $n = $n.Substring(0, 20) }
+    $n
+}
+# Is the name a save carries this man? Older campaigns were given his
+# surname, new ones his full name (or the 20 character form of it).
+function Test-SameMan {
+    param($Pilot, [string]$Name)
+    if (-not $Pilot) { return $false }
+    $n = "$Name".Trim()
+    if (-not $n) { return $true }
+    foreach ($c in @("$($Pilot.pilot)".Trim(), (Get-FullName $Pilot).Trim(), (Get-GameName $Pilot).Trim())) { if ($c -and ($c -ieq $n)) { return $true } }
+    $false
+}
 function Get-FullName {
     param($Man)
     if (-not $Man) { return '' }
@@ -1907,7 +1930,7 @@ function Write-AutostartRequest {
         'role=' + $(if ("$($Pilot.cmode)" -eq 'commander') { '5' } else { '4' })
         "phase=$phase"
         "unit=$unit"
-        'name=' + ("$($Pilot.pilot)".Trim())
+        'name=' + (Get-GameName $Pilot)
     )
     if ($LoadSave) { $lines += ('save=' + (Split-Path $LoadSave -Leaf)) }
     try {
@@ -2000,9 +2023,9 @@ function New-LaunchCardData {
         # the card says which tab, and what dates the game shows under it.
         $steps += $(if ($per) { "Press the $($per.Game) tab along the top of the campaign screen; it shows $($per.GameDates). That is your period, $($per.Desc). Then BEGIN" }
                     else { 'Choose the period along the top of the campaign screen, then BEGIN' })
-        $steps += 'Enter the name ' + "$($p.pilot)" + ' and press BEGIN'
+        $steps += 'Enter the name ' + (Get-GameName $p) + ' and press BEGIN'
     }
-    [pscustomobject]@{ Name = "$($p.pilot)"; Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps; Auto = [bool]$script:AutostartArmed }
+    [pscustomobject]@{ Name = (Get-FullName $p); Unit = $unit; Side = $(if ($lw) { 'Luftwaffe' } else { 'RAF' }); Steps = $steps; Auto = [bool]$script:AutostartArmed }
 }
 function New-LaunchCard {
     $c = $script:LaunchCard
@@ -3495,7 +3518,7 @@ function Test-CampaignMatch {
     $pside = if ($Pilot.PSObject.Properties.Name -contains 'side' -and "$($Pilot.side)") { "$($Pilot.side)" } else { 'raf' }
     if ($pside -ne $Identity.Side) { return $false }
     if (-not $Identity.Name) { return $true }        # nothing to disagree with
-    ("$($Pilot.pilot)".Trim() -ieq "$($Identity.Name)".Trim())
+    (Test-SameMan -Pilot $Pilot -Name "$($Identity.Name)")
 }
 # THE OTHER DOOR. A player who starts a campaign from the game's own menus
 # instead of the Room's PLAY CAMPAIGN comes back to a Room that knows
@@ -3737,7 +3760,7 @@ function Remove-PilotCareer {
     $sideName = if ($script:Side -eq 'lw') { 'Luftwaffe' } else { 'RAF' }
     if (-not $Force) {
         $ans = [System.Windows.MessageBox]::Show($Win,
-            "Delete $($p.pilot), your $sideName pilot?`n`nHis record, logbook, claims and flight marker are removed from the Room and a copy is kept under archive\deleted-. The game's own campaign saves are left exactly as they are; delete or replace those in the game.`n`nThe $sideName enrollment board comes up next so you can post a new man.",
+            "Delete $(Get-FullName $p), your $sideName pilot?`n`nHis record, logbook, claims and flight marker are removed from the Room and a copy is kept under archive\deleted-. The game's own campaign saves are left exactly as they are; delete or replace those in the game.`n`nThe $sideName enrollment board comes up next so you can post a new man.",
             'Delete this pilot', 'YesNo', 'Warning')
         if ($ans -ne 'Yes') { return }
     }
@@ -3901,10 +3924,11 @@ function Show-Logbook {
     $script:Stage.Children.Clear()
     $script:CampaignDate = Get-CampaignDate
     [void]$script:Stage.Children.Add((New-Nav 'logbook'))
-    [void]$script:Stage.Children.Add((New-Heading -Eyebrow "PILOT'S LOGBOOK" -Title ("$($Pilot.pilot)")))
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow "PILOT'S LOGBOOK" -Title (Get-FullName $Pilot)))
 
     $cp = Get-CampaignPilot
-    if ($cp) {
+    # only worth saying when the game knows him by a different name
+    if ($cp -and -not (Test-SameMan -Pilot $Pilot -Name "$($cp.Name)")) {
         $cpTxt = "Campaign pilot on record: $($cp.Name)"
         $cpl = New-TB -Text $cpTxt -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
         $cpl.Margin = '0,-12,0,14'
@@ -3964,17 +3988,10 @@ function Show-Logbook {
     $lk.Margin = '0,0,0,22'; $lk.MaxWidth = 860; $lk.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lk)
 
-    # which save this career is being read from
-    $flownAny = ($ld -and @($ld.rows).Count -gt 0)
-    $asked = (($Pilot.PSObject.Properties.Name -contains 'saveAsked') -and $Pilot.saveAsked)
-    $nSaves = @(Get-SaveFiles).Count
-    if ($flownAny -and $nSaves -gt 1 -and -not $asked) {
-        $ch = New-SaveChooser -Pilot $Pilot
-        if ($ch) { [void]$script:Stage.Children.Add($ch) }
-    } elseif ($flownAny -and $nSaves -gt 0) {
-        $ch = New-SaveChooser -Pilot $Pilot -Settled
-        if ($ch) { [void]$script:Stage.Children.Add($ch) }
-    }
+    # WHICH SAVE is no longer chosen here. The dispersal's CAMPAIGN SAVE line
+    # shows it and changes it, and he is asked on his first return from the
+    # game; a second list of save files on this page was the same thing twice
+    # (Patrick, 21 September 2026).
 
     [void]$script:Stage.Children.Add((New-TB -Text 'SORTIES FLOWN' -Family $CondFam -Size 12.5 -Colour '#C8973F' -Bold))
     if ($ld -and @($ld.rows).Count -gt 0) {
@@ -4186,7 +4203,7 @@ function Show-Roster {
     $pv = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $pv = [int]$Pilot.victories }
     $ph = $ph0
     $me = [pscustomobject]@{
-        pilot = "$($Pilot.pilot)"
+        pilot = (Get-FullName $Pilot)
         rank = "$($career0.rank)"
         codes = "$($Pilot.codes)"
         status = 'On strength'
@@ -6519,10 +6536,10 @@ function Show-Flugbuch {
     Show-ChromeButtons $true
     $h = C 'HdrSquadron'; if ($h) { $h.Text = "$($Pilot.unit)" }
     $m = C 'HdrMotto'; if ($m) { $m.Text = "LUFTWAFFE  $([char]0x2022)  FLUGBUCH" }
-    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'FLUGBUCH' -Title "$($Pilot.pilot)"))
+    [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'FLUGBUCH' -Title (Get-FullName $Pilot)))
 
     $cp = Get-CampaignPilot
-    if ($cp) {
+    if ($cp -and -not (Test-SameMan -Pilot $Pilot -Name "$($cp.Name)")) {
         $cpl = New-TB -Text "Campaign pilot on record: $($cp.Name)" -Family 'Segoe UI' -Size 13 -Colour '#9FB0B8'
         $cpl.Margin = '0,-12,0,14'
         [void]$script:Stage.Children.Add($cpl)
@@ -7988,7 +8005,7 @@ function Show-ReadyRoom {
         [void]$ts.Children.Add((New-LwRosterRow -Header))
         $myV = 0; if (($Pilot.PSObject.Properties.Name -contains 'victories') -and $Pilot.victories) { $myV = [int]$Pilot.victories }
         [void]$ts.Children.Add((New-LwRosterRow -Man ([pscustomobject]@{
-            pilot = "$($Pilot.pilot)"; rank = "$($Pilot.rank)"; historical = $false
+            pilot = (Get-FullName $Pilot); rank = "$($Pilot.rank)"; historical = $false
             appointment = $null; staffel = $Pilot.staffel; victories_total = $null; fate = $null }) -IsPlayer -Vics $myV))
         foreach ($man in ($roster | Sort-Object @{ e = { -[int][bool]$_.historical } }, @{ e = { "$($_.pilot)" } })) {
             [void]$ts.Children.Add((New-LwRosterRow -Man $man))
@@ -8330,4 +8347,25 @@ function Start-Room {
     }
 }
 Start-Room
+# ONE ROOM. Every press of SQUADRON ROOM in the launcher started another
+# window, and the ones left minimised behind the game piled up on the
+# taskbar (Patrick, 21 September 2026: "many screens are left open"). The
+# first Room holds a named mutex; a second one brings the first to the
+# front and closes. Done on Loaded, so the harnesses, which never show the
+# window, never meet it.
+$Win.Add_Loaded({
+    try {
+        $created = $false
+        $script:RoomMutex = New-Object System.Threading.Mutex($true, 'Local\BOB2-SquadronRoom', [ref]$created)
+        if (-not $created) {
+            try {
+                Add-Type -Namespace RoomWin -Name U -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr h, int c); [DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr h);' -ErrorAction SilentlyContinue
+                $other = Get-Process -Name powershell, pwsh -ErrorAction SilentlyContinue |
+                    Where-Object { $_.Id -ne $PID -and $_.MainWindowTitle -like 'The Squadron Room*' -and $_.MainWindowHandle -ne [IntPtr]::Zero } | Select-Object -First 1
+                if ($other) { [void][RoomWin.U]::ShowWindow($other.MainWindowHandle, 9); [void][RoomWin.U]::SetForegroundWindow($other.MainWindowHandle) }
+            } catch { }
+            $Win.Close()
+        }
+    } catch { }
+})
 [void]$Win.ShowDialog()

@@ -396,6 +396,16 @@ try {
         $rq = Get-Content (Join-Path (Get-AutostartRoot) 'autostart.txt') -Raw
         Check 'the request asks the guard to load it'           ($rq -match 'mode=load' -and $rq -match 'save=Millin_war\.bsR' -and $rq -match 'side=0') $rq
     } else { '  (no dev settings.cfg to copy, load checks skipped)' }
+    "14 the man's full name"
+    $nm1 = [pscustomobject]@{ pilot='Millin'; first='Patrick' }
+    $nm2 = [pscustomobject]@{ pilot='Wolfenbuettel-Hohenstein'; first='Maximilian' }
+    Check 'the game is given his full name'                    ((Get-GameName $nm1) -eq 'Patrick Millin')
+    Check 'a name over 20 letters becomes initial and surname'  ((Get-GameName $nm2).Length -le 20 -and (Get-GameName $nm2) -like 'M. Wolfen*') (Get-GameName $nm2)
+    Check 'his older saves (surname) are still his'            (Test-SameMan -Pilot $nm1 -Name 'Millin')
+    Check 'and his new ones (full name)'                       (Test-SameMan -Pilot $nm1 -Name 'Patrick Millin')
+    Check 'but not another man''s'                             (-not (Test-SameMan -Pilot $nm1 -Name 'Richard Hughes'))
+    [void](Write-AutostartRequest -Pilot ([pscustomobject]@{ pilot='Millin'; first='Patrick'; period='P1'; sqn=610; cmode='pilot' }))
+    Check 'PLAY CAMPAIGN asks for Patrick Millin'              ((Get-Content (Join-Path (Get-AutostartRoot) 'autostart.txt') -Raw) -match 'name=Patrick Millin')
     ''
     '--- samples, to be read by a person ---'
     foreach ($c in $cases) { $b = New-PilotBackground -Man $c -Pilot $c; ''; "[$($c.rank), $($c.actype)]  born $($b.born), $($b.place)"; $b.story }
