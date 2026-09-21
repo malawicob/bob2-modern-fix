@@ -112,6 +112,7 @@ try {
     }
     Show-GruppeCreate
     "    adjutant : drew $($script:Stage.Children.Count) blocks"
+    $script:FirstBox.Text = 'Hans'
     $script:NameBox.Text = 'Testflieger'
     $script:SelPortrait = 'pilot01.jpg'
     # reporting now asks for an aircraft number as well, and without one
@@ -136,6 +137,7 @@ try {
             Luftflotte = [int]$zg.luftflotte; Period = 'P2'
         }
         Show-GruppeCreate
+        $script:FirstBox.Text = 'Karl'
         $script:NameBox.Text = 'Zerstoerer'
         $script:SelPortrait = 'pilot01.jpg'
         $script:SelAcNum = 4

@@ -284,7 +284,7 @@ try {
     "11 a background behind the portrait"
     $script:CampaignDate = [datetime]'1940-08-12'
     $cases = @(
-        [pscustomobject]@{ pilot='Millin'; rank='Sergeant'; sqn=610; actype='Spitfire I'; base='Biggin Hill' },
+        [pscustomobject]@{ pilot='Millin'; first='Patrick'; rank='Sergeant'; sqn=610; actype='Spitfire I'; base='Biggin Hill' },
         [pscustomobject]@{ pilot='Millin'; rank='Pilot Officer'; sqn=32; actype='Hurricane I'; base='Biggin Hill' },
         [pscustomobject]@{ pilot='Millin'; rank='Unteroffizier'; side='lw'; unit='II./JG 26'; actype='Bf 109E'; base='Marquise' },
         [pscustomobject]@{ pilot='Millin'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley' }
@@ -313,6 +313,7 @@ try {
     Check 'a 110 pilot went through the Zerstoerer school'     ("$($z.story)" -match 'Zerst' -and "$($z.story)" -match 'blind flying')
     $bf = [pscustomobject]@{ pilot='Lehmann, P'; rank='Unteroffizier'; role='Bordfunker' }
     $bfb = New-PilotBackground -Man $bf -Pilot $cases[3]
+    Check 'a roster man gets a first name from his initial'   ((Get-BackgroundNames -Man $bf -Seed 5).first -match '^P' -and (Get-BackgroundNames -Man $bf -Seed 5).last -eq 'Lehmann')
     Check 'his Bordfunker is a wireless man, not a pilot'      ("$($bfb.story)" -match 'wireless operator' -and "$($bfb.story)" -notmatch 'pilot.s badge')
     Set-StateSide 'lw'
     $zp = [ordered]@{ pilot='Millin'; rank='Leutnant'; side='lw'; unit='III./ZG 26'; actype='Bf 110'; base='Barley'; status='On strength'
@@ -326,6 +327,22 @@ try {
     Check 'and the crewman''s, without touching the pilot''s'  ("$(@(Get-Crew $p2)[0].background.story)" -eq 'The man in the back.' -and "$($p2.background.story)" -eq 'My own words.' -and "$(@(Get-Crew $p2)[0].pilot)" -eq 'Lehmann, P')
     $bw = New-BackgroundWindow -Pilot $p2 -CrewIndex -1
     Check 'the window builds with his record in it'            ($bw -and "$($script:BgDlg.Story.Text)" -eq 'My own words.' -and "$($script:BgDlg.Born.Text)" -eq '3 May 1917')
+    # THE BUTTONS ANSWER A PRESS. They were wired to the release, and the
+    # window's drag swallowed it: all three were dead and the test, which
+    # called the action directly, never knew.
+    $btnRow = @($script:BgDlg.Win.Content.Child.Children)[-1]
+    $press = { param($Border)
+        $ev = New-Object Windows.Input.MouseButtonEventArgs([Windows.Input.Mouse]::PrimaryDevice, 0, [Windows.Input.MouseButton]::Left)
+        $ev.RoutedEvent = [Windows.UIElement]::MouseLeftButtonDownEvent
+        $Border.RaiseEvent($ev) }
+    $script:BgDlg.First.Text = 'Patrick'
+    & $press @($btnRow.Children)[0]
+    Check 'pressing WRITE ANOTHER writes another, with his name' ("$($script:BgDlg.Story.Text)" -ne 'My own words.' -and "$($script:BgDlg.Story.Text)" -match 'Patrick Millin')
+    $script:BgDlg.Story.Text = 'Typed by the player.'
+    & $press @($btnRow.Children)[2]
+    $p3 = Get-Pilot
+    Check 'pressing SAVE keeps his words and his first name'   ("$($p3.background.story)" -eq 'Typed by the player.' -and "$($p3.first)" -eq 'Patrick' -and (Get-FullName $p3) -eq 'Patrick Millin')
+    $bw = New-BackgroundWindow -Pilot $p3 -CrewIndex -1
     Invoke-BackgroundAction 'another'
     Check 'WRITE ANOTHER writes another'                       ("$($script:BgDlg.Story.Text)" -ne 'My own words.' -and "$($script:BgDlg.Story.Text)".Length -gt 300)
     $script:BgDlg = $null

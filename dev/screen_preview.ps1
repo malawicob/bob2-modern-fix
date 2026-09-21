@@ -77,6 +77,7 @@ if (-not $pl -and $WantSide -eq 'lw' -and $WantTab -ne 'postings') {
         Luftflotte = [int]$u.luftflotte; Period = 'P2'
     }
     Show-GruppeCreate
+    $script:FirstBox.Text = 'Hans'
     $script:NameBox.Text = 'Vorschau'
     $script:SelPortrait = 'pilot01.jpg'
     $script:SelRank = 'Leutnant'

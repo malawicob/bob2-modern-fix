@@ -1265,6 +1265,40 @@ function New-Frame {
 #  HIS RECORD, so a later edit of the lists cannot quietly give a man who
 #  has flown forty sorties a different father.
 $BackgroundsPath = Join-Path $ModDir 'backgrounds.json'
+# FIRST AND LAST NAME. `pilot` stays what it always was, the name on the
+# boards and the one the game is given and its saves are matched by: his
+# surname. `first` is new on 21 September 2026 and required at enrolment.
+# A record made before that has none, and the personal record asks for it.
+function Get-FullName {
+    param($Man)
+    if (-not $Man) { return '' }
+    $f = ''; if ($Man.PSObject.Properties.Name -contains 'first') { $f = "$($Man.first)".Trim() }
+    $l = "$($Man.pilot)".Trim()
+    if ($f) { return "$f $l" }
+    $l
+}
+# The men of the rosters are "Lehmann, P": a surname and an initial. A story
+# needs a first name, so one is dealt from the names their generation was
+# given, keeping the initial where a name begins with it.
+$LwFirstNames = @('Albert','Alfred','Anton','Bruno','Bernhard','Carl','Dieter','Dietrich','Emil','Erich','Ernst','Franz','Friedrich','Fritz',
+                  'Georg','Gerhard','Günther','Hans','Heinrich','Heinz','Helmut','Herbert','Hermann','Horst','Josef','Johannes','Karl','Konrad','Kurt',
+                  'Ludwig','Lothar','Martin','Max','Otto','Oskar','Paul','Peter','Richard','Rudolf','Robert','Siegfried','Stefan','Theodor','Thomas',
+                  'Ulrich','Viktor','Walter','Werner','Wilhelm','Willi','Wolfgang')
+function Get-BackgroundNames {
+    param($Man, [int]$Seed = 0)
+    $raw = "$($Man.pilot)".Trim()
+    $first = ''; if ($Man.PSObject.Properties.Name -contains 'first') { $first = "$($Man.first)".Trim() }
+    $last = $raw
+    if (-not $first -and $raw -match '^(.+?),\s*(\S)') {
+        $last = $Matches[1].Trim(); $ini = $Matches[2].ToUpper()
+        $pool = @($LwFirstNames | Where-Object { $_.Substring(0,1) -eq $ini })
+        if (-not $pool.Count) { $pool = $LwFirstNames }
+        $first = $pool[[math]::Abs($Seed) % $pool.Count]
+    }
+    $name = if ($first) { "$first $last" } else { $last }
+    if (-not $first) { $first = $last }
+    @{ first = $first; last = $last; name = $name }
+}
 function Get-BackgroundData {
     if ($null -ne $script:BackgroundData) { return $script:BackgroundData }
     $d = $null
@@ -1331,7 +1365,10 @@ function New-PilotBackground {
     $base = "$($Pilot.base)"; if (-not $base) { $base = 'its station' }
     $posted = 'July 1940'
     if ($script:CampaignDate) { $posted = $script:CampaignDate.ToString('MMMM yyyy', [Globalization.CultureInfo]::InvariantCulture) }
+    $nm = Get-BackgroundNames -Man $Man -Seed $seed
+    $age = 1940 - $year; if ($month -gt 7) { $age-- }
     $tok = @{
+        first = $nm.first; last = $nm.last; name = $nm.name; born = $born; year = "$year"; age = "$age"
         place = $place; joined = "$joined"; type = $type; unit = $unit; base = $base; posted = $posted
         hours = "$(150 + (& $next 61))"; ontype = "$(10 + (& $next 16))"
     }
@@ -1346,11 +1383,12 @@ function New-PilotBackground {
             ''
         })
     }
+    $deep = { param([string]$Text) $x = $Text; foreach ($pass in 1..3) { if ($x -notmatch '\{') { break }; $x = & $fill $x }; $x }
     $paras = @()
-    foreach ($t in @($route.text)) { $paras += (& $fill "$t") }
+    foreach ($t in @($route.text)) { $paras += (& $deep "$t") }
     $closing = "$($side.closing)"
     if ($isCrew -and ($side.PSObject.Properties.Name -contains 'closing_crew')) { $closing = "$($side.closing_crew)" }
-    if ($closing) { $paras += (& $fill $closing) }
+    if ($closing) { $paras += (& $deep $closing) }
     $story = (($paras | ForEach-Object { ($_ -replace '\s{2,}', ' ').Trim() }) -join "`r`n`r`n")
     # a sentence that begins with a school's number must still begin with a capital
     $story = [regex]::Replace($story, '(^|\n)the ', { param($m) $m.Groups[1].Value + 'The ' })
@@ -1373,12 +1411,15 @@ function Get-PilotBackground {
     New-PilotBackground -Man $man -Pilot $Pilot
 }
 function Save-PilotBackground {
-    param($Pilot, [int]$CrewIndex = -1, [string]$Born, [string]$Place, [string]$Story, [bool]$Custom = $true)
+    param($Pilot, [int]$CrewIndex = -1, [string]$Born, [string]$Place, [string]$Story, [bool]$Custom = $true, [string]$First = $null)
     if (-not $Pilot) { return $null }
     $rec = [ordered]@{ born = "$Born".Trim(); place = "$Place".Trim(); story = "$Story".Trim(); custom = [bool]$Custom }
     $o = [ordered]@{}
     foreach ($pp in $Pilot.PSObject.Properties) { $o[$pp.Name] = $pp.Value }
-    if ($CrewIndex -lt 0) { $o['background'] = $rec }
+    if ($CrewIndex -lt 0) {
+        $o['background'] = $rec
+        if ($null -ne $First -and "$First".Trim()) { $o['first'] = "$First".Trim() }
+    }
     else {
         $crew = @()
         $i = 0
@@ -1420,7 +1461,7 @@ function New-BackgroundWindow {
     [void]$head.Children.Add($ph)
     $ht = New-Object Windows.Controls.StackPanel; $ht.Margin = '20,2,0,0'; $ht.VerticalAlignment = 'Center'
     [void]$ht.Children.Add((New-TB -Text 'PERSONAL RECORD' -Family $CondFam -Size 11.5 -Colour '#C8973F' -Bold))
-    [void]$ht.Children.Add((New-TB -Text "$($man.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    [void]$ht.Children.Add((New-TB -Text (Get-FullName $man) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
     $isLw = (($Pilot.PSObject.Properties.Name -contains 'side') -and ("$($Pilot.side)" -eq 'lw'))
     $unitLine = if ($isLw) { "$($Pilot.unit)" } else { "No. $([int]$Pilot.sqn) Squadron" }
     $seat = if (($man.PSObject.Properties.Name -contains 'role') -and "$($man.role)") { "$($man.role)" } else { "$($Pilot.actype)" }
@@ -1438,29 +1479,36 @@ function New-BackgroundWindow {
         $tb
     }
     $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,16'
+    # the player's own first name, asked for here when his record predates the
+    # rule that a pilot has two names; his surname is the game's and is not
+    # changed from this window
+    $firstBox = $null
+    if ($CrewIndex -lt 0) {
+        $c0 = New-Object Windows.Controls.StackPanel; $c0.Margin = '0,0,22,0'
+        [void]$c0.Children.Add((New-TB -Text 'FIRST NAME' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
+        $fn = ''; if ($man.PSObject.Properties.Name -contains 'first') { $fn = "$($man.first)" }
+        $firstBox = & $mkBox $fn 170; $firstBox.Margin = '0,5,0,0'; $firstBox.MaxLength = 20
+        [void]$c0.Children.Add($firstBox)
+        [void]$row.Children.Add($c0)
+    }
     $c1 = New-Object Windows.Controls.StackPanel; $c1.Margin = '0,0,22,0'
     [void]$c1.Children.Add((New-TB -Text 'BORN' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
-    $bornBox = & $mkBox "$($bg.born)" 230; $bornBox.Margin = '0,5,0,0'
+    $bornBox = & $mkBox "$($bg.born)" 190; $bornBox.Margin = '0,5,0,0'
     [void]$c1.Children.Add($bornBox)
     $c2 = New-Object Windows.Controls.StackPanel
     [void]$c2.Children.Add((New-TB -Text 'AT' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
-    $placeBox = & $mkBox "$($bg.place)" 508; $placeBox.Margin = '0,5,0,0'
+    $placeBox = & $mkBox "$($bg.place)" $(if ($CrewIndex -lt 0) { 356 } else { 548 }); $placeBox.Margin = '0,5,0,0'
     [void]$c2.Children.Add($placeBox)
     [void]$row.Children.Add($c1); [void]$row.Children.Add($c2)
     [void]$sp.Children.Add($row)
 
     [void]$sp.Children.Add((New-TB -Text 'HOW HE CAME HERE' -Family $CondFam -Size 11.5 -Colour '#6F828C' -Bold))
     $storyBox = & $mkBox "$($bg.story)" 760
-    $storyBox.Margin = '0,5,0,12'; $storyBox.Height = 330; $storyBox.HorizontalAlignment = 'Left'
+    $storyBox.Margin = '0,5,0,18'; $storyBox.Height = 380; $storyBox.HorizontalAlignment = 'Left'
     $storyBox.TextWrapping = 'Wrap'; $storyBox.AcceptsReturn = $true; $storyBox.VerticalScrollBarVisibility = 'Auto'
     $storyBox.FontSize = 14.5
     [void]$sp.Children.Add($storyBox)
 
-    $note = New-TB -Wrap -Family 'Segoe UI' -Size 12 -Colour '#6F828C' -Text (
-        'The man is invented by the Room; the road he came by is a real one for his rank and his aeroplane in 1940. ' +
-        'It is yours to change: type over any of it and press SAVE, or press WRITE ANOTHER for a different past.')
-    $note.Margin = '0,0,0,16'
-    [void]$sp.Children.Add($note)
 
     $btns = New-Object Windows.Controls.StackPanel; $btns.Orientation = 'Horizontal'; $btns.HorizontalAlignment = 'Right'
     $mkBtn = {
@@ -1469,7 +1517,11 @@ function New-BackgroundWindow {
         $b.Background = B $Fill; $b.CornerRadius = '2'; $b.Padding = '18,9'; $b.Margin = '10,0,0,0'; $b.Cursor = 'Hand'
         $b.BorderBrush = B '#2B3B47'; $b.BorderThickness = '1'; $b.Tag = $Do; $b.Focusable = $true
         $b.Child = (New-TB -Text $Label -Family $CondFam -Size 13 -Colour $Ink -Bold)
-        $b.Add_MouseLeftButtonUp({ param($sender, $e) Invoke-BackgroundAction "$($sender.Tag)"; $e.Handled = $true })
+        # ON THE PRESS, and handled. The window used to start DragMove() on any
+        # left button down that was not in a text box; DragMove runs its own
+        # mouse loop until the button comes up, so a button never saw the
+        # release it was waiting for and none of the three did anything.
+        $b.Add_MouseLeftButtonDown({ param($sender, $e) $e.Handled = $true; Invoke-BackgroundAction "$($sender.Tag)" })
         $b
     }
     [void]$btns.Children.Add((& $mkBtn 'WRITE ANOTHER' '#16222B' '#E9E3D4' 'another'))
@@ -1478,10 +1530,12 @@ function New-BackgroundWindow {
     [void]$sp.Children.Add($btns)
 
     $w.Add_KeyDown({ param($sender, $e) if ($e.Key -eq 'Escape') { Invoke-BackgroundAction 'close' } })
-    $w.Add_MouseLeftButtonDown({ param($sender, $e) if ($e.OriginalSource -isnot [Windows.Controls.TextBox]) { try { $sender.DragMove() } catch { } } })
+    # only the header drags the window
+    $head.Background = B '#0F171D'
+    $head.Add_MouseLeftButtonDown({ param($sender, $e) try { [Windows.Window]::GetWindow($sender).DragMove() } catch { } })
     # State the buttons read. Script scope and no closures: a closure in this
     # file gets a module scope of its own and its writes never reach the Room.
-    $script:BgDlg = @{ Win = $w; Born = $bornBox; Place = $placeBox; Story = $storyBox; CrewIndex = $CrewIndex; Salt = 0; Saved = $false }
+    $script:BgDlg = @{ Win = $w; First = $firstBox; Born = $bornBox; Place = $placeBox; Story = $storyBox; CrewIndex = $CrewIndex; Salt = 0; Saved = $false }
     $w
 }
 function Invoke-BackgroundAction {
@@ -1494,13 +1548,21 @@ function Invoke-BackgroundAction {
             $d.Salt = [int]$d.Salt + 1
             $p = Get-Pilot
             $man = Get-BackgroundMan -Pilot $p -CrewIndex ([int]$d.CrewIndex)
+            # the name in the story is the one in the box now, saved or not
+            if ($d.First -and "$($d.First.Text)".Trim()) {
+                $mo = [ordered]@{}
+                foreach ($pp in $man.PSObject.Properties) { $mo[$pp.Name] = $pp.Value }
+                $mo['first'] = "$($d.First.Text)".Trim()
+                $man = [pscustomobject]$mo
+                if ([int]$d.CrewIndex -lt 0) { $p = $man }
+            }
             $n = New-PilotBackground -Man $man -Pilot $p -Salt ([int]$d.Salt)
             if ($n) { $d.Born.Text = "$($n.born)"; $d.Place.Text = "$($n.place)"; $d.Story.Text = "$($n.story)" }
         }
         'save' {
             $p = Get-Pilot
             if ($p) {
-                [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $true)
+                [void](Save-PilotBackground -Pilot $p -CrewIndex ([int]$d.CrewIndex) -Born $d.Born.Text -Place $d.Place.Text -Story $d.Story.Text -Custom $true -First $(if ($d.First) { "$($d.First.Text)" } else { $null }))
                 $d.Saved = $true
             }
             try { $d.Win.Close() } catch { }
@@ -3784,7 +3846,7 @@ function Show-Roster {
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,32'
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
-    [void]$d.Children.Add((New-TB -Text ("$($Pilot.pilot)") -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    [void]$d.Children.Add((New-TB -Text (Get-FullName $Pilot) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
     $line = if ($flownCount -gt 0) { "$($Pilot.rank)   $([char]0x2022)   $($Pilot.codes)" } else { "$($Pilot.rank)   $([char]0x2022)   awaiting first operation" }
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
     [void]$d.Children.Add($lt)
@@ -4075,7 +4137,7 @@ function Update-RankSegs {
     }
 }
 function Update-CreateValid {
-    $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
+    $ok = ($script:NameBox.Text.Trim().Length -ge 2) -and ($script:FirstBox -and $script:FirstBox.Text.Trim().Length -ge 2) -and ($null -ne $script:SelPortrait)
     $script:SubmitBtn.IsEnabled = $ok
     Set-ChromeActionEnabled $ok
 }
@@ -4091,6 +4153,7 @@ function Invoke-Submit {
     $serial = New-Serial -Type ("$($script:SelSq.Type)")
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
+        first   = $script:FirstBox.Text.Trim()
         rank    = $rank
         codes   = $(if ("$($script:SelSq.Code)") { "$($script:SelSq.Code)-$letter" } else { "$letter" })
         status  = 'On strength'
@@ -5889,22 +5952,32 @@ function Show-GruppeCreate {
     Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-GruppeSubmit }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE GRUPPE' -Title "A new pilot for $($script:SelSq.Unit)"))
     $lead = New-TB -Wrap -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Text (
-        'Summer 1940, on the Channel coast. Give your name, say whether you come to the Gruppe as a ' +
+        'Summer 1940, on the Channel coast. Give your first name and your surname, say whether you come to the Gruppe as a ' +
         'non-commissioned pilot or with a commission, and pick your photograph.')
     $lead.Margin = '0,-14,0,22'; $lead.MaxWidth = 940; $lead.HorizontalAlignment = 'Left'
     [void]$script:Stage.Children.Add($lead)
 
     $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,26'
+    # TWO NAMES, BOTH REQUIRED (Patrick, 21 September 2026). The surname is
+    # the one the boards, the game and its saves have always used; the first
+    # name is his own and is what his personal record calls him.
+    $firstCol = New-Object Windows.Controls.StackPanel; $firstCol.Margin = '0,0,18,0'
+    [void]$firstCol.Children.Add((New-TB -Text 'FIRST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $script:FirstBox = New-Object Windows.Controls.TextBox
+    $script:FirstBox.Width = 190; $script:FirstBox.Margin = '0,7,0,0'; $script:FirstBox.MaxLength = 20
+    [void]$firstCol.Children.Add($script:FirstBox)
+    [void]$row.Children.Add($firstCol)
     $nameCol = New-Object Windows.Controls.StackPanel; $nameCol.Margin = '0,0,36,0'
-    [void]$nameCol.Children.Add((New-TB -Text 'NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    [void]$nameCol.Children.Add((New-TB -Text 'LAST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
     $script:NameBox = New-Object Windows.Controls.TextBox
-    $script:NameBox.Width = 320; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 40
+    $script:NameBox.Width = 230; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 20
     # The campaign save's pilot name is offered on the RAF side. It is NOT
     # offered here: that name belongs to whichever campaign is loaded, and
     # a German career started while an RAF campaign is open would take an
     # English name by default, which is worse than an empty box.
     [void]$nameCol.Children.Add($script:NameBox)
     $script:NameBox.Add_TextChanged({ Update-GruppeCreateValid })
+    $script:FirstBox.Add_TextChanged({ Update-GruppeCreateValid })
     [void]$row.Children.Add($nameCol)
 
     # Unteroffizier or Leutnant. The two are separate careers in the
@@ -6048,6 +6121,7 @@ function Update-GruppeCreateValid {
     # before there was a choice and the wrong one for a new man: he was
     # asked, and he should answer.
     $ok = ($script:NameBox -and $script:NameBox.Text.Trim().Length -ge 2) -and
+          ($script:FirstBox -and $script:FirstBox.Text.Trim().Length -ge 2) -and
           ($null -ne $script:SelPortrait) -and ([int]$script:SelAcNum -gt 0)
     Set-ChromeActionEnabled $ok
 }
@@ -6062,6 +6136,7 @@ function Invoke-GruppeSubmit {
     $staffel = ($gi * 3) + (Get-Random -Minimum 1 -Maximum 4)
     $pilot = [ordered]@{
         pilot   = $script:NameBox.Text.Trim()
+        first   = $script:FirstBox.Text.Trim()
         rank    = $rank
         side    = 'lw'
         status  = 'On strength'
@@ -7439,7 +7514,7 @@ function Show-ReadyRoom {
     $hero = New-Object Windows.Controls.StackPanel; $hero.Orientation = 'Horizontal'; $hero.Margin = '0,-6,0,-22'
     [void]$hero.Children.Add((New-Frame -Pilot $Pilot -IsPlayer -CrewIndex -1))
     $d = New-Object Windows.Controls.StackPanel; $d.Margin = '30,4,0,0'; $d.VerticalAlignment = 'Top'
-    [void]$d.Children.Add((New-TB -Text "$($Pilot.pilot)" -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
+    [void]$d.Children.Add((New-TB -Text (Get-FullName $Pilot) -Family $SerifFam -Size 30 -Colour '#E9E3D4' -Bold))
     $appt = Get-Appointment -Pilot $Pilot -Career $career
     $line = "$($Pilot.rank)   $([char]0x2022)   $appt   $([char]0x2022)   $($Pilot.staffel). Staffel"
     $lt = New-TB -Text $line -Family $CondFam -Size 15 -Colour '#9FB0B8'; $lt.Margin = '0,7,0,0'
@@ -7894,17 +7969,26 @@ function Show-Create {
     Set-ChromeBack 'BACK TO THE BOARD' { Show-SquadronSelect }
     Set-ChromeAction -Text 'REPORT FOR DUTY' -Enabled $false -OnClick { Invoke-Submit }
     [void]$script:Stage.Children.Add((New-Heading -Eyebrow 'REPORT TO THE ADJUTANT' -Title "A new pilot for No. $($script:SelSq.Num)"))
-    $lead = New-TB -Text 'Summer 1940. Give your name, say whether you come to the squadron as a sergeant pilot or with a commission, and pick your photograph. Your aircraft and code letter are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
+    $lead = New-TB -Text 'Summer 1940. Give your first name and your surname, say whether you come to the squadron as a sergeant pilot or with a commission, and pick your photograph. Your aircraft and code letter are settled once you have flown your first operation.' -Family 'Segoe UI' -Size 14.5 -Colour '#9FB0B8' -Wrap
     $lead.Margin = '0,-14,0,22'
     [void]$script:Stage.Children.Add($lead)
 
     # form row
     $row = New-Object Windows.Controls.StackPanel; $row.Orientation = 'Horizontal'; $row.Margin = '0,0,0,26'
 
+    # TWO NAMES, BOTH REQUIRED (Patrick, 21 September 2026). The surname is
+    # the one the boards, the game and its saves have always used; the first
+    # name is his own and is what his personal record calls him.
+    $firstCol = New-Object Windows.Controls.StackPanel; $firstCol.Margin = '0,0,18,0'
+    [void]$firstCol.Children.Add((New-TB -Text 'FIRST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    $script:FirstBox = New-Object Windows.Controls.TextBox
+    $script:FirstBox.Width = 190; $script:FirstBox.Margin = '0,7,0,0'; $script:FirstBox.MaxLength = 20
+    [void]$firstCol.Children.Add($script:FirstBox)
+    [void]$row.Children.Add($firstCol)
     $nameCol = New-Object Windows.Controls.StackPanel; $nameCol.Margin = '0,0,36,0'
-    [void]$nameCol.Children.Add((New-TB -Text 'NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
+    [void]$nameCol.Children.Add((New-TB -Text 'LAST NAME' -Family $CondFam -Size 12 -Colour '#C8973F' -Bold))
     $script:NameBox = New-Object Windows.Controls.TextBox
-    $script:NameBox.Width = 320; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 40
+    $script:NameBox.Width = 230; $script:NameBox.Margin = '0,7,0,0'; $script:NameBox.MaxLength = 20
     # one man, one name: if a campaign is under way, offer its pilot's name
     $cp0 = Get-CampaignPilot -Path $(if ($script:AdoptFrom) { $script:AdoptFrom.Path } else { $null })
     if ($cp0 -and $cp0.Name) { $script:NameBox.Text = "$($cp0.Name)" }
@@ -7979,6 +8063,7 @@ function Show-Create {
     [void]$script:Stage.Children.Add($foot)
 
     $script:NameBox.Add_TextChanged({ Update-CreateValid })
+    $script:FirstBox.Add_TextChanged({ Update-CreateValid })
     $script:SubmitBtn.Add_Click({ Invoke-Submit })
 }
 
