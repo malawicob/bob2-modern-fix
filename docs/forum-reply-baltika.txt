@@ -1,0 +1,39 @@
+Reply to Baltika, October 2026. First post: CTD entering 3D on a fresh
+2.13 install, options screen crash, Overview showing keys.txt and
+settings.cfg "not found". Second post: working at 3840x2160 at 120 Hz
+after adjusting dgVoodoo and the launcher.
+
+---
+
+Glad it came good, and thank you for coming back to say so. A fresh
+install on a 4K screen at 120 Hz is a useful one to have on the list.
+
+Those two missing files were my fault, not yours, and not the cause.
+The game does not ship either of them. It writes keys.txt the first
+time you save your key bindings and reads KEYBOARD\default.txt until
+then, and it writes settings.cfg the first time it exits. On a brand
+new install that has never got as far as a clean exit, neither file
+exists, which is normal. The Overview screen should have said so.
+Instead it printed "not found" in red on both, which is exactly what
+you would read as a fault. The next build says "not written yet" and
+what writes it.
+
+Reinstalling twice on the strength of two red lines is a rotten
+afternoon, so sorry about that.
+
+What I would like to know, if you can spare the time, is what you
+changed to get it running. Two things in particular. What is in your
+dgVoodoo.conf now (it is in the game folder, it is a plain text file,
+the Resolution and Scaling lines are the ones I am after), and which
+launcher settings you ended up changing. The package writes the
+dgVoodoo settings from your desktop mode when you install, and if a 4K
+120 Hz screen needed something different from what it wrote, that is
+something I can fix for the next person rather than leaving them to
+find it.
+
+If the options screen crash comes back at any point, the file to send
+me is bob2guard.log from the game folder. It is rewritten every time
+the game runs, so grab it straight after the crash.
+
+Enjoy the campaign, and do report back. The Squadron Room in the
+launcher is built for exactly that, if you have not found it yet.

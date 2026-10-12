@@ -40,6 +40,15 @@ Unreleased  (on dev since 1.9.3)
   - Note: these tests ran with dgVoodoo's frame-rate cap at 240 on the
     dev install. The package sets the cap to the monitor's refresh rate,
     where the judder is far less visible.
+  - FIXED: Settings, Overview no longer calls KEYBOARD\keys.txt and
+    SAVEGAME\settings.cfg "not found" in red on a fresh install. Neither
+    is shipped with the game: it writes keys.txt when you first save key
+    bindings (and reads default.txt until then) and settings.cfg the
+    first time it exits. A new player took the two red lines for the
+    cause of a crash they had nothing to do with and reinstalled the
+    game twice. The rows now say the file has not been written yet and
+    what writes it; the GFX page says the same instead of a critical
+    note. Reported on the forum (Baltika).
 
 v1.9.3  (2026-09-21)
 --------------------

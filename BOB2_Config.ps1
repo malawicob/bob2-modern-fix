@@ -2775,7 +2775,9 @@ function New-CfgSwitch {
 function Build-GfxPage {
     $list = New-Stack -Margin ([System.Windows.Thickness]::new(34,0,34,50))
     if (-not $script:CfgBytes) {
-        [void]$list.Children.Add((New-Note 'SAVEGAME\settings.cfg was not found, so the GFX options cannot be read.' 'critical'))
+        # Not a fault on a fresh install: the game writes this file the first
+        # time it exits, so until then there is nothing here to read.
+        [void]$list.Children.Add((New-Note 'SAVEGAME\settings.cfg has not been written yet. The game creates it the first time it exits; run the game once, quit from its main menu, and come back here.' 'info'))
         return (New-Scroll $list)
     }
 
@@ -3469,12 +3471,19 @@ function Build-OverviewPage {
 
     [void]$list.Children.Add((New-SectionHeader 'Files' 'What was found, and what this tool will write to.'))
     $script:FileHost = New-Stack
+    # The fourth field is what to say when the file is absent. Two of these
+    # the game writes itself and a fresh install has neither: keys.txt is
+    # created when key bindings are saved (the game reads default.txt until
+    # then, commandmapping.cpp), and settings.cfg on the first exit. A new
+    # player read "not found" in red on both, took them for the cause of an
+    # unrelated crash and reinstalled the game twice (Baltika, October
+    # 2026). Only a file the game ships is a fault when it is missing.
     foreach ($f in @(
-        @('bdg.txt',              $script:Paths.Bdg,     'Game settings.  Windows-1252, CRLF.'),
-        @('KEYBOARD\keys.txt',    $script:Paths.Keys,    'Your key bindings.'),
-        @('KEYBOARD\default.txt', $script:Paths.Default, 'Stock bindings.  Read only - used for Reset.'),
-        @('SAVEGAME\settings.cfg',$script:Paths.Cfg,     'Binary. Holds the GFX options screen.'),
-        @('Weather\Weather.cfg',  $script:Paths.Wx,      'Water, weather and horizon detail.'))) {
+        @('bdg.txt',              $script:Paths.Bdg,     'Game settings.  Windows-1252, CRLF.', $null),
+        @('KEYBOARD\keys.txt',    $script:Paths.Keys,    'Your key bindings.', 'not written yet: the game creates it when you save key bindings, and uses default.txt until then'),
+        @('KEYBOARD\default.txt', $script:Paths.Default, 'Stock bindings.  Read only - used for Reset.', $null),
+        @('SAVEGAME\settings.cfg',$script:Paths.Cfg,     'Binary. Holds the GFX options screen.', 'not written yet: the game creates it the first time it exits'),
+        @('Weather\Weather.cfg',  $script:Paths.Wx,      'Water, weather and horizon detail.', $null))) {
         $g = New-Grid @('300','*','Auto')
         $g.Margin = [System.Windows.Thickness]::new(0,11,0,11)
         $nm = New-TB $f[0] -Size 12.5
@@ -3485,6 +3494,8 @@ function Build-OverviewPage {
         $st = if ($exists) {
             $fi = Get-Item -LiteralPath $f[1]
             New-TB (('{0:n0} bytes    {1:yyyy-MM-dd HH:mm}' -f $fi.Length, $fi.LastWriteTime)) -Size 11.5 -Brush 'Dim'
+        } elseif ($f[3]) {
+            New-TB $f[3] -Size 11.5 -Brush 'Muted' -Wrap
         } else {
             New-TB 'not found' -Size 11.5 -Brush 'Danger'
         }
