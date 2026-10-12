@@ -15,6 +15,32 @@ the setup tool, a stale dinput8.dll is deployed - re-run the crash fix
 step to update it.
 
 
+Unreleased  (on dev since 1.9.3)
+--------------------------------
+  - Crash guard: two more optional patches, both off unless bob2guard.ini
+    beside the guard switches them on. Nothing in the package writes that
+    file yet, so a player installing this build sees no change.
+      * cockpitautopilot=1 keeps the cockpit view when the autopilot is
+        engaged (the game forces the outside view). Off by default: the
+        autopilot moves the aircraft at the simulation's 25 Hz, and from
+        the cockpit the world outside jumps in steps.
+      * smooth=1 draws the other aircraft's heading, pitch and roll
+        between the simulation's 40 ms steps. The game predicts position
+        between steps but never attitude, so at a high frame rate a
+        nearby aircraft holds one attitude for several frames and snaps.
+        Flown once on the dev install: close aircraft no longer jerk, but
+        a 25 Hz beat remains near formations and its cause is not yet
+        settled. smooth=2 (the player's own aircraft as well) was flown
+        and rejected as sluggish. Experimental; dev/perf/RUNLOG.md
+        carries the measurements and what is still open.
+  - Crash guard: with smooth on, bob2guard.log reports every five seconds
+    on the drawing (passes, timer step, how far the game's own position
+    prediction misses). Measurement for the investigation above; it does
+    nothing without the ini.
+  - Note: these tests ran with dgVoodoo's frame-rate cap at 240 on the
+    dev install. The package sets the cap to the monitor's refresh rate,
+    where the judder is far less visible.
+
 v1.9.3  (2026-09-21)
 --------------------
   - PLAY CAMPAIGN now also works for a pilot whose campaign is under way:
